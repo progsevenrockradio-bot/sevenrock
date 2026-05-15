@@ -429,7 +429,7 @@ export function registerRadioPlayer(Alpine) {
             this.bandLookupArtist = artist;
 
             try {
-                const response = await fetch(`${this.bandInfoUrl}?artist=${encodeURIComponent(artist)}`, {
+                const response = await fetch(`${this.bandInfoUrl}?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(this.track.title || '')}`, {
                     headers: {
                         Accept: 'application/json',
                     },
@@ -446,6 +446,7 @@ export function registerRadioPlayer(Alpine) {
                     ...this.track,
                     band_info: data.summary || this.track.band_info || this.track.comment || '',
                     band_thumbnail: data.thumbnail || this.track.band_thumbnail || this.track.cover || this.fallbackCover,
+                    lyrics: data.lyrics || this.track.lyrics || '',
                     social_links: Array.isArray(data.social_links) ? data.social_links : this.track.social_links,
                     band_founded_year: data.formed_year ?? this.track.band_founded_year ?? null,
                     band_founded_label: data.formed_label || this.track.band_founded_label || '',

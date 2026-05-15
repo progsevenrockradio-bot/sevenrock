@@ -249,7 +249,14 @@
                                 </div>
                             </template>
                         </div>
-                        <p data-player-band-info style="color:#d8d3ca; line-height:1.55; margin:0;" x-text="bandPanel.info || track.band_info || track.comment || 'Buscando información de banda...'"></p>
+                        <div style="display:grid; gap:8px;">
+                            <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Info de banda</h4>
+                            <p data-player-band-info style="color:#d8d3ca; line-height:1.55; margin:0;" x-text="bandPanel.info || track.band_info || track.comment || 'Buscando información de banda...'"></p>
+                        </div>
+                        <div style="display:grid; gap:8px;">
+                            <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Letra</h4>
+                            <p style="color:#d8d3ca; line-height:1.55; margin:0; white-space:pre-line;" x-text="track.lyrics || 'Letra no disponible para este tema.'"></p>
+                        </div>
                         <div style="display:flex; flex-wrap:wrap; gap:8px;">
                             <template x-for="link in bandLinks()" :key="link.url">
                                 <a :href="link.url" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; justify-content:center; min-height:34px; padding:0 12px; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.2); color:#dcd7cb; text-decoration:none; font-family:var(--font-display); font-size:10px; letter-spacing:.14em; text-transform:uppercase;" x-text="link.label"></a>
