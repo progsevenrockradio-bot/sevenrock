@@ -1,0 +1,123 @@
+@props(['items' => null, 'theme' => null])
+
+@php
+    $ui = $themeAppearance['ui_texts'];
+    $items ??= [
+        ['label' => 'Home', 'route' => 'home'],
+        ['label' => 'Music', 'route' => 'discography', 'children' => [
+            ['label' => 'Discography', 'route' => 'discography'],
+            ['label' => 'Single Album', 'url' => route('albums.single', ['slug' => 'nightride'])],
+        ]],
+        ['label' => 'Events', 'route' => 'events', 'children' => [
+            ['label' => 'Upcoming Events', 'route' => 'events'],
+            ['label' => 'Past Events', 'route' => 'events'],
+            ['label' => 'All Events', 'route' => 'events'],
+        ]],
+        ['label' => 'Videos', 'route' => 'videos', 'children' => [
+            ['label' => 'Videos Page', 'route' => 'videos'],
+            ['label' => 'Single Video', 'url' => route('videos.single', ['slug' => 'gold-on-the-ceiling'])],
+        ]],
+        ['label' => 'Gallery', 'route' => 'gallery', 'children' => [
+            ['label' => 'Photo Gallery', 'route' => 'gallery'],
+            ['label' => 'Single Gallery', 'route' => 'gallery.green-day'],
+        ]],
+        ['label' => 'Blog', 'route' => 'blog', 'children' => [
+            ['label' => 'Blog Masonry', 'route' => 'blog'],
+            ['label' => 'Blog Standard', 'route' => 'blog.standard'],
+            ['label' => 'Single Post', 'url' => route('posts.single', ['year' => '2016', 'month' => '09', 'day' => '06', 'slug' => 'inspiration'])],
+        ]],
+        ['label' => 'Shop', 'route' => 'shop'],
+        ['label' => 'Contact', 'route' => 'contact'],
+    ];
+    $themeData = is_array($theme ?? null) ? $theme : $themeAppearance;
+    $brandMark = $themeData['visual']['brand_mark'] ?? $themeData['brand_mark'] ?? 'Lucille';
+    $brandDisplayMode = $themeData['visual']['brand_display_mode'] ?? $themeData['brand_display_mode'] ?? 'mark';
+    $logoUrl = $themeData['media']['logo_url'] ?? $themeData['logo_url'] ?? $themeSettings->logo_url;
+@endphp
+
+<header
+    x-data="rocksNav"
+    x-init="init"
+    :class="sticky ? 'rocks-header-sticky' : 'rocks-header-top'"
+    class="inset-x-0 top-0 z-50 transition-all duration-300"
+>
+    <div class="mx-auto flex h-full max-w-[1180px] items-center justify-between px-5 lg:px-8">
+    <a href="{{ route('home') }}" class="flex h-full items-center" aria-label="Lucille home">
+            @if ($brandDisplayMode === 'logo' && $logoUrl)
+                <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo">
+            @else
+                <span class="lucille-brand-mark">{{ $brandMark }}</span>
+            @endif
+        </a>
+
+        <nav class="hidden h-full items-center lg:flex">
+            <ul class="flex h-full items-center">
+                @foreach ($items as $item)
+                    <li class="group relative flex h-full items-center">
+                        <a
+                            href="{{ $item['url'] ?? route($item['route']) }}"
+                            class="flex h-full items-center px-[18px] font-display text-xs font-light uppercase tracking-[.08em] text-white transition-colors duration-300 hover:text-lucille-accent"
+                        >
+                            {{ $item['label'] }}
+                        </a>
+
+                        @if (! empty($item['children']))
+                            <ul class="invisible absolute left-0 top-full min-w-48 bg-[rgba(8,26,36,.96)] py-3 opacity-0 shadow-[0_10px_30px_rgba(0,0,0,.22)] transition-all duration-300 group-hover:visible group-hover:opacity-100">
+                                @foreach ($item['children'] as $child)
+                                    <li>
+                                        <a href="{{ $child['url'] ?? route($child['route']) }}" class="block whitespace-nowrap px-5 py-2 text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent">
+                                            {{ $child['label'] }}
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+        </nav>
+
+        <div class="flex items-center gap-5 text-white">
+            <button type="button" class="hidden text-lg transition-colors duration-300 hover:text-lucille-accent lg:block" @click="searchOpen = true" aria-label="Open search">
+                &#9906;
+            </button>
+
+            <button type="button" class="relative h-10 w-10 lg:hidden" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
+                <span class="absolute left-1/2 top-[12px] h-px w-9 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'top-1/2 rotate-45' : ''"></span>
+                <span class="absolute left-1/2 top-1/2 h-px w-7 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'opacity-0' : ''"></span>
+                <span class="absolute left-1/2 top-[28px] h-px w-9 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'top-1/2 -rotate-45' : ''"></span>
+            </button>
+        </div>
+    </div>
+
+    <div x-cloak x-show="open" x-transition.opacity class="border-t border-[#003954] bg-[rgba(8,26,36,.9)] px-5 py-4 lg:hidden">
+        <nav>
+            <ul class="mx-auto max-w-[1180px] divide-y divide-[#003954]">
+                @foreach ($items as $item)
+                    <li x-data="{ childOpen: false }" class="py-1">
+                        <div class="flex items-center justify-between">
+                            <a href="{{ $item['url'] ?? route($item['route']) }}" class="block py-3 font-display text-sm uppercase tracking-[.08em] text-white">{{ $item['label'] }}</a>
+                            @if (! empty($item['children']))
+                                <button type="button" class="px-4 py-3 text-white" @click.prevent="childOpen = ! childOpen" aria-label="Toggle submenu">+</button>
+                            @endif
+                        </div>
+                        @if (! empty($item['children']))
+                            <ul x-show="childOpen" x-transition class="pb-2 pl-5">
+                                @foreach ($item['children'] as $child)
+                                    <li><a href="{{ $child['url'] ?? route($child['route']) }}" class="block py-2 text-[13px] text-[#b7b7b7]">{{ $child['label'] }}</a></li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+        </nav>
+    </div>
+
+    <div x-cloak x-show="searchOpen" x-transition.opacity class="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-6">
+        <button type="button" class="absolute right-8 top-7 font-display text-3xl text-white" @click="searchOpen = false" aria-label="Close search">&times;</button>
+        <form class="w-full max-w-3xl">
+            <input type="search" placeholder="{{ $ui['search_placeholder'] }}" class="w-full border-0 border-b border-white/40 bg-transparent px-0 py-5 font-display text-4xl uppercase tracking-[.04em] text-white placeholder:text-white/45 focus:border-lucille-accent focus:outline-none">
+        </form>
+    </div>
+</header>
