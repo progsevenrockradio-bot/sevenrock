@@ -63,7 +63,7 @@ class ThemeSetting extends Model
     {
         return [
             'site_name' => 'Seven Rock Radio',
-            'brand_mark' => 'Lucille',
+            'brand_mark' => 'Seven Rock Radio',
             'brand_mark_font' => 'Rock Salt',
             'brand_display_mode' => 'mark',
             'logo_path' => 'assets/lucille/logo.png',
@@ -490,7 +490,7 @@ class ThemeSetting extends Model
     {
         return [
             'site_name' => $this->site_name,
-            'brand_mark' => $this->brand_mark ?: 'Lucille',
+            'brand_mark' => $this->brand_mark ?: ($this->site_name ?: 'Seven Rock Radio'),
             'brand_mark_font' => $this->brand_mark_font ?: 'Rock Salt',
             'brand_display_mode' => $this->brand_display_mode ?: 'mark',
             'body_font' => $this->body_font,

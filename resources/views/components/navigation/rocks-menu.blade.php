@@ -30,7 +30,7 @@
         ['label' => 'Contact', 'route' => 'contact'],
     ];
     $themeData = is_array($theme ?? null) ? $theme : $themeAppearance;
-    $brandMark = $themeData['visual']['brand_mark'] ?? $themeData['brand_mark'] ?? 'Lucille';
+    $brandMark = $themeData['visual']['brand_mark'] ?? $themeData['brand_mark'] ?? $themeData['site_name'] ?? 'Seven Rock Radio';
     $brandDisplayMode = $themeData['visual']['brand_display_mode'] ?? $themeData['brand_display_mode'] ?? 'mark';
     $logoUrl = $themeData['media']['logo_url'] ?? $themeData['logo_url'] ?? $themeSettings->logo_url;
 @endphp
@@ -42,7 +42,7 @@
     class="inset-x-0 top-0 z-50 transition-all duration-300"
 >
     <div class="mx-auto flex h-full max-w-[1180px] items-center justify-between px-5 lg:px-8">
-    <a href="{{ route('home') }}" class="flex h-full items-center" aria-label="Lucille home">
+    <a href="{{ route('home') }}" class="flex h-full items-center" aria-label="{{ $brandMark }} home">
             @if ($brandDisplayMode === 'logo' && $logoUrl)
                 <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo">
             @else

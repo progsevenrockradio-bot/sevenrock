@@ -31,21 +31,31 @@ class BandInfoController extends Controller
         $title = trim((string) ($validated['title'] ?? ''));
 
         $payload = $this->resolver->resolve($artist);
-
-        $song = Song::query()
-            ->when($title !== '', fn ($query) => $query->whereRaw('LOWER(title) = ?', [mb_strtolower($title)]))
-            ->whereRaw('LOWER(artist) = ?', [mb_strtolower($artist)])
-            ->first();
-
         $lyrics = '';
-        if ($song?->lyrics) {
-            $lyrics = trim((string) $song->lyrics);
-        } elseif ($artist !== '' && $title !== '') {
-            $lyrics = trim($this->lyricsResolver->resolve($artist, $title));
+
+        try {
+            $song = Song::query()
+                ->when($title !== '', fn ($query) => $query->whereRaw('LOWER(title) = ?', [mb_strtolower($title)]))
+                ->whereRaw('LOWER(artist) = ?', [mb_strtolower($artist)])
+                ->first();
+
+            if ($song?->band_info && trim((string) $song->band_info) !== '') {
+                $payload['summary'] = trim((string) $song->band_info);
+            }
+
+            if ($song?->lyrics) {
+                $lyrics = trim((string) $song->lyrics);
+            }
+        } catch (\Throwable) {
+            $song = null;
         }
 
-        if ($song?->band_info && trim((string) $song->band_info) !== '') {
-            $payload['summary'] = trim((string) $song->band_info);
+        if ($lyrics === '' && $artist !== '' && $title !== '') {
+            try {
+                $lyrics = trim($this->lyricsResolver->resolve($artist, $title));
+            } catch (\Throwable) {
+                $lyrics = '';
+            }
         }
 
         $payload['lyrics'] = $lyrics;
