@@ -150,14 +150,14 @@
             class="radio-player-dock"
             aria-label="Reproductor"
             :style="dockMinimized
-                ? 'position:fixed; left:50%; bottom:12px; z-index:90; display:grid; grid-template-columns:minmax(106px,.16fr) minmax(150px,.22fr) minmax(206px,.29fr) auto; align-items:center; gap:8px; width:min(1060px, calc(100vw - 24px)); min-height:58px; padding:6px 10px; border:1px solid rgba(184,175,162,.28); background:linear-gradient(180deg, rgba(18,17,16,.98), rgba(12,11,10,.98)); box-shadow:0 10px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.03); transform:translateX(-50%); pointer-events:auto; overflow:hidden;'
-                : 'position:fixed; left:50%; bottom:12px; z-index:90; display:grid; grid-template-columns:minmax(112px,.16fr) minmax(154px,.22fr) minmax(214px,.30fr) auto; align-items:center; gap:10px; width:min(1080px, calc(100vw - 24px)); min-height:66px; padding:8px 10px; border:1px solid rgba(184,175,162,.28); background:linear-gradient(180deg, rgba(18,17,16,.98), rgba(12,11,10,.98)); box-shadow:0 12px 32px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.03); transform:translateX(-50%); pointer-events:auto; overflow:hidden;'"
+                ? 'position:fixed; left:50%; bottom:12px; z-index:90; display:grid; grid-template-columns:minmax(86px,.11fr) minmax(196px,.33fr) minmax(232px,.26fr) minmax(282px,.30fr); align-items:center; gap:6px; width:min(1060px, calc(100vw - 24px)); min-height:58px; padding:6px 10px 6px 8px; border:1px solid rgba(184,175,162,.28); background:linear-gradient(180deg, rgba(18,17,16,.98), rgba(12,11,10,.98)); box-shadow:0 10px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.03); transform:translateX(-50%); pointer-events:auto; overflow:hidden;'
+                : 'position:fixed; left:50%; bottom:12px; z-index:90; display:grid; grid-template-columns:minmax(94px,.11fr) minmax(214px,.32fr) minmax(248px,.25fr) minmax(302px,.32fr); align-items:center; gap:6px; width:min(1080px, calc(100vw - 24px)); min-height:66px; padding:8px 10px 8px 8px; border:1px solid rgba(184,175,162,.28); background:linear-gradient(180deg, rgba(18,17,16,.98), rgba(12,11,10,.98)); box-shadow:0 12px 32px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.03); transform:translateX(-50%); pointer-events:auto; overflow:hidden;'"
         >
-                <div class="rbcloud_nowplaying" style="display:flex; flex-direction:column; gap:6px; min-width:0; align-items:flex-start; padding-left:0;">
+                <div class="rbcloud_nowplaying" style="display:flex; flex-direction:column; gap:4px; min-width:0; align-items:flex-start; padding-left:0; margin-right:0;">
                     <button type="button" data-player-band-trigger @click="openBandWindow()" aria-label="Abrir información de la banda" style="appearance:none; display:inline-flex; border:0; background:transparent; padding:0; cursor:pointer; text-align:left;">
-                        <img id="rbcloud_np_c1266" class="radio-player-cover" data-player-cover-image src="https://c30.radioboss.fm/w/artwork/569.jpg" alt="cover art" :style="dockMinimized ? "width:60px; height:60px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;" : "width:76px; height:76px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;"">
+                        <img id="rbcloud_np_c1266" class="radio-player-cover" data-player-cover-image src="https://c30.radioboss.fm/w/artwork/569.jpg" alt="cover art" x-bind:style="dockMinimized ? 'width:62px; height:62px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;' : 'width:84px; height:84px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;'">
                     </button>
-                    <div style="display:flex; align-items:center; gap:8px; margin-top:-1px; padding-left:1px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:-1px; padding-left:0;">
                         <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" :style="isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; min-height:28px; padding:0 10px; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; box-shadow:0 0 0 1px rgba(195,39,32,.14) inset;' : 'display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; min-height:28px; padding:0 10px; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer;'">
                             <span data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
                             <span data-player-favorite-label>Like</span>
@@ -166,12 +166,12 @@
                 </div>
                 <script src="https://c30.radioboss.fm/w/nowplaying2.js?u=569&amp;wid=1266&amp;tf=1" defer></script>
 
-                <div style="display:flex; flex-direction:column; gap:4px; min-width:0; justify-content:center; padding-left:0; margin-left:0; transform:translateY(-1px);">
+                <div style="display:flex; flex-direction:column; gap:2px; min-width:0; justify-content:center; padding-left:0; margin-left:-8px; transform:translateY(-1px);">
                     <div class="radio-player-meta" style="min-width:0; gap:2px; overflow:hidden; align-items:flex-start;">
-                        <strong id="rbcloud_np_t1266" data-player-title-text style="font-size:14px; color:#ddd7cb; line-height:1.2;" x-text="track.title || ''"></strong>
-                        <span id="rbcloud_np_a1266" data-player-artist-text style="font-size:12px; color:#b9b1a5; line-height:1.2;" x-text="track.artist || ''"></span>
+                        <strong id="rbcloud_np_t1266" data-player-title-text style="font-size:14px; color:#ddd7cb; line-height:1.08; max-width:100%;" x-text="track.title || ''"></strong>
+                        <span id="rbcloud_np_a1266" data-player-artist-text style="font-size:12px; color:#b9b1a5; line-height:1.08; max-width:100%;" x-text="track.artist || ''"></span>
                     </div>
-                    <div class="rbcloud_tracktimer" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:18px; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.18em; text-transform:uppercase; white-space:nowrap; margin-top:1px;">
+                    <div class="rbcloud_tracktimer" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:18px; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.18em; text-transform:uppercase; white-space:nowrap; margin-top:0;">
                         <span id='rbcloud_tracktimer_e13829'></span>
                         <span id='rbcloud_tracktimer_sep13829' hidden> / </span>
                         <span id='rbcloud_tracktimer_r13829'></span>
@@ -185,7 +185,7 @@
                         <span x-text="playing ? 'Pause' : 'Play'">Play</span>
                     </button>
                     <div style="display:flex; align-items:center; justify-content:center; min-width:0;">
-                        <div style="display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:10px; min-width:min(100%,220px); border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.16); padding:7px 10px; box-shadow:inset 0 1px 0 rgba(255,255,255,.03);">
+                        <div style="display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:12px; min-width:min(100%,300px); border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.16); padding:8px 12px; box-shadow:inset 0 1px 0 rgba(255,255,255,.03);">
                             <span style="color:#b7ad9f; font-family:var(--font-display); font-size:10px; letter-spacing:.18em; text-transform:uppercase;">Vol</span>
                             <input data-player-volume-input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" style="width:100%; accent-color:#b7ad9f;">
                             <span data-player-volume-output x-text="Math.round(volume * 100) + '%'" style="color:#b7ad9f; font-family:var(--font-display); font-size:10px; letter-spacing:.12em; text-transform:uppercase;">80%</span>

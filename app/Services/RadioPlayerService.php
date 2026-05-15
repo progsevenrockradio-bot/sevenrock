@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Schema;
 
 class RadioPlayerService
 {
+    private const STATUS_CACHE_KEY = 'radio-player-status:v4';
+
     public function __construct(
         private readonly RadioPlayerStateStore $store,
         private readonly BandInfoResolver $bandInfoResolver,
@@ -27,14 +29,14 @@ class RadioPlayerService
 
     public function resolve(): array
     {
-        return Cache::remember('radio-player-status:v4', now()->addSeconds(5), function (): array {
+        return Cache::remember(self::STATUS_CACHE_KEY, now()->addSeconds(5), function (): array {
             return $this->build();
         });
     }
 
     public function forgetCache(): void
     {
-        Cache::forget('radio-player-status');
+        Cache::forget(self::STATUS_CACHE_KEY);
     }
 
     public function storeTrack(array $payload): void

@@ -7,6 +7,7 @@ use App\Models\PlayHistory;
 use App\Models\Program;
 use App\Models\Song;
 use App\Services\RadioPlayerService;
+use App\Services\PlayerWarmupService;
 use App\Support\RadioPlayerStateStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ class RadioWebhookController extends Controller
     public function __construct(
         private readonly RadioPlayerService $playerService,
         private readonly RadioPlayerStateStore $stateStore,
+        private readonly PlayerWarmupService $warmupService,
     ) {
     }
 
@@ -79,6 +81,8 @@ class RadioWebhookController extends Controller
         ];
 
         $this->playerService->storeTrack($payload);
+
+        $this->warmupService->warmComplete($payload['artist'], $payload['title']);
 
         if ($this->hasTable('play_history')) {
             PlayHistory::query()->create([
