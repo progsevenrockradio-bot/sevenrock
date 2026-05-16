@@ -4,22 +4,18 @@
     $ui = $themeAppearance['ui_texts'];
     $items ??= [
         ['label' => 'Home', 'route' => 'home'],
-        ['label' => 'Music', 'route' => 'discography', 'children' => [
+        ['label' => 'Multimedia', 'route' => 'discography', 'children' => [
             ['label' => 'Discography', 'route' => 'discography'],
+            ['label' => 'Videos', 'route' => 'videos'],
+            ['label' => 'Gallery', 'route' => 'gallery'],
             ['label' => 'Single Album', 'url' => route('albums.single', ['slug' => 'nightride'])],
+            ['label' => 'Single Video', 'url' => route('videos.single', ['slug' => 'gold-on-the-ceiling'])],
+            ['label' => 'Single Gallery', 'route' => 'gallery.green-day'],
         ]],
         ['label' => 'Events', 'route' => 'events', 'children' => [
             ['label' => 'Upcoming Events', 'route' => 'events'],
             ['label' => 'Past Events', 'route' => 'events'],
             ['label' => 'All Events', 'route' => 'events'],
-        ]],
-        ['label' => 'Videos', 'route' => 'videos', 'children' => [
-            ['label' => 'Videos Page', 'route' => 'videos'],
-            ['label' => 'Single Video', 'url' => route('videos.single', ['slug' => 'gold-on-the-ceiling'])],
-        ]],
-        ['label' => 'Gallery', 'route' => 'gallery', 'children' => [
-            ['label' => 'Photo Gallery', 'route' => 'gallery'],
-            ['label' => 'Single Gallery', 'route' => 'gallery.green-day'],
         ]],
         ['label' => 'Blog', 'route' => 'blog', 'children' => [
             ['label' => 'Blog Masonry', 'route' => 'blog'],

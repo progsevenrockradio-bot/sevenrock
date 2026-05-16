@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Song;
 use App\Support\BandInfoResolver;
-use App\Support\LyricsResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,7 +14,6 @@ class BandInfoController extends Controller
 {
     public function __construct(
         private readonly BandInfoResolver $resolver,
-        private readonly LyricsResolver $lyricsResolver,
     )
     {
     }
@@ -29,7 +27,6 @@ class BandInfoController extends Controller
 
         $artist = trim((string) $validated['artist']);
         $title = trim((string) ($validated['title'] ?? ''));
-
         $payload = $this->resolver->resolve($artist);
         $lyrics = '';
 
@@ -37,10 +34,15 @@ class BandInfoController extends Controller
             $song = Song::query()
                 ->when($title !== '', fn ($query) => $query->whereRaw('LOWER(title) = ?', [mb_strtolower($title)]))
                 ->whereRaw('LOWER(artist) = ?', [mb_strtolower($artist)])
+                ->with('bandProfile')
                 ->first();
 
             if ($song?->band_info && trim((string) $song->band_info) !== '') {
                 $payload['summary'] = trim((string) $song->band_info);
+            } elseif ($song?->bandProfile) {
+                $payload['summary'] = trim((string) ($song->bandProfile->editorial_summary ?: $song->bandProfile->biography ?: $payload['summary']));
+                $payload['thumbnail'] = $song->bandProfile->normalizedImageUrl() ?: $payload['thumbnail'];
+                $payload['social_links'] = $song->bandProfile->official_links ?: $payload['social_links'];
             }
 
             if ($song?->lyrics) {
@@ -48,14 +50,6 @@ class BandInfoController extends Controller
             }
         } catch (\Throwable) {
             $song = null;
-        }
-
-        if ($lyrics === '' && $artist !== '' && $title !== '') {
-            try {
-                $lyrics = trim($this->lyricsResolver->resolve($artist, $title));
-            } catch (\Throwable) {
-                $lyrics = '';
-            }
         }
 
         $payload['lyrics'] = $lyrics;

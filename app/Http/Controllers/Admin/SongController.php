@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BandProfile;
 use App\Models\Song;
 use App\Models\Program;
 use Carbon\Carbon;
@@ -20,7 +21,7 @@ class SongController extends Controller
     public function index(): View
     {
         return view('admin.songs.index', [
-            'songs' => Song::query()->with('program')->orderByDesc('published_at')->orderBy('artist')->get(),
+            'songs' => Song::query()->with(['program', 'bandProfile'])->orderByDesc('published_at')->orderBy('artist')->get(),
         ]);
     }
 
@@ -33,6 +34,7 @@ class SongController extends Controller
                 'social_links' => [],
                 'is_live' => false,
             ]),
+            'bandProfiles' => BandProfile::query()->orderBy('name')->get(),
             'programs' => Program::query()->active()->orderBy('sort_order')->get(),
             'bandMembersText' => '',
             'socialLinksText' => '',
@@ -49,7 +51,8 @@ class SongController extends Controller
     public function edit(Song $song): View
     {
         return view('admin.songs.edit', [
-            'song' => $song->load('program'),
+            'song' => $song->load(['program', 'bandProfile']),
+            'bandProfiles' => BandProfile::query()->orderBy('name')->get(),
             'programs' => Program::query()->active()->orderBy('sort_order')->get(),
             'bandMembersText' => implode("\n", array_map('strval', $song->band_members ?? [])),
             'socialLinksText' => $this->linksToText($song->social_links ?? []),
@@ -79,6 +82,7 @@ class SongController extends Controller
             'slug' => ['nullable', 'string', 'max:255', Rule::unique('songs', 'slug')->ignore($ignoreId)],
             'title' => ['required', 'string', 'max:255'],
             'artist' => ['required', 'string', 'max:255'],
+            'band_profile_id' => ['nullable', 'integer', 'exists:band_profiles,id'],
             'album' => ['nullable', 'string', 'max:255'],
             'duration_seconds' => ['nullable', 'integer', 'min:0'],
             'audio_url' => ['nullable', 'string', 'max:2048'],

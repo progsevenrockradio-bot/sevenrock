@@ -6,6 +6,6 @@ use App\Http\Controllers\Api\PlayerStatusController;
 use App\Http\Controllers\Api\RadioWebhookController;
 
 Route::get('/player/status', [PlayerStatusController::class, 'show'])->middleware('throttle:60,1')->name('api.player.status');
-Route::get('/player/band-info', [BandInfoController::class, 'show'])->middleware('throttle:30,1')->name('api.player.band-info');
+Route::get('/player/band-info', [BandInfoController::class, 'show'])->name('api.player.band-info');
 Route::post('/radio/metadata', [RadioWebhookController::class, 'handle'])->middleware('throttle:30,1')->name('api.radio.metadata');
 Route::post('/player/metadata_receiver.php', [RadioWebhookController::class, 'handle'])->middleware('throttle:30,1')->name('api.radio.metadata.receiver');

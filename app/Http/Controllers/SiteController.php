@@ -34,7 +34,7 @@ class SiteController extends Controller
     public function events(): View
     {
         return view('pages.events', [
-            'events' => Event::query()->orderBy('starts_at')->get(),
+            'events' => $this->safeValue(fn () => Event::query()->orderBy('starts_at')->get(), collect()),
         ]);
     }
 
@@ -47,7 +47,7 @@ class SiteController extends Controller
 
     public function discography(): View
     {
-        $albums = Album::query()->orderByDesc('released_at')->orderBy('title')->get();
+        $albums = $this->safeValue(fn () => Album::query()->orderByDesc('released_at')->orderBy('title')->get(), collect());
 
         if ($albums->count() < 2) {
             $albums = $albums->concat($this->discographyFallbackAlbums()->reject(function (Album $fallbackAlbum) use ($albums) {
@@ -62,7 +62,7 @@ class SiteController extends Controller
 
     public function albumSingle(string $slug): View
     {
-        $album = Album::query()->where('slug', $slug)->first();
+        $album = $this->safeValue(fn () => Album::query()->where('slug', $slug)->first(), null);
 
         if ($album) {
             return view('pages.album-single', [
@@ -93,13 +93,13 @@ class SiteController extends Controller
     public function videos(): View
     {
         return view('pages.videos', [
-            'videos' => Video::query()->latest()->get(),
+            'videos' => $this->safeValue(fn () => Video::query()->latest()->get(), collect()),
         ]);
     }
 
     public function videoSingle(string $slug): View
     {
-        $video = Video::query()->where('slug', $slug)->first();
+        $video = $this->safeValue(fn () => Video::query()->where('slug', $slug)->first(), null);
 
         if ($video) {
             return view('pages.video-single', [
@@ -125,7 +125,7 @@ class SiteController extends Controller
     public function gallery(): View
     {
         return view('pages.gallery', [
-            'images' => GalleryImage::query()->ordered()->get(),
+            'images' => $this->safeValue(fn () => GalleryImage::query()->ordered()->get(), collect()),
         ]);
     }
 
@@ -145,13 +145,13 @@ class SiteController extends Controller
     public function blog(): View
     {
         return view('pages.blog', [
-            'posts' => Post::query()->published()->orderByDesc('published_at')->get(),
+            'posts' => $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->get(), collect()),
         ]);
     }
 
     public function blogStandard(): View
     {
-        $posts = Post::query()->published()->orderByDesc('published_at')->get();
+        $posts = $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->get(), collect());
         $categories = $posts->flatMap(fn (Post $post) => $post->categories ?? [])->filter()->unique()->values()->all();
         $tags = $posts->flatMap(fn (Post $post) => $post->tags ?? [])->filter()->unique()->values()->all();
 
@@ -165,18 +165,20 @@ class SiteController extends Controller
 
     public function singlePost(string $year, string $month, string $day, string $slug): View
     {
-        $post = Post::query()
-            ->published()
-            ->where('slug', $slug)
-            ->whereDate('published_at', sprintf('%04d-%02d-%02d', (int) $year, (int) $month, (int) $day))
-            ->first();
+        $post = $this->safeValue(function () use ($slug, $year, $month, $day) {
+            return Post::query()
+                ->published()
+                ->where('slug', $slug)
+                ->whereDate('published_at', sprintf('%04d-%02d-%02d', (int) $year, (int) $month, (int) $day))
+                ->first();
+        }, null);
 
         if (! $post) {
-            $post = Post::query()->published()->orderByDesc('published_at')->first();
+            $post = $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->first(), null);
         }
 
         if ($post) {
-            $allPosts = Post::query()->published()->latest('published_at')->get();
+            $allPosts = $this->safeValue(fn () => Post::query()->published()->latest('published_at')->get(), collect());
 
             return view('pages.single-post', [
                 'post' => [
@@ -207,17 +209,17 @@ class SiteController extends Controller
     public function shop(): View
     {
         return view('pages.shop', [
-            'products' => $this->products(),
+            'products' => $this->safeValue(fn () => $this->products(), $this->fallbackProducts()),
         ]);
     }
 
     public function productSingle(string $slug): View
     {
-        $product = $this->productBySlug($slug);
+        $product = $this->safeValue(fn () => $this->productBySlug($slug), $this->fallbackProducts()[0]);
 
         return view('pages.product-single', [
             'product' => $product,
-            'relatedProducts' => $this->relatedProducts($product['slug']),
+            'relatedProducts' => $this->safeValue(fn () => $this->relatedProducts($product['slug']), $this->fallbackProducts()),
         ]);
     }
 
@@ -514,7 +516,7 @@ class SiteController extends Controller
 
     private function products(): array
     {
-        $products = Product::query()->published()->ordered()->get();
+        $products = $this->safeValue(fn () => Product::query()->published()->ordered()->get(), collect());
 
         if ($products->isNotEmpty()) {
             return $products->map(fn (Product $product): array => $product->toCatalogArray())->all();
@@ -538,7 +540,7 @@ class SiteController extends Controller
 
     private function productBySlug(string $slug): array
     {
-        $product = Product::query()->published()->where('slug', $slug)->first();
+        $product = $this->safeValue(fn () => Product::query()->published()->where('slug', $slug)->first(), null);
 
         if ($product) {
             return $product->toCatalogArray();
@@ -555,24 +557,28 @@ class SiteController extends Controller
 
     private function relatedProducts(string $currentSlug): array
     {
-        $currentProduct = Product::query()->published()->where('slug', $currentSlug)->first();
+        $currentProduct = $this->safeValue(fn () => Product::query()->published()->where('slug', $currentSlug)->first(), null);
 
         if ($currentProduct) {
-            $related = Product::query()
-                ->published()
-                ->where('id', '!=', $currentProduct->id)
-                ->when($currentProduct->category, fn ($query) => $query->where('category', $currentProduct->category))
-                ->ordered()
-                ->limit(4)
-                ->get();
-
-            if ($related->isEmpty()) {
-                $related = Product::query()
+            $related = $this->safeValue(function () use ($currentProduct) {
+                return Product::query()
                     ->published()
                     ->where('id', '!=', $currentProduct->id)
+                    ->when($currentProduct->category, fn ($query) => $query->where('category', $currentProduct->category))
                     ->ordered()
                     ->limit(4)
                     ->get();
+            }, collect());
+
+            if ($related->isEmpty()) {
+                $related = $this->safeValue(function () use ($currentProduct) {
+                    return Product::query()
+                        ->published()
+                        ->where('id', '!=', $currentProduct->id)
+                        ->ordered()
+                        ->limit(4)
+                        ->get();
+                }, collect());
             }
 
             if ($related->isNotEmpty()) {

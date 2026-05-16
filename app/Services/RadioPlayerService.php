@@ -7,7 +7,6 @@ use App\Models\PlayHistory;
 use App\Models\Program;
 use App\Models\Song;
 use App\Support\BandInfoResolver;
-use App\Support\LyricsResolver;
 use App\Support\PublicMediaUrl;
 use App\Support\RadioPlayerStateStore;
 use Illuminate\Support\Arr;
@@ -23,7 +22,6 @@ class RadioPlayerService
     public function __construct(
         private readonly RadioPlayerStateStore $store,
         private readonly BandInfoResolver $bandInfoResolver,
-        private readonly LyricsResolver $lyricsResolver,
     ) {
     }
 
@@ -77,8 +75,14 @@ class RadioPlayerService
         $defaults = config('player.defaults');
         $state = array_replace($this->currentState(), $this->remoteNowPlayingState());
         $song = $this->resolveSong($state);
+        $bandProfile = $song?->bandProfile
+            ?? $this->resolveBandProfile($state, $song);
+        $trackTitle = trim((string) ($song?->title ?: Arr::get($state, 'title', $defaults['title'])));
+        $trackArtist = trim((string) ($song?->artist ?: Arr::get($state, 'artist', $defaults['artist'])));
+        $bandProfilePayload = $bandProfile
+            ? $this->bandInfoResolver->resolve((string) $bandProfile->name)
+            : ($trackArtist !== '' ? $this->bandInfoResolver->resolve($trackArtist) : []);
         $lyrics = $song?->lyrics ?: Arr::get($state, 'lyrics');
-        $bandProfile = [];
         $programs = $this->hasTable('programs')
             ? Program::query()->active()->orderBy('sort_order')->get()
             : collect();
@@ -111,20 +115,26 @@ class RadioPlayerService
 
         $track = [
             'id' => $song?->id,
-            'title' => (string) ($song?->title ?: Arr::get($state, 'title', $defaults['title'])),
-            'artist' => (string) ($song?->artist ?: Arr::get($state, 'artist', $defaults['artist'])),
+            'title' => $trackTitle !== '' ? $trackTitle : (string) $defaults['title'],
+            'artist' => $trackArtist !== '' ? $trackArtist : (string) $defaults['artist'],
             'album' => $song?->album ?: Arr::get($state, 'album'),
             'cover' => $cover,
             'lyrics' => is_string($lyrics) ? $lyrics : '',
-            'band_info' => $song?->band_info ?: Arr::get($state, 'band_info') ?: Arr::get($state, 'comment') ?: '',
-            'band_thumbnail' => Arr::get($state, 'band_thumbnail') ?: ($bandProfile['thumbnail'] ?? ''),
-            'band_founded_year' => Arr::get($bandProfile, 'formed_year'),
-            'band_founded_label' => Arr::get($bandProfile, 'formed_label'),
+            'band_info' => $song?->band_info
+                ?: ($bandProfile?->editorial_summary ?: $bandProfile?->biography)
+                ?: Arr::get($state, 'band_info')
+                ?: Arr::get($state, 'comment')
+                ?: ($bandProfilePayload['summary'] ?? ''),
+            'band_thumbnail' => Arr::get($state, 'band_thumbnail')
+                ?: ($bandProfile?->normalizedImageUrl() ?? '')
+                ?: ($bandProfilePayload['thumbnail'] ?? ''),
+            'band_founded_year' => Arr::get($bandProfilePayload, 'formed_year'),
+            'band_founded_label' => Arr::get($bandProfilePayload, 'formed_label'),
             'comment' => Arr::get($state, 'comment'),
             'band_members' => $song?->band_members ?? Arr::get($state, 'band_members', []),
             'social_links' => ! empty($song?->social_links)
                 ? $song->social_links
-                : (Arr::get($state, 'social_links', []) ?: ($bandProfile['social_links'] ?? [])),
+                : (Arr::get($state, 'social_links', []) ?: ($bandProfilePayload['social_links'] ?? [])),
             'audio_url' => $song?->audio_url ?: Arr::get($state, 'audio_url'),
             'program_id' => $currentProgram?->id ?? Arr::get($state, 'program_id'),
             'program_name' => $currentProgram?->name,
@@ -170,7 +180,7 @@ class RadioPlayerService
         }
 
         if ($songId = Arr::get($state, 'song_id')) {
-            $song = Song::query()->find((int) $songId);
+            $song = Song::query()->with('bandProfile')->find((int) $songId);
             if ($song) {
                 return $song;
             }
@@ -184,9 +194,44 @@ class RadioPlayerService
         }
 
         return Song::query()
+            ->with('bandProfile')
             ->when($title !== '', fn ($query) => $query->whereRaw('LOWER(title) = ?', [mb_strtolower($title)]))
             ->when($artist !== '', fn ($query) => $query->whereRaw('LOWER(artist) = ?', [mb_strtolower($artist)]))
             ->first();
+    }
+
+    private function resolveBandProfile(array $state, ?Song $song)
+    {
+        if (! $this->hasTable('band_profiles')) {
+            return null;
+        }
+
+        if ($song?->band_profile_id) {
+            return $song->bandProfile;
+        }
+
+        $artist = trim((string) ($song?->artist ?: Arr::get($state, 'artist', '')));
+        if ($artist === '') {
+            return null;
+        }
+
+        return \App\Models\BandProfile::query()
+            ->get()
+            ->first(function (\App\Models\BandProfile $candidate) use ($artist): bool {
+                $normalizedArtist = preg_replace('/[^a-z0-9]+/i', '', mb_strtolower($artist)) ?: '';
+
+                if (preg_replace('/[^a-z0-9]+/i', '', mb_strtolower($candidate->name)) === $normalizedArtist) {
+                    return true;
+                }
+
+                foreach ((array) $candidate->related_artists as $relatedArtist) {
+                    if (is_string($relatedArtist) && preg_replace('/[^a-z0-9]+/i', '', mb_strtolower($relatedArtist)) === $normalizedArtist) {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
     }
 
     private function resolveCurrentProgram(array $state, ?Song $song, $programs): ?Program

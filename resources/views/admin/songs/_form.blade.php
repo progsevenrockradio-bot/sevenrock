@@ -18,6 +18,17 @@
         <input name="artist" value="{{ old('artist', $song->artist) }}" class="lucille-product-field w-full">
     </div>
     <div>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Band Profile</label>
+        <select name="band_profile_id" class="lucille-product-field w-full">
+            <option value="">-- use artist only --</option>
+            @foreach ($bandProfiles as $bandProfile)
+                <option value="{{ $bandProfile->id }}" @selected((string) old('band_profile_id', $song->band_profile_id) === (string) $bandProfile->id)>
+                    {{ $bandProfile->name }}
+                </option>
+            @endforeach
+        </select>
+    </div>
+    <div>
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Album</label>
         <input name="album" value="{{ old('album', $song->album) }}" class="lucille-product-field w-full">
     </div>

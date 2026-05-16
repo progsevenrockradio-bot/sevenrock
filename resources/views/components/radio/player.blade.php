@@ -3,7 +3,9 @@
 @php
     $player = config('player');
     $theme = $themeAppearance;
-    $fallbackCover = $theme['media']['home_album_cover_url'] ?? asset('assets/lucille/album3.jpg');
+    $fallbackCover = ! empty($theme['media']['home_album_cover_url'] ?? '')
+        ? $theme['media']['home_album_cover_url']
+        : asset('assets/lucille/album3.jpg');
 @endphp
 
 <div
@@ -33,7 +35,7 @@
     })"
     x-init="init()"
 >
-    <audio x-ref="audio" data-radio-audio preload="none" crossorigin="anonymous"></audio>
+    <audio x-ref="audio" data-radio-audio src="{{ $player['streams']['direct'] }}" preload="none" playsinline></audio>
 
     @if ($mode === 'popup')
         <div class="radio-player-popup-shell" style="display:flex; flex-direction:column; min-height:100vh; background:rgba(0,0,0,.18); overflow:hidden;">
@@ -150,23 +152,17 @@
             class="radio-player-dock"
             aria-label="Reproductor"
             :style="dockMinimized
-                ? 'position:fixed; left:50%; bottom:12px; z-index:90; display:grid; grid-template-columns:minmax(86px,.11fr) minmax(196px,.33fr) minmax(232px,.26fr) minmax(282px,.30fr); align-items:center; gap:6px; width:min(1060px, calc(100vw - 24px)); min-height:58px; padding:6px 10px 6px 8px; border:1px solid rgba(184,175,162,.28); background:linear-gradient(180deg, rgba(18,17,16,.98), rgba(12,11,10,.98)); box-shadow:0 10px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.03); transform:translateX(-50%); pointer-events:auto; overflow:hidden;'
-                : 'position:fixed; left:50%; bottom:12px; z-index:90; display:grid; grid-template-columns:minmax(94px,.11fr) minmax(214px,.32fr) minmax(248px,.25fr) minmax(302px,.32fr); align-items:center; gap:6px; width:min(1080px, calc(100vw - 24px)); min-height:66px; padding:8px 10px 8px 8px; border:1px solid rgba(184,175,162,.28); background:linear-gradient(180deg, rgba(18,17,16,.98), rgba(12,11,10,.98)); box-shadow:0 12px 32px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.03); transform:translateX(-50%); pointer-events:auto; overflow:hidden;'"
+                ? 'position:fixed; left:50%; bottom:12px; z-index:90; display:grid; grid-template-columns:minmax(94px,.11fr) minmax(232px,.34fr) minmax(244px,.28fr) minmax(290px,.27fr); align-items:center; gap:10px; width:min(1100px, calc(100vw - 24px)); min-height:58px; padding:6px 12px 6px 10px; border:1px solid rgba(184,175,162,.28); background:linear-gradient(180deg, rgba(18,17,16,.98), rgba(12,11,10,.98)); box-shadow:0 10px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.03); transform:translateX(-50%); pointer-events:auto; overflow:hidden;'
+                : 'position:fixed; left:50%; bottom:12px; z-index:90; display:grid; grid-template-columns:minmax(104px,.11fr) minmax(260px,.34fr) minmax(260px,.29fr) minmax(326px,.26fr); align-items:center; gap:10px; width:min(1160px, calc(100vw - 24px)); min-height:66px; padding:8px 12px 8px 10px; border:1px solid rgba(184,175,162,.28); background:linear-gradient(180deg, rgba(18,17,16,.98), rgba(12,11,10,.98)); box-shadow:0 12px 32px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.03); transform:translateX(-50%); pointer-events:auto; overflow:hidden;'"
         >
                 <div class="rbcloud_nowplaying" style="display:flex; flex-direction:column; gap:4px; min-width:0; align-items:flex-start; padding-left:0; margin-right:0;">
                     <button type="button" data-player-band-trigger @click="openBandWindow()" aria-label="Abrir información de la banda" style="appearance:none; display:inline-flex; border:0; background:transparent; padding:0; cursor:pointer; text-align:left;">
                         <img id="rbcloud_np_c1266" class="radio-player-cover" data-player-cover-image src="https://c30.radioboss.fm/w/artwork/569.jpg" alt="cover art" x-bind:style="dockMinimized ? 'width:62px; height:62px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;' : 'width:84px; height:84px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;'">
                     </button>
-                    <div style="display:flex; align-items:center; gap:8px; margin-top:-1px; padding-left:0;">
-                        <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" :style="isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; min-height:28px; padding:0 10px; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; box-shadow:0 0 0 1px rgba(195,39,32,.14) inset;' : 'display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; min-height:28px; padding:0 10px; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer;'">
-                            <span data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
-                            <span data-player-favorite-label>Like</span>
-                        </button>
-                    </div>
                 </div>
                 <script src="https://c30.radioboss.fm/w/nowplaying2.js?u=569&amp;wid=1266&amp;tf=1" defer></script>
 
-                <div style="display:flex; flex-direction:column; gap:2px; min-width:0; justify-content:center; padding-left:0; margin-left:-8px; transform:translateY(-1px);">
+                <div style="display:flex; flex-direction:column; gap:2px; min-width:0; justify-content:center; padding-left:0; margin-left:-18px; transform:translateY(-1px);">
                     <div class="radio-player-meta" style="min-width:0; gap:2px; overflow:hidden; align-items:flex-start;">
                         <strong id="rbcloud_np_t1266" data-player-title-text style="font-size:14px; color:#ddd7cb; line-height:1.08; max-width:100%;" x-text="track.title || ''"></strong>
                         <span id="rbcloud_np_a1266" data-player-artist-text style="font-size:12px; color:#b9b1a5; line-height:1.08; max-width:100%;" x-text="track.artist || ''"></span>
@@ -179,13 +175,13 @@
                     <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&t=0&wid=13829" defer></script>
                 </div>
 
-                <span class="radio-player-actions" style="display:flex; flex:0 0 auto; align-items:center; justify-content:flex-end; gap:6px; white-space:nowrap; margin-left:auto;">
+                <span class="radio-player-actions" style="display:flex; flex:0 0 auto; align-items:center; justify-content:flex-end; gap:8px; white-space:nowrap; margin-left:auto; padding-right:4px; transform:translateX(8px);">
                     <button type="button" class="radio-player-icon" data-player-action="play" @click.stop="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'" title="Play / Pause" style="display:inline-flex; width:auto; min-width:102px; min-height:40px; padding:0 12px; gap:8px; border-color:rgba(184,175,162,.38); background:rgba(0,0,0,.22); color:#dcd7cc; font-family:var(--font-display); font-size:11px; letter-spacing:.14em; text-transform:uppercase; line-height:1; flex-shrink:0;">
                         <span x-text="playing ? '❚❚' : '▶'">▶</span>
                         <span x-text="playing ? 'Pause' : 'Play'">Play</span>
                     </button>
-                    <div style="display:flex; align-items:center; justify-content:center; min-width:0;">
-                        <div style="display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:12px; min-width:min(100%,300px); border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.16); padding:8px 12px; box-shadow:inset 0 1px 0 rgba(255,255,255,.03);">
+                    <div style="display:flex; align-items:center; justify-content:center; min-width:0; flex:1 1 380px; max-width:520px;">
+                        <div style="display:grid; grid-template-columns:auto minmax(220px,1fr) auto; align-items:center; gap:12px; width:100%; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.16); padding:8px 12px; box-shadow:inset 0 1px 0 rgba(255,255,255,.03);">
                             <span style="color:#b7ad9f; font-family:var(--font-display); font-size:10px; letter-spacing:.18em; text-transform:uppercase;">Vol</span>
                             <input data-player-volume-input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" style="width:100%; accent-color:#b7ad9f;">
                             <span data-player-volume-output x-text="Math.round(volume * 100) + '%'" style="color:#b7ad9f; font-family:var(--font-display); font-size:10px; letter-spacing:.12em; text-transform:uppercase;">80%</span>
@@ -210,6 +206,10 @@
                                 <path d="M19 7a8 8 0 0 1 0 10"></path>
                             </svg>
                         </span>
+                    </button>
+                    <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" :style="(isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; min-height:40px; padding:0 12px; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; box-shadow:0 0 0 1px rgba(195,39,32,.14) inset;' : 'display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; min-height:40px; padding:0 12px; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer;') + '; flex-shrink:0;'">
+                        <span data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
+                        <span data-player-favorite-label>Like</span>
                     </button>
                 </span>
         </div>
@@ -394,258 +394,4 @@
         <span x-text="toast.message"></span>
     </div>
 
-    <script>
-        (() => {
-            const boot = () => {
-                document.querySelectorAll('[data-radio-player-root]').forEach((root) => {
-                    if (root.dataset.nativeBooted === '1') {
-                        return;
-                    }
-
-                    const audio = root.querySelector('[data-radio-audio]');
-                    const playButton = root.querySelector('[data-player-action="play"]');
-                    const muteButton = root.querySelector('[data-player-action="mute"]');
-                    const titleNode = root.querySelector('[data-player-title-text]');
-                    const artistNode = root.querySelector('[data-player-artist-text]');
-                    const coverNode = root.querySelector('[data-player-cover-image]');
-                    const liveNode = root.querySelector('[data-player-live-badge]');
-                    const volumeInput = root.querySelector('[data-player-volume-input]');
-                    const volumeOutput = root.querySelector('[data-player-volume-output]');
-                    const panel = root.querySelector('.radio-player-panel');
-                    const bandWindow = root.querySelector('.radio-player-band-window');
-                    const bandTrigger = root.querySelector('[data-player-band-trigger]');
-                    const bandClose = root.querySelector('[data-player-band-close]');
-                    const bandCoverNode = root.querySelector('[data-player-band-cover-image]');
-                    const bandTitleNode = root.querySelector('[data-player-band-title]');
-                    const bandArtistNode = root.querySelector('[data-player-band-artist]');
-                    const bandInfoNode = root.querySelector('[data-player-band-info]');
-                    const favoriteButtons = Array.from(root.querySelectorAll('[data-player-action="favorite"]'));
-                    const muteMutedIcon = root.querySelector('[data-player-mute-muted-icon]');
-                    const muteUnmutedIcon = root.querySelector('[data-player-mute-unmuted-icon]');
-                    const statusUrl = root.dataset.playerStatusUrl || '';
-                    const fallbackCover = root.dataset.playerFallbackCover || '';
-                    const defaultTitle = root.dataset.playerDefaultTitle || '';
-                    const defaultArtist = root.dataset.playerDefaultArtist || '';
-                    const streamUrl = root.dataset.playerStreamUrl || '';
-                    let currentTrackSignature = '';
-
-                    if (!audio || !playButton) {
-                        return;
-                    }
-
-                    root.dataset.nativeBooted = '1';
-
-                    const playLabel = playButton.querySelector('span:last-child');
-                    const playIcon = playButton.querySelector('span:first-child');
-                    const setPlayingState = (isPlaying) => {
-                        if (playLabel) {
-                            playLabel.textContent = isPlaying ? 'Pause' : 'Play';
-                        }
-                        if (playIcon) {
-                            playIcon.textContent = isPlaying ? '❚❚' : '▶';
-                        }
-                    };
-
-                    const setMutedState = (isMuted) => {
-                        if (muteMutedIcon) {
-                            muteMutedIcon.style.display = isMuted ? 'inline-flex' : 'none';
-                        }
-                        if (muteUnmutedIcon) {
-                            muteUnmutedIcon.style.display = isMuted ? 'none' : 'inline-flex';
-                        }
-                    };
-
-                    const setVisibleTrack = (track = {}) => {
-                        const title = typeof track.title === 'string' ? track.title.trim() : '';
-                        const artist = typeof track.artist === 'string' ? track.artist.trim() : '';
-                        const cover = typeof track.cover === 'string' ? track.cover.trim() : '';
-                        const bandCover = typeof track.band_thumbnail === 'string' ? track.band_thumbnail.trim() : '';
-
-                        currentTrackSignature = typeof track.signature === 'string' && track.signature.trim() !== ''
-                            ? track.signature.trim()
-                            : [title, artist, cover].filter(Boolean).join('|').trim();
-
-                        if (coverNode && cover !== '') {
-                            coverNode.src = cover;
-                            coverNode.alt = title || defaultTitle;
-                        }
-                        if (titleNode && title !== '') {
-                            titleNode.textContent = title;
-                        }
-                        if (artistNode && artist !== '') {
-                            artistNode.textContent = artist;
-                        }
-                        if (liveNode) {
-                            liveNode.textContent = track.is_live === false ? '' : 'LIVE';
-                            liveNode.classList.toggle('is-live', track.is_live !== false);
-                        }
-                        if (bandCoverNode) {
-                            bandCoverNode.src = bandCover || coverNode?.src || cover || fallbackCover;
-                            bandCoverNode.alt = title || defaultTitle;
-                            bandCoverNode.onerror = () => {
-                                bandCoverNode.src = fallbackCover;
-                            };
-                        }
-                        if (bandTitleNode && title !== '') {
-                            bandTitleNode.textContent = title;
-                        }
-                        if (bandArtistNode && artist !== '') {
-                            bandArtistNode.textContent = artist;
-                        }
-                        const bandInfo = typeof track.band_info === 'string' && track.band_info.trim() !== ''
-                            ? track.band_info.trim()
-                            : (typeof track.comment === 'string' ? track.comment.trim() : '');
-
-                        if (bandInfoNode && bandInfo !== '') {
-                            bandInfoNode.textContent = bandInfo;
-                        }
-
-                        syncFavoriteButtons();
-                    };
-
-                    const readFavorites = () => {
-                        try {
-                            const parsed = JSON.parse(localStorage.getItem('sr-player-favorites') || '[]');
-                            return Array.isArray(parsed) ? parsed : [];
-                        } catch (error) {
-                            return [];
-                        }
-                    };
-
-                    const writeFavorites = (items) => {
-                        try {
-                            localStorage.setItem('sr-player-favorites', JSON.stringify(items));
-                        } catch (error) {
-                            // ignore
-                        }
-                    };
-
-                    const isCurrentFavorite = () => {
-                        if (!currentTrackSignature) {
-                            return false;
-                        }
-
-                        return readFavorites().some((item) => item && item.signature === currentTrackSignature);
-                    };
-
-                    const syncFavoriteButtons = () => {
-                        const favorite = isCurrentFavorite();
-
-                        favoriteButtons.forEach((button) => {
-                            if (!button) {
-                                return;
-                            }
-
-                            button.style.borderColor = favorite ? 'rgba(195,39,32,.55)' : 'rgba(184,175,162,.22)';
-                            button.style.background = favorite ? 'rgba(195,39,32,.14)' : 'rgba(0,0,0,.18)';
-                            button.style.color = favorite ? '#fff' : '#dcd7cb';
-                            button.setAttribute('aria-pressed', favorite ? 'true' : 'false');
-
-                            const icon = button.querySelector('[data-player-favorite-icon]');
-                            const label = button.querySelector('[data-player-favorite-label]');
-                            if (icon) {
-                                icon.textContent = favorite ? '♥' : '♡';
-                            }
-                            if (label) {
-                                label.textContent = button.closest('.radio-player-head-actions')
-                                    ? (favorite ? 'Favorito' : 'Favorito +')
-                                    : 'Like';
-                            }
-
-                            if (button.classList.contains('radio-player-chip')) {
-                                button.textContent = favorite ? 'Favorito' : 'Favorito +';
-                            }
-                        });
-                    };
-
-                    const toggleFavoriteState = () => {
-                        if (!currentTrackSignature) {
-                            return;
-                        }
-
-                        const favorites = readFavorites();
-                        const exists = favorites.some((item) => item && item.signature === currentTrackSignature);
-
-                        const nextFavorites = exists
-                            ? favorites.filter((item) => item && item.signature !== currentTrackSignature)
-                            : [
-                                ...favorites,
-                                {
-                                    signature: currentTrackSignature,
-                                    title: titleNode?.textContent?.trim() || defaultTitle,
-                                    artist: artistNode?.textContent?.trim() || defaultArtist,
-                                    cover: coverNode?.src || fallbackCover,
-                                },
-                            ].slice(-50);
-
-                        writeFavorites(nextFavorites);
-                        syncFavoriteButtons();
-                    };
-
-                    const syncVisibleStatus = async () => {
-                        if (!statusUrl) {
-                            setVisibleTrack({});
-                            return;
-                        }
-
-                        try {
-                            const response = await fetch(`${statusUrl}?t=${Date.now()}`, {
-                                headers: {
-                                    Accept: 'application/json',
-                                },
-                            });
-                            const payload = await response.json();
-                            setVisibleTrack(payload?.data?.track || {});
-                        } catch (error) {
-                            setVisibleTrack({});
-                        }
-                    };
-
-                    const ensureStream = () => {
-                        if (!audio.src || audio.src.indexOf(streamUrl) === -1) {
-                            audio.src = streamUrl;
-                        }
-                        audio.preload = 'none';
-                        audio.crossOrigin = 'anonymous';
-                    };
-
-                    audio.addEventListener('play', () => setPlayingState(true));
-                    audio.addEventListener('pause', () => setPlayingState(false));
-                    audio.addEventListener('volumechange', () => setMutedState(audio.muted));
-
-                    if (volumeInput) {
-                        const initialVolume = Number.isFinite(audio.volume) ? audio.volume : 0.8;
-                        volumeInput.value = String(initialVolume);
-                        if (volumeOutput) {
-                            volumeOutput.textContent = `${Math.round(initialVolume * 100)}%`;
-                        }
-
-                        volumeInput.addEventListener('input', () => {
-                            const nextVolume = Math.max(0, Math.min(1, Number(volumeInput.value) || 0));
-                            audio.volume = nextVolume;
-                            if (volumeOutput) {
-                                volumeOutput.textContent = `${Math.round(nextVolume * 100)}%`;
-                            }
-                            if (nextVolume > 0 && audio.muted) {
-                                audio.muted = false;
-                                setMutedState(false);
-                            }
-                        });
-                    }
-
-
-                    syncVisibleStatus();
-                    window.setInterval(syncVisibleStatus, 15000);
-                    setPlayingState(!audio.paused);
-                    setMutedState(audio.muted);
-                });
-            };
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', boot, { once: true });
-            } else {
-                boot();
-            }
-        })();
-    </script>
 </div>

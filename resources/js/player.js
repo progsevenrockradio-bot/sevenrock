@@ -99,6 +99,7 @@ export function registerRadioPlayer(Alpine) {
         boundHotkeys: null,
         widgetObserver: null,
         widgetSyncHandle: null,
+        toastHandle: null,
 
         init() {
             this.panelOpen = this.mode === 'page' ? true : false;
@@ -133,6 +134,9 @@ export function registerRadioPlayer(Alpine) {
             }
             if (this.boundHotkeys) {
                 window.removeEventListener('keydown', this.boundHotkeys);
+            }
+            if (this.toastHandle) {
+                clearTimeout(this.toastHandle);
             }
         },
 
@@ -233,9 +237,11 @@ export function registerRadioPlayer(Alpine) {
             }
 
             const source = this.streamCandidates[this.currentStreamIndex] || this.playbackSource || this.streamUrl;
-            const currentSource = audio.getAttribute('src') || '';
+            const currentSource = audio.currentSrc || audio.getAttribute('src') || '';
 
-            if (currentSource !== source) {
+            if (currentSource !== source || audio.error) {
+                audio.pause();
+                audio.removeAttribute('src');
                 audio.src = source;
                 audio.load();
             }
@@ -260,6 +266,7 @@ export function registerRadioPlayer(Alpine) {
             }
 
             try {
+                audio.load();
                 await audio.play();
                 this.playing = true;
                 this.toastMessage('Reproduciendo');
@@ -268,6 +275,7 @@ export function registerRadioPlayer(Alpine) {
                     this.currentStreamIndex += 1;
                     this.ensureAudioSource();
                     try {
+                        audio.load();
                         await audio.play();
                         this.playing = true;
                         this.toastMessage('Reproduciendo');
@@ -462,8 +470,6 @@ export function registerRadioPlayer(Alpine) {
                 };
             } catch (error) {
                 // ignore band info lookup failures
-            } finally {
-                this.bandLookupArtist = artist;
             }
         },
 
@@ -812,7 +818,18 @@ export function registerRadioPlayer(Alpine) {
         },
 
         toastMessage(message) {
-            return;
+            this.toast.message = message;
+            this.toast.visible = true;
+
+            if (this.toastHandle) {
+                clearTimeout(this.toastHandle);
+            }
+
+            this.toastHandle = setTimeout(() => {
+                this.toast.visible = false;
+                this.toast.message = '';
+                this.toastHandle = null;
+            }, 2200);
         },
 
         bandLinks() {

@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'discogs' => [
+        'token' => env('DISCOGS_TOKEN'),
+    ],
+
+    'lastfm' => [
+        'key' => env('LASTFM_KEY'),
+        'api_key' => env('LASTFM_API_KEY'),
+    ],
+
 ];

@@ -13,6 +13,7 @@ class Song extends Model
         'slug',
         'title',
         'artist',
+        'band_profile_id',
         'album',
         'duration_seconds',
         'audio_url',
@@ -43,6 +44,11 @@ class Song extends Model
     public function program(): BelongsTo
     {
         return $this->belongsTo(Program::class);
+    }
+
+    public function bandProfile(): BelongsTo
+    {
+        return $this->belongsTo(BandProfile::class);
     }
 
     public function scopePublished(Builder $query): Builder
