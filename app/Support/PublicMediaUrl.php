@@ -179,12 +179,11 @@ class PublicMediaUrl
     public static function resolveLegacyWordPressUploadFilesystemPath(string $value): ?string
     {
         $relative = self::extractLegacyWordPressUploadRelativePath($value);
-
         if ($relative === null) {
-            return null;
+            $relative = trim(str_replace('\\', '/', $value));
         }
 
-        $relative = ltrim(str_replace('\\', '/', $relative), '/');
+        $relative = ltrim($relative, '/');
         if ($relative === '') {
             return null;
         }
