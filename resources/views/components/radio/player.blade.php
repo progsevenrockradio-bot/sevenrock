@@ -53,6 +53,12 @@
         >
         <script src="https://c30.radioboss.fm/w/nowplaying.js?u=569&amp;wid=15715&amp;nl=1&amp;nnt=1"></script>
         <script src="https://c30.radioboss.fm/w/cover.js?u=569&amp;wid=8795"></script>
+        <div class="rbcloud_tracktimer">
+            <span id="rbcloud_tracktimer_e11096"></span>
+            <span id="rbcloud_tracktimer_sep11096" hidden> &frasl; </span>
+            <span id="rbcloud_tracktimer_r11096"></span>
+        </div>
+        <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11096"></script>
     </div>
 
     @if ($mode === 'popup')

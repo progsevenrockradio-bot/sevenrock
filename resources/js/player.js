@@ -89,6 +89,9 @@ export function registerRadioPlayer(Alpine) {
         widgetIds: {
             root: 'rbcloud_nowplaying15715',
             cover: 'rbcloud_cover8795',
+            timerElapsed: 'rbcloud_tracktimer_e11096',
+            timerSeparator: 'rbcloud_tracktimer_sep11096',
+            timerRemaining: 'rbcloud_tracktimer_r11096',
         },
         toast: {
             visible: false,
@@ -462,8 +465,10 @@ export function registerRadioPlayer(Alpine) {
             const bind = () => {
                 const root = document.getElementById(this.widgetIds.root);
                 const cover = document.getElementById(this.widgetIds.cover);
+                const timerElapsed = document.getElementById(this.widgetIds.timerElapsed);
+                const timerRemaining = document.getElementById(this.widgetIds.timerRemaining);
 
-                if (!root && !cover) {
+                if (!root && !cover && !timerElapsed && !timerRemaining) {
                     if (this.widgetRetryHandle) {
                         clearTimeout(this.widgetRetryHandle);
                     }
@@ -481,6 +486,7 @@ export function registerRadioPlayer(Alpine) {
                 });
 
                 [root, cover]
+                    .concat([timerElapsed, timerRemaining])
                     .filter(Boolean)
                     .forEach((element) => {
                         this.widgetObserver.observe(element, {
@@ -803,16 +809,49 @@ export function registerRadioPlayer(Alpine) {
         readNowPlayingWidget() {
             const root = document.getElementById(this.widgetIds.root);
             const cover = document.getElementById(this.widgetIds.cover);
+            const timerElapsed = document.getElementById(this.widgetIds.timerElapsed);
+            const timerRemaining = document.getElementById(this.widgetIds.timerRemaining);
+            const timerRoot = timerElapsed?.closest?.('.rbcloud_tracktimer') || timerRemaining?.closest?.('.rbcloud_tracktimer');
             const rawText = this.cleanWidgetText(root?.innerText || root?.textContent || '');
             const parsed = this.parseWidgetNowPlaying(rawText);
+            const timer = this.readTrackTimerWidget(timerRoot, timerElapsed, timerRemaining);
 
             return {
                 cover: cover?.getAttribute('src') || cover?.currentSrc || '',
                 artist: parsed.artist,
                 title: parsed.title,
-                elapsed: parsed.elapsed,
-                duration: parsed.duration,
+                elapsed: timer.elapsed || parsed.elapsed,
+                duration: timer.duration || parsed.duration,
                 text: rawText,
+            };
+        },
+
+        readTrackTimerWidget(timerRoot = null, timerElapsed = null, timerRemaining = null) {
+            const elapsedText = this.cleanWidgetText(
+                timerElapsed?.innerText
+                    || timerElapsed?.textContent
+                    || timerRoot?.querySelector?.(`#${this.widgetIds.timerElapsed}`)?.innerText
+                    || ''
+            );
+            const durationText = this.cleanWidgetText(
+                timerRemaining?.innerText
+                    || timerRemaining?.textContent
+                    || timerRoot?.querySelector?.(`#${this.widgetIds.timerRemaining}`)?.innerText
+                    || ''
+            );
+
+            const elapsed = this.parseWidgetDuration(elapsedText);
+            const duration = this.parseWidgetDuration(durationText);
+
+            if (elapsed > 0 || duration > 0) {
+                return { elapsed, duration };
+            }
+
+            const rawText = this.cleanWidgetText(timerRoot?.innerText || timerRoot?.textContent || '');
+            const matches = Array.from(rawText.matchAll(/\b(\d{1,3}:\d{2})\b/g), (match) => match[1]);
+            return {
+                elapsed: this.parseWidgetDuration(matches[0] || ''),
+                duration: this.parseWidgetDuration(matches[1] || ''),
             };
         },
 
