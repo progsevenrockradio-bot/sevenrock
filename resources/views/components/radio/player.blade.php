@@ -184,6 +184,11 @@
                         <strong data-player-title-text style="font-size:14px; color:#ddd7cb; line-height:1.08; max-width:100%;" x-text="track.title || defaultTitle"></strong>
                         <span data-player-artist-text style="font-size:12px; color:#b9b1a5; line-height:1.08; max-width:100%;" x-text="track.artist || defaultArtist"></span>
                     </div>
+                    <div class="rbcloud_tracktimer" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:18px; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.18em; text-transform:uppercase; white-space:nowrap; margin-top:0;">
+                        <span x-text="formatTime(progress.elapsed)"></span>
+                        <span> / </span>
+                        <span x-text="formatTime(progress.duration)"></span>
+                    </div>
                 </div>
 
                 <span class="radio-player-actions" style="display:flex; flex:0 0 auto; align-items:center; justify-content:flex-end; gap:8px; white-space:nowrap; margin-left:auto; padding-right:4px; transform:translateX(8px);">
