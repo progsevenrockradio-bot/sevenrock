@@ -631,6 +631,8 @@ class RadioPlayerService
                 trim((string) Arr::get($currentTrack, 'ALBUM', '')),
                 trim((string) Arr::get($recentTrack, 'album', '')),
             ]),
+            'duration_seconds' => $this->extractPlaybackDurationSeconds($data),
+            'elapsed_seconds' => $this->extractPlaybackElapsedSeconds($data),
             'comment' => $this->firstFilledString([
                 trim((string) Arr::get($data, 'comment', '')),
                 trim((string) Arr::get($trackAttributes, 'COMMENT', '')),
@@ -648,6 +650,32 @@ class RadioPlayerService
             ]),
             'listeners' => $this->extractListeners($data, $currentTrack, $trackAttributes),
         ];
+    }
+
+    private function extractPlaybackElapsedSeconds(array $data): int
+    {
+        $playback = Arr::get($data, 'playback', []);
+        $playback = is_array($playback) ? $playback : [];
+
+        return $this->millisecondsToSeconds(Arr::get($playback, 'pos', 0));
+    }
+
+    private function extractPlaybackDurationSeconds(array $data): int
+    {
+        $playback = Arr::get($data, 'playback', []);
+        $playback = is_array($playback) ? $playback : [];
+
+        return $this->millisecondsToSeconds(Arr::get($playback, 'len', 0));
+    }
+
+    private function millisecondsToSeconds(mixed $value): int
+    {
+        $milliseconds = (int) $value;
+        if ($milliseconds <= 0) {
+            return 0;
+        }
+
+        return (int) max(0, round($milliseconds / 1000));
     }
 
     private function extractListeners(array $data, array $currentTrack, array $trackAttributes): int
