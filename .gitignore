@@ -18,12 +18,14 @@
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage
+/storage/framework/vite-cache/
 /storage/*.key
 /storage/logs/*.log
 /storage/framework/views/*
 /storage/framework/views-compiled/*
 /storage/pail
 /vendor
+docs/sevenrock_whitelist_extracted.sql
 _ide_helper.php
 Homestead.json
 Homestead.yaml
