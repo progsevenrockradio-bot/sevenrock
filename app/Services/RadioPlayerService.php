@@ -75,16 +75,46 @@ class RadioPlayerService
     {
         $defaults = config('player.defaults');
         $state = array_replace($this->currentState(), $this->remoteNowPlayingState());
-        $song = $this->resolveSong($state);
+        $rawTitle = $this->firstFilledString([
+            Arr::get($state, 'title'),
+            Arr::get($state, 'casttitle'),
+            Arr::get($state, 'tracktitle'),
+        ]);
+        $rawArtist = $this->firstFilledString([
+            Arr::get($state, 'artist'),
+            Arr::get($state, 'trackartist'),
+            Arr::get($state, 'program_name'),
+        ]);
+        $rawCover = $this->firstFilledString([
+            Arr::get($state, 'cover'),
+            Arr::get($state, 'cover_image'),
+            Arr::get($state, 'artwork'),
+            Arr::get($state, 'image'),
+        ]);
+        $lookupState = $state;
+        $lookupState['title'] = $rawTitle;
+        $lookupState['artist'] = $rawArtist;
+        $lookupState['cover'] = $rawCover;
+
+        $song = $this->resolveSong($lookupState);
         $bandProfile = $song?->bandProfile
             ?? $this->resolveBandProfile($state, $song);
-        $trackTitle = trim((string) ($song?->title ?: Arr::get($state, 'title', $defaults['title'])));
-        $trackArtist = trim((string) ($song?->artist ?: Arr::get($state, 'artist', $defaults['artist'])));
+        $trackTitle = $this->firstFilledString([
+            $song?->title,
+            $rawTitle,
+            $defaults['title'] ?? '',
+        ]);
+        $trackArtist = $this->firstFilledString([
+            $song?->artist,
+            $rawArtist,
+            $defaults['artist'] ?? '',
+        ]);
         $stateSignature = $this->trackSignature(
-            trim((string) Arr::get($state, 'title', $defaults['title'])),
-            trim((string) Arr::get($state, 'artist', $defaults['artist'])),
+            $rawTitle !== '' ? $rawTitle : $trackTitle,
+            $rawArtist !== '' ? $rawArtist : $trackArtist,
             $this->resolveCover(
-                Arr::get($state, 'cover')
+                $rawCover
+                    ?: Arr::get($state, 'cover')
                     ?? Arr::get($state, 'cover_image')
                     ?? Arr::get($state, 'artwork')
                     ?? Arr::get($state, 'image')
@@ -94,7 +124,10 @@ class RadioPlayerService
         $bandProfilePayload = $bandProfile
             ? $this->bandInfoResolver->resolve((string) $bandProfile->name)
             : ($trackArtist !== '' ? $this->bandInfoResolver->resolve($trackArtist) : []);
-        $lyrics = $song?->lyrics ?: Arr::get($state, 'lyrics');
+        $lyrics = $this->firstFilledString([
+            $song?->lyrics,
+            Arr::get($state, 'lyrics'),
+        ]);
         $programs = $this->hasTable('radio_programs')
             ? Program::query()->active()->orderBy('sort_order')->orderBy('name')->get()
             : collect();
@@ -136,9 +169,12 @@ class RadioPlayerService
 
         $track = [
             'id' => $song?->id,
-            'title' => $trackTitle !== '' ? $trackTitle : (string) $defaults['title'],
-            'artist' => $trackArtist !== '' ? $trackArtist : (string) $defaults['artist'],
-            'album' => $song?->album ?: Arr::get($state, 'album'),
+            'title' => $trackTitle !== '' ? $trackTitle : (string) ($defaults['title'] ?? ''),
+            'artist' => $trackArtist !== '' ? $trackArtist : (string) ($defaults['artist'] ?? ''),
+            'album' => $this->firstFilledString([
+                $song?->album,
+                Arr::get($state, 'album'),
+            ]),
             'cover' => $cover,
             'lyrics' => is_string($lyrics) ? $lyrics : '',
             'band_info' => $song?->band_info
@@ -187,6 +223,21 @@ class RadioPlayerService
             'history' => $this->latestHistory(config('player.history_limit', 10)),
             'updated_at' => now()->toIso8601String(),
         ];
+    }
+
+    /**
+     * @param array<int, mixed> $values
+     */
+    private function firstFilledString(array $values): string
+    {
+        foreach ($values as $value) {
+            $value = trim((string) $value);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
     }
 
     private function resolveSong(array $state): ?Song
@@ -597,21 +648,6 @@ class RadioPlayerService
             ]),
             'listeners' => $this->extractListeners($data, $currentTrack, $trackAttributes),
         ];
-    }
-
-    /**
-     * @param array<int, mixed> $values
-     */
-    private function firstFilledString(array $values): string
-    {
-        foreach ($values as $value) {
-            $value = trim((string) $value);
-            if ($value !== '') {
-                return $value;
-            }
-        }
-
-        return '';
     }
 
     private function extractListeners(array $data, array $currentTrack, array $trackAttributes): int

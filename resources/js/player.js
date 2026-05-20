@@ -28,8 +28,8 @@ export function registerRadioPlayer(Alpine) {
         fallbackCover: options.fallbackCover || '',
         pollInterval: Number(options.pollInterval || 5),
         historyLimit: Number(options.historyLimit || 10),
-        defaultArtist: '',
-        defaultTitle: '',
+        defaultArtist: options.defaultArtist || '',
+        defaultTitle: options.defaultTitle || '',
         panelOpen: false,
         bandWindowOpen: false,
         bandWindowTab: 'lyrics',
@@ -575,8 +575,8 @@ export function registerRadioPlayer(Alpine) {
             const currentTitle = this.track.title && this.track.title !== this.defaultTitle ? this.track.title : '';
             const currentArtist = this.track.artist && this.track.artist !== this.defaultArtist ? this.track.artist : '';
             const nextSignature = track.signature || this.buildSignature({
-                title: track.title || currentTitle || '',
-                artist: track.artist || currentArtist || '',
+                title: track.title || currentTitle || this.defaultTitle || '',
+                artist: track.artist || currentArtist || this.defaultArtist || '',
                 cover: track.cover || this.track.cover || this.fallbackCover,
                 program: track.program_name || '',
             });
@@ -590,8 +590,8 @@ export function registerRadioPlayer(Alpine) {
             this.track = {
                 ...this.track,
                 ...track,
-                title: this.normalizeTrackTitle(track.title || currentTitle || ''),
-                artist: this.normalizeBandArtist(track.artist || currentArtist || ''),
+                title: this.normalizeTrackTitle(track.title || currentTitle || this.defaultTitle || ''),
+                artist: this.normalizeBandArtist(track.artist || currentArtist || this.defaultArtist || ''),
                 cover: track.cover || this.track.cover || this.fallbackCover,
                 lyrics: trackChanged ? nextLyrics : (nextLyrics || this.track.lyrics || ''),
                 band_info: trackChanged ? nextBandInfo : (nextBandInfo || this.track.band_info || ''),
@@ -796,20 +796,6 @@ export function registerRadioPlayer(Alpine) {
             const minutes = String(Math.floor(safe / 60)).padStart(2, '0');
             const secs = String(Math.floor(safe % 60)).padStart(2, '0');
             return `${minutes}:${secs}`;
-        },
-
-        resolveCoverUrl(value) {
-            const url = String(value || '').trim();
-            if (!url) {
-                return this.fallbackCover || '';
-            }
-
-            const signature = String(this.track?.signature || '').trim();
-            if (!signature) {
-                return url;
-            }
-
-            return `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(signature)}`;
         },
 
         setTab(tab) {

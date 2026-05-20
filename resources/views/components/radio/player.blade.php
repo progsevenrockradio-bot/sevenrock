@@ -8,31 +8,33 @@
         : asset('assets/lucille/album3.jpg');
 @endphp
 
-<div
-    class="radio-player"
-    data-radio-player-root
-    data-player-status-url="{{ route('api.player.status') }}"
-    data-player-stream-url="{{ $player['streams']['direct'] }}"
-    data-player-stream-alt-url="{{ $player['streams']['alt_direct'] }}"
-    data-player-listen-url="{{ $player['streams']['listen'] }}"
-    data-player-band-info-url="{{ route('api.player.band-info') }}"
-    data-player-fallback-cover="{{ $fallbackCover }}"
-    data-player-default-title=""
-    data-player-default-artist=""
-    x-bind:data-mode="mode"
-    x-data="radioPlayer({
-        mode: @js($mode),
-        statusUrl: @js(route('api.player.status')),
-        streamUrl: @js($player['streams']['direct']),
+    <div
+        class="radio-player"
+        data-radio-player-root
+        data-player-status-url="{{ route('api.player.status') }}"
+        data-player-stream-url="{{ $player['streams']['direct'] }}"
+        data-player-stream-alt-url="{{ $player['streams']['alt_direct'] }}"
+        data-player-listen-url="{{ $player['streams']['listen'] }}"
+        data-player-band-info-url="{{ route('api.player.band-info') }}"
+        data-player-fallback-cover="{{ $fallbackCover }}"
+        data-player-default-title="{{ $player['defaults']['title'] ?? '' }}"
+        data-player-default-artist="{{ $player['defaults']['artist'] ?? '' }}"
+        x-bind:data-mode="mode"
+        x-data="radioPlayer({
+            mode: @js($mode),
+            statusUrl: @js(route('api.player.status')),
+            streamUrl: @js($player['streams']['direct']),
         altStreamUrl: @js($player['streams']['alt_direct']),
         listenUrl: @js($player['streams']['listen']),
         bandInfoUrl: @js(route('api.player.band-info')),
-        playlistM3u: @js($player['streams']['m3u']),
-        playlistPls: @js($player['streams']['pls']),
-        fallbackCover: @js($fallbackCover),
-        pollInterval: @js($player['poll_interval']),
-        historyLimit: @js($player['history_limit']),
-    })"
+            playlistM3u: @js($player['streams']['m3u']),
+            playlistPls: @js($player['streams']['pls']),
+            fallbackCover: @js($fallbackCover),
+            pollInterval: @js($player['poll_interval']),
+            historyLimit: @js($player['history_limit']),
+            defaultTitle: @js($player['defaults']['title'] ?? ''),
+            defaultArtist: @js($player['defaults']['artist'] ?? ''),
+        })"
     x-init="init()"
 >
     <audio x-ref="audio" data-radio-audio src="{{ $player['streams']['direct'] }}" preload="none" playsinline></audio>
@@ -45,7 +47,7 @@
 
             <section class="radio-player-popup-bar" style="position:relative; display:grid; grid-template-columns:minmax(280px,1.1fr) minmax(220px,.8fr) 1fr; gap:14px; align-items:center; min-height:92px; padding:10px 14px 10px 8px; border-top:1px solid rgba(195,39,32,.48); background:linear-gradient(180deg, rgba(16,16,18,.98), rgba(8,8,10,.98));">
                 <div class="radio-player-popup-track" style="display:grid; grid-template-columns:56px minmax(0,1fr); gap:10px; align-items:center;">
-                    <img class="radio-player-popup-cover" :src="resolveCoverUrl(track.cover || fallbackCover)" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:56px; height:56px; object-fit:cover; display:block;">
+                    <img class="radio-player-popup-cover" :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:56px; height:56px; object-fit:cover; display:block;">
                     <div class="radio-player-popup-meta" style="display:flex; flex-direction:column; gap:2px; min-width:0;">
                         <span class="radio-player-live-pill is-live" x-show="track.is_live" style="display:inline-flex; align-items:center; justify-content:center; width:max-content; min-height:22px; padding:0 8px; border-radius:9999px; background:#b7ad9f; color:#151515; font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;">LIVE</span>
                         <strong x-text="track.title || defaultTitle"></strong>
@@ -133,7 +135,7 @@
                             <div class="space-y-3">
                                 <template x-for="item in history" :key="`${item.title}-${item.played_at}`">
                                     <article class="radio-player-popup-history">
-                                        <img :src="resolveCoverUrl(item.cover || fallbackCover)" alt="">
+                                        <img :src="item.cover || fallbackCover" alt="">
                                         <div>
                                             <strong x-text="item.title"></strong>
                                             <p x-text="item.artist || defaultArtist"></p>
@@ -157,14 +159,14 @@
         >
                 <div class="rbcloud_nowplaying" style="display:flex; flex-direction:column; gap:4px; min-width:0; align-items:flex-start; padding-left:0; margin-right:0;">
                     <button type="button" data-player-band-trigger @click="setTab('lyrics'); openBandWindow()" aria-label="Abrir información de la banda" style="appearance:none; display:inline-flex; border:0; background:transparent; padding:0; cursor:pointer; text-align:left;">
-                        <img class="radio-player-cover" data-player-cover-image :src="resolveCoverUrl(track.cover || fallbackCover)" alt="cover art" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" x-bind:style="dockMinimized ? 'width:62px; height:62px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;' : 'width:84px; height:84px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;'">
+                        <img class="radio-player-cover" data-player-cover-image :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="cover art" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" x-bind:style="dockMinimized ? 'width:62px; height:62px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;' : 'width:84px; height:84px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;'">
                     </button>
                 </div>
 
                 <div style="display:flex; flex-direction:column; gap:2px; min-width:0; justify-content:center; padding-left:0; margin-left:-18px; transform:translateY(-1px);">
                     <div class="radio-player-meta" style="min-width:0; gap:2px; overflow:hidden; align-items:flex-start;">
-                        <strong data-player-title-text style="font-size:14px; color:#ddd7cb; line-height:1.08; max-width:100%;" x-text="track.title || ''"></strong>
-                        <span data-player-artist-text style="font-size:12px; color:#b9b1a5; line-height:1.08; max-width:100%;" x-text="track.artist || ''"></span>
+                        <strong data-player-title-text style="font-size:14px; color:#ddd7cb; line-height:1.08; max-width:100%;" x-text="track.title || defaultTitle"></strong>
+                        <span data-player-artist-text style="font-size:12px; color:#b9b1a5; line-height:1.08; max-width:100%;" x-text="track.artist || defaultArtist"></span>
                     </div>
                     <div class="rbcloud_tracktimer" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:18px; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.18em; text-transform:uppercase; white-space:nowrap; margin-top:0;">
                         <span x-text="formatTime(progress.elapsed)"></span>
@@ -226,7 +228,7 @@
                 <div style="display:grid; grid-template-columns:minmax(320px,360px) minmax(0,1fr); gap:22px; align-items:start;">
                     <aside style="display:flex; flex-direction:column; gap:14px; min-width:0;">
                         <div style="position:relative;">
-                            <img data-player-band-cover-image src="{{ $fallbackCover }}" :src="resolveCoverUrl(bandPanel.cover || track.band_thumbnail || track.cover || fallbackCover)" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:100%; aspect-ratio:1/1; object-fit:cover; border:1px solid rgba(184,175,162,.20); box-shadow:0 24px 56px rgba(0,0,0,.50); transform:translateY(-14px) scale(1.01); border-radius:20px;">
+                            <img data-player-band-cover-image src="{{ $fallbackCover }}" :src="bandPanel.cover || track.band_thumbnail || track.cover || fallbackCover" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:100%; aspect-ratio:1/1; object-fit:cover; border:1px solid rgba(184,175,162,.20); box-shadow:0 24px 56px rgba(0,0,0,.50); transform:translateY(-14px) scale(1.01); border-radius:20px;">
                         </div>
                         <div style="display:flex; align-items:center; gap:8px; justify-content:flex-start;">
                             <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'LIVE' : 'PLAYBACK'"></span>
@@ -305,8 +307,8 @@
             <header class="radio-player-head" style="padding:16px 18px;">
                 <div>
                     <div class="radio-player-kicker" x-text="track.is_live ? 'EN VIVO AHORA' : 'ON DEMAND'"></div>
-                    <h2 class="radio-player-title" x-text="track.title || ''"></h2>
-                    <p class="radio-player-subtitle" x-text="track.artist || ''"></p>
+                    <h2 class="radio-player-title" x-text="track.title || defaultTitle"></h2>
+                    <p class="radio-player-subtitle" x-text="track.artist || defaultArtist"></p>
                     <small x-text="listeners > 0 ? `${listeners} oyentes` : 'Sin oyentes'"></small>
                 </div>
                 <div class="radio-player-head-actions">
@@ -319,7 +321,7 @@
 
             <div class="radio-player-body" style="grid-template-columns:minmax(0,1fr) minmax(280px,.72fr); gap:14px; padding:16px 18px 18px;">
                 <section class="radio-player-now" style="grid-template-columns:128px minmax(0,1fr); gap:14px; align-items:start;">
-                    <img class="radio-player-cover-large" :src="resolveCoverUrl(track.cover || fallbackCover)" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:128px; height:128px; min-height:128px;">
+                    <img class="radio-player-cover-large" :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:128px; height:128px; min-height:128px;">
                     <div class="radio-player-now-copy" style="justify-content:flex-start; gap:6px;">
                         <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'LIVE' : 'PLAYBACK'"></span>
                         <h3 x-text="track.title || defaultTitle"></h3>
@@ -382,7 +384,7 @@
                                     <div class="radio-player-queue-grid" style="grid-template-columns:1fr;">
                                         <template x-for="item in queue" :key="item.title">
                                             <article class="radio-player-queue-item">
-                                                <img :src="resolveCoverUrl(item.cover || fallbackCover)" alt="">
+                                                <img :src="item.cover || fallbackCover" alt="">
                                                 <div>
                                                     <strong x-text="item.title"></strong>
                                                     <p x-text="item.artist || defaultArtist"></p>
@@ -399,7 +401,7 @@
                                 <div class="space-y-3">
                                     <template x-for="item in history" :key="`${item.title}-${item.played_at}`">
                                         <article class="radio-player-history">
-                                            <img :src="resolveCoverUrl(item.cover || fallbackCover)" alt="">
+                                            <img :src="item.cover || fallbackCover" alt="">
                                             <div>
                                                 <strong x-text="item.title"></strong>
                                                 <p x-text="item.artist || defaultArtist"></p>
