@@ -18,24 +18,32 @@ class LyricsResolver
         }
 
         $cacheKey = 'lyrics:v2:' . md5(mb_strtolower($artist . '|' . $title));
+        $cached = Cache::get($cacheKey);
+        if (is_string($cached) && trim($cached) !== '') {
+            return $cached;
+        }
 
-        return Cache::remember($cacheKey, now()->addHours(12), function () use ($artist, $title): string {
-            foreach ($this->artistVariants($artist) as $artistVariant) {
-                foreach ($this->titleVariants($title) as $titleVariant) {
-                    $lyrics = $this->fetchFromLrclib($artistVariant, $titleVariant);
-                    if ($lyrics !== '') {
-                        return $lyrics;
-                    }
+        foreach ($this->artistVariants($artist) as $artistVariant) {
+            foreach ($this->titleVariants($title) as $titleVariant) {
+                $lyrics = $this->fetchFromLrclib($artistVariant, $titleVariant);
+                if ($lyrics !== '') {
+                    Cache::put($cacheKey, $lyrics, now()->addHours(12));
 
-                    $lyrics = $this->fetchFromLyricsOvh($artistVariant, $titleVariant);
-                    if ($lyrics !== '') {
-                        return $lyrics;
-                    }
+                    return $lyrics;
+                }
+
+                $lyrics = $this->fetchFromLyricsOvh($artistVariant, $titleVariant);
+                if ($lyrics !== '') {
+                    Cache::put($cacheKey, $lyrics, now()->addHours(12));
+
+                    return $lyrics;
                 }
             }
+        }
 
-            return 'Letra no disponible';
-        });
+        Cache::put($cacheKey, 'Letra no disponible', now()->addMinutes(3));
+
+        return 'Letra no disponible';
     }
 
     /**

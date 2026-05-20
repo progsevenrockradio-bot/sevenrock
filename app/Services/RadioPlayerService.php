@@ -80,6 +80,17 @@ class RadioPlayerService
             ?? $this->resolveBandProfile($state, $song);
         $trackTitle = trim((string) ($song?->title ?: Arr::get($state, 'title', $defaults['title'])));
         $trackArtist = trim((string) ($song?->artist ?: Arr::get($state, 'artist', $defaults['artist'])));
+        $stateSignature = $this->trackSignature(
+            trim((string) Arr::get($state, 'title', $defaults['title'])),
+            trim((string) Arr::get($state, 'artist', $defaults['artist'])),
+            $this->resolveCover(
+                Arr::get($state, 'cover')
+                    ?? Arr::get($state, 'cover_image')
+                    ?? Arr::get($state, 'artwork')
+                    ?? Arr::get($state, 'image')
+                    ?? $defaults['cover']
+            )
+        );
         $bandProfilePayload = $bandProfile
             ? $this->bandInfoResolver->resolve((string) $bandProfile->name)
             : ($trackArtist !== '' ? $this->bandInfoResolver->resolve($trackArtist) : []);
@@ -103,15 +114,24 @@ class RadioPlayerService
                 ?? $currentProgram?->cover_image
                 ?? $defaults['cover']
         );
+        $trackSignature = $this->trackSignature($trackTitle, $trackArtist, $cover);
+        $trackChanged = $stateSignature !== $trackSignature;
 
         $duration = (int) Arr::get($state, 'duration_seconds', $song?->duration_seconds ?? 0);
         $elapsed = (int) Arr::get($state, 'elapsed_seconds', 0);
-        if ($duration > 0 && $elapsed <= 0 && filled(Arr::get($state, 'started_at'))) {
+        if ($trackChanged) {
+            $duration = (int) ($song?->duration_seconds ?? 0);
+            $elapsed = 0;
+        } elseif ($duration > 0 && $elapsed <= 0 && filled(Arr::get($state, 'started_at'))) {
             try {
                 $elapsed = max(0, Carbon::parse((string) Arr::get($state, 'started_at'))->diffInSeconds(now()));
             } catch (\Throwable) {
                 $elapsed = 0;
             }
+        }
+
+        if ($duration > 0 && $elapsed > $duration) {
+            $elapsed = 0;
         }
 
         $track = [
@@ -142,12 +162,7 @@ class RadioPlayerService
             'program_host' => $currentProgram?->host,
             'program_schedule' => $currentProgram?->schedule,
             'is_live' => (bool) Arr::get($state, 'is_live', $song?->is_live ?? true),
-            'signature' => md5(mb_strtolower(implode('|', [
-                (string) ($song?->title ?: Arr::get($state, 'title', $defaults['title'])),
-                (string) ($song?->artist ?: Arr::get($state, 'artist', $defaults['artist'])),
-                (string) $cover,
-                (string) ($currentProgram?->name ?? ''),
-            ]))),
+            'signature' => $trackSignature,
             'started_at' => Arr::get($state, 'started_at'),
             'published_at' => optional($song?->published_at)->toIso8601String(),
             'duration_seconds' => $duration,
@@ -305,6 +320,15 @@ class RadioPlayerService
         }
 
         return $cover ? asset($cover) : asset(config('player.defaults.cover'));
+    }
+
+    private function trackSignature(string $title, string $artist, string $cover): string
+    {
+        return md5(mb_strtolower(implode('|', [
+            trim($title),
+            trim($artist),
+            trim($cover),
+        ])));
     }
 
     private function remoteNowPlayingState(): array

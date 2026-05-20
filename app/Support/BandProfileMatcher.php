@@ -84,7 +84,10 @@ class BandProfileMatcher
             return $score >= 1000 ? $candidate : null;
         }
 
-        return $score >= 550 ? $candidate : null;
+        // Fuzzy matching is intentionally conservative.
+        // The previous threshold was permissive enough to cross-match similar band names
+        // (for example, Matchbook Romance -> My Chemical Romance).
+        return $score >= 650 ? $candidate : null;
     }
 
     /**

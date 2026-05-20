@@ -45,7 +45,7 @@
 
             <section class="radio-player-popup-bar" style="position:relative; display:grid; grid-template-columns:minmax(280px,1.1fr) minmax(220px,.8fr) 1fr; gap:14px; align-items:center; min-height:92px; padding:10px 14px 10px 8px; border-top:1px solid rgba(195,39,32,.48); background:linear-gradient(180deg, rgba(16,16,18,.98), rgba(8,8,10,.98));">
                 <div class="radio-player-popup-track" style="display:grid; grid-template-columns:56px minmax(0,1fr); gap:10px; align-items:center;">
-                    <img class="radio-player-popup-cover" :src="track.cover || fallbackCover" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:56px; height:56px; object-fit:cover; display:block;">
+                    <img class="radio-player-popup-cover" :src="resolveCoverUrl(track.cover || fallbackCover)" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:56px; height:56px; object-fit:cover; display:block;">
                     <div class="radio-player-popup-meta" style="display:flex; flex-direction:column; gap:2px; min-width:0;">
                         <span class="radio-player-live-pill is-live" x-show="track.is_live" style="display:inline-flex; align-items:center; justify-content:center; width:max-content; min-height:22px; padding:0 8px; border-radius:9999px; background:#b7ad9f; color:#151515; font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;">LIVE</span>
                         <strong x-text="track.title || defaultTitle"></strong>
@@ -133,7 +133,7 @@
                             <div class="space-y-3">
                                 <template x-for="item in history" :key="`${item.title}-${item.played_at}`">
                                     <article class="radio-player-popup-history">
-                                        <img :src="item.cover || fallbackCover" alt="">
+                                        <img :src="resolveCoverUrl(item.cover || fallbackCover)" alt="">
                                         <div>
                                             <strong x-text="item.title"></strong>
                                             <p x-text="item.artist || defaultArtist"></p>
@@ -157,22 +157,20 @@
         >
                 <div class="rbcloud_nowplaying" style="display:flex; flex-direction:column; gap:4px; min-width:0; align-items:flex-start; padding-left:0; margin-right:0;">
                     <button type="button" data-player-band-trigger @click="setTab('lyrics'); openBandWindow()" aria-label="Abrir información de la banda" style="appearance:none; display:inline-flex; border:0; background:transparent; padding:0; cursor:pointer; text-align:left;">
-                        <img id="rbcloud_np_c1266" class="radio-player-cover" data-player-cover-image src="https://c30.radioboss.fm/w/artwork/569.jpg" alt="cover art" x-bind:style="dockMinimized ? 'width:62px; height:62px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;' : 'width:84px; height:84px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;'">
+                        <img class="radio-player-cover" data-player-cover-image :src="resolveCoverUrl(track.cover || fallbackCover)" alt="cover art" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" x-bind:style="dockMinimized ? 'width:62px; height:62px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;' : 'width:84px; height:84px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover;'">
                     </button>
                 </div>
-                <script src="https://c30.radioboss.fm/w/nowplaying2.js?u=569&amp;wid=1266&amp;tf=1" defer></script>
 
                 <div style="display:flex; flex-direction:column; gap:2px; min-width:0; justify-content:center; padding-left:0; margin-left:-18px; transform:translateY(-1px);">
                     <div class="radio-player-meta" style="min-width:0; gap:2px; overflow:hidden; align-items:flex-start;">
-                        <strong id="rbcloud_np_t1266" data-player-title-text style="font-size:14px; color:#ddd7cb; line-height:1.08; max-width:100%;" x-text="track.title || ''"></strong>
-                        <span id="rbcloud_np_a1266" data-player-artist-text style="font-size:12px; color:#b9b1a5; line-height:1.08; max-width:100%;" x-text="track.artist || ''"></span>
+                        <strong data-player-title-text style="font-size:14px; color:#ddd7cb; line-height:1.08; max-width:100%;" x-text="track.title || ''"></strong>
+                        <span data-player-artist-text style="font-size:12px; color:#b9b1a5; line-height:1.08; max-width:100%;" x-text="track.artist || ''"></span>
                     </div>
                     <div class="rbcloud_tracktimer" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:18px; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.18em; text-transform:uppercase; white-space:nowrap; margin-top:0;">
-                        <span id='rbcloud_tracktimer_e13829'></span>
-                        <span id='rbcloud_tracktimer_sep13829' hidden> / </span>
-                        <span id='rbcloud_tracktimer_r13829'></span>
+                        <span x-text="formatTime(progress.elapsed)"></span>
+                        <span> / </span>
+                        <span x-text="formatTime(progress.duration)"></span>
                     </div>
-                    <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&t=0&wid=13829" defer></script>
                 </div>
 
                 <span class="radio-player-actions" style="display:flex; flex:0 0 auto; align-items:center; justify-content:flex-end; gap:8px; white-space:nowrap; margin-left:auto; padding-right:4px; transform:translateX(8px);">
@@ -228,7 +226,7 @@
                 <div style="display:grid; grid-template-columns:minmax(320px,360px) minmax(0,1fr); gap:22px; align-items:start;">
                     <aside style="display:flex; flex-direction:column; gap:14px; min-width:0;">
                         <div style="position:relative;">
-                            <img data-player-band-cover-image src="{{ $fallbackCover }}" :src="bandPanel.cover || track.band_thumbnail || track.cover || fallbackCover" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:100%; aspect-ratio:1/1; object-fit:cover; border:1px solid rgba(184,175,162,.20); box-shadow:0 24px 56px rgba(0,0,0,.50); transform:translateY(-14px) scale(1.01); border-radius:20px;">
+                            <img data-player-band-cover-image src="{{ $fallbackCover }}" :src="resolveCoverUrl(bandPanel.cover || track.band_thumbnail || track.cover || fallbackCover)" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:100%; aspect-ratio:1/1; object-fit:cover; border:1px solid rgba(184,175,162,.20); box-shadow:0 24px 56px rgba(0,0,0,.50); transform:translateY(-14px) scale(1.01); border-radius:20px;">
                         </div>
                         <div style="display:flex; align-items:center; gap:8px; justify-content:flex-start;">
                             <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'LIVE' : 'PLAYBACK'"></span>
@@ -283,12 +281,12 @@
                         <div style="display:grid; gap:14px; min-width:0; min-height:0;">
                             <section x-show="activeTab === 'lyrics'" style="display:grid; gap:8px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
                                 <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Letra</h4>
-                                <p style="color:#e7e1d6; line-height:1.75; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:15px;" x-text="track.lyrics || 'Letra no disponible para este tema.'"></p>
+                                <p style="color:#e7e1d6; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:15px;" x-text="track.lyrics || 'Letra no disponible para este tema.'"></p>
                             </section>
 
                             <section x-show="activeTab === 'band'" style="display:grid; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
                                 <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Info de banda</h4>
-                                <p data-player-band-info style="color:#d8d3ca; line-height:1.65; margin:0; white-space:pre-line; overflow-wrap:anywhere;" x-text="bandPanel.info || track.band_info || track.comment || 'Buscando información de banda...'"></p>
+                                <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="bandPanel.info || track.band_info || track.comment || 'Buscando información de banda...'"></p>
                             </section>
                         </div>
                     </div>
@@ -321,7 +319,7 @@
 
             <div class="radio-player-body" style="grid-template-columns:minmax(0,1fr) minmax(280px,.72fr); gap:14px; padding:16px 18px 18px;">
                 <section class="radio-player-now" style="grid-template-columns:128px minmax(0,1fr); gap:14px; align-items:start;">
-                    <img class="radio-player-cover-large" :src="track.cover || fallbackCover" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:128px; height:128px; min-height:128px;">
+                    <img class="radio-player-cover-large" :src="resolveCoverUrl(track.cover || fallbackCover)" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:128px; height:128px; min-height:128px;">
                     <div class="radio-player-now-copy" style="justify-content:flex-start; gap:6px;">
                         <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'LIVE' : 'PLAYBACK'"></span>
                         <h3 x-text="track.title || defaultTitle"></h3>
@@ -384,7 +382,7 @@
                                     <div class="radio-player-queue-grid" style="grid-template-columns:1fr;">
                                         <template x-for="item in queue" :key="item.title">
                                             <article class="radio-player-queue-item">
-                                                <img :src="item.cover || fallbackCover" alt="">
+                                                <img :src="resolveCoverUrl(item.cover || fallbackCover)" alt="">
                                                 <div>
                                                     <strong x-text="item.title"></strong>
                                                     <p x-text="item.artist || defaultArtist"></p>
@@ -401,7 +399,7 @@
                                 <div class="space-y-3">
                                     <template x-for="item in history" :key="`${item.title}-${item.played_at}`">
                                         <article class="radio-player-history">
-                                            <img :src="item.cover || fallbackCover" alt="">
+                                            <img :src="resolveCoverUrl(item.cover || fallbackCover)" alt="">
                                             <div>
                                                 <strong x-text="item.title"></strong>
                                                 <p x-text="item.artist || defaultArtist"></p>

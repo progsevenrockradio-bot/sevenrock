@@ -114,10 +114,8 @@ export function registerRadioPlayer(Alpine) {
             this.toast.message = '';
             this.applyAudioPreferences();
             this.bindAudioEvents();
-            this.watchNowPlayingWidget();
             this.bindNavigationGuards();
             this.queueStatusRefresh(0);
-            this.queueWidgetSync(400);
 
             this.pollHandle = setInterval(() => this.queueStatusRefresh(0), Math.max(3, this.pollInterval) * 1000);
             this.progressHandle = setInterval(() => this.tickProgress(), 1000);
@@ -384,7 +382,6 @@ export function registerRadioPlayer(Alpine) {
                 return;
             }
 
-            this.syncTrackFromWidget(true);
             this.bandWindowOpen = !this.bandWindowOpen;
             if (this.bandWindowOpen) {
                 this.ensureBandInfo();
@@ -392,15 +389,12 @@ export function registerRadioPlayer(Alpine) {
         },
 
         async openBandWindow() {
-            this.syncTrackFromWidget(true);
             await this.refreshStatus(true);
-            this.syncTrackFromWidget(true);
-            const widgetTrack = this.inferWidgetTrack(this.readNowPlayingWidget());
             this.bandPanel = {
-                title: this.track.title || widgetTrack.title || '',
-                artist: this.track.artist || widgetTrack.artist || '',
+                title: this.track.title || '',
+                artist: this.track.artist || '',
                 info: this.track.band_info || this.track.comment || '',
-                cover: this.track.band_thumbnail || this.track.cover || widgetTrack.cover || this.fallbackCover,
+                cover: this.track.band_thumbnail || this.track.cover || this.fallbackCover,
                 foundedLabel: this.track.band_founded_label || '',
                 facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : [],
             };
@@ -443,7 +437,6 @@ export function registerRadioPlayer(Alpine) {
             }
 
             this.widgetSyncHandle = setTimeout(() => {
-                this.syncTrackFromWidget(true);
                 if (this.needsBandEnrichment()) {
                     this.ensureBandInfo();
                 }
@@ -461,72 +454,17 @@ export function registerRadioPlayer(Alpine) {
         },
 
         watchNowPlayingWidget() {
-            this.$nextTick(() => {
-                const cover = document.getElementById(this.widgetIds.cover);
-                const artist = document.getElementById(this.widgetIds.artist);
-                const title = document.getElementById(this.widgetIds.title);
-
-                if (!cover && !artist && !title) {
-                    return;
-                }
-
-                const observer = new MutationObserver(() => {
-                    this.queueStatusRefresh(200);
-                    this.queueWidgetSync(0);
-                });
-
-                [cover, artist, title].forEach((node) => {
-                    if (node) {
-                        observer.observe(node, {
-                            characterData: true,
-                            childList: true,
-                            subtree: true,
-                            attributes: true,
-                        });
-                    }
-                });
-
-                this.widgetObserver = observer;
-            });
+            // Legacy widget syncing was removed from the visible player.
+            // Keep this as a no-op so older calls do not reintroduce a second source of truth.
         },
 
         syncTrackFromWidget(force = false) {
-            const widgetTrack = this.inferWidgetTrack(this.readNowPlayingWidget());
-            const hasWidgetData = Boolean(widgetTrack.title || widgetTrack.artist || widgetTrack.cover);
-
-            if (!hasWidgetData && !force) {
-                return;
-            }
-
-            const currentTitle = this.track.title && this.track.title !== this.defaultTitle ? this.track.title : '';
-            const currentArtist = this.track.artist && this.track.artist !== this.defaultArtist ? this.track.artist : '';
-            const nextTitle = this.normalizeTrackTitle(widgetTrack.title || currentTitle || '');
-            const nextArtist = this.normalizeBandArtist(widgetTrack.artist || currentArtist || '');
-            const nextCover = widgetTrack.cover || this.track.cover || this.fallbackCover;
-
-            this.track = {
-                ...this.track,
-                title: nextTitle || this.track.title || '',
-                artist: nextArtist || this.track.artist || '',
-                cover: nextCover,
-            };
+            return force;
         },
 
         async ensureBandInfo() {
-            const widgetTrack = this.readNowPlayingWidget();
-            const inferredWidget = this.inferWidgetTrack(widgetTrack);
-            const artist = this.normalizeBandArtist(
-                (this.track.artist && this.track.artist !== this.defaultArtist ? this.track.artist : '') ||
-                inferredWidget.artist ||
-                widgetTrack.artist ||
-                ''
-            );
-            const title = this.normalizeTrackTitle(
-                this.track.title ||
-                inferredWidget.title ||
-                widgetTrack.title ||
-                ''
-            );
+            const artist = this.normalizeBandArtist(this.track.artist || '');
+            const title = this.normalizeTrackTitle(this.track.title || '');
 
             if (!artist && !title) {
                 return;
@@ -581,8 +519,9 @@ export function registerRadioPlayer(Alpine) {
             const hasFounded = typeof this.track.band_founded_label === 'string' && this.track.band_founded_label.trim() !== '';
             const hasFacts = Array.isArray(this.track.band_facts) && this.track.band_facts.length > 0;
             const hasThumb = typeof this.track.band_thumbnail === 'string' && this.track.band_thumbnail.trim() !== '';
+            const hasLyrics = typeof this.track.lyrics === 'string' && this.track.lyrics.trim() !== '';
 
-            return !hasInfo || !hasFounded || !hasFacts || !hasThumb;
+            return !hasInfo || !hasFounded || !hasFacts || !hasThumb || !hasLyrics;
         },
 
         openPopout() {
@@ -633,14 +572,12 @@ export function registerRadioPlayer(Alpine) {
         applyStatus(data, silent = false) {
             const previousSignature = this.track.signature;
             const track = data.track || {};
-            const widgetTrack = this.readNowPlayingWidget();
-            const inferredWidget = this.inferWidgetTrack(widgetTrack);
             const currentTitle = this.track.title && this.track.title !== this.defaultTitle ? this.track.title : '';
             const currentArtist = this.track.artist && this.track.artist !== this.defaultArtist ? this.track.artist : '';
             const nextSignature = track.signature || this.buildSignature({
-                title: track.title || inferredWidget.title || widgetTrack.title || currentTitle || '',
-                artist: track.artist || inferredWidget.artist || widgetTrack.artist || currentArtist || '',
-                cover: track.cover || widgetTrack.cover || this.fallbackCover,
+                title: track.title || currentTitle || '',
+                artist: track.artist || currentArtist || '',
+                cover: track.cover || this.track.cover || this.fallbackCover,
                 program: track.program_name || '',
             });
             const trackChanged = Boolean(previousSignature && previousSignature !== nextSignature);
@@ -653,9 +590,9 @@ export function registerRadioPlayer(Alpine) {
             this.track = {
                 ...this.track,
                 ...track,
-                title: this.normalizeTrackTitle(track.title || inferredWidget.title || widgetTrack.title || currentTitle || ''),
-                artist: this.normalizeBandArtist(track.artist || inferredWidget.artist || widgetTrack.artist || currentArtist || ''),
-                cover: track.cover || widgetTrack.cover || this.fallbackCover,
+                title: this.normalizeTrackTitle(track.title || currentTitle || ''),
+                artist: this.normalizeBandArtist(track.artist || currentArtist || ''),
+                cover: track.cover || this.track.cover || this.fallbackCover,
                 lyrics: trackChanged ? nextLyrics : (nextLyrics || this.track.lyrics || ''),
                 band_info: trackChanged ? nextBandInfo : (nextBandInfo || this.track.band_info || ''),
                 band_thumbnail: trackChanged ? nextThumbnail : (nextThumbnail || this.track.band_thumbnail || ''),
@@ -685,7 +622,6 @@ export function registerRadioPlayer(Alpine) {
                 };
             }
 
-            this.syncTrackFromWidget();
             this.queueWidgetSync(trackChanged ? 0 : 200);
 
             if ((this.normalizeBandArtist(this.track.artist) || this.normalizeTrackTitle(this.track.title)) && this.needsBandEnrichment()) {
@@ -700,7 +636,10 @@ export function registerRadioPlayer(Alpine) {
             this.listeners = Number(data.listeners || this.track.listeners || 0);
 
             this.progress.duration = Number(track.duration_seconds || 0);
-            this.progress.elapsed = Number(track.elapsed_seconds || 0);
+            this.progress.elapsed = trackChanged ? 0 : Number(track.elapsed_seconds || 0);
+            if (this.progress.duration > 0 && this.progress.elapsed > this.progress.duration) {
+                this.progress.elapsed = 0;
+            }
             this.syncProgress();
             this.ensureAudioSource();
 
@@ -857,6 +796,20 @@ export function registerRadioPlayer(Alpine) {
             const minutes = String(Math.floor(safe / 60)).padStart(2, '0');
             const secs = String(Math.floor(safe % 60)).padStart(2, '0');
             return `${minutes}:${secs}`;
+        },
+
+        resolveCoverUrl(value) {
+            const url = String(value || '').trim();
+            if (!url) {
+                return this.fallbackCover || '';
+            }
+
+            const signature = String(this.track?.signature || '').trim();
+            if (!signature) {
+                return url;
+            }
+
+            return `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(signature)}`;
         },
 
         setTab(tab) {

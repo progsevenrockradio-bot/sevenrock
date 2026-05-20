@@ -33,7 +33,7 @@ class BandInfoResolver
             return is_array($cached) ? $cached : $this->emptyPayload($artist);
         }
 
-        $local = $this->resolveLocalProfile($artist, false);
+        $local = $this->resolveLocalProfile($artist);
         if ($local !== null) {
             Cache::put($cacheKey, $local, now()->addMinutes(60));
 
@@ -49,15 +49,6 @@ class BandInfoResolver
             $this->hasMeaningfulPayload($payload) ? now()->addMinutes(60) : now()->addMinutes(10)
         );
 
-        if (! $this->hasMeaningfulPayload($payload)) {
-            $fuzzyLocal = $this->resolveLocalProfile($artist, true);
-            if ($fuzzyLocal !== null) {
-                Cache::put($cacheKey, $fuzzyLocal, now()->addMinutes(60));
-
-                return $fuzzyLocal;
-            }
-        }
-
         return $payload;
     }
 
@@ -71,12 +62,10 @@ class BandInfoResolver
      *     facts:array<int,string>
      * }|null
      */
-    private function resolveLocalProfile(string $artist, bool $allowFuzzy = false): ?array
+    private function resolveLocalProfile(string $artist): ?array
     {
         $matcher = app(BandProfileMatcher::class);
-        $profile = $allowFuzzy
-            ? $matcher->fuzzyMatch($artist)
-            : $matcher->exactMatch($artist);
+        $profile = $matcher->exactMatch($artist);
 
         if (! $profile) {
             return null;

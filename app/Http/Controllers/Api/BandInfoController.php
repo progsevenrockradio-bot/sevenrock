@@ -59,10 +59,13 @@ class BandInfoController extends Controller
                 $artist = trim((string) $song->artist);
             }
             $songMatchesArtist = $song ? $this->songArtistMatchesLookup($song, $artist) : false;
+            $songBandProfileMatchesArtist = $song?->bandProfile
+                ? $this->bandProfileMatchesArtist($song->bandProfile, $artist)
+                : true;
 
-            if ($songMatchesArtist && $song?->band_info && trim((string) $song->band_info) !== '' && ! $this->isFallbackSummary((string) $song->band_info, $artist)) {
+            if ($songMatchesArtist && $songBandProfileMatchesArtist && $song?->band_info && trim((string) $song->band_info) !== '' && ! $this->isFallbackSummary((string) $song->band_info, $artist)) {
                 $payload['summary'] = $this->formatSummaryText((string) $song->band_info);
-            } elseif ($songMatchesArtist && $song?->bandProfile) {
+            } elseif ($songMatchesArtist && $songBandProfileMatchesArtist && $song?->bandProfile) {
                 $bandProfile = $song->bandProfile;
                 $payload['summary'] = $this->formatSummaryText((string) ($song->bandProfile->editorial_summary ?: $song->bandProfile->biography ?: $payload['summary']));
                 $payload['thumbnail'] = $song->bandProfile->normalizedImageUrl() ?: $payload['thumbnail'];
@@ -104,8 +107,7 @@ class BandInfoController extends Controller
             return null;
         }
 
-        return $this->matcher->exactMatch($artist)
-            ?? $this->matcher->fuzzyMatch($artist);
+        return $this->matcher->exactMatch($artist);
     }
 
     private function resolveSong(string $artist, string $title): ?Song
@@ -184,6 +186,25 @@ class BandInfoController extends Controller
         return $songArtist === $lookupArtist
             || str_contains($songArtist, $lookupArtist)
             || str_contains($lookupArtist, $songArtist);
+    }
+
+    private function bandProfileMatchesArtist(BandProfile $bandProfile, string $artist): bool
+    {
+        $artist = trim($artist);
+        if ($artist === '') {
+            return false;
+        }
+
+        $profileName = $this->normalizeContextValue((string) $bandProfile->name);
+        $lookupArtist = $this->normalizeContextValue($artist);
+
+        if ($profileName === '' || $lookupArtist === '') {
+            return false;
+        }
+
+        return $profileName === $lookupArtist
+            || str_contains($profileName, $lookupArtist)
+            || str_contains($lookupArtist, $profileName);
     }
 
     /**
@@ -302,7 +323,7 @@ class BandInfoController extends Controller
 
         $updates = [];
 
-        if ($bandProfile && ! $song->band_profile_id) {
+        if ($bandProfile && (int) $song->band_profile_id !== (int) $bandProfile->id) {
             $updates['band_profile_id'] = $bandProfile->id;
         }
 

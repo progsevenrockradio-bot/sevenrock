@@ -81,7 +81,7 @@ class BandInfoAggregator
         }
 
         $matcher = app(BandProfileMatcher::class);
-        $profile = $matcher->exactMatch($artist) ?? $matcher->fuzzyMatch($artist);
+        $profile = $matcher->exactMatch($artist);
 
         if (! $profile) {
             return null;
