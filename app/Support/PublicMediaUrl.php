@@ -232,6 +232,7 @@ class PublicMediaUrl
             trim((string) config('media.legacy_wp_uploads_path', '')),
             public_path('wp-content/uploads'),
             realpath(public_path('wp-content/uploads')) ?: null,
+            dirname(dirname(dirname(base_path()))) . '/shared/sevenrock-assets/public/wp-content/uploads',
             base_path('../shared/sevenrock-assets/public/wp-content/uploads'),
             base_path('../../shared/sevenrock-assets/public/wp-content/uploads'),
             '/shared/sevenrock-assets/public/wp-content/uploads',
