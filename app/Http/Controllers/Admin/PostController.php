@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Database\Eloquent\Model;
 
 class PostController extends Controller
 {
@@ -51,6 +52,7 @@ class PostController extends Controller
         unset($data['categories'], $data['tags']);
         $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
         $data['featured_image'] = $this->resolveImage($request, null, $data['featured_image'] ?? null);
+        $data = $this->persistableAttributes($data);
 
         $post = Post::query()->create($data);
         $this->syncTaxonomies($post, $categories, $tags);
@@ -78,6 +80,7 @@ class PostController extends Controller
         unset($data['categories'], $data['tags']);
         $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
         $data['featured_image'] = $this->resolveImage($request, $post->featured_image, $data['featured_image'] ?? null);
+        $data = $this->persistableAttributes($data);
 
         $post->update($data);
         $this->syncTaxonomies($post, $categories, $tags);
@@ -147,9 +150,45 @@ class PostController extends Controller
         $validated['tags'] = $this->splitCsv((string) ($validated['tags_text'] ?? ''));
         $validated['is_published'] = $request->boolean('is_published', true);
 
+        if (! Schema::hasColumn('posts', 'is_published') && Schema::hasColumn('posts', 'status')) {
+            $validated['status'] = $validated['is_published'] ? 'published' : 'draft';
+        }
+
         unset($validated['content_text'], $validated['categories_text'], $validated['tags_text'], $validated['featured_image_file']);
 
         return $validated;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function persistableAttributes(array $data): array
+    {
+        $table = (new Post())->getTable();
+
+        if (Schema::hasColumn($table, 'featured_image_path') && ! Schema::hasColumn($table, 'featured_image')) {
+            $data['featured_image_path'] = $data['featured_image'];
+            unset($data['featured_image']);
+        }
+
+        if (! Schema::hasColumn($table, 'is_published')) {
+            unset($data['is_published']);
+        }
+
+        if (! Schema::hasColumn($table, 'status')) {
+            unset($data['status']);
+        }
+
+        if (! Schema::hasColumn($table, 'categories')) {
+            unset($data['categories']);
+        }
+
+        if (! Schema::hasColumn($table, 'tags')) {
+            unset($data['tags']);
+        }
+
+        return $data;
     }
 
     private function resolveImage(Request $request, ?string $current, ?string $input): string

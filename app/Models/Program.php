@@ -11,6 +11,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Program extends Model
 {
     use Auditable;
+
+    /**
+     * The legacy schema stores schedule rows in radio_programs.
+     * Keep the model aligned with the actual table used by the app.
+     */
+    protected $table = 'radio_programs';
+
     protected $fillable = [
         'slug',
         'name',

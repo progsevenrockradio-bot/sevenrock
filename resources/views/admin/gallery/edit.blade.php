@@ -1,5 +1,5 @@
+@php $admin = $themeAppearance['admin_texts']; @endphp
 <x-layouts.admin :title="$admin['edit_image'].' - '.$themeSettings->site_name">
-    @php $admin = $themeAppearance['admin_texts']; @endphp
     <div class="mb-6">
         <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $admin['edit_image'] }}</h1>
         <p class="mt-2 text-[#7b7b7b]">Update a gallery tile.</p>

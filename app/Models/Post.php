@@ -39,7 +39,39 @@ class Post extends Model
 
     public function scopePublished(Builder $query): Builder
     {
-        return $query->where('is_published', true);
+        if (Schema::hasColumn($query->getModel()->getTable(), 'is_published')) {
+            return $query->where('is_published', true);
+        }
+
+        if (Schema::hasColumn($query->getModel()->getTable(), 'status')) {
+            return $query->where('status', 'published');
+        }
+
+        return $query->whereNotNull('published_at')->where('published_at', '<=', now());
+    }
+
+    public function getIsPublishedAttribute(mixed $value): bool
+    {
+        if ($value !== null) {
+            return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if (Schema::hasColumn($this->getTable(), 'status')) {
+            return (string) ($this->getAttribute('status') ?? '') === 'published';
+        }
+
+        return (bool) ($this->getAttribute('published_at') && $this->getAttribute('published_at') <= now());
+    }
+
+    public function getFeaturedImageUrlAttribute(): string
+    {
+        $path = (string) ($this->featured_image ?? $this->featured_image_path ?? '');
+
+        if ($resolved = PublicMediaUrl::normalizePublicUrl($path)) {
+            return $resolved;
+        }
+
+        return $path !== '' ? asset($path) : '';
     }
 
     public function taxonomies(): BelongsToMany
@@ -94,12 +126,4 @@ class Post extends Model
         return array_values(array_filter(array_map('strval', $this->{$attribute} ?? [])));
     }
 
-    public function getFeaturedImageUrlAttribute(): string
-    {
-        if ($resolved = PublicMediaUrl::normalizePublicUrl($this->featured_image)) {
-            return $resolved;
-        }
-
-        return $this->featured_image ? asset($this->featured_image) : '';
-    }
 }

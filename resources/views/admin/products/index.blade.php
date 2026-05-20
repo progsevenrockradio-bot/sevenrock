@@ -1,5 +1,5 @@
+@php $admin = $themeAppearance['admin_texts']; @endphp
 <x-layouts.admin :title="$admin['products_heading'].' - '.$themeSettings->site_name">
-    @php $admin = $themeAppearance['admin_texts']; @endphp
     @if (session('status'))
         <div class="mb-6 border border-[#1e4d2b] bg-[rgba(16,64,30,.2)] px-4 py-3 text-sm text-[#b8e6c3]">
             {{ session('status') }}
