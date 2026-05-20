@@ -6,9 +6,11 @@ namespace App\Models;
 
 use App\Models\Concerns\Auditable;
 use App\Support\PublicMediaUrl;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class MasterProgram extends Model
@@ -69,6 +71,48 @@ class MasterProgram extends Model
         return $this->hasMany(RadioProgram::class, 'master_program_id');
     }
 
+    public static function adminListingQuery(): Builder
+    {
+        $query = static::query();
+        $table = (new static())->getTable();
+
+        if (! Schema::hasTable($table)) {
+            return $query;
+        }
+
+        $dayColumn = static::firstExistingColumn($table, ['dia_transmision', 'day', 'schedule_day']);
+        $timeColumn = static::firstExistingColumn($table, ['hora_transmision', 'time', 'schedule_time']);
+        $nameColumn = static::firstExistingColumn($table, ['nombre', 'name', 'title']);
+
+        if ($dayColumn !== null) {
+            $query->orderByRaw(sprintf(
+                "CASE UPPER(%s)
+                    WHEN 'LUNES' THEN 1
+                    WHEN 'MARTES' THEN 2
+                    WHEN 'MIERCOLES' THEN 3
+                    WHEN 'JUEVES' THEN 4
+                    WHEN 'VIERNES' THEN 5
+                    WHEN 'SABADO' THEN 6
+                    WHEN 'DOMINGO' THEN 7
+                    ELSE 99
+                END",
+                self::wrapColumn($dayColumn)
+            ));
+        }
+
+        if ($timeColumn !== null) {
+            $query->orderByRaw(sprintf("COALESCE(%s, '99:99:99')", self::wrapColumn($timeColumn)));
+        }
+
+        if ($nameColumn !== null) {
+            $query->orderBy($nameColumn);
+        } else {
+            $query->orderBy($table . '.id');
+        }
+
+        return $query;
+    }
+
     public function getNameAttribute(): string
     {
         return trim((string) ($this->nombre ?: ''));
@@ -121,5 +165,24 @@ class MasterProgram extends Model
     public function publicSlug(): string
     {
         return Str::slug($this->name ?: 'programa');
+    }
+
+    /**
+     * @param  array<int, string>  $columns
+     */
+    private static function firstExistingColumn(string $table, array $columns): ?string
+    {
+        foreach ($columns as $column) {
+            if (Schema::hasColumn($table, $column)) {
+                return $column;
+            }
+        }
+
+        return null;
+    }
+
+    private static function wrapColumn(string $column): string
+    {
+        return '`' . str_replace('`', '``', $column) . '`';
     }
 }

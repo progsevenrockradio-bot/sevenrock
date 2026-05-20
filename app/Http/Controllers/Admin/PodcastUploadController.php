@@ -22,20 +22,7 @@ final class PodcastUploadController extends Controller
 {
     public function index(): View
     {
-        $masterPrograms = MasterProgram::query()
-            ->orderByRaw("CASE dia_transmision
-                WHEN 'LUNES' THEN 1
-                WHEN 'MARTES' THEN 2
-                WHEN 'MIERCOLES' THEN 3
-                WHEN 'JUEVES' THEN 4
-                WHEN 'VIERNES' THEN 5
-                WHEN 'SABADO' THEN 6
-                WHEN 'DOMINGO' THEN 7
-                ELSE 99
-            END")
-            ->orderByRaw("COALESCE(hora_transmision, '99:99:99')")
-            ->orderBy('nombre')
-            ->get();
+        $masterPrograms = MasterProgram::adminListingQuery()->get();
 
         $dayTabs = [
             'LUNES' => 'Lunes',
