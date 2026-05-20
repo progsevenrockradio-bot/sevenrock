@@ -132,36 +132,23 @@ class PublicMediaUrl
             return null;
         }
 
-        $configuredPath = trim((string) config('media.legacy_wp_uploads_path', ''));
         $configuredUrl = trim((string) config('media.legacy_wp_uploads_url', ''));
-        $legacyRelative = null;
-
-        if ($configuredPath !== '') {
-            $basePath = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR);
+        foreach (self::legacyWordPressUploadRoots() as $basePath) {
             $filesystemPath = $basePath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
 
             if (File::exists($filesystemPath)) {
-                $legacyRelative = $relative;
-            } else {
-                $foundPath = self::findLegacyWordPressUploadByBasename($basePath, $relative);
-                $legacyRelative = $foundPath !== null ? self::relativeLegacyWordPressUploadPath($foundPath) : null;
+                $legacyRelative = self::relativeLegacyWordPressUploadPath($filesystemPath) ?? $relative;
+                return self::buildLegacyWordPressUploadUrl($legacyRelative, $configuredUrl);
             }
 
-            if ($legacyRelative !== null) {
-                if ($configuredUrl !== '') {
-                    return rtrim($configuredUrl, '/') . '/' . $legacyRelative;
-                }
-
-                if (Route::has('legacy-wp-uploads.show')) {
-                    return route('legacy-wp-uploads.show', ['path' => $legacyRelative]);
-                }
-
-                $publicRelative = 'wp-content/uploads/' . $legacyRelative;
-
-                if (self::localAssetExists($publicRelative)) {
-                    return asset($publicRelative);
-                }
+            $foundPath = self::findLegacyWordPressUploadByBasename($basePath, $relative);
+            if ($foundPath === null) {
+                continue;
             }
+
+            $legacyRelative = self::relativeLegacyWordPressUploadPath($foundPath) ?? $relative;
+
+            return self::buildLegacyWordPressUploadUrl($legacyRelative, $configuredUrl);
         }
 
         $publicRelative = 'wp-content/uploads/' . $relative;
@@ -180,11 +167,7 @@ class PublicMediaUrl
     private static function relativeLegacyWordPressUploadPath(string $filesystemPath): ?string
     {
         $filesystemPath = str_replace('\\', '/', $filesystemPath);
-        $candidateRoots = array_values(array_filter([
-            trim((string) config('media.legacy_wp_uploads_path', '')),
-            public_path('wp-content/uploads'),
-            realpath(public_path('wp-content/uploads')) ?: null,
-        ]));
+        $candidateRoots = self::legacyWordPressUploadRoots();
 
         foreach ($candidateRoots as $configuredPath) {
             $basePath = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR);
@@ -213,10 +196,7 @@ class PublicMediaUrl
             return null;
         }
 
-        $candidateRoots = array_values(array_filter([
-            trim((string) config('media.legacy_wp_uploads_path', '')),
-            public_path('wp-content/uploads'),
-        ]));
+        $candidateRoots = self::legacyWordPressUploadRoots();
 
         foreach ($candidateRoots as $configuredPath) {
             $basePath = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR);
@@ -241,6 +221,64 @@ class PublicMediaUrl
         }
 
         return null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function legacyWordPressUploadRoots(): array
+    {
+        $roots = [
+            trim((string) config('media.legacy_wp_uploads_path', '')),
+            public_path('wp-content/uploads'),
+            realpath(public_path('wp-content/uploads')) ?: null,
+            base_path('../shared/sevenrock-assets/public/wp-content/uploads'),
+            base_path('../../shared/sevenrock-assets/public/wp-content/uploads'),
+            '/shared/sevenrock-assets/public/wp-content/uploads',
+        ];
+
+        $normalized = [];
+
+        foreach ($roots as $root) {
+            $root = self::normalizeFilesystemRoot($root);
+            if ($root !== null) {
+                $normalized[] = $root;
+            }
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    private static function normalizeFilesystemRoot(?string $path): ?string
+    {
+        $path = trim((string) $path);
+        if ($path === '') {
+            return null;
+        }
+
+        $path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+
+        return rtrim($path, DIRECTORY_SEPARATOR);
+    }
+
+    private static function buildLegacyWordPressUploadUrl(string $legacyRelative, string $configuredUrl): ?string
+    {
+        $legacyRelative = ltrim(str_replace('\\', '/', $legacyRelative), '/');
+        if ($legacyRelative === '') {
+            return null;
+        }
+
+        if ($configuredUrl !== '') {
+            return rtrim($configuredUrl, '/') . '/' . $legacyRelative;
+        }
+
+        if (Route::has('legacy-wp-uploads.show')) {
+            return route('legacy-wp-uploads.show', ['path' => $legacyRelative]);
+        }
+
+        $publicRelative = 'wp-content/uploads/' . $legacyRelative;
+
+        return self::localAssetExists($publicRelative) ? asset($publicRelative) : null;
     }
 
     private static function findLegacyWordPressUploadByBasename(string $basePath, string $relative): ?string
