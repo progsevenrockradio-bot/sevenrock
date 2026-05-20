@@ -188,26 +188,36 @@ class PublicMediaUrl
             return null;
         }
 
-        $configuredPath = trim((string) config('media.legacy_wp_uploads_path', ''));
-        if ($configuredPath === '') {
-            return null;
+        $candidateRoots = array_values(array_filter([
+            trim((string) config('media.legacy_wp_uploads_path', '')),
+            public_path('wp-content/uploads'),
+        ]));
+
+        foreach ($candidateRoots as $configuredPath) {
+            $basePath = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR);
+            if ($basePath === '') {
+                continue;
+            }
+
+            $filesystemPath = $basePath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+
+            if (File::exists($filesystemPath)) {
+                return $filesystemPath;
+            }
+
+            $foundRelative = self::findLegacyWordPressUploadByBasename($basePath, $relative);
+            if ($foundRelative === null) {
+                continue;
+            }
+
+            $filesystemPath = $basePath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $foundRelative);
+
+            if (File::exists($filesystemPath)) {
+                return $filesystemPath;
+            }
         }
 
-        $basePath = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR);
-        $filesystemPath = $basePath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
-
-        if (File::exists($filesystemPath)) {
-            return $filesystemPath;
-        }
-
-        $foundRelative = self::findLegacyWordPressUploadByBasename($basePath, $relative);
-        if ($foundRelative === null) {
-            return null;
-        }
-
-        $filesystemPath = $basePath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $foundRelative);
-
-        return File::exists($filesystemPath) ? $filesystemPath : null;
+        return null;
     }
 
     private static function findLegacyWordPressUploadByBasename(string $basePath, string $relative): ?string
