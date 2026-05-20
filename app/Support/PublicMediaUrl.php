@@ -227,10 +227,17 @@ class PublicMediaUrl
             return null;
         }
 
+        $stem = pathinfo($basename, PATHINFO_FILENAME);
+        $extension = pathinfo($basename, PATHINFO_EXTENSION);
         $candidates = array_values(array_unique(array_filter([
             $basename,
             self::stripWordPressThumbnailSuffix($basename),
+            $stem . ($extension !== '' ? '.' . $extension : ''),
+            $stem,
         ])));
+
+        $candidateLower = array_map(static fn (string $name): string => mb_strtolower($name), $candidates);
+        $stemLower = mb_strtolower($stem);
 
         if ($candidates === []) {
             return null;
@@ -246,8 +253,17 @@ class PublicMediaUrl
                     continue;
                 }
 
-                if (! in_array($file->getFilename(), $candidates, true)) {
-                    continue;
+                $filename = $file->getFilename();
+                $filenameLower = mb_strtolower($filename);
+
+                if (! in_array($filenameLower, $candidateLower, true)) {
+                    if ($stemLower === '') {
+                        continue;
+                    }
+
+                    if (! str_starts_with($filenameLower, $stemLower)) {
+                        continue;
+                    }
                 }
 
                 $fullPath = str_replace('\\', '/', $file->getPathname());
