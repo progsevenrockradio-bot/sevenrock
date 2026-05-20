@@ -184,12 +184,11 @@
                         <strong data-player-title-text style="font-size:14px; color:#ddd7cb; line-height:1.08; max-width:100%;" x-text="track.title || defaultTitle"></strong>
                         <span data-player-artist-text style="font-size:12px; color:#b9b1a5; line-height:1.08; max-width:100%;" x-text="track.artist || defaultArtist"></span>
                     </div>
-                </div>
-
-                <div class="rbcloud_tracktimer" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:18px; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.18em; text-transform:uppercase; white-space:nowrap; margin-top:0;">
-                    <span id="rbcloud_tracktimer_e11096"></span>
-                    <span id="rbcloud_tracktimer_sep11096" hidden> &frasl; <!-- slash --> </span>
-                    <span id="rbcloud_tracktimer_r11096"></span>
+                    <div class="rbcloud_tracktimer" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:18px; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.18em; text-transform:uppercase; white-space:nowrap; margin-top:2px;">
+                        <span id="rbcloud_tracktimer_e11096"></span>
+                        <span id="rbcloud_tracktimer_sep11096" hidden> &frasl; <!-- slash --> </span>
+                        <span id="rbcloud_tracktimer_r11096"></span>
+                    </div>
                 </div>
                 <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11096"></script>
 
