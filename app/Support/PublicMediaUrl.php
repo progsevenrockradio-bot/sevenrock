@@ -245,7 +245,7 @@ class PublicMediaUrl
 
         try {
             $iterator = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($basePath, \FilesystemIterator::SKIP_DOTS)
+                new \RecursiveDirectoryIterator($basePath, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::FOLLOW_SYMLINKS)
             );
 
             foreach ($iterator as $file) {
