@@ -3,9 +3,12 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use App\Support\ArchiveIdentifierAudit;
+use App\Models\Post;
 use App\Jobs\UploadMp3Job;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
+use App\Support\PublicMediaUrl;
+use App\Support\WordPressContent;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -164,6 +167,64 @@ Artisan::command('radioboss:test {--folder= : Carpeta remota destino (relativa a
         return 1;
     }
 })->purpose('Prueba la conexion FTP a RadioBOSS');
+
+Artisan::command('sevenrock:resolve-post-media {slug : Slug del post a inspeccionar}', function (string $slug) {
+    $post = Post::query()->where('slug', $slug)->first();
+
+    if (! $post) {
+        $this->error('No existe un post con slug: ' . $slug);
+
+        return 1;
+    }
+
+    $this->info('Post: ' . $post->title);
+    $this->line('Slug: ' . $post->slug);
+    $this->line('Featured image raw: ' . (string) ($post->featured_image ?? $post->featured_image_path ?? ''));
+    $this->line('Featured image resolved: ' . $post->featured_image_url);
+
+    $blocks = WordPressContent::toRenderableBlocks($post->content ?? []);
+    $images = [];
+
+    foreach ($blocks as $index => $blockHtml) {
+        if (! is_string($blockHtml) || ! str_contains($blockHtml, '<img')) {
+            continue;
+        }
+
+        if (! preg_match_all('/<img\b[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/i', $blockHtml, $matches, PREG_SET_ORDER)) {
+            continue;
+        }
+
+        foreach ($matches as $match) {
+            $rawSrc = html_entity_decode($match[1] ?? '', ENT_QUOTES | ENT_HTML5);
+            $alt = html_entity_decode($match[2] ?? '', ENT_QUOTES | ENT_HTML5);
+            $resolved = PublicMediaUrl::normalizePublicUrl($rawSrc);
+            $images[] = [
+                'block' => $index + 1,
+                'alt' => $alt,
+                'raw' => $rawSrc,
+                'resolved' => $resolved !== '' ? $resolved : '(no resuelto)',
+            ];
+        }
+    }
+
+    if ($images === []) {
+        $this->warn('No se encontraron imágenes dentro del contenido renderizable.');
+
+        return 0;
+    }
+
+    $this->table(
+        ['Bloque', 'ALT', 'Raw src', 'Resolved URL'],
+        array_map(static fn (array $row): array => [
+            $row['block'],
+            $row['alt'],
+            $row['raw'],
+            $row['resolved'],
+        ], $images)
+    );
+
+    return 0;
+})->purpose('Inspecciona la resolucion de imagenes legacy de un post');
 
 Artisan::command('sevenrock:test-upload {--file= : Ruta relativa en storage/app/public del MP3 local} {--master-name=Seven Rock Test : Nombre del programa maestro temporal} {--folder=Programas : Carpeta FTP remota} {--archive=0 : 1 para sincronizar con Archive.org, 0 para omitirlo} {--keep-local=1 : 1 para conservar la copia local procesada}', function () {
     $storedPath = trim((string) $this->option('file'));
