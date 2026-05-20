@@ -751,15 +751,15 @@ export function registerRadioPlayer(Alpine) {
         },
 
         tickProgress() {
-            if (!this.playing || this.progress.duration <= 0) {
+            if (!this.playing) {
                 return;
             }
 
             const audio = this.$refs.audio;
             if (audio && Number.isFinite(audio.currentTime) && audio.currentTime > 0) {
-                this.progress.elapsed = Math.min(Math.round(audio.currentTime), this.progress.duration);
+                this.progress.elapsed = Math.round(audio.currentTime);
             } else {
-                this.progress.elapsed = Math.min(this.progress.elapsed + 1, this.progress.duration);
+                this.progress.elapsed = Math.max(0, Math.round(this.progress.elapsed) + 1);
             }
 
             this.syncProgress();

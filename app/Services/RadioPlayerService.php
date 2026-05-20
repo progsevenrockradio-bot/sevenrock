@@ -155,7 +155,7 @@ class RadioPlayerService
         if ($trackChanged) {
             $duration = (int) ($song?->duration_seconds ?? 0);
             $elapsed = 0;
-        } elseif ($duration > 0 && $elapsed <= 0 && filled(Arr::get($state, 'started_at'))) {
+        } elseif ($elapsed <= 0 && filled(Arr::get($state, 'started_at'))) {
             try {
                 $elapsed = max(0, Carbon::parse((string) Arr::get($state, 'started_at'))->diffInSeconds(now()));
             } catch (\Throwable) {
