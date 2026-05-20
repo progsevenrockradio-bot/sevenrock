@@ -11,7 +11,6 @@ use App\Models\Program;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -25,8 +24,10 @@ class SongController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $selectedBandProfile = $this->selectedBandProfile($request);
+
         return view('admin.songs.create', [
             'song' => new Song([
                 'published_at' => now(),
@@ -34,8 +35,8 @@ class SongController extends Controller
                 'social_links' => [],
                 'is_live' => false,
             ]),
-            'bandProfiles' => BandProfile::query()->orderBy('name')->get(),
-            'programs' => Program::query()->active()->orderBy('sort_order')->get(),
+            'selectedBandProfile' => $selectedBandProfile,
+            'programs' => Program::query()->active()->latestEditorial()->get(),
             'bandMembersText' => '',
             'socialLinksText' => '',
         ]);
@@ -48,12 +49,14 @@ class SongController extends Controller
         return redirect()->route('admin.songs.index')->with('status', 'Song created.');
     }
 
-    public function edit(Song $song): View
+    public function edit(Request $request, Song $song): View
     {
+        $selectedBandProfile = $this->selectedBandProfile($request, $song);
+
         return view('admin.songs.edit', [
             'song' => $song->load(['program', 'bandProfile']),
-            'bandProfiles' => BandProfile::query()->orderBy('name')->get(),
-            'programs' => Program::query()->active()->orderBy('sort_order')->get(),
+            'selectedBandProfile' => $selectedBandProfile,
+            'programs' => Program::query()->active()->latestEditorial()->get(),
             'bandMembersText' => implode("\n", array_map('strval', $song->band_members ?? [])),
             'socialLinksText' => $this->linksToText($song->social_links ?? []),
         ]);
@@ -91,7 +94,7 @@ class SongController extends Controller
             'band_info' => ['nullable', 'string'],
             'band_members_text' => ['nullable', 'string'],
             'social_links_text' => ['nullable', 'string'],
-            'program_id' => ['nullable', 'integer', 'exists:programs,id'],
+            'program_id' => ['nullable', 'integer', 'exists:radio_programs,id'],
             'is_live' => ['nullable', 'boolean'],
             'published_at' => ['nullable', 'date'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -147,6 +150,20 @@ class SongController extends Controller
         }
 
         return $links;
+    }
+
+    private function selectedBandProfile(Request $request, ?Song $song = null): ?BandProfile
+    {
+        $selectedId = $request->old('band_profile_id');
+        if (is_numeric($selectedId)) {
+            return BandProfile::query()->find((int) $selectedId);
+        }
+
+        if ($song?->band_profile_id) {
+            return $song->bandProfile;
+        }
+
+        return null;
     }
 
     /**

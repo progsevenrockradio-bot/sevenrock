@@ -172,7 +172,7 @@ class RadioWebhookController extends Controller
 
     private function resolveProgram(array $validated): ?Program
     {
-        if (! $this->hasTable('programs')) {
+        if (! $this->hasTable('radio_programs')) {
             return null;
         }
 
@@ -184,7 +184,7 @@ class RadioWebhookController extends Controller
             return Program::query()->where('slug', $validated['program_slug'])->first();
         }
 
-        return Program::query()->active()->orderBy('sort_order')->first();
+        return Program::query()->active()->latestEditorial()->first();
     }
 
     private function resolveCover(array $validated, ?Song $song): string

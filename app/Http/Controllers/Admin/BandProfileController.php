@@ -6,10 +6,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BandProfile;
+use App\Support\BandProfileMatcher;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Support\Str;
 
 class BandProfileController extends Controller
 {
@@ -63,6 +66,31 @@ class BandProfileController extends Controller
         $bandProfile->delete();
 
         return redirect()->route('admin.band-profiles.index')->with('status', 'Band profile deleted.');
+    }
+
+    public function search(Request $request, BandProfileMatcher $matcher): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $profiles = $matcher->search((string) ($validated['q'] ?? ''), 12);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'results' => $profiles->map(function (BandProfile $profile): array {
+                    $summary = trim((string) ($profile->editorial_summary ?: $profile->biography ?: ''));
+
+                    return [
+                        'id' => $profile->id,
+                        'text' => $profile->name,
+                        'summary' => $summary !== '' ? Str::limit(strip_tags($summary), 120, '') : '',
+                        'related_artists' => array_values(array_filter(array_map('strval', (array) ($profile->related_artists ?? [])))),
+                    ];
+                })->values()->all(),
+            ],
+        ]);
     }
 
     /**

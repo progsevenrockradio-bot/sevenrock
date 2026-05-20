@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Event extends Model
 {
+    use Auditable;
     protected $fillable = [
         'title',
         'slug',
@@ -16,6 +18,13 @@ class Event extends Model
         'venue',
         'ticket_url',
         'ticket_label',
+        'categories',
+        'poster',
+        'venue_url',
+        'facebook_url',
+        'embed_url',
+        'map_url',
+        'content',
     ];
 
     protected function casts(): array
@@ -23,6 +32,8 @@ class Event extends Model
         return [
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'categories' => 'array',
+            'content' => 'array',
         ];
     }
 

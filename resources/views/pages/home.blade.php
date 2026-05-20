@@ -9,6 +9,8 @@
         ['image' => $themeAppearance['hero_slide_secondary_url']],
     ]" />
 
+    <x-home.headline-ticker :ticker="$headlineTicker" />
+
     <x-sections.background-band class="home-section-texture home-section-gray">
         <div class="py-[90px]">
             <x-ui.section-heading :title="$homeHeadings['featured_stories']['title']" :subtitle="$homeHeadings['featured_stories']['subtitle']" />

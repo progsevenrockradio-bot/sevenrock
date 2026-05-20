@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use App\Support\PublicMediaUrl;
 
 class Album extends Model
 {
+    use Auditable;
     protected $fillable = [
         'title',
         'slug',

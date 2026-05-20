@@ -218,6 +218,110 @@
         background: transparent;
     }
 
+    .lucille-admin-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        border: 1px solid rgba(220, 220, 220, .45);
+        background: rgba(255, 255, 255, .015);
+        padding: 0 16px;
+        color: #fff;
+        font-family: var(--font-display);
+        font-size: 12px;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        transition: border-color .2s ease, background-color .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .lucille-admin-link:hover {
+        border-color: var(--color-lucille-accent);
+        background: rgba(195, 39, 32, .08);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    .lucille-admin-dropdowns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-start;
+        overflow: visible;
+    }
+
+    .lucille-admin-dropdown {
+        position: relative;
+        flex: 0 1 220px;
+        border: 1px solid rgba(220, 220, 220, .16);
+        background: rgba(12, 12, 13, .88);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .02);
+    }
+
+    .lucille-admin-dropdown > summary {
+        list-style: none;
+    }
+
+    .lucille-admin-dropdown > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .lucille-admin-dropdown-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        min-height: 42px;
+        padding: 0 14px;
+        color: #878787;
+        font-family: var(--font-display);
+        font-size: 10px;
+        letter-spacing: .32em;
+        text-transform: uppercase;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .lucille-admin-dropdown[open] .lucille-admin-dropdown-summary {
+        color: #b7b7b7;
+    }
+
+    .lucille-admin-dropdown-caret {
+        font-size: 12px;
+        line-height: 1;
+        transition: transform .2s ease;
+    }
+
+    .lucille-admin-dropdown[open] .lucille-admin-dropdown-caret {
+        transform: rotate(180deg);
+    }
+
+    .lucille-admin-dropdown-panel {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        z-index: 20;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-width: 100%;
+        width: max-content;
+        max-width: min(720px, calc(100vw - 3rem));
+        padding: 14px;
+        border: 1px solid rgba(220, 220, 220, .16);
+        background: rgba(12, 12, 13, .96);
+        box-shadow: 0 18px 35px rgba(0, 0, 0, .35);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-6px);
+        transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .lucille-admin-dropdown[open] .lucille-admin-dropdown-panel {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
+
     .lucille-card-image {
         background-position: center;
         background-size: cover;
@@ -306,6 +410,10 @@
         overflow: hidden;
     }
 
+    .lucille-event-single-shell {
+        padding-bottom: 10px;
+    }
+
     .lucille-event-detail-entry {
         margin-bottom: 10px;
         color: #7b7b7b;
@@ -388,12 +496,12 @@
 
     .lucille-event-map {
         margin-inline: auto;
-        max-width: 1200px;
-        padding-inline: 30px;
+        max-width: 1240px;
+        padding-inline: 16px;
     }
 
     .lucille-event-map-frame {
-        height: 300px;
+        height: 245px;
         width: 100%;
         filter: grayscale(100%);
     }
@@ -402,6 +510,12 @@
         width: 100%;
         height: 100%;
         border: 0;
+    }
+
+    .event-single-poster {
+        max-height: 840px;
+        min-height: 650px;
+        object-position: center top;
     }
 
     .lucille-lightbox-overlay {
@@ -904,7 +1018,9 @@
 
     .lucille-select-field {
         appearance: none;
+        color-scheme: dark;
         background-image: linear-gradient(45deg, transparent 50%, #7b7b7b 50%), linear-gradient(135deg, #7b7b7b 50%, transparent 50%);
+        background-color: rgba(0, 0, 0, .22);
         background-position: calc(100% - 18px) calc(50% - 2px), calc(100% - 12px) calc(50% - 2px);
         background-size: 6px 6px, 6px 6px;
         background-repeat: no-repeat;
@@ -914,6 +1030,13 @@
     .lucille-select-field option {
         background: #101012;
         color: #dcdcdc;
+    }
+
+    .lucille-select-field option:checked,
+    .lucille-select-field option:hover,
+    .lucille-select-field option:focus {
+        background: var(--color-lucille-accent);
+        color: #fff;
     }
 
     .lucille-product-qty {

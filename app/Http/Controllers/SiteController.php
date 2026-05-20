@@ -7,17 +7,27 @@ use App\Models\Event;
 use App\Models\GalleryImage;
 use App\Models\Product;
 use App\Models\Post;
+use App\Models\PostTaxonomy;
 use App\Models\ThemeSetting;
 use App\Models\Video;
+use App\Services\ArchiveOrgService;
+use App\Support\HeadlineTickerService;
 use App\Support\PublicMediaUrl;
 use App\Support\ProgramScheduleService;
+use App\Support\WordPressContent;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\DB;
 
 class SiteController extends Controller
 {
-    public function home(): View
+    public function home(ArchiveOrgService $archiveOrgService): View
     {
         $theme = ThemeSetting::current();
+        $latestPodcasts = $this->safeValue(fn () => $archiveOrgService->homePodcastPayload(10), []);
+
+        if (! is_array($latestPodcasts) || empty($latestPodcasts['episodes'] ?? [])) {
+            $latestPodcasts = $theme->latestPodcasts();
+        }
 
         return view('pages.home', [
             'events' => $this->safeValue(fn () => Event::query()->upcoming()->orderBy('starts_at')->limit(3)->get(), collect()),
@@ -25,9 +35,10 @@ class SiteController extends Controller
             'video' => $this->safeValue(fn () => Video::query()->latest()->first(), null),
             'galleryImages' => $this->safeValue(fn () => GalleryImage::query()->ordered()->limit(7)->get(), collect()),
             'posts' => $this->latestPosts(),
-            'nextProgram' => $this->safeValue(fn () => app(ProgramScheduleService::class)->resolve(), app(ProgramScheduleService::class)->fallback()),
+            'nextProgram' => app(ProgramScheduleService::class)->resolve(),
+            'headlineTicker' => $this->headlineTicker(),
             'featuredStories' => $theme->featuredStories(),
-            'latestPodcasts' => $theme->latestPodcasts(),
+            'latestPodcasts' => $latestPodcasts,
         ]);
     }
 
@@ -152,15 +163,23 @@ class SiteController extends Controller
     public function blogStandard(): View
     {
         $posts = $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->get(), collect());
-        $categories = $posts->flatMap(fn (Post $post) => $post->categories ?? [])->filter()->unique()->values()->all();
-        $tags = $posts->flatMap(fn (Post $post) => $post->tags ?? [])->filter()->unique()->values()->all();
+        $categories = $this->mergeTaxonomyValues(
+            $posts->flatMap(fn (Post $post) => $post->categoryNames())->all(),
+            PostTaxonomy::TYPE_CATEGORY,
+            ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']
+        );
+        $tags = $this->mergeTaxonomyValues(
+            $posts->flatMap(fn (Post $post) => $post->tagNames())->all(),
+            PostTaxonomy::TYPE_TAG,
+            ['articles', 'concerts', 'live', 'music', 'news', 'on stage']
+        );
 
         return view('pages.blog-standard', [
-            'posts' => $posts,
-            'recentPosts' => $posts->take(5),
-            'categories' => $categories ?: ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized'],
-            'tags' => $tags ?: ['articles', 'concerts', 'live', 'music', 'news', 'on stage'],
-        ]);
+                'posts' => $posts,
+                'recentPosts' => $posts->take(5),
+                'categories' => $categories,
+                'tags' => $tags,
+            ]);
     }
 
     public function singlePost(string $year, string $month, string $day, string $slug): View
@@ -185,13 +204,17 @@ class SiteController extends Controller
                     'title' => $post->title,
                     'date' => $post->published_at?->format('F j, Y') ?? trim("{$year}-{$month}-{$day}"),
                     'author' => $post->author,
-                    'categories' => $post->categories ?? [],
+                    'categories' => $post->categoryNames(),
                     'image' => $post->featured_image_url,
-                    'content' => array_pad($post->content ?? [], 4, ''),
+                    'content' => WordPressContent::toRenderableBlocks($post->content ?? []),
                     'quote' => $post->quote ?: '',
                 ],
                 'recentPosts' => $allPosts->take(5),
-                'categories' => $allPosts->flatMap(fn (Post $item) => $item->categories ?? [])->filter()->unique()->values()->all() ?: ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized'],
+                'categories' => $this->mergeTaxonomyValues(
+                    $allPosts->flatMap(fn (Post $item) => $item->categoryNames())->all(),
+                    PostTaxonomy::TYPE_CATEGORY,
+                    ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']
+                ),
                 'archives' => ['November 2016', 'October 2016', 'September 2016', 'August 2016'],
                 'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
             ]);
@@ -200,7 +223,7 @@ class SiteController extends Controller
         return view('pages.single-post', [
             'post' => $this->inspirationPost(),
             'recentPosts' => [],
-            'categories' => ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized'],
+            'categories' => $this->mergeTaxonomyValues([], PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
             'archives' => ['November 2016', 'October 2016', 'September 2016', 'August 2016'],
             'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
         ]);
@@ -230,22 +253,112 @@ class SiteController extends Controller
 
     private function latestPosts(): array
     {
-        return $this->safeValue(fn () => Post::query()->published()->latest('published_at')->limit(3)->get()->map(function (Post $post): array {
+        try {
+            if (! DB::connection()->getSchemaBuilder()->hasTable('posts')) {
+                return [];
+            }
+
+            return DB::table('posts')
+                ->where('status', 'published')
+                ->orderByDesc('published_at')
+                ->limit(3)
+                ->get()
+                ->map(function (object $post): array {
+                    $publishedAt = ! empty($post->published_at)
+                        ? \Illuminate\Support\Carbon::parse((string) $post->published_at)
+                        : null;
+                    $image = $this->resolvePublicImage((string) ($post->featured_image_path ?? ''));
+                    $excerpt = $this->excerptFromContent((string) ($post->content ?? ''), (string) ($post->meta_description ?? ''));
+
+                    return [
+                        'title' => (string) $post->title,
+                        'date' => $publishedAt?->format('F j, Y') ?? '',
+                        'category' => 'Blog',
+                        'categories' => ['Blog'],
+                        'excerpt' => $excerpt,
+                        'image' => $image,
+                        'url' => route('posts.single', [
+                            'year' => $publishedAt?->format('Y') ?? now()->format('Y'),
+                            'month' => $publishedAt?->format('m') ?? now()->format('m'),
+                            'day' => $publishedAt?->format('d') ?? now()->format('d'),
+                            'slug' => (string) $post->slug,
+                        ]),
+                    ];
+                })
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @param array<int, string> $values
+     * @param array<int, string> $fallback
+     * @return array<int, string>
+     */
+    private function mergeTaxonomyValues(array $values, string $type, array $fallback = []): array
+    {
+        $terms = array_values(array_filter(array_map('trim', $values)));
+
+        if (DB::connection()->getSchemaBuilder()->hasTable('post_taxonomies')) {
+            $terms = array_merge(
+                $terms,
+                PostTaxonomy::query()
+                    ->where('type', $type)
+                    ->orderBy('name')
+                    ->pluck('name')
+                    ->all()
+            );
+        }
+
+        $terms = array_merge($terms, $fallback);
+
+        return array_values(array_unique(array_filter(array_map('trim', $terms))));
+    }
+
+    private function headlineTicker(): array
+    {
+        try {
+            return app(HeadlineTickerService::class)->resolve();
+        } catch (\Throwable) {
             return [
-                'title' => $post->title,
-                'date' => $post->published_at?->format('F j, Y') ?? '',
-                'category' => $post->categories[0] ?? 'Blog',
-                'categories' => $post->categories ?? [],
-                'excerpt' => $post->excerpt ?? '',
-                'image' => $post->featured_image_url ?: $post->featured_image,
-                'url' => route('posts.single', [
-                    'year' => $post->published_at?->format('Y') ?? now()->format('Y'),
-                    'month' => $post->published_at?->format('m') ?? now()->format('m'),
-                    'day' => $post->published_at?->format('d') ?? now()->format('d'),
-                    'slug' => $post->slug,
-                ]),
+                'label' => 'Editorial feed',
+                'subtitle' => 'Latest headlines',
+                'items' => [],
             ];
-        })->all(), []);
+        }
+    }
+
+    private function excerptFromContent(string $content, string $fallback = ''): string
+    {
+        $fallback = trim($fallback);
+        if ($fallback !== '') {
+            return $fallback;
+        }
+
+        $content = trim($content);
+        if ($content === '') {
+            return '';
+        }
+
+        $blocks = json_decode($content, true);
+        if (is_array($blocks)) {
+            foreach ($blocks as $block) {
+                $html = data_get($block, 'content.html');
+                if (! is_string($html)) {
+                    continue;
+                }
+
+                $text = trim(preg_replace('/\s+/u', ' ', strip_tags($html)) ?? '');
+                if ($text !== '') {
+                    return \Illuminate\Support\Str::limit($text, 140, '');
+                }
+            }
+        }
+
+        $text = trim(preg_replace('/\s+/u', ' ', strip_tags($content)) ?? '');
+
+        return $text !== '' ? \Illuminate\Support\Str::limit($text, 140, '') : '';
     }
 
     /**
@@ -325,6 +438,31 @@ class SiteController extends Controller
 
     private function singleEvent(string $slug): array
     {
+        $event = $this->safeValue(function () use ($slug) {
+            return Event::query()->where('slug', $slug)->first();
+        }, null);
+
+        if ($event instanceof Event) {
+            $startsAt = $event->starts_at ?? now();
+
+            return [
+                'title' => $event->title,
+                'categories' => $event->categories ?? [],
+                'date' => $startsAt->format('F j, Y'),
+                'time' => $startsAt->format('g:i a'),
+                'location' => $event->location,
+                'venue' => $event->venue,
+                'venue_url' => $event->venue_url ?: '#',
+                'ticket_url' => $event->ticket_url ?: '#',
+                'ticket_label' => $event->ticket_label ?: 'Tickets',
+                'facebook_url' => $event->facebook_url ?: '',
+                'poster' => PublicMediaUrl::normalizePublicUrl($event->poster) ?: 'assets/lucille/ozzfest_poster.jpg',
+                'embed' => $event->embed_url ?: 'https://www.youtube.com/embed/2Ob5y1YqWYg?autoplay=0&enablejsapi=1&wmode=transparent&rel=0&showinfo=0',
+                'map' => $event->map_url ?: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d17236.51886266146!2d-4.402682717825224!3d57.31528684031594!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x488f16c34da23729%3A0xd4d749cbf4fe912f!2sLoch+Ness%2C+Highland%2C+UK!5e0!3m2!1sen!2sro!4v1429172565870',
+                'content' => array_values(array_filter(array_map('strval', $event->content ?? []))),
+            ];
+        }
+
         $events = [
             'rockness-festival' => [
                 'title' => 'Rockness Festival',

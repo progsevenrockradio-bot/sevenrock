@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -9,6 +10,7 @@ use App\Support\PublicMediaUrl;
 
 class ThemeSetting extends Model
 {
+    use Auditable;
     protected $casts = [
         'hero_video_disabled' => 'bool',
         'featured_stories' => 'array',
@@ -34,6 +36,11 @@ class ThemeSetting extends Model
         'contact_description',
         'contact_address',
         'contact_email',
+        'notification_email',
+        'notification_copy_email',
+        'notification_from_email',
+        'notification_reply_to_email',
+        'notification_mailer',
         'contact_phone_primary',
         'contact_phone_secondary',
         'featured_stories',
@@ -76,7 +83,12 @@ class ThemeSetting extends Model
             'contact_info_title' => 'Where to find us',
             'contact_description' => 'Whether you like our music or you just would like to say hello, we would love to hear from you. Follow us on social media or simply use this contact form to send us an email.',
             'contact_address' => 'PO Box 16122 Collins Street West Victoria 8007 Australia',
-            'contact_email' => 'contact@sevenrockradio.shop',
+            'contact_email' => 'prog.sevenrockradio@gmail.com',
+            'notification_email' => 'prog.sevenrockradio@gmail.com',
+            'notification_copy_email' => 'contact@sevenrockradio.shop',
+            'notification_from_email' => 'prog.sevenrockradio@gmail.com',
+            'notification_reply_to_email' => 'prog.sevenrockradio@gmail.com',
+            'notification_mailer' => null,
             'contact_phone_primary' => '+88 (0) 101 1010 101',
             'contact_phone_secondary' => '+88 (0) 101 1010 100',
             'featured_stories' => [
@@ -378,6 +390,11 @@ class ThemeSetting extends Model
                 'contact_description_label' => 'Description',
                 'address_label' => 'Address',
                 'contact_email_label' => 'Email',
+                'notification_email_label' => 'Correo de notificación',
+                'notification_copy_email_label' => 'Correo copia',
+                'notification_from_email_label' => 'Correo remitente',
+                'notification_reply_to_email_label' => 'Responder a',
+                'notification_mailer_label' => 'Mailer',
                 'contact_phone_primary_label' => 'Phone primary',
                 'contact_phone_secondary_label' => 'Phone secondary',
                 'facebook_label' => 'Facebook',

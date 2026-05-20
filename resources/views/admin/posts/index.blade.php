@@ -30,7 +30,7 @@
                     <tr class="hover:bg-[rgba(255,255,255,.02)]">
                         <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">{{ $post->title }}</td>
                         <td class="px-5 py-4">{{ $post->published_at?->format('d M Y') }}</td>
-                        <td class="px-5 py-4">{{ implode(', ', $post->categories ?? []) }}</td>
+                        <td class="px-5 py-4">{{ implode(', ', $post->categoryNames()) }}</td>
                         <td class="px-5 py-4">{{ $post->is_published ? $admin['status_published'] : $admin['status_draft'] }}</td>
                         <td class="px-5 py-4">
                             <div class="flex flex-wrap gap-2">

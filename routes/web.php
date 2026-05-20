@@ -6,12 +6,16 @@ use App\Http\Controllers\Admin\AlbumController as AdminAlbumController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\GalleryImageController as AdminGalleryImageController;
+use App\Http\Controllers\Admin\MasterProgramController as AdminMasterProgramController;
 use App\Http\Controllers\Admin\BandProfileController as AdminBandProfileController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\VideoController as AdminVideoController;
 use App\Http\Controllers\Admin\ThemeSettingsController as AdminThemeSettingsController;
+use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
+use App\Http\Controllers\Admin\PostTaxonomyController as AdminPostTaxonomyController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\SongController as AdminSongController;
+use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\SiteController;
 
@@ -38,7 +42,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AdminAuthController::class, 'login'])->name('login.store');
 
-    Route::middleware('admin')->group(function (): void {
+    Route::middleware(['admin', 'audit'])->group(function (): void {
         Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('/albums', [AdminAlbumController::class, 'index'])->name('albums.index');
         Route::get('/albums/create', [AdminAlbumController::class, 'create'])->name('albums.create');
@@ -65,6 +69,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::put('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
         Route::delete('/products/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
         Route::get('/events', [AdminEventController::class, 'index'])->name('events.index');
+        Route::get('/events/single', [AdminEventController::class, 'preview'])->name('events.single');
         Route::get('/events/create', [AdminEventController::class, 'create'])->name('events.create');
         Route::post('/events', [AdminEventController::class, 'store'])->name('events.store');
         Route::get('/events/{event}/edit', [AdminEventController::class, 'edit'])->name('events.edit');
@@ -72,8 +77,24 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::delete('/events/{event}', [AdminEventController::class, 'destroy'])->name('events.destroy');
         Route::get('/settings', [AdminThemeSettingsController::class, 'edit'])->name('settings.edit');
         Route::put('/settings', [AdminThemeSettingsController::class, 'update'])->name('settings.update');
+        Route::get('/audit-logs', [AdminAuditLogController::class, 'index'])->name('audit-logs.index');
+        Route::get('/taxonomies/{taxonomy}/edit', [AdminPostTaxonomyController::class, 'edit'])->name('taxonomies.edit');
+        Route::post('/taxonomies', [AdminPostTaxonomyController::class, 'store'])->name('taxonomies.store');
+        Route::put('/taxonomies/{taxonomy}', [AdminPostTaxonomyController::class, 'update'])->name('taxonomies.update');
+        Route::delete('/taxonomies/{taxonomy}', [AdminPostTaxonomyController::class, 'destroy'])->name('taxonomies.destroy');
+        Route::get('/master-programs', [AdminMasterProgramController::class, 'index'])->name('master-programs.index');
+        Route::get('/master-programs/create', [AdminMasterProgramController::class, 'create'])->name('master-programs.create');
+        Route::post('/master-programs', [AdminMasterProgramController::class, 'store'])->name('master-programs.store');
+        Route::get('/master-programs/{masterProgram}/edit', [AdminMasterProgramController::class, 'edit'])->name('master-programs.edit');
+        Route::put('/master-programs/{masterProgram}', [AdminMasterProgramController::class, 'update'])->name('master-programs.update');
+        Route::delete('/master-programs/{masterProgram}', [AdminMasterProgramController::class, 'destroy'])->name('master-programs.destroy');
+        Route::get('/podcast-uploads', [AdminPodcastUploadController::class, 'index'])->name('podcast-uploads.index');
+        Route::post('/podcast-uploads', [AdminPodcastUploadController::class, 'store'])->name('podcast-uploads.store');
+        Route::post('/podcast-uploads/{radioProgram}/retry', [AdminPodcastUploadController::class, 'retry'])->name('podcast-uploads.retry');
+        Route::get('/podcast-uploads/{radioProgram}/download', [AdminPodcastUploadController::class, 'download'])->name('podcast-uploads.download');
         Route::get('/band-profiles', [AdminBandProfileController::class, 'index'])->name('band-profiles.index');
         Route::get('/band-profiles/create', [AdminBandProfileController::class, 'create'])->name('band-profiles.create');
+        Route::get('/band-profiles/search', [AdminBandProfileController::class, 'search'])->name('band-profiles.search');
         Route::post('/band-profiles', [AdminBandProfileController::class, 'store'])->name('band-profiles.store');
         Route::get('/band-profiles/{bandProfile}/edit', [AdminBandProfileController::class, 'edit'])->name('band-profiles.edit');
         Route::put('/band-profiles/{bandProfile}', [AdminBandProfileController::class, 'update'])->name('band-profiles.update');
@@ -86,6 +107,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::delete('/songs/{song}', [AdminSongController::class, 'destroy'])->name('songs.destroy');
         Route::get('/posts', [AdminPostController::class, 'index'])->name('posts.index');
         Route::get('/posts/create', [AdminPostController::class, 'create'])->name('posts.create');
+        Route::post('/posts/media', [AdminPostController::class, 'uploadMedia'])->name('posts.media.store');
         Route::post('/posts', [AdminPostController::class, 'store'])->name('posts.store');
         Route::get('/posts/{post}/edit', [AdminPostController::class, 'edit'])->name('posts.edit');
         Route::put('/posts/{post}', [AdminPostController::class, 'update'])->name('posts.update');

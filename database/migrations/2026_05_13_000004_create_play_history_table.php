@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('play_history', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('song_id')->nullable()->constrained('songs')->nullOnDelete();
-            $table->foreignId('program_id')->nullable()->constrained('programs')->nullOnDelete();
+            $table->foreignId('program_id')->nullable()->constrained('radio_programs')->nullOnDelete();
             $table->string('title');
             $table->string('artist')->nullable();
             $table->string('cover_image')->nullable();

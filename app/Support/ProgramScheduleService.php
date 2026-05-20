@@ -2,45 +2,69 @@
 
 namespace App\Support;
 
-use App\Models\Event;
+use App\Models\MasterProgram;
+use App\Models\RadioProgram;
 use App\Models\ThemeSetting;
+use App\Support\ExternalHttp;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class ProgramScheduleService
 {
+    private const DAY_ORDER = [
+        'LUNES' => 1,
+        'MARTES' => 2,
+        'MIERCOLES' => 3,
+        'JUEVES' => 4,
+        'VIERNES' => 5,
+        'SABADO' => 6,
+        'DOMINGO' => 7,
+    ];
+
     public function resolve(int $limit = 3): array
     {
-        $theme = ThemeSetting::current();
-        $events = Event::query()
-            ->upcoming()
-            ->orderBy('starts_at')
-            ->limit(max($limit + 1, 4))
-            ->get();
-
-        $program = $events->first() ?? Event::query()->orderBy('starts_at')->first();
-
-        if (! $program) {
-            return $this->fallback();
+        $cacheKey = 'program-schedule:v7';
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached) && $cached !== []) {
+            return $cached;
         }
 
-        return [
-            'label' => 'Próximo programa',
-            'subtitle' => 'Avance editorial del siguiente bloque en parrilla',
-            'title' => mb_strtoupper($program->title),
-            'host' => $program->venue ?: $program->location ?: 'Seven Rock Radio',
-            'location' => $program->location ?: 'Próxima emisión',
-            'schedule' => $program->starts_at?->format('l · H:i') ?? 'Próxima emisión',
-            'show' => $program->venue ?: $program->title,
-            'timezone' => 'Zona America/Caracas',
-            'summary' => $this->summaryFor($program),
-            'image' => $this->imageForEvent($program->slug, $theme),
-            'badge' => 'On deck',
-            'button' => [
-                'label' => 'Ver evento',
-                'url' => route('events.single', $program->slug),
-            ],
-            'upcoming' => $this->mapUpcoming($events->skip(1), $theme),
-        ];
+        $theme = ThemeSetting::current();
+        $scheduledPrograms = $this->programsWithNextStart();
+
+        if ($scheduledPrograms->isNotEmpty()) {
+            $current = $this->currentProgramFromSchedule($scheduledPrograms) ?? $scheduledPrograms->first()['program'];
+            $upcoming = $this->upcomingProgramsFromSchedule($scheduledPrograms, $current, $limit);
+
+            $payload = [
+                'label' => 'Próximo programa',
+                'subtitle' => 'Avance editorial del siguiente bloque en parrilla',
+                'title' => mb_strtoupper($current->name ?: 'PROGRAMACIÓN'),
+                'host' => $current->host ?: 'Seven Rock Radio',
+                'location' => $current->schedule ?: 'Próxima emisión',
+                'schedule' => $current->schedule,
+                'show' => $current->name ?: 'Programación',
+                'timezone' => $current->timezone ?: 'America/Caracas',
+                'summary' => $this->summaryFor($current),
+                'image' => $this->imageForProgram($current, $theme),
+                'badge' => $this->programIsLiveNow($current) ? 'On air' : 'On deck',
+                'button' => [
+                    'label' => 'Ver programación',
+                    'url' => route('events'),
+                ],
+                'upcoming' => $this->mapUpcoming($upcoming, $theme),
+            ];
+
+            Cache::put($cacheKey, $payload, now()->addSeconds(30));
+
+            return $payload;
+        }
+
+        $this->warmRemoteCache($limit);
+
+        return $this->fallback();
     }
 
     public function fallback(): array
@@ -48,67 +72,532 @@ class ProgramScheduleService
         return [
             'label' => 'Próximo programa',
             'subtitle' => 'Avance editorial del siguiente bloque en parrilla',
-            'title' => 'POLYVERSUM',
+            'title' => 'PROGRAMACIÓN',
             'host' => 'Seven Rock Radio',
             'location' => 'Próxima emisión',
-            'schedule' => 'Miércoles · 19:00',
-            'show' => 'Metal Under',
-            'timezone' => 'Zona America/Caracas',
-            'summary' => 'Conducción prevista para este turno. Polyversum es una pieza editorial en vivo que mezcla catálogo, contexto y una presentación clara del siguiente bloque.',
+            'schedule' => 'Programación continua',
+            'show' => 'Seven Rock Radio',
+            'timezone' => 'America/Caracas',
+            'summary' => 'La grilla editorial se muestra aquí cuando existe programación maestro o cuando RadioBOSS devuelve la siguiente emisión.',
             'image' => 'assets/lucille/pedalboard-1511069_1920.jpg',
             'badge' => 'On deck',
-            'button' => ['label' => 'Leer más', 'url' => '#'],
+            'button' => ['label' => 'Ver programación', 'url' => route('events')],
             'upcoming' => [
-                ['time' => 'Hoy miércoles · 22:00', 'title' => 'ESTACION ROCK', 'host' => 'Claudio E. Laguna', 'image' => 'assets/lucille/microphone-1206364_1920.jpg'],
-                ['time' => 'Mañana jueves · 17:00', 'title' => 'POLUCION', 'host' => 'Yury Fernández', 'image' => 'assets/lucille/guitar-1245856_1920.jpg'],
-                ['time' => 'Mañana jueves · 21:00', 'title' => 'ROCK MADE IN AMAZON', 'host' => 'Claudio Wallace', 'image' => 'assets/lucille/music-1284505_1920.jpg'],
+                ['time' => 'Cargando', 'title' => 'PROGRAMACIÓN', 'host' => 'Seven Rock Radio', 'image' => 'assets/lucille/microphone-1206364_1920.jpg'],
             ],
         ];
     }
 
-    private function summaryFor(Event $event): string
+    /**
+     * @return Collection<int, MasterProgram>
+     */
+    private function masterPrograms(): Collection
     {
-        $location = $event->location ?: 'próxima emisión';
+        if (! Schema::hasTable('master_programs')) {
+            return collect();
+        }
+
+        return MasterProgram::query()
+            ->when(Schema::hasColumn('master_programs', 'activo'), fn ($query) => $query->where('activo', true))
+            ->get()
+            ->sort(function (MasterProgram $left, MasterProgram $right): int {
+                return $this->sortTuple($left) <=> $this->sortTuple($right);
+            })
+            ->values();
+    }
+
+    private function sortTuple(MasterProgram $program): array
+    {
+        $today = now('America/Caracas')->dayOfWeekIso;
+        $dayNumber = $this->dayNumber((string) $program->dia_transmision) ?? 8;
+        $delta = ($dayNumber - $today + 7) % 7;
+        $timeRank = $this->timeRank((string) $program->hora_transmision);
+
+        if ($delta === 0 && $timeRank === PHP_INT_MAX) {
+            $timeRank = 0;
+        }
+
+        return [$delta, $timeRank, (int) $program->getKey()];
+    }
+
+    private function timeRank(string $value): int
+    {
+        $hm = $this->parseScheduleTime($value);
+        if (! $hm) {
+            return PHP_INT_MAX;
+        }
+
+        return ((int) $hm[0] * 60) + (int) $hm[1];
+    }
+
+    private function dayNumber(string $day): ?int
+    {
+        $day = mb_strtoupper(\Illuminate\Support\Str::ascii(trim($day)));
+
+        return self::DAY_ORDER[$day] ?? null;
+    }
+
+    private function parseScheduleTime(string $time): ?array
+    {
+        $time = trim($time);
+        if ($time === '') {
+            return null;
+        }
+
+        $time = str_replace('.', ':', $time);
+        $parts = array_values(array_filter(explode(':', $time), static fn ($part) => trim($part) !== ''));
+
+        if ($parts === []) {
+            return null;
+        }
+
+        $hour = (int) preg_replace('/\D+/', '', (string) ($parts[0] ?? ''));
+        $minute = (int) preg_replace('/\D+/', '', (string) ($parts[1] ?? '0'));
+
+        if ($hour < 0 || $hour > 23 || $minute < 0 || $minute > 59) {
+            return null;
+        }
+
+        return [$hour, $minute];
+    }
+
+    /**
+     * @param Collection<int, MasterProgram> $programs
+     */
+    private function currentProgram(Collection $programs): ?MasterProgram
+    {
+        $now = now('America/Caracas');
+
+        $scheduled = $programs
+            ->map(function (MasterProgram $program) use ($now): array {
+                return [
+                    'program' => $program,
+                    'next_start' => $this->nextProgramStart($program, $now),
+                ];
+            })
+            ->filter(fn (array $item): bool => $item['next_start'] instanceof Carbon)
+            ->sort(function (array $left, array $right): int {
+                return ($left['next_start']?->timestamp ?? PHP_INT_MAX) <=> ($right['next_start']?->timestamp ?? PHP_INT_MAX);
+            })
+            ->values();
+
+        return $this->currentProgramFromSchedule($scheduled);
+    }
+
+    /**
+     * @param Collection<int, MasterProgram> $programs
+     * @return Collection<int, MasterProgram>
+     */
+    private function upcomingPrograms(Collection $programs, ?MasterProgram $current, int $limit): Collection
+    {
+        if ($programs->isEmpty()) {
+            return collect();
+        }
+
+        $indexed = $programs->values();
+
+        if (! $current) {
+            return $indexed->take($limit);
+        }
+
+        $currentIndex = $indexed->search(fn (MasterProgram $program): bool => (int) $program->getKey() === (int) $current->getKey());
+        if ($currentIndex === false) {
+            return $indexed->take($limit);
+        }
+
+        return $indexed->slice($currentIndex + 1)->take($limit)->values();
+    }
+
+    /**
+     * @return Collection<int, array{program: MasterProgram, next_start: Carbon|null}>
+     */
+    private function programsWithNextStart(): Collection
+    {
+        if (! Schema::hasTable('master_programs')) {
+            return collect();
+        }
+
+        return $this->masterPrograms()
+            ->map(function (MasterProgram $program): array {
+                return [
+                    'program' => $program,
+                    'next_start' => $this->nextProgramStart($program),
+                ];
+            })
+            ->sort(function (array $left, array $right): int {
+                $leftTs = $left['next_start']?->timestamp ?? PHP_INT_MAX;
+                $rightTs = $right['next_start']?->timestamp ?? PHP_INT_MAX;
+
+                if ($leftTs === $rightTs) {
+                    return mb_strtolower(trim((string) $left['program']->name)) <=> mb_strtolower(trim((string) $right['program']->name));
+                }
+
+                return $leftTs <=> $rightTs;
+            })
+            ->values();
+    }
+
+    /**
+     * @param Collection<int, array{program: MasterProgram, next_start: Carbon|null}> $programs
+     */
+    private function currentProgramFromSchedule(Collection $programs): ?MasterProgram
+    {
+        if ($programs->isEmpty()) {
+            return null;
+        }
+
+        $now = now('America/Caracas');
+
+        $live = $programs->first(fn (array $item): bool => $this->programIsLiveNow($item['program'], $now));
+        if (is_array($live) && $live['program'] instanceof MasterProgram) {
+            return $live['program'];
+        }
+
+        $upcoming = $programs->first(fn (array $item): bool => $item['next_start'] instanceof Carbon && $item['next_start']->greaterThan($now));
+        if (is_array($upcoming) && $upcoming['program'] instanceof MasterProgram) {
+            return $upcoming['program'];
+        }
+
+        $first = $programs->first();
+
+        return is_array($first) && $first['program'] instanceof MasterProgram ? $first['program'] : null;
+    }
+
+    /**
+     * @param Collection<int, array{program: MasterProgram, next_start: Carbon|null}> $programs
+     * @return Collection<int, MasterProgram>
+     */
+    private function upcomingProgramsFromSchedule(Collection $programs, ?MasterProgram $current, int $limit): Collection
+    {
+        if ($programs->isEmpty()) {
+            return collect();
+        }
+
+        $indexed = $programs->values();
+
+        if (! $current) {
+            return $indexed->take($limit)->pluck('program')->values();
+        }
+
+        $currentIndex = $indexed->search(fn (array $item): bool => (int) $item['program']->getKey() === (int) $current->getKey());
+        if ($currentIndex === false) {
+            return $indexed->take($limit)->pluck('program')->values();
+        }
+
+        return $indexed->slice($currentIndex + 1)->take($limit)->pluck('program')->values();
+    }
+
+    private function programIsLiveNow(MasterProgram $program, ?Carbon $now = null): bool
+    {
+        $now ??= now($this->programTimezone($program));
+        $timezone = $this->programTimezone($program);
+        $now = $now->copy()->setTimezone($timezone);
+
+        if ($program->live_starts_at && $program->live_ends_at) {
+            $startsAt = $program->live_starts_at->copy()->setTimezone($timezone);
+            $endsAt = $program->live_ends_at->copy()->setTimezone($timezone);
+            if ($endsAt->lessThanOrEqualTo($startsAt)) {
+                $endsAt = $endsAt->copy()->addDay();
+            }
+
+            return $now->between($startsAt, $endsAt);
+        }
+
+        $dayNumber = $this->dayNumber((string) $program->dia_transmision);
+        if ($dayNumber === null) {
+            return false;
+        }
+
+        $hm = $this->parseScheduleTime((string) $program->hora_transmision);
+        if (! $hm) {
+            return true;
+        }
+
+        [$hour, $minute] = $hm;
+        $daysSinceSchedule = ((int) $now->dayOfWeekIso - $dayNumber + 7) % 7;
+        $start = $now->copy()->startOfDay()->subDays($daysSinceSchedule)->setTime($hour, $minute, 0);
+        $duration = max(15, (int) ($program->duracion_minutos ?? 120));
+        $end = $start->copy()->addMinutes($duration);
+
+        if ($end->lessThanOrEqualTo($start)) {
+            $end = $end->copy()->addDay();
+        }
+
+        return $now->between($start, $end);
+    }
+
+    private function nextProgramStart(MasterProgram $program, ?Carbon $reference = null): ?Carbon
+    {
+        $timezone = $this->programTimezone($program);
+        $now = ($reference ?? now($timezone))->copy()->setTimezone($timezone);
+
+        if ($program->live_starts_at) {
+            $liveStart = $program->live_starts_at->copy()->setTimezone($timezone);
+            if ($liveStart->greaterThan($now)) {
+                return $liveStart;
+            }
+        }
+
+        $day = $this->dayNumber((string) $program->dia_transmision);
+        $time = $this->parseScheduleTime((string) $program->hora_transmision);
+
+        if ($day === null || ! $time) {
+            return null;
+        }
+
+        [$hour, $minute] = $time;
+        $daysAhead = ($day - (int) $now->dayOfWeekIso + 7) % 7;
+        $candidate = $now->copy()->startOfDay()->addDays($daysAhead)->setTime($hour, $minute, 0);
+
+        if ($candidate->lessThanOrEqualTo($now)) {
+            $candidate->addWeek();
+        }
+
+        $episode = $this->episodeForProgramOnDate($program, $candidate->toDateString());
+        if ($episode && $episode->hora_inicio) {
+            $episodeHm = $this->parseScheduleTime((string) $episode->hora_inicio);
+            if ($episodeHm) {
+                [$episodeHour, $episodeMinute] = $episodeHm;
+                $candidate = $candidate->copy()->setTime($episodeHour, $episodeMinute, 0);
+
+                if ($candidate->lessThanOrEqualTo($now)) {
+                    $candidate->addWeek();
+                }
+            }
+        }
+
+        return $candidate;
+    }
+
+    private function summaryFor(MasterProgram $program): string
+    {
+        $parts = array_filter([
+            trim((string) $program->description),
+            trim((string) $program->comentario_predeterminado),
+        ]);
+
+        if ($parts !== []) {
+            return implode(' ', $parts);
+        }
 
         return trim(sprintf(
-            'El siguiente bloque programado es %s desde %s.',
-            $event->title,
-            $location
+            'El siguiente bloque programado es %s en %s.',
+            $program->name ?: 'programación editorial',
+            $program->schedule ?: 'horario continuo'
         ));
     }
 
-    private function imageForEvent(?string $slug, ThemeSetting $theme): string
+    private function imageForProgram(MasterProgram $program, ThemeSetting $theme): string
     {
-        $map = [
-            'wakestock-festival' => 'assets/lucille/microphone-1206364_1920.jpg',
-            'rockness-festival' => 'assets/lucille/pedalboard-1511069_1920.jpg',
-            'coachella-music-festival' => 'assets/lucille/music-1284505_1920.jpg',
-        ];
-
-        if ($slug && isset($map[$slug])) {
-            return $map[$slug];
+        if ($program->cover_url !== '') {
+            return $program->cover_url;
         }
 
         return $theme->home_video_image_path ?: $theme->hero_slide_primary_path ?: 'assets/lucille/pedalboard-1511069_1920.jpg';
     }
 
     /**
-     * @param Collection<int, Event> $events
+     * @param Collection<int, MasterProgram> $programs
      * @return array<int, array{time:string,title:string,host:string,image:string}>
      */
-    private function mapUpcoming(Collection $events, ThemeSetting $theme): array
+    private function mapUpcoming(Collection $programs, ThemeSetting $theme): array
     {
-        return $events
+        return $programs
             ->take(3)
-            ->map(function (Event $event) use ($theme): array {
+            ->map(function (MasterProgram $program) use ($theme): array {
                 return [
-                    'time' => $event->starts_at?->format('D · H:i') ?? 'Próxima emisión',
-                    'title' => mb_strtoupper($event->title),
-                    'host' => $event->venue ?: $event->location ?: 'Seven Rock Radio',
-                    'image' => $this->imageForEvent($event->slug, $theme),
+                    'time' => $program->schedule ?: 'Próxima emisión',
+                    'title' => mb_strtoupper($program->name ?: 'PROGRAMACIÓN'),
+                    'host' => $program->host ?: 'Seven Rock Radio',
+                    'image' => $this->imageForProgram($program, $theme),
                 ];
             })
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function remoteUpcomingEvents(int $limit): array
+    {
+        $apiUrl = trim((string) config('player.radioboss.api_url', ''));
+        $stationId = trim((string) config('player.radioboss.station_id', ''));
+        $apiKey = trim((string) config('player.radioboss.api_key', ''));
+
+        if ($apiUrl === '' || $stationId === '' || $apiKey === '') {
+            return [];
+        }
+
+        try {
+            $response = ExternalHttp::client()->connectTimeout(1)
+                ->timeout(2)
+                ->acceptJson()
+                ->get(rtrim($apiUrl, '/') . '/api/getupcomingevents/' . $stationId, [
+                    'key' => $apiKey,
+                ]);
+
+            if (! $response->successful()) {
+                return [];
+            }
+
+            $data = $response->json();
+            if (! is_array($data)) {
+                return [];
+            }
+
+            $items = collect($data)
+                ->filter('is_array')
+                ->map(function (array $event): array {
+                    $event['_sort'] = $this->parseRemoteDate((string) ($event['nextstart'] ?? ''));
+
+                    return $event;
+                })
+                ->sortBy(fn (array $event): int => $event['_sort'] ?? PHP_INT_MAX)
+                ->values()
+                ->map(function (array $event): array {
+                    unset($event['_sort']);
+
+                    return $event;
+                })
+                ->all();
+
+            return array_slice($items, 0, max(1, $limit));
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    private function warmRemoteCache(int $limit): void
+    {
+        if (! Cache::add('program-schedule:warmup:v6', true, now()->addSeconds(20))) {
+            return;
+        }
+
+        dispatch(function () use ($limit): void {
+            try {
+                $theme = ThemeSetting::current();
+                $events = $this->remoteUpcomingEvents($limit);
+                if ($events === []) {
+                    return;
+                }
+
+                $payload = $this->resolveFromRemoteEvents($events, $theme, $limit);
+                Cache::put('program-schedule:v7', $payload, now()->addSeconds(30));
+            } catch (\Throwable) {
+                // keep silent; the page already has a fallback
+            }
+        })->afterResponse();
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $events
+     */
+    private function resolveFromRemoteEvents(array $events, ThemeSetting $theme, int $limit): array
+    {
+        $primary = $events[0] ?? [];
+        $primaryTitle = trim((string) ($primary['title'] ?? ''));
+        $primaryStart = trim((string) ($primary['nextstart'] ?? ''));
+        $primarySchedule = $this->formatRemoteSchedule($primaryStart);
+
+        return [
+            'label' => 'Próximo programa',
+            'subtitle' => 'Avance editorial del siguiente bloque en parrilla',
+            'title' => mb_strtoupper($primaryTitle !== '' ? $primaryTitle : 'PROGRAMACIÓN'),
+            'host' => 'Seven Rock Radio',
+            'location' => $primarySchedule !== '' ? $primarySchedule : 'Próxima emisión',
+            'schedule' => $primarySchedule !== '' ? $primarySchedule : 'Programación continua',
+            'show' => $primaryTitle !== '' ? $primaryTitle : 'Programación',
+            'timezone' => 'America/Caracas',
+            'summary' => sprintf(
+                'La próxima emisión en vivo es %s%s.',
+                $primaryTitle !== '' ? $primaryTitle : 'programación',
+                $primaryStart !== '' ? ' (' . $primarySchedule . ')' : ''
+            ),
+            'image' => $theme->home_video_image_path ?: $theme->hero_slide_primary_path ?: 'assets/lucille/pedalboard-1511069_1920.jpg',
+            'badge' => 'On deck',
+            'button' => [
+                'label' => 'Ver programación',
+                'url' => route('events'),
+            ],
+            'upcoming' => $this->mapRemoteUpcoming($events, $theme, $limit),
+        ];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $events
+     * @return array<int, array{time:string,title:string,host:string,image:string}>
+     */
+    private function mapRemoteUpcoming(array $events, ThemeSetting $theme, int $limit): array
+    {
+        return collect($events)
+            ->map(function (array $event) use ($theme): array {
+                $title = trim((string) ($event['title'] ?? 'PROGRAMACIÓN'));
+                $time = $this->formatRemoteSchedule(trim((string) ($event['nextstart'] ?? '')));
+
+                return [
+                    'time' => $time !== '' ? $time : 'Próxima emisión',
+                    'title' => mb_strtoupper($title !== '' ? $title : 'PROGRAMACIÓN'),
+                    'host' => 'Seven Rock Radio',
+                    'image' => $theme->home_video_image_path ?: $theme->hero_slide_primary_path ?: 'assets/lucille/microphone-1206364_1920.jpg',
+                ];
+            })
+            ->take(max(1, $limit))
+            ->values()
+            ->all();
+    }
+
+    private function formatRemoteSchedule(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        try {
+            return Carbon::parse($value, 'America/Caracas')->translatedFormat('D · d M Y');
+        } catch (\Throwable) {
+            return $value;
+        }
+    }
+
+    private function parseRemoteDate(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return PHP_INT_MAX;
+        }
+
+        try {
+            return Carbon::parse($value, 'America/Caracas')->getTimestamp();
+        } catch (\Throwable) {
+            return PHP_INT_MAX;
+        }
+    }
+
+    private function programTimezone(MasterProgram $program): string
+    {
+        $timezone = trim((string) ($program->timezone ?: 'America/Caracas'));
+
+        return $timezone !== '' ? $timezone : 'America/Caracas';
+    }
+
+    private function episodeForProgramOnDate(MasterProgram $program, ?string $date = null): ?RadioProgram
+    {
+        if (! class_exists(RadioProgram::class) || ! Schema::hasTable('radio_programs')) {
+            return null;
+        }
+
+        $date ??= now($this->programTimezone($program))->toDateString();
+
+        return RadioProgram::query()
+            ->whereDate('fecha_emision', $date)
+            ->where(function ($query) use ($program): void {
+                $query->where('master_program_id', $program->getKey())
+                    ->orWhere('titulo_programa', (string) $program->nombre);
+            })
+            ->latest('numero_episodio')
+            ->latest('id')
+            ->first();
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditTrailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +16,7 @@ class AuthController extends Controller
         return view('admin.login');
     }
 
-    public function login(Request $request): RedirectResponse
+    public function login(Request $request, AuditTrailService $auditTrailService): RedirectResponse
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -23,12 +24,23 @@ class AuthController extends Controller
         ]);
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+            $auditTrailService->recordSystem('admin.login.failed', 'Intento de acceso fallido', [
+                'email' => $credentials['email'],
+                'ip' => $request->ip(),
+                'remember' => $request->boolean('remember'),
+            ], 'warning');
+
             return back()->withErrors([
                 'email' => 'Invalid credentials.',
             ])->onlyInput('email');
         }
 
-        if (! Auth::user()?->is_admin) {
+        if (! Auth::user()?->hasAdminAccess()) {
+            $auditTrailService->recordSystem('admin.login.denied', 'Usuario autenticado sin acceso de admin', [
+                'email' => $credentials['email'],
+                'ip' => $request->ip(),
+            ], 'warning');
+
             Auth::logout();
 
             return back()->withErrors([
@@ -38,11 +50,23 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        $auditTrailService->recordSystem('admin.login.success', 'Acceso al panel admin', [
+            'email' => Auth::user()?->email,
+            'name' => Auth::user()?->name,
+            'ip' => $request->ip(),
+        ]);
+
         return redirect()->route('admin.dashboard');
     }
 
-    public function logout(Request $request): RedirectResponse
+    public function logout(Request $request, AuditTrailService $auditTrailService): RedirectResponse
     {
+        $auditTrailService->recordSystem('admin.logout', 'Salida del panel admin', [
+            'email' => Auth::user()?->email,
+            'name' => Auth::user()?->name,
+            'ip' => $request->ip(),
+        ]);
+
         Auth::logout();
 
         $request->session()->invalidate();

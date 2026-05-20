@@ -6,7 +6,6 @@ namespace App\Support;
 
 use App\Models\BandProfile;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class BandInfoResolver
@@ -28,10 +27,38 @@ class BandInfoResolver
             return $this->emptyPayload();
         }
 
-        return Cache::remember('band-info:v5:' . Str::slug($artist), now()->addMinutes(60), function () use ($artist): array {
-            return $this->resolveLocalProfile($artist)
-                ?? $this->emptyPayload($artist);
-        });
+        $cacheKey = 'band-info:v11:' . Str::slug($artist);
+
+        if ($cached = Cache::get($cacheKey)) {
+            return is_array($cached) ? $cached : $this->emptyPayload($artist);
+        }
+
+        $local = $this->resolveLocalProfile($artist, false);
+        if ($local !== null) {
+            Cache::put($cacheKey, $local, now()->addMinutes(60));
+
+            return $local;
+        }
+
+        $payload = app(BandInfoAggregator::class)->aggregate($artist);
+        $payload = is_array($payload) ? $payload : $this->emptyPayload($artist);
+
+        Cache::put(
+            $cacheKey,
+            $payload,
+            $this->hasMeaningfulPayload($payload) ? now()->addMinutes(60) : now()->addMinutes(10)
+        );
+
+        if (! $this->hasMeaningfulPayload($payload)) {
+            $fuzzyLocal = $this->resolveLocalProfile($artist, true);
+            if ($fuzzyLocal !== null) {
+                Cache::put($cacheKey, $fuzzyLocal, now()->addMinutes(60));
+
+                return $fuzzyLocal;
+            }
+        }
+
+        return $payload;
     }
 
     /**
@@ -44,46 +71,71 @@ class BandInfoResolver
      *     facts:array<int,string>
      * }|null
      */
-    private function resolveLocalProfile(string $artist): ?array
+    private function resolveLocalProfile(string $artist, bool $allowFuzzy = false): ?array
     {
-        if (! $this->hasTable('band_profiles')) {
-            return null;
-        }
-
-        $normalizedArtist = $this->normalizeKey($artist);
-
-        $profile = BandProfile::query()
-            ->get()
-            ->first(function (BandProfile $candidate) use ($artist, $normalizedArtist): bool {
-                if ($this->normalizeKey($candidate->name) === $normalizedArtist) {
-                    return true;
-                }
-
-                foreach ((array) $candidate->related_artists as $relatedArtist) {
-                    if (is_string($relatedArtist) && $this->normalizeKey($relatedArtist) === $normalizedArtist) {
-                        return true;
-                    }
-                }
-
-                return false;
-            });
+        $matcher = app(BandProfileMatcher::class);
+        $profile = $allowFuzzy
+            ? $matcher->fuzzyMatch($artist)
+            : $matcher->exactMatch($artist);
 
         if (! $profile) {
             return null;
         }
 
-        $summary = trim((string) ($profile->editorial_summary ?: $profile->biography ?: ''));
+        return $this->buildProfilePayload($profile);
+    }
+
+    /**
+     * @return array{
+     *     summary:string,
+     *     thumbnail:string,
+     *     social_links:array<int,array{label:string,url:string}>,
+     *     formed_year:int|null,
+     *     formed_label:string,
+     *     facts:array<int,string>
+     * }|null
+     */
+    private function buildProfilePayload(BandProfile $profile): ?array
+    {
+        $summary = $this->formatSummaryText((string) ($profile->editorial_summary ?: $profile->biography ?: ''));
+        $thumbnail = (string) ($profile->normalizedImageUrl() ?? '');
+        $socialLinks = $this->normalizeLocalLinks((array) ($profile->official_links ?? []));
         $facts = $this->normalizeFacts((array) ($profile->featured_facts ?? []));
         $formedYear = $this->extractYearFromText($summary);
 
+        if (! $this->hasMeaningfulPayload([
+            'summary' => $summary,
+            'thumbnail' => $thumbnail,
+            'social_links' => $socialLinks,
+            'formed_year' => $formedYear,
+            'facts' => $facts,
+        ])) {
+            return null;
+        }
+
         return [
             'summary' => $summary,
-            'thumbnail' => (string) ($profile->normalizedImageUrl() ?? ''),
-            'social_links' => $this->normalizeLocalLinks((array) ($profile->official_links ?? [])),
+            'thumbnail' => $thumbnail,
+            'social_links' => $socialLinks,
             'formed_year' => $formedYear,
             'formed_label' => $formedYear ? sprintf('Se formó en %d', $formedYear) : '',
             'facts' => $facts,
         ];
+    }
+
+    private function formatSummaryText(string $text): string
+    {
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        $text = strip_tags($text);
+        $text = preg_replace('/\[(?:[A-Za-z]{1,3}\d+|\d+)\]/u', '', $text) ?? $text;
+        $text = preg_replace('/[ \t]+/u', ' ', $text) ?? $text;
+        $text = preg_replace('/ *\n */u', "\n", $text) ?? $text;
+        $text = preg_replace('/\n{3,}/u', "\n\n", $text) ?? $text;
+        $text = preg_replace('/\b(Contexto de catalogo|Contexto de catálogo|Miembros relacionados|Alias \/ variaciones)\b/iu', "\n\n$1", $text) ?? $text;
+        $text = preg_replace('/\n\s*\n\s*\n+/u', "\n\n", $text) ?? $text;
+
+        return trim($text);
     }
 
     /**
@@ -159,20 +211,6 @@ class BandInfoResolver
         return filter_var($url, FILTER_VALIDATE_URL) ? $url : null;
     }
 
-    private function hasTable(string $table): bool
-    {
-        try {
-            return Schema::hasTable($table);
-        } catch (\Throwable) {
-            return false;
-        }
-    }
-
-    private function normalizeKey(string $value): string
-    {
-        return preg_replace('/[^a-z0-9]+/i', '', mb_strtolower(trim($value))) ?: '';
-    }
-
     private function extractYearFromText(string $text): ?int
     {
         if ($text === '') {
@@ -234,5 +272,17 @@ class BandInfoResolver
             'formed_label' => '',
             'facts' => [],
         ];
+    }
+
+    /**
+     * @param array{summary?:string,thumbnail?:string,social_links?:array<int,array{label:string,url:string}>,formed_year?:int|null,formed_label?:string,facts?:array<int,string>} $payload
+     */
+    private function hasMeaningfulPayload(array $payload): bool
+    {
+        return trim((string) ($payload['summary'] ?? '')) !== ''
+            || trim((string) ($payload['thumbnail'] ?? '')) !== ''
+            || ! empty($payload['social_links'])
+            || ! empty($payload['facts'])
+            || ! empty($payload['formed_year']);
     }
 }

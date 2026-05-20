@@ -6,18 +6,19 @@ use App\Models\Notice;
 use App\Models\PlayHistory;
 use App\Models\Program;
 use App\Models\Song;
+use App\Support\BandProfileMatcher;
 use App\Support\BandInfoResolver;
+use App\Support\ExternalHttp;
 use App\Support\PublicMediaUrl;
 use App\Support\RadioPlayerStateStore;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class RadioPlayerService
 {
-    private const STATUS_CACHE_KEY = 'radio-player-status:v4';
+    private const STATUS_CACHE_KEY = 'radio-player-status:v5';
 
     public function __construct(
         private readonly RadioPlayerStateStore $store,
@@ -27,7 +28,7 @@ class RadioPlayerService
 
     public function resolve(): array
     {
-        return Cache::remember(self::STATUS_CACHE_KEY, now()->addSeconds(5), function (): array {
+        return Cache::remember(self::STATUS_CACHE_KEY, now()->addSeconds(2), function (): array {
             return $this->build();
         });
     }
@@ -83,8 +84,8 @@ class RadioPlayerService
             ? $this->bandInfoResolver->resolve((string) $bandProfile->name)
             : ($trackArtist !== '' ? $this->bandInfoResolver->resolve($trackArtist) : []);
         $lyrics = $song?->lyrics ?: Arr::get($state, 'lyrics');
-        $programs = $this->hasTable('programs')
-            ? Program::query()->active()->orderBy('sort_order')->get()
+        $programs = $this->hasTable('radio_programs')
+            ? Program::query()->active()->orderBy('sort_order')->orderBy('name')->get()
             : collect();
         $currentProgram = $this->resolveCurrentProgram($state, $song, $programs);
         $nextProgram = $this->resolveNextProgram(
@@ -215,23 +216,10 @@ class RadioPlayerService
             return null;
         }
 
-        return \App\Models\BandProfile::query()
-            ->get()
-            ->first(function (\App\Models\BandProfile $candidate) use ($artist): bool {
-                $normalizedArtist = preg_replace('/[^a-z0-9]+/i', '', mb_strtolower($artist)) ?: '';
+        $matcher = app(BandProfileMatcher::class);
 
-                if (preg_replace('/[^a-z0-9]+/i', '', mb_strtolower($candidate->name)) === $normalizedArtist) {
-                    return true;
-                }
-
-                foreach ((array) $candidate->related_artists as $relatedArtist) {
-                    if (is_string($relatedArtist) && preg_replace('/[^a-z0-9]+/i', '', mb_strtolower($relatedArtist)) === $normalizedArtist) {
-                        return true;
-                    }
-                }
-
-                return false;
-            });
+        return $matcher->exactMatch($artist)
+            ?? $matcher->fuzzyMatch($artist);
     }
 
     private function resolveCurrentProgram(array $state, ?Song $song, $programs): ?Program
@@ -259,11 +247,14 @@ class RadioPlayerService
             return $programs->skip(1)->first() ?? $this->programFromUpcomingEvent($remoteUpcomingPrograms[0] ?? null);
         }
 
-        return $programs
-            ->filter(fn (Program $program): bool => $program->sort_order > $currentProgram->sort_order)
-            ->sortBy('sort_order')
+        $currentIndex = $programs->values()->search(fn (Program $program): bool => (int) $program->id === (int) $currentProgram->id);
+        if ($currentIndex === false) {
+            return $programs->skip(1)->first() ?? $this->programFromUpcomingEvent($remoteUpcomingPrograms[0] ?? null);
+        }
+
+        return $programs->values()
+            ->slice($currentIndex + 1)
             ->first()
-            ?? $programs->first(fn (Program $program): bool => (int) $program->id !== (int) $currentProgram->id)
             ?? $this->programFromUpcomingEvent($remoteUpcomingPrograms[0] ?? null);
     }
 
@@ -332,7 +323,7 @@ class RadioPlayerService
         }
 
         try {
-            $response = Http::connectTimeout(1)
+            $response = ExternalHttp::client()->connectTimeout(1)
                 ->timeout(2)
                 ->acceptJson()
                 ->get(rtrim($apiUrl, '/') . '/api/info/' . $stationId, [
@@ -381,7 +372,7 @@ class RadioPlayerService
         }
 
         try {
-            $response = Http::connectTimeout(1)
+            $response = ExternalHttp::client()->connectTimeout(1)
                 ->timeout(2)
                 ->acceptJson()
                 ->get(rtrim($apiUrl, '/') . '/api/getplaylist/' . $stationId, [
@@ -442,7 +433,7 @@ class RadioPlayerService
         }
 
         try {
-            $response = Http::connectTimeout(1)
+            $response = ExternalHttp::client()->connectTimeout(1)
                 ->timeout(2)
                 ->acceptJson()
                 ->get(rtrim($apiUrl, '/') . '/api/getupcomingevents/' . $stationId, [
@@ -490,7 +481,7 @@ class RadioPlayerService
         }
 
         try {
-            $response = Http::connectTimeout(1)->timeout(2)->get($metadataTxtUrl);
+            $response = ExternalHttp::client()->connectTimeout(1)->timeout(2)->get($metadataTxtUrl);
             if (! $response->successful()) {
                 return [];
             }

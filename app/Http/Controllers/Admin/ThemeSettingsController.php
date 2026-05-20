@@ -15,14 +15,33 @@ class ThemeSettingsController extends Controller
 {
     public function edit(): View
     {
+        $settings = ThemeSetting::current();
+
         return view('admin.settings', [
-            'settings' => ThemeSetting::current(),
+            'settings' => $settings,
             'fonts' => ThemeAppearance::fonts(),
-            'featuredStoriesJson' => json_encode(ThemeSetting::current()->featuredStories(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'latestPodcastsJson' => json_encode(ThemeSetting::current()->latestPodcasts(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'homeHeadingsJson' => json_encode(ThemeSetting::current()->homeHeadings(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'uiTextsJson' => json_encode(ThemeSetting::current()->uiTexts(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'adminTextsJson' => json_encode(ThemeSetting::current()->adminTexts(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'featuredStoriesJson' => json_encode($settings->featuredStories(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'latestPodcastsJson' => json_encode($settings->latestPodcasts(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'homeHeadingsJson' => json_encode($settings->homeHeadings(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'uiTextsJson' => json_encode($settings->uiTexts(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'adminTextsJson' => json_encode($settings->adminTexts(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'activeNotificationState' => [
+                'mailer' => $this->resolveActiveNotificationMailer($settings),
+                'primary' => $this->resolveActiveNotificationPrimaryRecipient($settings),
+                'copy' => $this->resolveActiveNotificationCopyRecipient($settings),
+                'from' => $this->resolveActiveNotificationFromAddress($settings),
+                'reply_to' => $this->resolveActiveNotificationReplyToAddress($settings),
+                'contact_email' => trim((string) ($settings->contact_email ?? '')) ?: null,
+            ],
+            'archiveOrgState' => [
+                'configured' => $this->hasArchiveOrgCredentials(),
+                'access_key_set' => trim((string) config('services.archive_org.access_key', '')) !== '',
+                'secret_key_set' => trim((string) config('services.archive_org.secret_key', '')) !== '',
+                'endpoint' => trim((string) config('services.archive_org.endpoint', '')),
+                'bucket' => trim((string) config('services.archive_org.bucket', '')),
+                'collection' => trim((string) config('services.archive_org.collection', '')),
+                'default_sync' => (bool) config('services.podcast_ingest.default_sync_archive_org', true),
+            ],
         ]);
     }
 
@@ -46,6 +65,11 @@ class ThemeSettingsController extends Controller
             'contact_description' => ['nullable', 'string'],
             'contact_address' => ['nullable', 'string'],
             'contact_email' => ['nullable', 'email', 'max:255'],
+            'notification_email' => ['nullable', 'email', 'max:255'],
+            'notification_copy_email' => ['nullable', 'email', 'max:255'],
+            'notification_from_email' => ['nullable', 'email', 'max:255'],
+            'notification_reply_to_email' => ['nullable', 'email', 'max:255'],
+            'notification_mailer' => ['nullable', 'string', 'max:50', 'in:'.implode(',', array_keys(config('mail.mailers', [])))],
             'contact_phone_primary' => ['nullable', 'string', 'max:255'],
             'contact_phone_secondary' => ['nullable', 'string', 'max:255'],
             'featured_stories_json' => ['nullable', 'string'],
@@ -86,6 +110,11 @@ class ThemeSettingsController extends Controller
             'contact_description',
             'contact_address',
             'contact_email',
+            'notification_email',
+            'notification_copy_email',
+            'notification_from_email',
+            'notification_reply_to_email',
+            'notification_mailer',
             'contact_phone_primary',
             'contact_phone_secondary',
             'featured_stories_json',
@@ -113,6 +142,11 @@ class ThemeSettingsController extends Controller
 
         $settings->hero_video_url = trim((string) ($validated['hero_video_url'] ?? '')) ?: null;
         $settings->hero_video_disabled = $request->boolean('hero_video_disabled');
+        $settings->notification_email = trim((string) ($validated['notification_email'] ?? '')) ?: null;
+        $settings->notification_copy_email = trim((string) ($validated['notification_copy_email'] ?? '')) ?: null;
+        $settings->notification_from_email = trim((string) ($validated['notification_from_email'] ?? '')) ?: null;
+        $settings->notification_reply_to_email = trim((string) ($validated['notification_reply_to_email'] ?? '')) ?: null;
+        $settings->notification_mailer = trim((string) ($validated['notification_mailer'] ?? '')) ?: null;
         $settings->social_facebook = trim((string) ($validated['social_facebook'] ?? '')) ?: null;
         $settings->social_instagram = trim((string) ($validated['social_instagram'] ?? '')) ?: null;
         $settings->social_youtube = trim((string) ($validated['social_youtube'] ?? '')) ?: null;
@@ -157,5 +191,49 @@ class ThemeSettingsController extends Controller
         }
 
         return $decoded;
+    }
+
+    private function hasArchiveOrgCredentials(): bool
+    {
+        return trim((string) config('services.archive_org.access_key', '')) !== ''
+            && trim((string) config('services.archive_org.secret_key', '')) !== '';
+    }
+
+    private function resolveActiveNotificationMailer(ThemeSetting $settings): string
+    {
+        $mailer = trim((string) ($settings->notification_mailer ?: config('services.notifications.mailer', '')));
+        if ($mailer !== '') {
+            return $mailer;
+        }
+
+        return (string) config('mail.default', 'log');
+    }
+
+    private function resolveActiveNotificationPrimaryRecipient(ThemeSetting $settings): ?string
+    {
+        $value = trim((string) ($settings->notification_email ?: $settings->contact_email ?: config('mail.from.address', '')));
+
+        return $value !== '' ? $value : null;
+    }
+
+    private function resolveActiveNotificationCopyRecipient(ThemeSetting $settings): ?string
+    {
+        $value = trim((string) ($settings->notification_copy_email ?: $settings->contact_email ?: ''));
+
+        return $value !== '' ? $value : null;
+    }
+
+    private function resolveActiveNotificationFromAddress(ThemeSetting $settings): ?string
+    {
+        $value = trim((string) ($settings->notification_from_email ?: config('mail.from.address', '')));
+
+        return $value !== '' ? $value : null;
+    }
+
+    private function resolveActiveNotificationReplyToAddress(ThemeSetting $settings): ?string
+    {
+        $value = trim((string) ($settings->notification_reply_to_email ?: $settings->notification_email ?: $settings->contact_email ?: config('mail.from.address', '')));
+
+        return $value !== '' ? $value : null;
     }
 }

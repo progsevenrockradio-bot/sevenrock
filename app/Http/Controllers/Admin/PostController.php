@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Post;
+use App\Models\PostTaxonomy;
+use App\Support\WordPressContent;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -31,16 +35,25 @@ class PostController extends Controller
                 'content' => [],
                 'is_published' => true,
             ]),
+            'editorBlocks' => [
+                ['type' => 'paragraph', 'value' => ''],
+            ],
+            'categoriesSuggestions' => $this->taxonomySuggestions(PostTaxonomy::TYPE_CATEGORY),
+            'tagsSuggestions' => $this->taxonomySuggestions(PostTaxonomy::TYPE_TAG),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
+        $categories = $data['categories'];
+        $tags = $data['tags'];
+        unset($data['categories'], $data['tags']);
         $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
         $data['featured_image'] = $this->resolveImage($request, null, $data['featured_image'] ?? null);
 
-        Post::query()->create($data);
+        $post = Post::query()->create($data);
+        $this->syncTaxonomies($post, $categories, $tags);
 
         return redirect()->route('admin.posts.index')->with('status', 'Post created.');
     }
@@ -49,19 +62,25 @@ class PostController extends Controller
     {
         return view('admin.posts.edit', [
             'post' => $post,
-            'contentText' => $this->linesToText($post->content ?? []),
-            'categoriesText' => implode(', ', $post->categories ?? []),
-            'tagsText' => implode(', ', $post->tags ?? []),
+            'editorBlocks' => WordPressContent::toEditorBlocks($post->content ?? []),
+            'categoriesText' => implode(', ', $this->taxonomyNames($post, PostTaxonomy::TYPE_CATEGORY, 'categories')),
+            'tagsText' => implode(', ', $this->taxonomyNames($post, PostTaxonomy::TYPE_TAG, 'tags')),
+            'categoriesSuggestions' => $this->taxonomySuggestions(PostTaxonomy::TYPE_CATEGORY),
+            'tagsSuggestions' => $this->taxonomySuggestions(PostTaxonomy::TYPE_TAG),
         ]);
     }
 
     public function update(Request $request, Post $post): RedirectResponse
     {
         $data = $this->validated($request, $post->id);
+        $categories = $data['categories'];
+        $tags = $data['tags'];
+        unset($data['categories'], $data['tags']);
         $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
         $data['featured_image'] = $this->resolveImage($request, $post->featured_image, $data['featured_image'] ?? null);
 
         $post->update($data);
+        $this->syncTaxonomies($post, $categories, $tags);
 
         return redirect()->route('admin.posts.index')->with('status', 'Post updated.');
     }
@@ -72,6 +91,32 @@ class PostController extends Controller
         $post->delete();
 
         return redirect()->route('admin.posts.index')->with('status', 'Post deleted.');
+    }
+
+    public function uploadMedia(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'image' => ['nullable', 'image', 'max:6144'],
+            'images' => ['nullable', 'array', 'max:10'],
+            'images.*' => ['image', 'max:6144'],
+        ]);
+
+        $urls = [];
+
+        if ($request->hasFile('image')) {
+            $urls[] = $this->storeContentImage($request->file('image'));
+        }
+
+        foreach ($request->file('images', []) as $file) {
+            $urls[] = $this->storeContentImage($file);
+        }
+
+        return response()->json([
+            'data' => [
+                'url' => $urls[0] ?? null,
+                'urls' => $urls,
+            ],
+        ]);
     }
 
     private function validated(Request $request, ?int $ignoreId = null): array
@@ -97,7 +142,7 @@ class PostController extends Controller
         ]);
 
         $validated['published_at'] = ! empty($validated['published_at']) ? Carbon::parse($validated['published_at']) : null;
-        $validated['content'] = $this->splitLines((string) ($validated['content_text'] ?? ''));
+        $validated['content'] = WordPressContent::toRenderableBlocks((string) ($validated['content_text'] ?? ''));
         $validated['categories'] = $this->splitCsv((string) ($validated['categories_text'] ?? ''));
         $validated['tags'] = $this->splitCsv((string) ($validated['tags_text'] ?? ''));
         $validated['is_published'] = $request->boolean('is_published', true);
@@ -127,27 +172,100 @@ class PostController extends Controller
         Storage::disk('public')->delete($path);
     }
 
-    /**
-     * @return array<int, string>
-     */
-    private function splitLines(string $text): array
+    private function storeContentImage(\Illuminate\Http\UploadedFile $file): string
     {
-        return array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', trim($text)) ?: [])));
+        $path = $file->store('catalog/posts/content-images', 'public');
+
+        return Storage::disk('public')->url($path);
     }
 
-    /**
-     * @return array<int, string>
-     */
     private function splitCsv(string $text): array
     {
         return array_values(array_filter(array_map('trim', explode(',', $text))));
     }
 
     /**
-     * @param array<int, string> $lines
+     * @param array<int, string> $categories
+     * @param array<int, string> $tags
      */
-    private function linesToText(array $lines): string
+    private function syncTaxonomies(Post $post, array $categories, array $tags): void
     {
-        return implode("\n", array_map('strval', $lines));
+        if (! Schema::hasTable('post_taxonomy_post')) {
+            return;
+        }
+
+        $taxonomyIds = [];
+
+        foreach ($categories as $name) {
+            $taxonomyIds[] = $this->ensureTaxonomy(PostTaxonomy::TYPE_CATEGORY, $name)->id;
+        }
+
+        foreach ($tags as $name) {
+            $taxonomyIds[] = $this->ensureTaxonomy(PostTaxonomy::TYPE_TAG, $name)->id;
+        }
+
+        $post->taxonomies()->sync(array_values(array_unique($taxonomyIds)));
     }
+
+    private function ensureTaxonomy(string $type, string $name): PostTaxonomy
+    {
+        $name = trim($name);
+
+        return PostTaxonomy::query()->firstOrCreate(
+            [
+                'type' => $type,
+                'slug' => Str::slug($name),
+            ],
+            [
+                'name' => $name,
+            ]
+        );
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function taxonomyNames(Post $post, string $type, string $attribute): array
+    {
+        if (Schema::hasTable('post_taxonomy_post')) {
+            $names = $post->taxonomies()
+                ->where('type', $type)
+                ->orderBy('name')
+                ->pluck('name')
+                ->all();
+
+            if ($names !== []) {
+                return $names;
+            }
+        }
+
+        return array_values(array_filter(array_map('strval', $post->{$attribute} ?? [])));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function taxonomySuggestions(string $type): array
+    {
+        if (Schema::hasTable('post_taxonomies')) {
+            return PostTaxonomy::query()
+                ->where('type', $type)
+                ->orderBy('name')
+                ->pluck('name')
+                ->all();
+        }
+
+        $values = Post::query()
+            ->pluck($type === PostTaxonomy::TYPE_CATEGORY ? 'categories' : 'tags')
+            ->filter()
+            ->flatten()
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return array_map('strval', $values);
+    }
+
 }

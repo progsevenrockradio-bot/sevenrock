@@ -26,12 +26,13 @@ export function registerRadioPlayer(Alpine) {
         popupUrl: options.popupUrl || '/player/popup',
         bandInfoUrl: options.bandInfoUrl || '/api/player/band-info',
         fallbackCover: options.fallbackCover || '',
-        pollInterval: Number(options.pollInterval || 10),
+        pollInterval: Number(options.pollInterval || 5),
         historyLimit: Number(options.historyLimit || 10),
         defaultArtist: '',
         defaultTitle: '',
         panelOpen: false,
         bandWindowOpen: false,
+        bandWindowTab: 'lyrics',
         dockMinimized: false,
         activeTab: 'lyrics',
         playing: false,
@@ -100,19 +101,25 @@ export function registerRadioPlayer(Alpine) {
         widgetObserver: null,
         widgetSyncHandle: null,
         toastHandle: null,
+        statusInFlight: false,
+        statusSyncHandle: null,
 
         init() {
             this.panelOpen = this.mode === 'page' ? true : false;
+            this.bandWindowOpen = false;
+            this.bandWindowTab = 'lyrics';
+            this.dockMinimized = false;
             this.activeTab = safeRead('sr-player-tab', 'lyrics');
             this.toast.visible = false;
             this.toast.message = '';
             this.applyAudioPreferences();
             this.bindAudioEvents();
             this.watchNowPlayingWidget();
-            this.refreshStatus(true);
-            this.queueWidgetSync(1200);
+            this.bindNavigationGuards();
+            this.queueStatusRefresh(0);
+            this.queueWidgetSync(400);
 
-            this.pollHandle = setInterval(() => this.refreshStatus(true), Math.max(5, this.pollInterval) * 1000);
+            this.pollHandle = setInterval(() => this.queueStatusRefresh(0), Math.max(3, this.pollInterval) * 1000);
             this.progressHandle = setInterval(() => this.tickProgress(), 1000);
 
             this.boundHotkeys = (event) => this.handleHotkeys(event);
@@ -137,6 +144,68 @@ export function registerRadioPlayer(Alpine) {
             }
             if (this.toastHandle) {
                 clearTimeout(this.toastHandle);
+            }
+            if (this.statusSyncHandle) {
+                clearTimeout(this.statusSyncHandle);
+            }
+            if (this.navigationGuard) {
+                document.removeEventListener('click', this.navigationGuard, true);
+            }
+            if (this.pageShowGuard) {
+                window.removeEventListener('pageshow', this.pageShowGuard);
+            }
+            if (this.beforeUnloadGuard) {
+                window.removeEventListener('beforeunload', this.beforeUnloadGuard);
+            }
+        },
+
+        bindNavigationGuards() {
+            this.navigationGuard = (event) => {
+                const anchor = event.target?.closest?.('a[href]');
+                if (!anchor) {
+                    return;
+                }
+
+                if (anchor.target && anchor.target !== '_self') {
+                    return;
+                }
+
+                const href = anchor.getAttribute('href') || '';
+                if (!href || href.startsWith('#') || href.startsWith('javascript:')) {
+                    return;
+                }
+
+                try {
+                    const url = new URL(href, window.location.href);
+                    if (url.origin !== window.location.origin) {
+                        return;
+                    }
+                } catch (error) {
+                    return;
+                }
+
+                this.closeTransientOverlays();
+            };
+
+            this.pageShowGuard = (event) => {
+                if (event.persisted) {
+                    this.closeTransientOverlays();
+                }
+            };
+
+            this.beforeUnloadGuard = () => {
+                this.closeTransientOverlays();
+            };
+
+            document.addEventListener('click', this.navigationGuard, true);
+            window.addEventListener('pageshow', this.pageShowGuard);
+            window.addEventListener('beforeunload', this.beforeUnloadGuard);
+        },
+
+        closeTransientOverlays() {
+            this.bandWindowOpen = false;
+            if (this.mode !== 'page') {
+                this.panelOpen = false;
             }
         },
 
@@ -259,25 +328,33 @@ export function registerRadioPlayer(Alpine) {
             this.ensureAudioSource();
 
             if (this.playing) {
-                audio.pause();
                 this.playing = false;
+                this.loading = false;
+                audio.pause();
                 this.toastMessage('Reproductor en pausa');
+                this.queueStatusRefresh(0);
                 return;
             }
 
             try {
+                this.loading = true;
+                this.playing = true;
                 audio.load();
                 await audio.play();
-                this.playing = true;
+                this.loading = false;
+                this.queueStatusRefresh(0);
                 this.toastMessage('Reproduciendo');
             } catch (error) {
                 if (this.currentStreamIndex + 1 < this.streamCandidates.length) {
                     this.currentStreamIndex += 1;
                     this.ensureAudioSource();
                     try {
+                        this.loading = true;
+                        this.playing = true;
                         audio.load();
                         await audio.play();
-                        this.playing = true;
+                        this.loading = false;
+                        this.queueStatusRefresh(0);
                         this.toastMessage('Reproduciendo');
                         return;
                     } catch (fallbackError) {
@@ -286,12 +363,14 @@ export function registerRadioPlayer(Alpine) {
                 }
 
                 this.playing = false;
+                this.loading = false;
+                this.queueStatusRefresh(0);
                 this.toastMessage('No se pudo iniciar el audio');
             }
         },
 
         togglePlay() {
-            this.attemptPlayWithFallback();
+            return this.attemptPlayWithFallback();
         },
 
         togglePanel() {
@@ -326,6 +405,7 @@ export function registerRadioPlayer(Alpine) {
                 facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : [],
             };
             this.bandWindowOpen = true;
+            this.bandWindowTab = 'lyrics';
             this.queueWidgetSync(0);
             await this.ensureBandInfo();
             this.bandPanel = {
@@ -342,6 +422,10 @@ export function registerRadioPlayer(Alpine) {
             this.bandWindowOpen = false;
         },
 
+        setBandWindowTab(tab) {
+            this.bandWindowTab = tab;
+        },
+
         closePanel() {
             if (this.mode === 'popup') {
                 this.panelOpen = false;
@@ -349,7 +433,7 @@ export function registerRadioPlayer(Alpine) {
                 return;
             }
 
-            this.bandWindowOpen = false;
+            this.closeTransientOverlays();
             this.dockMinimized = !this.dockMinimized;
         },
 
@@ -366,6 +450,16 @@ export function registerRadioPlayer(Alpine) {
             }, Math.max(0, Number(delay) || 0));
         },
 
+        queueStatusRefresh(delay = 0) {
+            if (this.statusSyncHandle) {
+                clearTimeout(this.statusSyncHandle);
+            }
+
+            this.statusSyncHandle = setTimeout(() => {
+                this.refreshStatus(true);
+            }, Math.max(0, Number(delay) || 0));
+        },
+
         watchNowPlayingWidget() {
             this.$nextTick(() => {
                 const cover = document.getElementById(this.widgetIds.cover);
@@ -377,6 +471,7 @@ export function registerRadioPlayer(Alpine) {
                 }
 
                 const observer = new MutationObserver(() => {
+                    this.queueStatusRefresh(200);
                     this.queueWidgetSync(0);
                 });
 
@@ -426,18 +521,26 @@ export function registerRadioPlayer(Alpine) {
                 widgetTrack.artist ||
                 ''
             );
-            if (!artist) {
+            const title = this.normalizeTrackTitle(
+                this.track.title ||
+                inferredWidget.title ||
+                widgetTrack.title ||
+                ''
+            );
+
+            if (!artist && !title) {
                 return;
             }
 
-            if (this.bandLookupArtist === artist && !this.needsBandEnrichment()) {
+            const lookupKey = [artist || '', title || ''].join('|');
+            if (this.bandLookupArtist === lookupKey && !this.needsBandEnrichment()) {
                 return;
             }
 
-            this.bandLookupArtist = artist;
+            this.bandLookupArtist = lookupKey;
 
             try {
-                const response = await fetch(`${this.bandInfoUrl}?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(this.track.title || '')}`, {
+                const response = await fetch(`${this.bandInfoUrl}?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}`, {
                     headers: {
                         Accept: 'application/json',
                     },
@@ -452,7 +555,7 @@ export function registerRadioPlayer(Alpine) {
 
                 this.track = {
                     ...this.track,
-                    band_info: data.summary || this.track.band_info || this.track.comment || '',
+                    band_info: this.formatBandText(data.summary || this.track.band_info || this.track.comment || ''),
                     band_thumbnail: data.thumbnail || this.track.band_thumbnail || this.track.cover || this.fallbackCover,
                     lyrics: data.lyrics || this.track.lyrics || '',
                     social_links: Array.isArray(data.social_links) ? data.social_links : this.track.social_links,
@@ -496,6 +599,12 @@ export function registerRadioPlayer(Alpine) {
         },
 
         async refreshStatus(silent = false) {
+            if (this.statusInFlight) {
+                return;
+            }
+
+            this.statusInFlight = true;
+
             try {
                 const response = await fetch(`${this.statusUrl}?t=${Date.now()}`, {
                     headers: {
@@ -516,6 +625,8 @@ export function registerRadioPlayer(Alpine) {
                     this.toastMessage('No se pudo actualizar el reproductor');
                 }
                 this.loading = false;
+            } finally {
+                this.statusInFlight = false;
             }
         },
 
@@ -526,6 +637,18 @@ export function registerRadioPlayer(Alpine) {
             const inferredWidget = this.inferWidgetTrack(widgetTrack);
             const currentTitle = this.track.title && this.track.title !== this.defaultTitle ? this.track.title : '';
             const currentArtist = this.track.artist && this.track.artist !== this.defaultArtist ? this.track.artist : '';
+            const nextSignature = track.signature || this.buildSignature({
+                title: track.title || inferredWidget.title || widgetTrack.title || currentTitle || '',
+                artist: track.artist || inferredWidget.artist || widgetTrack.artist || currentArtist || '',
+                cover: track.cover || widgetTrack.cover || this.fallbackCover,
+                program: track.program_name || '',
+            });
+            const trackChanged = Boolean(previousSignature && previousSignature !== nextSignature);
+            const nextBandInfo = this.formatBandText(track.band_info || track.comment || '');
+            const nextLyrics = typeof track.lyrics === 'string' ? track.lyrics : '';
+            const nextThumbnail = track.band_thumbnail || '';
+            const nextFacts = Array.isArray(track.band_facts) ? track.band_facts : [];
+            const nextLinks = Array.isArray(track.social_links) ? track.social_links : [];
 
             this.track = {
                 ...this.track,
@@ -533,15 +656,15 @@ export function registerRadioPlayer(Alpine) {
                 title: this.normalizeTrackTitle(track.title || inferredWidget.title || widgetTrack.title || currentTitle || ''),
                 artist: this.normalizeBandArtist(track.artist || inferredWidget.artist || widgetTrack.artist || currentArtist || ''),
                 cover: track.cover || widgetTrack.cover || this.fallbackCover,
-                lyrics: track.lyrics || this.track.lyrics || '',
-                band_info: track.band_info || track.comment || this.track.band_info || '',
-                band_thumbnail: track.band_thumbnail || this.track.band_thumbnail || '',
+                lyrics: trackChanged ? nextLyrics : (nextLyrics || this.track.lyrics || ''),
+                band_info: trackChanged ? nextBandInfo : (nextBandInfo || this.track.band_info || ''),
+                band_thumbnail: trackChanged ? nextThumbnail : (nextThumbnail || this.track.band_thumbnail || ''),
                 band_founded_year: track.band_founded_year ?? this.track.band_founded_year ?? null,
                 band_founded_label: track.band_founded_label || this.track.band_founded_label || '',
-                band_facts: Array.isArray(track.band_facts) ? track.band_facts : (this.track.band_facts || []),
-                comment: track.comment || this.track.comment || '',
-                band_members: track.band_members || this.track.band_members || [],
-                social_links: track.social_links || this.track.social_links || [],
+                band_facts: trackChanged ? nextFacts : (nextFacts.length ? nextFacts : (this.track.band_facts || [])),
+                comment: track.comment || '',
+                band_members: Array.isArray(track.band_members) ? track.band_members : [],
+                social_links: nextLinks.length ? nextLinks : [],
                 audio_url: track.audio_url || this.track.audio_url || '',
                 is_live: track.is_live ?? true,
                 program_name: track.program_name || '',
@@ -550,10 +673,22 @@ export function registerRadioPlayer(Alpine) {
                 program_id: track.program_id || null,
             };
 
-            this.syncTrackFromWidget();
-            this.queueWidgetSync(1200);
+            if (trackChanged) {
+                this.bandLookupArtist = '';
+                this.bandPanel = {
+                    title: '',
+                    artist: '',
+                    info: '',
+                    cover: this.track.cover || this.fallbackCover,
+                    foundedLabel: '',
+                    facts: [],
+                };
+            }
 
-            if (this.normalizeBandArtist(this.track.artist) && this.needsBandEnrichment()) {
+            this.syncTrackFromWidget();
+            this.queueWidgetSync(trackChanged ? 0 : 200);
+
+            if ((this.normalizeBandArtist(this.track.artist) || this.normalizeTrackTitle(this.track.title)) && this.needsBandEnrichment()) {
                 this.ensureBandInfo();
             }
 
@@ -572,6 +707,30 @@ export function registerRadioPlayer(Alpine) {
             if (!silent && previousSignature && previousSignature !== this.track.signature) {
                 this.toastMessage(`Ahora suena: ${this.track.title}`);
             }
+        },
+
+        formatBandText(value) {
+            const text = String(value || '').trim();
+            if (!text) {
+                return '';
+            }
+
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = text;
+            const decoded = textarea.value
+                .replace(/\[(?:[A-Za-z]{1,3}\d+|\d+)\]/g, '')
+                .replace(/\r\n?/g, '\n')
+                .replace(/\n{3,}/g, '\n\n')
+                .replace(/ *\n */g, '\n')
+                .replace(/\b(Contexto de catalogo|Contexto de catálogo|Miembros relacionados|Alias \/ variaciones)\b/gi, '\n\n$1')
+                .replace(/[ \t]{2,}/g, ' ')
+                .trim();
+
+            return decoded;
+        },
+
+        buildSignature({ title = '', artist = '', cover = '', program = '' } = {}) {
+            return [title, artist, cover, program].join('|');
         },
 
         readNowPlayingWidget() {
@@ -612,10 +771,21 @@ export function registerRadioPlayer(Alpine) {
                 return '';
             }
 
+            const cleaned = text
+                .replace(/^\s*(?:remasterizado|remastered)\s*\d{0,4}\s*[-:]\s*/i, '')
+                .replace(/\s*\((?:feat\.?|ft\.?|with)[^)]+\)\s*$/i, '')
+                .replace(/\s+(?:feat\.?|ft\.?|featuring|with)\b.*$/i, '')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
+
+            if (!cleaned) {
+                return '';
+            }
+
             return ['Seven Rock Radio', 'Transmisión oficial']
-                .some((needle) => text.toLowerCase() === needle.toLowerCase())
+                .some((needle) => cleaned.toLowerCase() === needle.toLowerCase())
                 ? ''
-                : text;
+                : cleaned;
         },
 
         normalizeTrackTitle(value) {
@@ -812,7 +982,7 @@ export function registerRadioPlayer(Alpine) {
             }
 
             if (event.code === 'Escape' && this.mode !== 'page') {
-                this.panelOpen = false;
+                this.closeTransientOverlays();
                 safeWrite('sr-player-expanded', '0');
             }
         },
@@ -853,6 +1023,34 @@ export function registerRadioPlayer(Alpine) {
             }
 
             return [];
+        },
+
+        bandLineup() {
+            const members = Array.isArray(this.bandPanel.lineup) && this.bandPanel.lineup.length
+                ? this.bandPanel.lineup
+                : (Array.isArray(this.track.band_members) ? this.track.band_members : []);
+
+            return members
+                .map((item) => {
+                    if (typeof item === 'string') {
+                        const name = this.cleanWidgetText(item);
+                        return name ? { name, role: '' } : null;
+                    }
+
+                    if (item && typeof item === 'object') {
+                        const name = this.cleanWidgetText(item.name || item.member || item.title || '');
+                        const role = this.cleanWidgetText(item.role || item.instrument || item.position || '');
+
+                        if (!name) {
+                            return null;
+                        }
+
+                        return { name, role };
+                    }
+
+                    return null;
+                })
+                .filter(Boolean);
         },
     }));
 }

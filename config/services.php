@@ -36,12 +36,44 @@ return [
     ],
 
     'discogs' => [
-        'token' => env('DISCOGS_TOKEN'),
+        'token' => env('DISCOGS_API_TOKEN', env('DISCOGS_TOKEN')),
     ],
 
     'lastfm' => [
         'key' => env('LASTFM_KEY'),
         'api_key' => env('LASTFM_API_KEY'),
+        'secret' => env('LASTFM_API_SECRET'),
+    ],
+
+    'genius' => [
+        'token' => env('GENIUS_API_TOKEN'),
+    ],
+
+    'musixmatch' => [
+        'key' => env('MUSIXMATCH_API_KEY'),
+    ],
+
+    'archive_org' => [
+        'access_key' => env('ARCHIVE_ORG_ACCESS_KEY'),
+        'secret_key' => env('ARCHIVE_ORG_SECRET_KEY'),
+        'region' => env('ARCHIVE_REGION', 'us-east-1'),
+        'bucket' => env('ARCHIVE_BUCKET'),
+        'endpoint' => env('ARCHIVE_ENDPOINT', 'https://s3.us.archive.org'),
+        'collection' => env('ARCHIVE_COLLECTION', 'opensource_audio'),
+        'mediatype' => env('ARCHIVE_MEDIATYPE', 'audio'),
+    ],
+
+    'notifications' => [
+        'mailer' => env('NOTIFICATION_MAILER'),
+    ],
+
+    'podcast_ingest' => [
+        'enabled' => env('PODCAST_INGEST_ENABLED', true),
+        'inbox_dir' => env('PODCAST_INGEST_INBOX_DIR', 'podcast-inbox'),
+        'processing_dir' => env('PODCAST_INGEST_PROCESSING_DIR', 'podcast-inbox/processing'),
+        'error_dir' => env('PODCAST_INGEST_ERROR_DIR', 'podcast-inbox/error'),
+        'json_dir' => env('PODCAST_INGEST_JSON_DIR', 'podcast-inbox/generated-json'),
+        'default_sync_archive_org' => env('PODCAST_INGEST_DEFAULT_SYNC_ARCHIVE_ORG', true),
     ],
 
 ];

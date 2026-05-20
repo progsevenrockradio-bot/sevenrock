@@ -29,4 +29,10 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function hasAdminAccess(): bool
+    {
+        return (bool) ($this->getAttribute('is_admin') ?? false)
+            || (string) $this->getAttribute('role') === 'admin';
+    }
 }

@@ -6,7 +6,6 @@ namespace App\Support;
 
 use App\Models\BandProfile;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Throwable;
@@ -30,23 +29,36 @@ class BandInfoAggregator
             return $this->emptyPayload();
         }
 
-        $cacheKey = 'band-info:agg:v1:' . Str::slug($artist);
+        $cacheKey = 'band-info:agg:v6:' . Str::slug($artist);
 
         $payload = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($artist): array {
             $local = $this->localProfile($artist);
-            $discogs = $this->fetchDiscogsProfile($artist);
-            $wikipedia = $this->fetchWikipediaProfile($artist);
-            $lastfm = $this->fetchLastFmProfile($artist);
-            $musicBrainz = $this->fetchMusicBrainzProfile($artist);
-            $audioDb = $this->fetchTadbProfile($artist);
-
-            $payload = $this->buildPayload($local, $discogs, $wikipedia, $lastfm, $musicBrainz, $audioDb);
-
-            if (! $local && $this->hasMeaningfulExternalPayload($payload)) {
-                $this->persistLocalProfile($artist, $payload);
+            if ($local) {
+                return $local;
             }
 
-            return $payload;
+            $providers = [
+                fn (): ?array => $this->fetchDiscogsProfile($artist),
+                fn (): ?array => $this->fetchWikipediaProfile($artist),
+                fn (): ?array => $this->fetchLastFmProfile($artist),
+                fn (): ?array => $this->fetchTadbProfile($artist),
+                fn (): ?array => $this->fetchMusicBrainzProfile($artist),
+            ];
+
+            foreach ($providers as $provider) {
+                $payload = $provider();
+
+                if (! $this->hasMeaningfulExternalPayload($payload ?? [])) {
+                    continue;
+                }
+
+                $payload = $this->normalizePayload($payload);
+                $this->persistLocalProfile($artist, $payload);
+
+                return $payload;
+            }
+
+            return $this->emptyPayload($artist);
         });
 
         return is_array($payload) ? $payload : $this->emptyPayload($artist);
@@ -68,35 +80,36 @@ class BandInfoAggregator
             return null;
         }
 
-        $normalizedArtist = $this->normalizeKey($artist);
-        $profile = BandProfile::query()->get()->first(function (BandProfile $candidate) use ($normalizedArtist): bool {
-            if ($this->normalizeKey($candidate->name) === $normalizedArtist) {
-                return true;
-            }
-
-            foreach ((array) $candidate->related_artists as $relatedArtist) {
-                if (is_string($relatedArtist) && $this->normalizeKey($relatedArtist) === $normalizedArtist) {
-                    return true;
-                }
-            }
-
-            return false;
-        });
+        $matcher = app(BandProfileMatcher::class);
+        $profile = $matcher->exactMatch($artist) ?? $matcher->fuzzyMatch($artist);
 
         if (! $profile) {
             return null;
         }
 
         $summary = trim((string) ($profile->editorial_summary ?: $profile->biography ?: ''));
+        $thumbnail = (string) ($profile->normalizedImageUrl() ?? '');
+        $socialLinks = $this->normalizeLocalLinks((array) ($profile->official_links ?? []));
+        $facts = $this->normalizeFacts((array) ($profile->featured_facts ?? []));
         $formedYear = $this->extractYearFromText($summary);
+
+        if (! $this->hasMeaningfulExternalPayload([
+            'summary' => $summary,
+            'thumbnail' => $thumbnail,
+            'social_links' => $socialLinks,
+            'formed_year' => $formedYear,
+            'facts' => $facts,
+        ])) {
+            return null;
+        }
 
         return [
             'summary' => $summary,
-            'thumbnail' => (string) ($profile->normalizedImageUrl() ?? ''),
-            'social_links' => $this->normalizeLocalLinks((array) ($profile->official_links ?? [])),
+            'thumbnail' => $thumbnail,
+            'social_links' => $socialLinks,
             'formed_year' => $formedYear,
             'formed_label' => $formedYear ? sprintf('Se formó en %d', $formedYear) : '',
-            'facts' => $this->normalizeFacts((array) ($profile->featured_facts ?? [])),
+            'facts' => $facts,
         ];
     }
 
@@ -113,10 +126,10 @@ class BandInfoAggregator
                 'Authorization' => "Discogs token={$token}",
             ];
 
-            $search = Http::withHeaders($headers)
+            $search = ExternalHttp::client()->withHeaders($headers)
                 ->retry(1, 100)
-                ->connectTimeout(2)
-                ->timeout(4)
+                ->connectTimeout(1)
+                ->timeout(2)
                 ->get('https://api.discogs.com/database/search', [
                     'q' => $artist,
                     'type' => 'artist',
@@ -128,10 +141,10 @@ class BandInfoAggregator
             }
 
             $artistId = (string) data_get($search->json(), 'results.0.id');
-            $details = Http::withHeaders($headers)
+            $details = ExternalHttp::client()->withHeaders($headers)
                 ->retry(1, 100)
-                ->connectTimeout(2)
-                ->timeout(4)
+                ->connectTimeout(1)
+                ->timeout(2)
                 ->get("https://api.discogs.com/artists/{$artistId}");
 
             if (! $details->successful()) {
@@ -161,11 +174,25 @@ class BandInfoAggregator
 
     private function fetchWikipediaProfile(string $artist): ?array
     {
+        foreach (['es', 'en'] as $language) {
+            $payload = $this->fetchWikipediaProfileFromLanguage($artist, $language);
+            if ($payload !== null) {
+                return $payload;
+            }
+        }
+
+        return null;
+    }
+
+    private function fetchWikipediaProfileFromLanguage(string $artist, string $language): ?array
+    {
         try {
-            $search = Http::retry(1, 100)
-                ->connectTimeout(2)
-                ->timeout(4)
-                ->get('https://es.wikipedia.org/w/api.php', [
+            $baseUrl = "https://{$language}.wikipedia.org";
+
+            $search = ExternalHttp::client()->retry(1, 100)
+                ->connectTimeout(1)
+                ->timeout(3)
+                ->get("{$baseUrl}/w/api.php", [
                     'action' => 'opensearch',
                     'search' => $artist,
                     'limit' => 1,
@@ -173,19 +200,30 @@ class BandInfoAggregator
                     'format' => 'json',
                 ]);
 
-            if (! $search->successful()) {
-                return null;
+            $title = trim((string) data_get($search->json(), '1.0', ''));
+            if ($title === '') {
+                $query = ExternalHttp::client()->retry(1, 100)
+                    ->connectTimeout(1)
+                    ->timeout(3)
+                    ->get("{$baseUrl}/w/api.php", [
+                        'action' => 'query',
+                        'list' => 'search',
+                        'srsearch' => $artist,
+                        'srlimit' => 1,
+                        'format' => 'json',
+                    ]);
+
+                $title = trim((string) data_get($query->json(), 'query.search.0.title', ''));
             }
 
-            $title = (string) data_get($search->json(), '1.0', '');
             if ($title === '') {
                 return null;
             }
 
-            $summary = Http::retry(1, 100)
-                ->connectTimeout(2)
-                ->timeout(4)
-                ->get('https://es.wikipedia.org/api/rest_v1/page/summary/' . rawurlencode($title));
+            $summary = ExternalHttp::client()->retry(1, 100)
+                ->connectTimeout(1)
+                ->timeout(3)
+                ->get("{$baseUrl}/api/rest_v1/page/summary/" . rawurlencode($title));
 
             if (! $summary->successful()) {
                 return null;
@@ -197,18 +235,20 @@ class BandInfoAggregator
             }
 
             $extract = $this->cleanText((string) ($data['extract'] ?? ''));
+            $description = $this->cleanText((string) ($data['description'] ?? ''));
+            $summaryText = $extract !== '' ? $extract : $description;
 
             return [
-                'summary' => $extract,
+                'summary' => $summaryText,
                 'thumbnail' => (string) data_get($data, 'thumbnail.source', ''),
                 'facts' => array_values(array_filter([
-                    $this->cleanText((string) ($data['description'] ?? '')),
+                    $description,
                     $this->cleanText((string) data_get($data, 'content_urls.desktop.page', '')),
                 ])),
                 'social_links' => $this->normalizeLinks(array_filter([
                     (string) data_get($data, 'content_urls.desktop.page', ''),
                 ])),
-                'formed_year' => $this->extractYearFromText($extract),
+                'formed_year' => $this->extractYearFromText($summaryText),
                 'formed_label' => '',
             ];
         } catch (Throwable) {
@@ -224,9 +264,9 @@ class BandInfoAggregator
         }
 
         try {
-            $response = Http::retry(1, 100)
-                ->connectTimeout(2)
-                ->timeout(4)
+            $response = ExternalHttp::client()->retry(1, 100)
+                ->connectTimeout(1)
+                ->timeout(2)
                 ->get('https://ws.audioscrobbler.com/2.0/', [
                     'method' => 'artist.getinfo',
                     'artist' => $artist,
@@ -262,10 +302,10 @@ class BandInfoAggregator
     private function fetchMusicBrainzProfile(string $artist): ?array
     {
         try {
-            $search = Http::withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (metadata)'])
+            $search = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (metadata)'])
                 ->retry(1, 100)
-                ->connectTimeout(2)
-                ->timeout(4)
+                ->connectTimeout(1)
+                ->timeout(2)
                 ->get('https://musicbrainz.org/ws/2/artist/', [
                     'query' => 'artist:"' . $artist . '"',
                     'fmt' => 'json',
@@ -277,10 +317,10 @@ class BandInfoAggregator
             }
 
             $id = (string) data_get($search->json(), 'artists.0.id');
-            $details = Http::withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (metadata)'])
+            $details = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (metadata)'])
                 ->retry(1, 100)
-                ->connectTimeout(2)
-                ->timeout(4)
+                ->connectTimeout(1)
+                ->timeout(2)
                 ->get("https://musicbrainz.org/ws/2/artist/{$id}", [
                     'fmt' => 'json',
                     'inc' => 'url-rels',
@@ -315,9 +355,9 @@ class BandInfoAggregator
     private function fetchTadbProfile(string $artist): ?array
     {
         try {
-            $response = Http::retry(1, 100)
-                ->connectTimeout(2)
-                ->timeout(4)
+            $response = ExternalHttp::client()->retry(1, 100)
+                ->connectTimeout(1)
+                ->timeout(2)
                 ->get('https://www.theaudiodb.com/api/v1/json/2/search.php', [
                     's' => $artist,
                 ]);
@@ -448,9 +488,37 @@ class BandInfoAggregator
                     'source' => 'Seven Rock Radio',
                 ]
             );
+
+            Cache::forget('band-info:v8:' . Str::slug($artist));
+            Cache::forget('band-info:v7:' . Str::slug($artist));
         } catch (Throwable) {
             // keep warmup failures silent
         }
+    }
+
+    /**
+     * @param array{summary?:string,thumbnail?:string,social_links?:array<int,array{label:string,url:string}>,formed_year?:int|null,formed_label?:string,facts?:array<int,string>}|null $payload
+     * @return array{
+     *     summary:string,
+     *     thumbnail:string,
+     *     social_links:array<int,array{label:string,url:string}>,
+     *     formed_year:int|null,
+     *     formed_label:string,
+     *     facts:array<int,string>
+     * }
+     */
+    private function normalizePayload(?array $payload): array
+    {
+        $payload ??= [];
+
+        return [
+            'summary' => $this->formatSummaryText((string) ($payload['summary'] ?? '')),
+            'thumbnail' => trim((string) ($payload['thumbnail'] ?? '')),
+            'social_links' => $this->normalizeLocalLinks((array) ($payload['social_links'] ?? [])),
+            'formed_year' => $this->positiveInt($payload['formed_year'] ?? null),
+            'formed_label' => trim((string) ($payload['formed_label'] ?? '')),
+            'facts' => $this->normalizeFacts((array) ($payload['facts'] ?? [])),
+        ];
     }
 
     private function hasMeaningfulExternalPayload(array $payload): bool
@@ -556,9 +624,26 @@ class BandInfoAggregator
 
     private function cleanText(string $text): string
     {
-        $text = trim($text);
-        $text = strip_tags($text);
-        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        $text = trim(strip_tags($text));
+        $text = preg_replace('/\[(?:[A-Za-z]{1,3}\d+|\d+)\]/u', '', $text) ?? $text;
+        $text = preg_replace('/[ \t]+/u', ' ', $text) ?? $text;
+        $text = preg_replace('/ *\n */u', "\n", $text) ?? $text;
+        $text = preg_replace('/\n{3,}/u', "\n\n", $text) ?? $text;
+
+        return trim($text);
+    }
+
+    private function formatSummaryText(string $text): string
+    {
+        $text = $this->cleanText($text);
+        if ($text === '') {
+            return '';
+        }
+
+        $text = preg_replace('/\b(Contexto de catalogo|Contexto de catálogo|Miembros relacionados|Alias \/ variaciones)\b/iu', "\n\n$1", $text) ?? $text;
+        $text = preg_replace('/\n\s*\n\s*\n+/u', "\n\n", $text) ?? $text;
 
         return trim($text);
     }

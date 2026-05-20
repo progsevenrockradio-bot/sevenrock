@@ -1,9 +1,8 @@
 <x-layouts.site title="Seven Rock Radio - Events">
     <x-sections.page-heading
-        title="Events"
-        subtitle="On Tour"
-        image="assets/lucille/microphone-1206364_1920.jpg"
-        overlay="rgba(21,21,21,.88)"
+        title="Upcoming Shows"
+        subtitle="Tour Dates 2026"
+        overlay="rgba(0,0,0,0)"
     />
 
     <section class="white_on_black">

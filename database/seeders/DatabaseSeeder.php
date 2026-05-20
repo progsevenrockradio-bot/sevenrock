@@ -35,6 +35,8 @@ class DatabaseSeeder extends Seeder
         );
 
         ThemeSetting::query()->firstOrCreate([], ThemeSetting::defaults());
+        $this->call(MasterProgramsSeeder::class);
+        $this->call(PostTaxonomySeeder::class);
 
         Event::query()->delete();
         Album::query()->delete();
@@ -353,5 +355,7 @@ class DatabaseSeeder extends Seeder
                 'sort_order' => GalleryImage::query()->count() + 1,
             ]);
         }
+
+        $this->call(SyncPostTaxonomiesSeeder::class);
     }
 }

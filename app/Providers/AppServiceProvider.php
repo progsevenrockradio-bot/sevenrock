@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\ThemeSetting;
+use App\Models\RadioProgram;
+use App\Observers\RadioProgramObserver;
 use App\Support\ThemeAppearance;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
@@ -26,7 +28,10 @@ class AppServiceProvider extends ServiceProvider
             require_once app_path('helpers.php');
         }
 
+        RadioProgram::observe(RadioProgramObserver::class);
+
         View::share('themeSettings', ThemeSetting::current());
         View::share('themeAppearance', ThemeAppearance::resolved());
+        View::share('admin', ThemeAppearance::resolved()['admin_texts'] ?? []);
     }
 }

@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use App\Support\PublicMediaUrl;
 
 class GalleryImage extends Model
 {
+    use Auditable;
     protected $fillable = [
         'image',
         'caption',

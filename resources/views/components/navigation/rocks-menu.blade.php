@@ -16,6 +16,7 @@
             ['label' => 'Upcoming Events', 'route' => 'events'],
             ['label' => 'Past Events', 'route' => 'events'],
             ['label' => 'All Events', 'route' => 'events'],
+            ['label' => 'Single Event', 'url' => route('events.single', ['slug' => 'rockness-festival'])],
         ]],
         ['label' => 'Blog', 'route' => 'blog', 'children' => [
             ['label' => 'Blog Masonry', 'route' => 'blog'],

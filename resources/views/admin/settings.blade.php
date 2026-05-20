@@ -226,7 +226,54 @@
         </section>
 
         <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-            <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $admin['contact_section'] }}</h2>
+            <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Notificaciones y contacto</h2>
+            <p class="mt-3 text-sm leading-7 text-[#7b7b7b]">Aquí defines los valores globales por defecto. Los programas maestros pueden sobrescribir el correo principal y la copia de notificación cuando lo necesiten.</p>
+            <div class="mt-6 border border-[#2b2b2b] bg-[rgba(0,0,0,.22)] p-5">
+                <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Guía rápida</h3>
+                <ol class="mt-4 space-y-2 text-sm leading-6 text-[#b8b8b8]">
+                    <li>1. Completa <span class="text-[#e0e0e0]">notification_email</span> con el correo principal global.</li>
+                    <li>2. Completa <span class="text-[#e0e0e0]">notification_copy_email</span> con la copia global de la radio.</li>
+                    <li>3. Define <span class="text-[#e0e0e0]">notification_from_email</span> y <span class="text-[#e0e0e0]">notification_reply_to_email</span> con un remitente válido.</li>
+                    <li>4. Si un programa maestro necesita otra dirección, edita <span class="text-[#e0e0e0]">email_notificacion</span> y <span class="text-[#e0e0e0]">email_copia_notificacion</span> en su ficha.</li>
+                </ol>
+            </div>
+            <div class="mt-6 border border-[#2b2b2b] bg-[rgba(0,0,0,.22)] p-5">
+                <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Estado actual</h3>
+                <p class="mt-2 text-sm leading-6 text-[#7b7b7b]">Estos son los valores que el sistema usará ahora mismo como base para los episodios nuevos y los correos de notificación.</p>
+                <dl class="mt-4 grid gap-4 md:grid-cols-2">
+                    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
+                        <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Correo principal activo</dt>
+                        <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['primary'] ?? 'No definido' }}</dd>
+                    </div>
+                    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
+                        <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Correo copia activo</dt>
+                        <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['copy'] ?? 'No definido' }}</dd>
+                    </div>
+                    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
+                        <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Remitente activo</dt>
+                        <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['from'] ?? 'No definido' }}</dd>
+                    </div>
+                    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
+                        <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Reply-to activo</dt>
+                        <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['reply_to'] ?? 'No definido' }}</dd>
+                    </div>
+                    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
+                        <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Mailer activo</dt>
+                        <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['mailer'] ?? 'No definido' }}</dd>
+                    </div>
+                    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
+                        <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Archive.org</dt>
+                        <dd class="mt-2 text-sm {{ $archiveOrgState['configured'] ? 'text-[#b8e6c3]' : 'text-[#ff9e9e]' }}">
+                            {{ $archiveOrgState['configured'] ? 'Credenciales detectadas' : 'Sin credenciales activas' }}
+                        </dd>
+                        <p class="mt-2 text-xs leading-5 text-[#7b7b7b]">
+                            Endpoint: <span class="text-[#e0e0e0]">{{ $archiveOrgState['endpoint'] ?: 'No definido' }}</span><br>
+                            Colección: <span class="text-[#e0e0e0]">{{ $archiveOrgState['collection'] ?: 'No definida' }}</span><br>
+                            Sincronización por defecto: <span class="text-[#e0e0e0]">{{ $archiveOrgState['default_sync'] ? 'Sí' : 'No' }}</span>
+                        </p>
+                    </div>
+                </dl>
+            </div>
             <div class="mt-6 grid gap-5">
                 <div class="grid gap-5 md:grid-cols-2">
                     <div>
@@ -250,6 +297,33 @@
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['contact_email_label'] }}</label>
                         <input name="contact_email" value="{{ old('contact_email', $settings->contact_email) }}" class="lucille-product-field w-full">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_email_label'] }}</label>
+                        <input name="notification_email" value="{{ old('notification_email', $settings->notification_email) }}" class="lucille-product-field w-full">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_copy_email_label'] }}</label>
+                        <input name="notification_copy_email" value="{{ old('notification_copy_email', $settings->notification_copy_email) }}" class="lucille-product-field w-full">
+                        <p class="mt-2 text-xs text-[#7b7b7b]">Copia global usada por defecto en los programas maestros.</p>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_from_email_label'] }}</label>
+                        <input name="notification_from_email" value="{{ old('notification_from_email', $settings->notification_from_email) }}" class="lucille-product-field w-full">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_reply_to_email_label'] }}</label>
+                        <input name="notification_reply_to_email" value="{{ old('notification_reply_to_email', $settings->notification_reply_to_email) }}" class="lucille-product-field w-full">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_mailer_label'] }}</label>
+                        <select name="notification_mailer" class="lucille-product-field lucille-select-field w-full">
+                            <option value="">Use mail defaults</option>
+                            @foreach (array_keys(config('mail.mailers', [])) as $mailerName)
+                                <option value="{{ $mailerName }}" @selected(old('notification_mailer', $settings->notification_mailer) === $mailerName)>{{ $mailerName }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-2 text-xs text-[#7b7b7b]">Override the mailer used by upload notifications.</p>
                     </div>
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['contact_phone_primary_label'] }}</label>

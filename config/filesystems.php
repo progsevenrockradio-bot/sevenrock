@@ -47,6 +47,23 @@ return [
             'report' => false,
         ],
 
+        'radioboss' => [
+            'driver' => 'ftp',
+            'host' => env('RADIOBOSS_FTP_SERVER', env('RADIOBOSS_FTP_HOST', '')),
+            'username' => env('RADIOBOSS_FTP_USER', env('RADIOBOSS_FTP_USERNAME', '')),
+            'password' => env('RADIOBOSS_FTP_PASS', env('RADIOBOSS_FTP_PASSWORD', '')),
+            'port' => (int) env('RADIOBOSS_FTP_PORT', 21),
+            'root' => env('RADIOBOSS_FTP_ROOT', '/'),
+            'passive' => filter_var(env('RADIOBOSS_FTP_PASSIVE', true), FILTER_VALIDATE_BOOL),
+            'ssl' => filter_var(env('RADIOBOSS_FTP_SSL', false), FILTER_VALIDATE_BOOL),
+            'timeout' => (int) env('RADIOBOSS_FTP_TIMEOUT', 60),
+            'clear_before_upload' => filter_var(env('RADIOBOSS_FTP_CLEAR_BEFORE_UPLOAD', false), FILTER_VALIDATE_BOOL),
+            'verify_after_upload' => filter_var(env('RADIOBOSS_FTP_VERIFY_AFTER_UPLOAD', false), FILTER_VALIDATE_BOOL),
+            'scan_remote_for_episode_number' => filter_var(env('RADIOBOSS_FTP_SCAN_REMOTE_FOR_EPISODE_NUMBER', false), FILTER_VALIDATE_BOOL),
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

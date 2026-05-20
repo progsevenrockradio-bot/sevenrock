@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Support;
 
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 
 class LyricsResolver
 {
@@ -18,29 +17,92 @@ class LyricsResolver
             return 'Letra no disponible';
         }
 
-        $cacheKey = 'lyrics:v1:' . md5(mb_strtolower($artist . '|' . $title));
+        $cacheKey = 'lyrics:v2:' . md5(mb_strtolower($artist . '|' . $title));
 
         return Cache::remember($cacheKey, now()->addHours(12), function () use ($artist, $title): string {
-            $lyrics = $this->fetchFromLrclib($artist, $title);
-            if ($lyrics !== '') {
-                return $lyrics;
-            }
+            foreach ($this->artistVariants($artist) as $artistVariant) {
+                foreach ($this->titleVariants($title) as $titleVariant) {
+                    $lyrics = $this->fetchFromLrclib($artistVariant, $titleVariant);
+                    if ($lyrics !== '') {
+                        return $lyrics;
+                    }
 
-            $lyrics = $this->fetchFromLyricsOvh($artist, $title);
-            if ($lyrics !== '') {
-                return $lyrics;
+                    $lyrics = $this->fetchFromLyricsOvh($artistVariant, $titleVariant);
+                    if ($lyrics !== '') {
+                        return $lyrics;
+                    }
+                }
             }
 
             return 'Letra no disponible';
         });
     }
 
+    /**
+     * @return array<int, string>
+     */
+    private function artistVariants(string $artist): array
+    {
+        $artist = trim($artist);
+        $variants = [$artist];
+
+        $normalized = preg_replace('/\s*\((?:feat\.?|ft\.?|with)[^)]*\)/iu', '', $artist) ?? $artist;
+        $normalized = preg_replace('/\s+(?:feat\.?|ft\.?|featuring|with)\b.*$/iu', '', $normalized) ?? $normalized;
+        $normalized = preg_replace('/\s+and\s+/iu', ' & ', $normalized) ?? $normalized;
+        $normalized = preg_replace('/\s{2,}/u', ' ', trim($normalized)) ?? $normalized;
+
+        foreach ([$normalized, $this->asciiFriendly($artist)] as $candidate) {
+            $candidate = trim((string) $candidate);
+            if ($candidate !== '' && ! in_array($candidate, $variants, true)) {
+                $variants[] = $candidate;
+            }
+        }
+
+        return $variants;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function titleVariants(string $title): array
+    {
+        $title = trim($title);
+        $variants = [$title];
+
+        $stripped = preg_replace('/\s*\(([^)]*)\)\s*$/u', '', $title) ?? $title;
+        $stripped = preg_replace('/\s+(?:feat\.?|ft\.?|featuring|with)\b.*$/iu', '', $stripped) ?? $stripped;
+        $stripped = preg_replace('/\s*-\s*(?:radio\s+edit|remaster(?:ed)?|live|clean|explicit|version)\b.*$/iu', '', $stripped) ?? $stripped;
+        $stripped = preg_replace('/\s{2,}/u', ' ', trim($stripped)) ?? $stripped;
+
+        foreach ([$stripped, $this->asciiFriendly($title)] as $candidate) {
+            $candidate = trim((string) $candidate);
+            if ($candidate !== '' && ! in_array($candidate, $variants, true)) {
+                $variants[] = $candidate;
+            }
+        }
+
+        return $variants;
+    }
+
+    private function asciiFriendly(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        $value = preg_replace('/[^\pL\pN\s&\-\']+/u', '', $value) ?? $value;
+        $value = preg_replace('/\s{2,}/u', ' ', $value) ?? $value;
+
+        return trim($value);
+    }
+
     private function fetchFromLrclib(string $artist, string $title): string
     {
         try {
-            $response = Http::retry(1, 100)
-                ->connectTimeout(2)
-                ->timeout(10)
+            $response = ExternalHttp::client()->retry(1, 100)
+                ->connectTimeout(1)
+                ->timeout(3)
                 ->withHeaders(['User-Agent' => 'SevenRockRadio/1.0'])
                 ->get('https://lrclib.net/api/get', [
                     'artist_name' => $artist,
@@ -73,9 +135,9 @@ class LyricsResolver
     private function fetchFromLyricsOvh(string $artist, string $title): string
     {
         try {
-            $response = Http::retry(1, 100)
-                ->connectTimeout(2)
-                ->timeout(10)
+            $response = ExternalHttp::client()->retry(1, 100)
+                ->connectTimeout(1)
+                ->timeout(3)
                 ->get('https://api.lyrics.ovh/v1/' . rawurlencode($artist) . '/' . rawurlencode($title));
 
             if (! $response->successful()) {

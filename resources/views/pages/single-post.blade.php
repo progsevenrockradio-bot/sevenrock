@@ -18,13 +18,14 @@
                         <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ $post['title'] }}" class="mb-0 w-full">
 
                         <div class="lucille-single-post-body mt-0 space-y-5">
-                            <p>{{ $post['content'][0] }}</p>
-                            <p>{{ $post['content'][1] }}</p>
-                            <blockquote class="lucille-single-blockquote">
-                                <p>{{ $post['quote'] }}</p>
-                            </blockquote>
-                            <p>{{ $post['content'][2] }}</p>
-                            <p>{{ $post['content'][3] }}</p>
+                            @foreach ($post['content'] as $block)
+                                {!! $block !!}
+                            @endforeach
+                            @if (! empty($post['quote']))
+                                <blockquote class="lucille-single-blockquote">
+                                    <p>{{ $post['quote'] }}</p>
+                                </blockquote>
+                            @endif
                         </div>
 
                         <div class="lucille-share-row">

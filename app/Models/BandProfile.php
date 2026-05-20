@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use App\Support\PublicMediaUrl;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +13,7 @@ use Illuminate\Support\Str;
 
 class BandProfile extends Model
 {
+    use Auditable;
     protected $fillable = [
         'name',
         'biography',
