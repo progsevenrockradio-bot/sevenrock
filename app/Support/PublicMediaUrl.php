@@ -134,28 +134,29 @@ class PublicMediaUrl
 
         $configuredPath = trim((string) config('media.legacy_wp_uploads_path', ''));
         $configuredUrl = trim((string) config('media.legacy_wp_uploads_url', ''));
-        $legacyFile = null;
+        $legacyRelative = null;
 
         if ($configuredPath !== '') {
             $basePath = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR);
             $filesystemPath = $basePath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
 
             if (File::exists($filesystemPath)) {
-                $legacyFile = $relative;
+                $legacyRelative = $relative;
             } else {
-                $legacyFile = self::findLegacyWordPressUploadByBasename($basePath, $relative);
+                $foundPath = self::findLegacyWordPressUploadByBasename($basePath, $relative);
+                $legacyRelative = $foundPath !== null ? self::relativeLegacyWordPressUploadPath($foundPath) : null;
             }
 
-            if ($legacyFile !== null) {
+            if ($legacyRelative !== null) {
                 if ($configuredUrl !== '') {
-                    return rtrim($configuredUrl, '/') . '/' . $legacyFile;
+                    return rtrim($configuredUrl, '/') . '/' . $legacyRelative;
                 }
 
                 if (Route::has('legacy-wp-uploads.show')) {
-                    return route('legacy-wp-uploads.show', ['path' => $legacyFile]);
+                    return route('legacy-wp-uploads.show', ['path' => $legacyRelative]);
                 }
 
-                $publicRelative = 'wp-content/uploads/' . $legacyFile;
+                $publicRelative = 'wp-content/uploads/' . $legacyRelative;
 
                 if (self::localAssetExists($publicRelative)) {
                     return asset($publicRelative);
@@ -171,6 +172,30 @@ class PublicMediaUrl
 
         if ($configuredUrl !== '') {
             return rtrim($configuredUrl, '/') . '/' . $relative;
+        }
+
+        return null;
+    }
+
+    private static function relativeLegacyWordPressUploadPath(string $filesystemPath): ?string
+    {
+        $filesystemPath = str_replace('\\', '/', $filesystemPath);
+        $candidateRoots = array_values(array_filter([
+            trim((string) config('media.legacy_wp_uploads_path', '')),
+            public_path('wp-content/uploads'),
+            realpath(public_path('wp-content/uploads')) ?: null,
+        ]));
+
+        foreach ($candidateRoots as $configuredPath) {
+            $basePath = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR);
+            if ($basePath === '') {
+                continue;
+            }
+
+            $base = str_replace('\\', '/', $basePath);
+            if (str_starts_with($filesystemPath, $base . '/')) {
+                return ltrim(substr($filesystemPath, strlen($base)), '/');
+            }
         }
 
         return null;
@@ -205,15 +230,13 @@ class PublicMediaUrl
                 return $filesystemPath;
             }
 
-            $foundRelative = self::findLegacyWordPressUploadByBasename($basePath, $relative);
-            if ($foundRelative === null) {
+            $foundPath = self::findLegacyWordPressUploadByBasename($basePath, $relative);
+            if ($foundPath === null) {
                 continue;
             }
 
-            $filesystemPath = $basePath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $foundRelative);
-
-            if (File::exists($filesystemPath)) {
-                return $filesystemPath;
+            if (File::exists($foundPath)) {
+                return $foundPath;
             }
         }
 
@@ -266,11 +289,7 @@ class PublicMediaUrl
                     }
                 }
 
-                $fullPath = str_replace('\\', '/', $file->getPathname());
-                $base = str_replace('\\', '/', rtrim($basePath, DIRECTORY_SEPARATOR));
-                if (str_starts_with($fullPath, $base)) {
-                    return ltrim(substr($fullPath, strlen($base)), '/');
-                }
+                return $file->getPathname();
             }
         } catch (\Throwable) {
             return null;
