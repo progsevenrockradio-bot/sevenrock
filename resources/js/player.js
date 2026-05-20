@@ -87,9 +87,8 @@ export function registerRadioPlayer(Alpine) {
         streamCandidates: [],
         currentStreamIndex: 0,
         widgetIds: {
-            cover: 'rbcloud_np_c1266',
-            artist: 'rbcloud_np_a1266',
-            title: 'rbcloud_np_t1266',
+            root: 'rbcloud_nowplaying15715',
+            cover: 'rbcloud_cover8795',
         },
         toast: {
             visible: false,
@@ -461,11 +460,10 @@ export function registerRadioPlayer(Alpine) {
 
         watchNowPlayingWidget() {
             const bind = () => {
+                const root = document.getElementById(this.widgetIds.root);
                 const cover = document.getElementById(this.widgetIds.cover);
-                const artist = document.getElementById(this.widgetIds.artist);
-                const title = document.getElementById(this.widgetIds.title);
 
-                if (!cover && !artist && !title) {
+                if (!root && !cover) {
                     if (this.widgetRetryHandle) {
                         clearTimeout(this.widgetRetryHandle);
                     }
@@ -482,12 +480,12 @@ export function registerRadioPlayer(Alpine) {
                     this.syncTrackFromWidget();
                 });
 
-                [cover, artist, title]
+                [root, cover]
                     .filter(Boolean)
                     .forEach((element) => {
                         this.widgetObserver.observe(element, {
                             attributes: true,
-                            attributeFilter: ['src'],
+                            attributeFilter: ['src', 'data-track', 'data-nowplaying'],
                             childList: true,
                             characterData: true,
                             subtree: true,
@@ -549,9 +547,21 @@ export function registerRadioPlayer(Alpine) {
                 signature: nextSignature,
             };
 
+            if (widgetTrack.elapsed > 0) {
+                this.progress.elapsed = widgetTrack.elapsed;
+            }
+
+            if (widgetTrack.duration > 0) {
+                this.progress.duration = widgetTrack.duration;
+            }
+
             if (previousSignature !== nextSignature) {
                 this.progress.elapsed = 0;
-                this.progress.duration = 0;
+                if (widgetTrack.duration > 0) {
+                    this.progress.duration = widgetTrack.duration;
+                } else {
+                    this.progress.duration = 0;
+                }
                 this.bandLookupArtist = '';
                 this.bandPanel = {
                     title: this.track.title || '',
@@ -749,8 +759,12 @@ export function registerRadioPlayer(Alpine) {
             this.history = (data.history || []).slice(0, this.historyLimit);
             this.listeners = Number(data.listeners || this.track.listeners || 0);
 
-            this.progress.duration = Number(track.duration_seconds || 0);
-            this.progress.elapsed = trackChanged ? 0 : Number(track.elapsed_seconds || 0);
+            const widgetDuration = Number(widgetTrack?.duration || 0);
+            const widgetElapsed = Number(widgetTrack?.elapsed || 0);
+            this.progress.duration = widgetDuration > 0 ? widgetDuration : Number(track.duration_seconds || 0);
+            this.progress.elapsed = widgetElapsed > 0
+                ? widgetElapsed
+                : (trackChanged ? 0 : Number(track.elapsed_seconds || 0));
             if (this.progress.duration > 0 && this.progress.elapsed > this.progress.duration) {
                 this.progress.elapsed = 0;
             }
@@ -787,14 +801,18 @@ export function registerRadioPlayer(Alpine) {
         },
 
         readNowPlayingWidget() {
+            const root = document.getElementById(this.widgetIds.root);
             const cover = document.getElementById(this.widgetIds.cover);
-            const artist = document.getElementById(this.widgetIds.artist);
-            const title = document.getElementById(this.widgetIds.title);
+            const rawText = this.cleanWidgetText(root?.innerText || root?.textContent || '');
+            const parsed = this.parseWidgetNowPlaying(rawText);
 
             return {
-                cover: cover?.getAttribute('src') || '',
-                artist: this.cleanWidgetText(artist?.textContent || ''),
-                title: this.cleanWidgetText(title?.textContent || ''),
+                cover: cover?.getAttribute('src') || cover?.currentSrc || '',
+                artist: parsed.artist,
+                title: parsed.title,
+                elapsed: parsed.elapsed,
+                duration: parsed.duration,
+                text: rawText,
             };
         },
 
@@ -803,19 +821,93 @@ export function registerRadioPlayer(Alpine) {
             const artist = this.normalizeBandArtist(widgetTrack.artist || '');
 
             if (artist) {
-                return { title, artist, cover: widgetTrack.cover || '' };
+                return {
+                    title,
+                    artist,
+                    cover: widgetTrack.cover || '',
+                    elapsed: Number(widgetTrack.elapsed || 0),
+                    duration: Number(widgetTrack.duration || 0),
+                };
             }
 
             const parts = title.includes(' - ') ? title.split(' - ') : [];
             if (parts.length >= 2) {
+                const lastPart = parts[parts.length - 1] || '';
                 return {
-                    title: this.cleanWidgetText(parts[0]),
-                    artist: this.normalizeBandArtist(parts.slice(1).join(' - ')),
+                    title: this.cleanWidgetText(parts.slice(0, -1).join(' - ')),
+                    artist: this.normalizeBandArtist(lastPart),
                     cover: widgetTrack.cover || '',
+                    elapsed: Number(widgetTrack.elapsed || 0),
+                    duration: Number(widgetTrack.duration || 0),
                 };
             }
 
-            return { title, artist: '', cover: widgetTrack.cover || '' };
+            return {
+                title,
+                artist: '',
+                cover: widgetTrack.cover || '',
+                elapsed: Number(widgetTrack.elapsed || 0),
+                duration: Number(widgetTrack.duration || 0),
+            };
+        },
+
+        parseWidgetNowPlaying(value) {
+            const text = this.cleanWidgetText(value);
+            if (!text) {
+                return { title: '', artist: '', elapsed: 0, duration: 0 };
+            }
+
+            const normalized = text
+                .replace(/\u00A0/g, ' ')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
+
+            const timeMatches = Array.from(normalized.matchAll(/\b(\d{1,3}:\d{2})\b/g), (match) => match[1]);
+            const duration = this.parseWidgetDuration(timeMatches[timeMatches.length - 1] || '');
+            const elapsed = this.parseWidgetDuration(timeMatches[timeMatches.length - 2] || '');
+
+            const withoutTimes = normalized.replace(/\b\d{1,3}:\d{2}\b/g, ' ').replace(/\s{2,}/g, ' ').trim();
+            const withoutPrefix = withoutTimes.replace(/^(?:reproduciendo ahora|now playing|nowplaying|reproduciendo|playing now)\s*/i, '').trim();
+            const candidate = withoutPrefix || normalized;
+
+            const split = this.splitWidgetArtistTitle(candidate);
+
+            return {
+                title: this.normalizeTrackTitle(split.title || candidate),
+                artist: this.normalizeBandArtist(split.artist || ''),
+                elapsed,
+                duration,
+            };
+        },
+
+        parseWidgetDuration(value) {
+            const text = this.cleanWidgetText(value);
+            if (!text || !/^\d{1,3}:\d{2}$/.test(text)) {
+                return 0;
+            }
+
+            const [minutes, seconds] = text.split(':').map((part) => Number(part));
+            if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+                return 0;
+            }
+
+            return (minutes * 60) + seconds;
+        },
+
+        splitWidgetArtistTitle(value) {
+            const text = this.cleanWidgetText(value);
+            if (!text) {
+                return { title: '', artist: '' };
+            }
+
+            const parts = text.includes(' - ') ? text.split(' - ') : [];
+            if (parts.length >= 2) {
+                const artist = this.cleanWidgetText(parts[parts.length - 1] || '');
+                const title = this.cleanWidgetText(parts.slice(0, -1).join(' - '));
+                return { title, artist };
+            }
+
+            return { title: text, artist: '' };
         },
 
         normalizeBandArtist(value) {
