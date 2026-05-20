@@ -185,7 +185,7 @@ final class WordPressContent
         }
 
         if (preg_match('/<\s*(p|img|figure|blockquote|ul|ol|li|h[1-6]|div|section|article|br|iframe)\b/i', $text)) {
-            return self::stripWpComments($text);
+            return PublicMediaUrl::rewriteLegacyWordPressUploadsInHtml(self::stripWpComments($text));
         }
 
         return '<p>'.e($text).'</p>';
@@ -229,6 +229,8 @@ final class WordPressContent
             return '';
         }
 
+        $src = PublicMediaUrl::normalizePublicUrl($src) ?: $src;
+
         return '<figure class="wp-block-image"><img src="'.e($src).'" alt="'.e($alt).'"></figure>';
     }
 
@@ -245,6 +247,7 @@ final class WordPressContent
                 continue;
             }
 
+            $src = PublicMediaUrl::normalizePublicUrl($src) ?: $src;
             $alt = trim((string) ($item['alt'] ?? ''));
             $images[] = '<figure class="wp-block-image"><img src="'.e($src).'" alt="'.e($alt).'"></figure>';
         }
@@ -284,7 +287,7 @@ final class WordPressContent
     {
         $html = trim($html);
 
-        return $html !== '' ? self::stripWpComments($html) : '';
+        return $html !== '' ? PublicMediaUrl::rewriteLegacyWordPressUploadsInHtml(self::stripWpComments($html)) : '';
     }
 
     /**

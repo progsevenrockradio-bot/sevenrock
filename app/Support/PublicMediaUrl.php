@@ -41,7 +41,7 @@ class PublicMediaUrl
         }
 
         if (filter_var($value, FILTER_VALIDATE_URL)) {
-            return $value;
+            return self::resolveLegacyWordPressUploadUrl($value) ?? $value;
         }
 
         if (str_starts_with($value, '//')) {
@@ -72,7 +72,7 @@ class PublicMediaUrl
         }
 
         if (str_contains($relative, '/wp-content/uploads/')) {
-            return asset($relative);
+            return self::resolveLegacyWordPressUploadUrl($relative) ?? asset($relative);
         }
 
         if (preg_match('/\.(?:jpe?g|png|gif|webp|svg|avif|bmp|mp4|webm|mp3|pdf)(?:\?.*)?$/i', $relative)) {
@@ -87,6 +87,27 @@ class PublicMediaUrl
         return self::normalize($value) ?? '';
     }
 
+    public static function rewriteLegacyWordPressUploadsInHtml(string $html): string
+    {
+        if ($html === '' || ! str_contains($html, 'wp-content/uploads')) {
+            return $html;
+        }
+
+        return preg_replace_callback(
+            '/\b(src|href|data-src|poster)=(["\'])([^"\']+)\2/i',
+            static function (array $matches): string {
+                $resolved = self::normalize($matches[3]);
+
+                if ($resolved === null || $resolved === $matches[3]) {
+                    return $matches[0];
+                }
+
+                return $matches[1] . '=' . $matches[2] . htmlspecialchars($resolved, ENT_QUOTES | ENT_HTML5) . $matches[2];
+            },
+            $html
+        ) ?? $html;
+    }
+
     private static function localAssetExists(string $relativePath): bool
     {
         $clean = ltrim(str_replace('\\', '/', $relativePath), '/');
@@ -95,5 +116,76 @@ class PublicMediaUrl
         }
 
         return File::exists(public_path($clean)) || File::exists(base_path($clean));
+    }
+
+    private static function resolveLegacyWordPressUploadUrl(string $value): ?string
+    {
+        $relative = self::extractLegacyWordPressUploadRelativePath($value);
+
+        if ($relative === null) {
+            return null;
+        }
+
+        $relative = ltrim(str_replace('\\', '/', $relative), '/');
+        if ($relative === '') {
+            return null;
+        }
+
+        $configuredPath = trim((string) config('media.legacy_wp_uploads_path', ''));
+        $configuredUrl = trim((string) config('media.legacy_wp_uploads_url', ''));
+
+        if ($configuredPath !== '') {
+            $filesystemPath = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR)
+                . DIRECTORY_SEPARATOR
+                . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+
+            if (File::exists($filesystemPath)) {
+                if ($configuredUrl !== '') {
+                    return rtrim($configuredUrl, '/') . '/' . $relative;
+                }
+
+                $publicRelative = 'wp-content/uploads/' . $relative;
+
+                if (self::localAssetExists($publicRelative)) {
+                    return asset($publicRelative);
+                }
+            }
+        }
+
+        $publicRelative = 'wp-content/uploads/' . $relative;
+
+        if (self::localAssetExists($publicRelative)) {
+            return asset($publicRelative);
+        }
+
+        if ($configuredUrl !== '') {
+            return rtrim($configuredUrl, '/') . '/' . $relative;
+        }
+
+        return null;
+    }
+
+    private static function extractLegacyWordPressUploadRelativePath(string $value): ?string
+    {
+        $value = trim(str_replace('\\', '/', $value));
+        if ($value === '') {
+            return null;
+        }
+
+        $path = $value;
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            $path = (string) (parse_url($value, PHP_URL_PATH) ?? '');
+        }
+
+        $needle = '/wp-content/uploads/';
+        $normalizedPath = '/' . ltrim($path, '/');
+        $position = strpos($normalizedPath, $needle);
+
+        if ($position === false) {
+            return null;
+        }
+
+        return substr($normalizedPath, $position + strlen($needle));
     }
 }
