@@ -1,4 +1,4 @@
-<x-layouts.admin :title="'Songs - '.$themeSettings->site_name">
+<x-layouts.admin :title="'Songs - '.(optional($themeSettings)->site_name ?? config('app.name'))">
     @if (session('status'))
         <div class="mb-6 border border-[#1e4d2b] bg-[rgba(16,64,30,.2)] px-4 py-3 text-sm text-[#b8e6c3]">
             {{ session('status') }}

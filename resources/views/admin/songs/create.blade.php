@@ -1,4 +1,4 @@
-<x-layouts.admin :title="'New Song - '.$themeSettings->site_name">
+<x-layouts.admin :title="'New Song - '.(optional($themeSettings)->site_name ?? config('app.name'))">
     <div class="mb-6">
         <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">New Song</h1>
         <p class="mt-2 text-[#7b7b7b]">Add lyrics, band info and metadata for the player.</p>

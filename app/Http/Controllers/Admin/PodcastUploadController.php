@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -22,7 +23,7 @@ final class PodcastUploadController extends Controller
 {
     public function index(): View
     {
-        $masterPrograms = MasterProgram::adminListingQuery()->get();
+        $masterPrograms = MasterProgram::adminListing();
 
         $dayTabs = [
             'LUNES' => 'Lunes',
@@ -43,7 +44,7 @@ final class PodcastUploadController extends Controller
             'dayTabs' => $dayTabs,
             'programsByDay' => $programsByDay,
             'activeDay' => $this->currentDayKey(),
-            'recentUploads' => RadioProgram::query()->with('masterProgram')->latest('id')->limit(20)->get(),
+            'recentUploads' => $this->recentUploads(),
         ]);
     }
 
@@ -257,5 +258,23 @@ final class PodcastUploadController extends Controller
             7 => 'DOMINGO',
             default => 'LUNES',
         };
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, RadioProgram>
+     */
+    private function recentUploads()
+    {
+        $uploads = RadioProgram::query()->latest('id')->limit(20)->get();
+
+        if (Schema::hasTable('master_programs')) {
+            $uploads->load('masterProgram');
+
+            return $uploads;
+        }
+
+        return $uploads->each(static function (RadioProgram $upload): void {
+            $upload->setRelation('masterProgram', null);
+        });
     }
 }

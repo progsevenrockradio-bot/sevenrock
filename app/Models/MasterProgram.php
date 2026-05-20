@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -71,13 +72,13 @@ class MasterProgram extends Model
         return $this->hasMany(RadioProgram::class, 'master_program_id');
     }
 
-    public static function adminListingQuery(): Builder
+    public static function adminListing(): Collection
     {
         $query = static::query();
         $table = (new static())->getTable();
 
         if (! Schema::hasTable($table)) {
-            return $query;
+            return collect();
         }
 
         $dayColumn = static::firstExistingColumn($table, ['dia_transmision', 'day', 'schedule_day']);
@@ -110,7 +111,7 @@ class MasterProgram extends Model
             $query->orderBy($table . '.id');
         }
 
-        return $query;
+        return $query->get();
     }
 
     public function getNameAttribute(): string

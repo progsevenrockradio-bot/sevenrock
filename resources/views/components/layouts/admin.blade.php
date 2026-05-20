@@ -1,7 +1,9 @@
 @props(['title' => 'Seven Rock Radio Admin'])
 
 @php
-    $theme = $themeSettings;
+    $theme = $themeSettings ?? \App\Models\ThemeSetting::current();
+    $themeAppearance = $themeAppearance ?? \App\Support\ThemeAppearance::resolved();
+    $admin = $themeAppearance['admin_texts'] ?? [];
 @endphp
 
 <!DOCTYPE html>
@@ -34,7 +36,6 @@
 
     @php
         $brandDisplayMode = $theme->brand_display_mode ?? 'mark';
-        $admin = $themeAppearance['admin_texts'];
     @endphp
 
     <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">

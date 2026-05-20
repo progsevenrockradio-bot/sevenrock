@@ -1,4 +1,4 @@
-<x-layouts.admin :title="'Nuevo programa maestro - '.$themeSettings->site_name">
+<x-layouts.admin :title="'Nuevo programa maestro - '.(optional($themeSettings)->site_name ?? config('app.name'))">
     @include('admin.master-programs._form', [
         'formAction' => route('admin.master-programs.store'),
         'formMethod' => 'POST',

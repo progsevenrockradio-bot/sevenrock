@@ -1,4 +1,4 @@
-<x-layouts.admin :title="'Podcast Uploads - '.$themeSettings->site_name">
+<x-layouts.admin :title="'Podcast Uploads - '.(optional($themeSettings)->site_name ?? config('app.name'))">
     @php
         $selectedProgramId = old('master_program_id');
         $selectedDay = null;

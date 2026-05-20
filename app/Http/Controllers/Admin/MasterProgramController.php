@@ -16,7 +16,7 @@ final class MasterProgramController extends Controller
 {
     public function index(): View
     {
-        $masterPrograms = MasterProgram::adminListingQuery()->get();
+        $masterPrograms = MasterProgram::adminListing();
 
         $dayTabs = [
             'LUNES' => 'Lunes',

@@ -1,4 +1,4 @@
-<x-layouts.admin :title="'Edit Song - '.$themeSettings->site_name">
+<x-layouts.admin :title="'Edit Song - '.(optional($themeSettings)->site_name ?? config('app.name'))">
     <div class="mb-6">
         <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Edit Song</h1>
         <p class="mt-2 text-[#7b7b7b]">Update the song used by the player and content pages.</p>

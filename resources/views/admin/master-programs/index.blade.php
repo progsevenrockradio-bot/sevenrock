@@ -1,4 +1,4 @@
-<x-layouts.admin :title="'Master Programs - '.$themeSettings->site_name">
+<x-layouts.admin :title="'Master Programs - '.(optional($themeSettings)->site_name ?? config('app.name'))">
     @php $admin = $themeAppearance['admin_texts']; @endphp
 
     <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
