@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
 class PublicMediaUrl
@@ -133,18 +134,28 @@ class PublicMediaUrl
 
         $configuredPath = trim((string) config('media.legacy_wp_uploads_path', ''));
         $configuredUrl = trim((string) config('media.legacy_wp_uploads_url', ''));
+        $legacyFile = null;
 
         if ($configuredPath !== '') {
-            $filesystemPath = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR)
-                . DIRECTORY_SEPARATOR
-                . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+            $basePath = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR);
+            $filesystemPath = $basePath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
 
             if (File::exists($filesystemPath)) {
+                $legacyFile = $relative;
+            } else {
+                $legacyFile = self::findLegacyWordPressUploadByBasename($basePath, $relative);
+            }
+
+            if ($legacyFile !== null) {
                 if ($configuredUrl !== '') {
-                    return rtrim($configuredUrl, '/') . '/' . $relative;
+                    return rtrim($configuredUrl, '/') . '/' . $legacyFile;
                 }
 
-                $publicRelative = 'wp-content/uploads/' . $relative;
+                if (Route::has('legacy-wp-uploads.show')) {
+                    return route('legacy-wp-uploads.show', ['path' => $legacyFile]);
+                }
+
+                $publicRelative = 'wp-content/uploads/' . $legacyFile;
 
                 if (self::localAssetExists($publicRelative)) {
                     return asset($publicRelative);
@@ -163,6 +174,89 @@ class PublicMediaUrl
         }
 
         return null;
+    }
+
+    public static function resolveLegacyWordPressUploadFilesystemPath(string $value): ?string
+    {
+        $relative = self::extractLegacyWordPressUploadRelativePath($value);
+
+        if ($relative === null) {
+            return null;
+        }
+
+        $relative = ltrim(str_replace('\\', '/', $relative), '/');
+        if ($relative === '') {
+            return null;
+        }
+
+        $configuredPath = trim((string) config('media.legacy_wp_uploads_path', ''));
+        if ($configuredPath === '') {
+            return null;
+        }
+
+        $basePath = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configuredPath), DIRECTORY_SEPARATOR);
+        $filesystemPath = $basePath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+
+        if (File::exists($filesystemPath)) {
+            return $filesystemPath;
+        }
+
+        $foundRelative = self::findLegacyWordPressUploadByBasename($basePath, $relative);
+        if ($foundRelative === null) {
+            return null;
+        }
+
+        $filesystemPath = $basePath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $foundRelative);
+
+        return File::exists($filesystemPath) ? $filesystemPath : null;
+    }
+
+    private static function findLegacyWordPressUploadByBasename(string $basePath, string $relative): ?string
+    {
+        $basename = basename($relative);
+        if ($basename === '') {
+            return null;
+        }
+
+        $candidates = array_values(array_unique(array_filter([
+            $basename,
+            self::stripWordPressThumbnailSuffix($basename),
+        ])));
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        try {
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($basePath, \FilesystemIterator::SKIP_DOTS)
+            );
+
+            foreach ($iterator as $file) {
+                if (! $file->isFile()) {
+                    continue;
+                }
+
+                if (! in_array($file->getFilename(), $candidates, true)) {
+                    continue;
+                }
+
+                $fullPath = str_replace('\\', '/', $file->getPathname());
+                $base = str_replace('\\', '/', rtrim($basePath, DIRECTORY_SEPARATOR));
+                if (str_starts_with($fullPath, $base)) {
+                    return ltrim(substr($fullPath, strlen($base)), '/');
+                }
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return null;
+    }
+
+    private static function stripWordPressThumbnailSuffix(string $filename): string
+    {
+        return (string) preg_replace('/-\d+x\d+(?=\.[a-z0-9]+$)/i', '', $filename);
     }
 
     private static function extractLegacyWordPressUploadRelativePath(string $value): ?string

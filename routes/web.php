@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\PostTaxonomyController as AdminPostTaxonomyContro
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
+use App\Http\Controllers\LegacyWordPressUploadController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\SiteController;
 
@@ -30,6 +31,9 @@ Route::get('/gallery', [SiteController::class, 'gallery'])->name('gallery');
 Route::get('/js_photo_albums/5', [SiteController::class, 'photoAlbum'])->name('gallery.green-day');
 Route::get('/blog', [SiteController::class, 'blog'])->name('blog');
 Route::get('/blog-standard', [SiteController::class, 'blogStandard'])->name('blog.standard');
+Route::get('/legacy-wp-uploads/{path}', [LegacyWordPressUploadController::class, 'show'])
+    ->where('path', '.*')
+    ->name('legacy-wp-uploads.show');
 Route::get('/{year}/{month}/{day}/{slug}', [SiteController::class, 'singlePost'])
     ->where(['year' => '\d{4}', 'month' => '\d{2}', 'day' => '\d{2}'])
     ->name('posts.single');
