@@ -39,6 +39,22 @@
     >
     <audio x-ref="audio" data-radio-audio src="{{ $player['streams']['direct'] }}" preload="none" playsinline></audio>
 
+    <div
+        aria-hidden="true"
+        style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; pointer-events:none;"
+    >
+        <span id="rbcloud_nowplaying15715">Cargando...</span>
+        <img
+            id="rbcloud_cover8795"
+            src="https://c30.radioboss.fm/w/artwork/569.png"
+            width="300"
+            height="300"
+            alt=""
+        >
+        <script src="https://c30.radioboss.fm/w/nowplaying.js?u=569&amp;wid=15715&amp;nl=1&amp;nnt=1"></script>
+        <script src="https://c30.radioboss.fm/w/cover.js?u=569&amp;wid=8795"></script>
+    </div>
+
     @if ($mode === 'popup')
         <div class="radio-player-popup-shell" style="display:flex; flex-direction:column; min-height:100vh; background:rgba(0,0,0,.18); overflow:hidden;">
             <div class="radio-player-popup-stage" aria-hidden="true" style="position:relative; flex:1 1 auto; min-height:calc(100vh - 92px); background:linear-gradient(180deg, rgba(0,0,0,.84), rgba(0,0,0,.76));">
