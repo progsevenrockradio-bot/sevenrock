@@ -511,30 +511,46 @@ final class ArchiveOrgService
     {
         $publishedAt = $this->publishedAtToDate($episode['published_at'] ?? null);
         $show = trim((string) ($episode['show'] ?? $episode['title'] ?? 'Podcast'));
+        $episodeTitle = trim((string) ($episode['title'] ?? ''));
         $description = trim((string) ($episode['description'] ?? ''));
+        $src = trim((string) ($episode['src'] ?? ''));
+        $archiveUrl = trim((string) ($episode['archive_url'] ?? ''));
 
         return [
             'title' => $show !== '' ? $show : 'Podcast',
+            'program' => $show !== '' ? $show : 'Podcast',
+            'episode_title' => $episodeTitle !== '' ? $episodeTitle : $show,
             'episode' => 'Último episodio',
             'date' => $publishedAt?->format('d/m/Y') ?? '',
             'host' => trim((string) ($episode['host'] ?? 'Seven Rock Radio')),
             'image' => trim((string) ($episode['cover'] ?? '')),
             'summary' => $description !== '' ? $description : 'Episodio listo para escuchar desde la portada.',
-            'url' => trim((string) ($episode['archive_url'] ?? $episode['src'] ?? '')),
+            'src' => $src,
+            'archive_url' => $archiveUrl,
+            'url' => trim((string) ($archiveUrl !== '' ? $archiveUrl : $src)),
         ];
     }
 
     private function mapEpisodeRow(array $episode): array
     {
         $publishedAt = $this->publishedAtToDate($episode['published_at'] ?? null);
+        $show = trim((string) ($episode['show'] ?? $episode['title'] ?? 'Podcast'));
+        $episodeTitle = trim((string) ($episode['title'] ?? ''));
+        $src = trim((string) ($episode['src'] ?? ''));
+        $archiveUrl = trim((string) ($episode['archive_url'] ?? ''));
 
         return [
-            'title' => trim((string) ($episode['show'] ?? $episode['title'] ?? 'Podcast')),
-            'episode' => trim((string) ($episode['show'] ?? $episode['title'] ?? 'Podcast')),
+            'title' => $show !== '' ? $show : 'Podcast',
+            'program' => $show !== '' ? $show : 'Podcast',
+            'episode_title' => $episodeTitle !== '' ? $episodeTitle : $show,
+            'episode' => $show !== '' ? $show : 'Podcast',
             'date' => $publishedAt?->format('d/m/Y') ?? '',
             'image' => trim((string) ($episode['cover'] ?? '')),
             'summary' => trim((string) ($episode['description'] ?? 'Episodio listo para escuchar desde la portada.')),
-            'url' => trim((string) ($episode['archive_url'] ?? $episode['src'] ?? '')),
+            'src' => $src,
+            'archive_url' => $archiveUrl,
+            'url' => trim((string) ($archiveUrl !== '' ? $archiveUrl : $src)),
+            'host' => trim((string) ($episode['host'] ?? 'Seven Rock Radio')),
         ];
     }
 
@@ -543,11 +559,15 @@ final class ArchiveOrgService
         return [
             'featured' => [
                 'title' => 'Seven Rock Radio',
+                'program' => 'Seven Rock Radio',
+                'episode_title' => 'Podcast',
                 'episode' => 'Podcast',
                 'date' => '',
                 'host' => 'Seven Rock Radio',
                 'image' => '',
                 'summary' => 'No hay podcasts listos todavía. El módulo queda conectado a Archive.org.',
+                'src' => '',
+                'archive_url' => '',
                 'url' => '',
             ],
             'episodes' => [],
