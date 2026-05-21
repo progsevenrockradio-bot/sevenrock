@@ -17,7 +17,7 @@ use Throwable;
 
 final class ArchiveOrgService
 {
-    private const HOME_CACHE_KEY = 'archive-org:home-podcasts:v4';
+    private const HOME_CACHE_KEY = 'archive-org:home-podcasts:v5';
     private const EPISODE_CACHE_KEY = 'archive-org:latest-episode:v3';
     private const WARMUP_CACHE_KEY = 'archive-org:warmup:v3';
     private const MAX_NETWORK_CALLS_PER_REQUEST = 20;
@@ -217,29 +217,20 @@ final class ArchiveOrgService
                 $identifier = trim((string) ($row->master_archive_identifier ?? ''));
             }
 
-            $remotePath = trim((string) data_get($snapshot, 'remote_path', ''));
-            if ($remotePath === '') {
-                $remotePath = trim((string) ($row->archive_org_remote_path ?? ''));
-            }
+            $storedPath = trim((string) ($row->archivo_mp3 ?? ''));
+            $remotePath = trim((string) ($row->archive_org_remote_path ?? ''));
+            $snapshotRemotePath = trim((string) data_get($snapshot, 'remote_path', ''));
+            $snapshotSrc = trim((string) data_get($snapshot, 'src', ''));
 
-            $src = trim((string) data_get($snapshot, 'src', ''));
-            if ($src === '' && $identifier !== '' && $remotePath !== '') {
-                $src = 'https://archive.org/download/' . rawurlencode($identifier) . '/' . implode('/', array_map('rawurlencode', explode('/', ltrim($remotePath, '/'))));
-            }
+            $audioSources = array_values(array_unique(array_filter([
+                $identifier !== '' && $remotePath !== '' ? $this->buildArchiveDownloadSrc($identifier, $remotePath) : '',
+                $snapshotSrc,
+                $identifier !== '' && $snapshotRemotePath !== '' ? $this->buildArchiveDownloadSrc($identifier, $snapshotRemotePath) : '',
+                $identifier !== '' && $storedPath !== '' ? $this->buildArchiveDownloadSrc($identifier, basename(str_replace('\\', '/', $storedPath))) : '',
+                $storedPath !== '' ? asset('storage/' . ltrim(str_replace('\\', '/', $storedPath), '/')) : '',
+            ], static fn (string $source): bool => $source !== '')));
 
-            if ($src === '' && $identifier !== '') {
-                $storedPath = trim((string) ($row->archivo_mp3 ?? ''));
-                if ($storedPath !== '') {
-                    $src = $this->buildArchiveDownloadSrc($identifier, $storedPath);
-                }
-            }
-
-            if ($src === '') {
-                $storedPath = trim((string) ($row->archivo_mp3 ?? ''));
-                if ($storedPath !== '') {
-                    $src = asset('storage/' . ltrim(str_replace('\\', '/', $storedPath), '/'));
-                }
-            }
+            $src = $audioSources[0] ?? '';
 
             if ($src === '') {
                 continue;
@@ -290,6 +281,7 @@ final class ArchiveOrgService
                 'description' => $description,
                 'cover' => $cover,
                 'src' => $src,
+                'audio_sources' => $audioSources,
                 'published_at' => $publishedAt?->getTimestamp() ?? 0,
                 'archive_url' => $identifier !== '' ? 'https://archive.org/details/' . rawurlencode($identifier) : '',
                 'host' => trim((string) ($row->conductor ?? '')),
@@ -547,6 +539,7 @@ final class ArchiveOrgService
             'image' => trim((string) ($episode['cover'] ?? '')),
             'summary' => $description !== '' ? $description : 'Episodio listo para escuchar desde la portada.',
             'src' => $src,
+            'audio_sources' => array_values(array_unique(array_filter((array) ($episode['audio_sources'] ?? [$src])))),
             'archive_url' => $archiveUrl,
             'url' => trim((string) ($archiveUrl !== '' ? $archiveUrl : $src)),
         ];
@@ -569,6 +562,7 @@ final class ArchiveOrgService
             'image' => trim((string) ($episode['cover'] ?? '')),
             'summary' => trim((string) ($episode['description'] ?? 'Episodio listo para escuchar desde la portada.')),
             'src' => $src,
+            'audio_sources' => array_values(array_unique(array_filter((array) ($episode['audio_sources'] ?? [$src])))),
             'archive_url' => $archiveUrl,
             'url' => trim((string) ($archiveUrl !== '' ? $archiveUrl : $src)),
             'host' => trim((string) ($episode['host'] ?? 'Seven Rock Radio')),

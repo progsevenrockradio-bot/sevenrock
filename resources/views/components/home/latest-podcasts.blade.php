@@ -14,6 +14,13 @@
         $src = trim((string) data_get($episode, 'src', ''));
         $archiveUrl = trim((string) data_get($episode, 'archive_url', data_get($episode, 'url', '')));
         $image = PublicMediaUrl::normalizePublicUrl((string) data_get($episode, 'image', ''));
+        $audioSources = collect(data_get($episode, 'audio_sources', []))
+            ->push($src)
+            ->filter(fn ($source): bool => trim((string) $source) !== '')
+            ->map(fn ($source): string => trim((string) $source))
+            ->unique()
+            ->values()
+            ->all();
 
         return [
             'id' => trim((string) data_get($episode, 'id', '')),
@@ -24,7 +31,8 @@
             'date' => $date,
             'summary' => $summary !== '' ? $summary : 'Episodio listo para escuchar desde la portada.',
             'image' => $image !== '' ? $image : $fallbackImage,
-            'src' => $src,
+            'src' => $src !== '' ? $src : (string) ($audioSources[0] ?? ''),
+            'audio_sources' => $audioSources,
             'archive_url' => $archiveUrl,
             'url' => trim((string) ($archiveUrl !== '' ? $archiveUrl : $src)),
         ];
@@ -84,6 +92,21 @@
             ->all();
     }
 
+    if (count($sidebarEpisodes) < 6 && $episodes !== []) {
+        $currentKeys = collect($sidebarEpisodes)
+            ->map($episodeIdentity)
+            ->filter()
+            ->flip();
+
+        $extraEpisodes = collect($episodes)
+            ->reject(static fn (array $episode): bool => $episodeIdentity($episode) === $heroKey)
+            ->reject(static fn (array $episode) use ($episodeIdentity, $currentKeys): bool => $currentKeys->has($episodeIdentity($episode)))
+            ->values()
+            ->all();
+
+        $sidebarEpisodes = array_merge($sidebarEpisodes, $extraEpisodes);
+    }
+
     $sidebarEpisodes = array_slice($sidebarEpisodes, 0, 6);
 @endphp
 
@@ -99,6 +122,7 @@
         elapsed: 0,
         duration: 0,
         progress: 0,
+        failedAudioSources: [],
         init() {
             this.syncAudio(false);
         },
@@ -119,6 +143,7 @@
                 summary: episode?.summary || 'Episodio listo para escuchar desde la portada.',
                 image: episode?.image || '{{ $fallbackImage }}',
                 src: episode?.src || '',
+                audio_sources: Array.isArray(episode?.audio_sources) ? episode.audio_sources.filter(Boolean) : [],
                 archive_url: episode?.archive_url || '',
                 url: episode?.url || episode?.archive_url || episode?.src || '',
             };
@@ -144,7 +169,7 @@
             const nextEpisode = this.normalizeEpisode(this.activeEpisode);
             this.activeEpisode = nextEpisode;
 
-            const source = nextEpisode.src || '';
+            const source = this.firstAudioSource(nextEpisode);
             const currentSource = audio.getAttribute('src') || '';
             audio.volume = this.volume / 100;
             audio.muted = this.muted;
@@ -165,6 +190,7 @@
                 audio.removeAttribute('src');
                 audio.src = source;
                 audio.load();
+                this.failedAudioSources = [];
                 this.elapsed = 0;
                 this.duration = 0;
                 this.progress = 0;
@@ -176,11 +202,16 @@
         },
         async play() {
             const audio = this.$refs.audio;
-            if (!audio || !this.activeEpisode?.src) {
+            if (!audio) {
                 return;
             }
 
+            await this.ensurePlayableSource();
             this.syncAudio(false);
+
+            if (!audio.getAttribute('src')) {
+                return;
+            }
 
             try {
                 if (!audio.currentSrc || audio.networkState === 0) {
@@ -190,6 +221,88 @@
                 await audio.play();
             } catch (error) {
                 this.playing = false;
+                await this.tryNextAudioSource();
+            }
+        },
+        firstAudioSource(episode) {
+            const sources = Array.isArray(episode?.audio_sources) ? episode.audio_sources : [];
+            return sources.find(Boolean) || episode?.src || '';
+        },
+        async ensurePlayableSource() {
+            const episode = this.normalizeEpisode(this.activeEpisode);
+            if (this.firstAudioSource(episode)) {
+                this.activeEpisode = episode;
+                return;
+            }
+
+            const resolved = await this.resolveArchiveAudioSource(episode);
+            if (resolved) {
+                episode.src = resolved;
+                episode.audio_sources = [resolved];
+                this.activeEpisode = episode;
+            }
+        },
+        async tryNextAudioSource() {
+            const audio = this.$refs.audio;
+            const episode = this.normalizeEpisode(this.activeEpisode);
+            const currentSource = audio?.getAttribute('src') || '';
+            const sources = Array.isArray(episode.audio_sources) ? episode.audio_sources.filter(Boolean) : [];
+            const failed = new Set(this.failedAudioSources || []);
+            if (currentSource) {
+                failed.add(currentSource);
+            }
+            this.failedAudioSources = Array.from(failed);
+
+            const resolvedSource = await this.resolveArchiveAudioSource(episode);
+            const nextSource = (!failed.has(resolvedSource) ? resolvedSource : '') || sources.find((source) => !failed.has(source)) || '';
+
+            if (!audio || !nextSource || nextSource === currentSource) {
+                return;
+            }
+
+            episode.src = nextSource;
+            episode.audio_sources = [nextSource, ...sources.filter((source) => source !== nextSource)];
+            this.activeEpisode = episode;
+            audio.src = nextSource;
+            audio.load();
+
+            try {
+                await audio.play();
+            } catch (error) {
+                this.playing = false;
+            }
+        },
+        async resolveArchiveAudioSource(episode) {
+            const archiveUrl = episode?.archive_url || '';
+            if (!archiveUrl || !archiveUrl.includes('archive.org/details/')) {
+                return '';
+            }
+
+            try {
+                const response = await fetch(`${archiveUrl}?output=json`, { headers: { Accept: 'application/json' } });
+                if (!response.ok) {
+                    return '';
+                }
+
+                const payload = await response.json();
+                const files = payload && typeof payload === 'object' && payload.files ? payload.files : {};
+                const identifier = archiveUrl.split('/details/')[1]?.split(/[?#]/)[0] || '';
+                const mp3Files = Object.entries(files)
+                    .map(([name, file]) => ({
+                        name: file?.name || name || '',
+                        mtime: Number(file?.mtime || 0),
+                        format: String(file?.format || '').toLowerCase(),
+                    }))
+                    .filter((file) => file.name && (file.name.toLowerCase().endsWith('.mp3') || file.format.includes('mp3')))
+                    .sort((left, right) => right.mtime - left.mtime);
+
+                if (!identifier || !mp3Files.length) {
+                    return '';
+                }
+
+                return `https://archive.org/download/${encodeURIComponent(identifier)}/${mp3Files[0].name.replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')}`;
+            } catch (error) {
+                return '';
             }
         },
         pause() {

@@ -25,7 +25,7 @@
                     type="button"
                     class="inline-flex h-10 min-w-[64px] items-center justify-center border border-[#dcdcdc] bg-transparent px-3 py-0 text-[10px] font-display uppercase tracking-[.16em] text-[#f5f5f5] transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
                     @click="togglePlayback()"
-                    :disabled="!activeEpisode.src"
+                    :disabled="!activeEpisode.src && !activeEpisode.archive_url"
                 >
                     <span x-show="!playing">Play</span>
                     <span x-show="playing">Pause</span>
@@ -91,6 +91,7 @@
         @play="onPlay()"
         @pause="onPause()"
         @ended="onEnded()"
+        @error="tryNextAudioSource()"
         @volumechange="volume = Math.round(($event.target.volume || 0) * 100); muted = $event.target.muted"
     ></audio>
 </div>
