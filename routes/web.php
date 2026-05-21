@@ -41,6 +41,16 @@ Route::get('/shop', [SiteController::class, 'shop'])->name('shop');
 Route::get('/product/{slug}', [SiteController::class, 'productSingle'])->name('products.single');
 Route::get('/contact', [SiteController::class, 'contact'])->name('contact');
 Route::get('/player/popup', [PlayerController::class, 'show'])->name('player.popup');
+Route::get('/search', [SearchController::class, 'index'])->name('search');
+Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('posts.comments.store');
+
+// Rutas de restablecimiento de contraseña para el panel de administración
+// Asumiendo que el AuthController maneja la lógica de login para admin.
+// Si se usa un sistema de autenticación diferente para el frontend, estas rutas podrían ir en otro lugar.
+Route::get('/admin/forgot-password', [AdminAuthController::class, 'showLinkRequestForm'])->name('admin.password.request');
+Route::post('/admin/forgot-password', [AdminAuthController::class, 'sendResetLinkEmail'])->name('admin.password.email');
+Route::get('/admin/reset-password/{token}', [AdminAuthController::class, 'showResetForm'])->name('admin.password.reset');
+Route::post('/admin/reset-password', [AdminAuthController::class, 'reset'])->name('admin.password.update');
 
 Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
