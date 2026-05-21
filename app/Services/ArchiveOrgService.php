@@ -130,7 +130,15 @@ final class ArchiveOrgService
         $seen = [];
 
         foreach ($episodes as $episode) {
-            $dedupeKey = trim((string) ($episode['id'] ?? ($episode['src'] ?? '')));
+            $dedupeKey = implode('|', array_filter([
+                trim((string) ($episode['id'] ?? '')),
+                trim((string) ($episode['src'] ?? '')),
+                trim((string) ($episode['archive_url'] ?? '')),
+                trim((string) ($episode['show'] ?? '')),
+                trim((string) ($episode['title'] ?? '')),
+                trim((string) ((string) ($episode['published_at'] ?? ''))),
+                trim((string) ($episode['host'] ?? '')),
+            ], static fn (string $value): bool => $value !== ''));
             if ($dedupeKey !== '' && isset($seen[$dedupeKey])) {
                 continue;
             }

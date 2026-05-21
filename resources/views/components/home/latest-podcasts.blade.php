@@ -31,9 +31,26 @@
     };
 
     $featured = $normalizeEpisode(data_get($podcasts, 'featured', []));
+    $episodeIdentity = static function (array $episode): string {
+        $parts = [
+            trim((string) ($episode['src'] ?? '')),
+            trim((string) ($episode['archive_url'] ?? '')),
+            trim((string) ($episode['program'] ?? '')),
+            trim((string) ($episode['title'] ?? '')),
+            trim((string) ($episode['episode_title'] ?? '')),
+            trim((string) ($episode['host'] ?? '')),
+            trim((string) ($episode['date'] ?? '')),
+        ];
+
+        $normalized = array_map(static fn (string $value): string => strtolower(preg_replace('/\s+/', ' ', trim($value)) ?: ''), $parts);
+
+        return implode('|', array_filter($normalized, static fn (string $value): bool => $value !== ''));
+    };
+
     $episodes = collect(data_get($podcasts, 'episodes', []))
         ->take(7)
         ->map(fn (array $episode) => $normalizeEpisode($episode))
+        ->unique($episodeIdentity)
         ->values()
         ->all();
 
@@ -44,11 +61,18 @@
     }
 
     $heroEpisode = $featured;
-    $sidebarEpisodes = array_slice($episodes, 1);
+    $heroKey = $episodeIdentity($heroEpisode);
+
+    $sidebarEpisodes = array_values(array_filter(
+        array_slice($episodes, 0),
+        static fn (array $episode) => $episodeIdentity($episode) !== $heroKey
+    ));
 
     if ($sidebarEpisodes === [] && $episodes !== []) {
-        $sidebarEpisodes = $episodes;
+        $sidebarEpisodes = array_slice($episodes, 1);
     }
+
+    $sidebarEpisodes = array_slice($sidebarEpisodes, 0, 6);
 @endphp
 
 <div
@@ -181,6 +205,15 @@
             }
 
             this.muted = audio.muted;
+        },
+        seekAudio(value) {
+            const audio = this.$refs.audio;
+            const next = Math.max(0, Math.min(100, Number(value) || 0));
+            this.progress = next;
+
+            if (audio && Number.isFinite(audio.duration) && audio.duration > 0) {
+                audio.currentTime = (audio.duration * next) / 100;
+            }
         },
         onLoadedMetadata() {
             const audio = this.$refs.audio;
