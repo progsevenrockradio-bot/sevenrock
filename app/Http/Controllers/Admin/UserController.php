@@ -38,7 +38,7 @@ final class UserController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'is_admin' => true, // Ensure new users are admins
+            'is_admin' => true,
         ]);
 
         return redirect()->route('admin.users.index')->with('status', 'Administrador creado exitosamente.');
@@ -64,10 +64,7 @@ final class UserController extends Controller
             $user->password = Hash::make($validated['password']);
         }
 
-        // Ensure the user remains an admin, or prevent changing this flag via UI for simplicity
-        // For this basic CRUD, we assume all managed users are admins.
         $user->is_admin = true;
-
         $user->save();
 
         return redirect()->route('admin.users.index')->with('status', 'Administrador actualizado exitosamente.');
@@ -75,7 +72,6 @@ final class UserController extends Controller
 
     public function destroy(User $user): RedirectResponse
     {
-        // Prevent deleting the last admin user
         if (User::query()->where('is_admin', true)->count() <= 1) {
             return back()->withErrors(['error' => 'No se puede eliminar el último administrador.']);
         }

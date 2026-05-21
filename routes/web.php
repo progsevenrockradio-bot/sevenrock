@@ -19,6 +19,8 @@ use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadCont
 use App\Http\Controllers\LegacyWordPressUploadController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\CommentController;
 
 Route::get('/', [SiteController::class, 'home'])->name('home');
 Route::get('/events', [SiteController::class, 'events'])->name('events');

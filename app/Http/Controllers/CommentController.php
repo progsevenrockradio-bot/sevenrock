@@ -27,9 +27,8 @@ final class CommentController extends Controller
             $comment->user_id = Auth::id();
             $comment->author_name = Auth::user()->name;
             $comment->author_email = Auth::user()->email;
-            $comment->approved = true; // Auto-aprobar comentarios de usuarios logueados
+            $comment->approved = true;
         } else {
-            // Los comentarios de invitados requieren moderación
             $comment->approved = false;
         }
 
@@ -37,8 +36,4 @@ final class CommentController extends Controller
 
         return back()->with('status', 'Comentario enviado. Será visible una vez aprobado.');
     }
-
-    // Puedes añadir métodos para moderación en el panel de administración
-    // public function approve(Comment $comment): RedirectResponse { ... }
-    // public function destroy(Comment $comment): RedirectResponse { ... }
 }

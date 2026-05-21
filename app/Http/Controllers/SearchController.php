@@ -20,26 +20,21 @@ final class SearchController extends Controller
         $results = collect();
 
         if ($query) {
-            // Búsqueda en Posts
             $posts = Post::query()
                 ->where('title', 'like', "%{$query}%")
                 ->orWhere('content', 'like', "%{$query}%")
                 ->get();
             $results = $results->merge($posts->map(fn ($item) => ['type' => 'Post', 'data' => $item]));
 
-            // Búsqueda en Albums
             $albums = Album::query()->where('title', 'like', "%{$query}%")->get();
             $results = $results->merge($albums->map(fn ($item) => ['type' => 'Album', 'data' => $item]));
 
-            // Búsqueda en Eventos
             $events = Event::query()->where('title', 'like', "%{$query}%")->get();
             $results = $results->merge($events->map(fn ($item) => ['type' => 'Event', 'data' => $item]));
 
-            // Búsqueda en Videos
             $videos = Video::query()->where('title', 'like', "%{$query}%")->get();
             $results = $results->merge($videos->map(fn ($item) => ['type' => 'Video', 'data' => $item]));
 
-            // Búsqueda en Productos
             $products = Product::query()->where('name', 'like', "%{$query}%")->get();
             $results = $results->merge($products->map(fn ($item) => ['type' => 'Product', 'data' => $item]));
         }
