@@ -74,29 +74,29 @@
 
                     <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                         <div class="min-w-0 flex-1">
-                            <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-html="activeProgram.title_html || activeProgram.title || ''"></h3>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-html="activeProgram.title_html || activeProgram.title || ''"></h3>
+                                <div class="flex flex-wrap gap-2">
+                                    <a
+                                        class="inline-flex min-h-[30px] items-center justify-center border border-[#d42426] bg-[#d42426] px-3 py-0 text-[10px] font-display uppercase tracking-[.14em] text-white transition-colors hover:bg-[#ba1f22]"
+                                        :href="activeProgram.button?.url || '{{ route('events') }}'"
+                                        x-text="activeProgram.button?.label || 'Ver programación'"
+                                    ></a>
+                                    <button
+                                        type="button"
+                                        class="inline-flex min-h-[30px] items-center justify-center border border-[#dcdcdc] bg-transparent px-3 py-0 text-[10px] font-display uppercase tracking-[.14em] text-[#dcdcdc] transition-colors hover:bg-white/5"
+                                        @click="openInfoModal()"
+                                    >
+                                        Info
+                                    </button>
+                                </div>
+                            </div>
+
                             <div class="mt-3 text-[12px] uppercase tracking-[.24em] text-[#dcdcdc]" x-text="activeProgram.schedule || ''"></div>
                             <div class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeProgram.host || ''"></div>
                         </div>
-
-                        <div class="flex flex-wrap gap-3 md:shrink-0 md:pt-1">
-                            <a
-                                class="lucille-button-solid"
-                                :href="activeProgram.button?.url || '{{ route('events') }}'"
-                                x-text="activeProgram.button?.label || 'Ver programación'"
-                            ></a>
-                            <button
-                                type="button"
-                                class="lucille-button-solid"
-                                @click="openInfoModal()"
-                            >
-                                Info
-                            </button>
-                        </div>
                     </div>
                 </div>
-
-                <p class="mt-4 max-w-xl text-[14px] leading-7 text-[#d8d8d8]" x-text="activeProgram.summary || ''"></p>
             </div>
         </div>
     </article>
@@ -142,7 +142,7 @@
         @keydown.escape.window="closeInfoModal()"
         @click.self="closeInfoModal()"
     >
-        <div class="w-full max-w-[720px] border border-[#2b2b2b] bg-[#111] p-5 shadow-[0_24px_80px_rgba(0,0,0,.65)]">
+        <div class="w-full max-w-[600px] border border-[#2b2b2b] bg-[#111] p-5 shadow-[0_24px_80px_rgba(0,0,0,.65)]">
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <div class="home-badge" x-text="activeProgram.badge || 'On deck'"></div>
