@@ -29,6 +29,12 @@
         activeProgram: @js($heroProgram),
         originalProgram: @js($heroProgram),
         restoreTimer: null,
+        programKey(program) {
+            return [program?.title || '', program?.host || '', program?.schedule || '', program?.image || ''].join('|');
+        },
+        isActiveProgram(program) {
+            return this.programKey(this.activeProgram) === this.programKey(program);
+        },
         selectProgram(program) {
             this.activeProgram = program;
             window.clearTimeout(this.restoreTimer);
@@ -45,17 +51,19 @@
         <div class="home-program-hero" :style="heroStyle(activeProgram)">
             <div class="home-program-hero-overlay"></div>
             <div class="home-program-hero-content">
-                <span class="home-badge" x-text="activeProgram.badge || 'On deck'"></span>
-                <p class="mt-4 text-xs uppercase tracking-[.26em] text-[#bfbfbf]" x-text="activeProgram.subtitle || ''"></p>
-                <h3 class="mt-3 font-display text-[30px] uppercase leading-none tracking-[.12em] md:text-[42px]" x-html="activeProgram.title_html || activeProgram.title || ''"></h3>
-                <div class="mt-4 text-sm uppercase tracking-[.22em] text-[#dcdcdc]" x-text="activeProgram.schedule || ''"></div>
-                <div class="mt-3 font-display text-sm uppercase tracking-[.16em] text-lucille-accent" x-text="activeProgram.host || ''"></div>
-                <p class="mt-5 max-w-2xl text-[15px] leading-8 text-[#d8d8d8]" x-text="activeProgram.summary || ''"></p>
-                <a
-                    class="lucille-button-solid mt-7"
-                    :href="activeProgram.button?.url || '{{ route('events') }}'"
-                    x-text="activeProgram.button?.label || 'Ver programación'"
-                ></a>
+                <div class="max-w-[620px] rounded-[24px] border border-white/10 bg-black/30 p-5 backdrop-blur-[2px] md:p-6">
+                    <span class="home-badge" x-text="activeProgram.badge || 'On deck'"></span>
+                    <p class="mt-4 text-[11px] uppercase tracking-[.28em] text-[#bfbfbf]" x-text="activeProgram.subtitle || ''"></p>
+                    <h3 class="mt-3 font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-html="activeProgram.title_html || activeProgram.title || ''"></h3>
+                    <div class="mt-3 text-[12px] uppercase tracking-[.24em] text-[#dcdcdc]" x-text="activeProgram.schedule || ''"></div>
+                    <div class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeProgram.host || ''"></div>
+                    <p class="mt-4 max-w-xl text-[14px] leading-7 text-[#d8d8d8]" x-text="activeProgram.summary || ''"></p>
+                    <a
+                        class="lucille-button-solid mt-6"
+                        :href="activeProgram.button?.url || '{{ route('events') }}'"
+                        x-text="activeProgram.button?.label || 'Ver programación'"
+                    ></a>
+                </div>
             </div>
         </div>
     </article>
@@ -70,21 +78,22 @@
             @foreach ($upcomingPrograms as $slot)
                 <button
                     type="button"
-                    class="flex flex-col gap-2 px-4 py-4 text-left transition-colors duration-300 hover:bg-[rgba(255,255,255,.03)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent/80"
+                    class="flex items-center gap-3 px-4 py-3 text-left transition-colors duration-300 hover:bg-[rgba(255,255,255,.03)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent/80"
+                    :class="isActiveProgram(@js($slot)) ? 'bg-[rgba(195,39,32,.08)] ring-1 ring-lucille-accent/50' : ''"
                     @click="selectProgram(@js($slot))"
                 >
-                    <div class="overflow-hidden border border-[#2b2b2b] bg-[#111]">
-                        <img src="{{ $slot['image'] }}" alt="{{ $slot['title'] }}" class="h-24 w-full object-cover transition duration-500 ease-out hover:scale-[1.02]">
+                    <div class="h-16 w-16 shrink-0 overflow-hidden border border-[#2b2b2b] bg-[#111] md:h-18 md:w-18">
+                        <img src="{{ $slot['image'] }}" alt="{{ $slot['title'] }}" class="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.02]">
                     </div>
 
-                    <div class="min-w-0">
-                        <div class="text-xs uppercase tracking-[.2em] text-[#7b7b7b]">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[10px] uppercase tracking-[.22em] text-[#7b7b7b]">
                             {{ $slot['time'] }}
                         </div>
-                        <div class="mt-1 font-display text-[18px] uppercase tracking-[.1em] text-[#dcdcdc]">
+                        <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-[#dcdcdc] md:text-[15px]">
                             {!! $slot['title_html'] !!}
                         </div>
-                        <div class="mt-1 text-sm text-[#7b7b7b]">
+                        <div class="mt-1 text-[12px] text-[#7b7b7b] md:text-sm">
                             {{ $slot['host'] }}
                         </div>
                     </div>
