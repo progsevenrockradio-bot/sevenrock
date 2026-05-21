@@ -74,17 +74,17 @@
 
                     <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                         <div class="min-w-0 flex-1">
-                            <div class="flex flex-wrap items-center gap-3">
+                            <div class="flex flex-wrap items-center gap-2 md:gap-3">
                                 <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-html="activeProgram.title_html || activeProgram.title || ''"></h3>
                                 <div class="flex flex-wrap gap-2">
                                     <a
-                                        class="inline-flex min-h-[30px] items-center justify-center border border-[#d42426] bg-[#d42426] px-3 py-0 text-[10px] font-display uppercase tracking-[.14em] text-white transition-colors hover:bg-[#ba1f22]"
+                                        class="inline-flex h-7 items-center justify-center border border-[#d42426] bg-[#d42426] px-2.5 py-0 text-[9px] font-display uppercase tracking-[.14em] text-white transition-colors hover:bg-[#ba1f22]"
                                         :href="activeProgram.button?.url || '{{ route('events') }}'"
                                         x-text="activeProgram.button?.label || 'Ver programación'"
                                     ></a>
                                     <button
                                         type="button"
-                                        class="inline-flex min-h-[30px] items-center justify-center border border-[#dcdcdc] bg-transparent px-3 py-0 text-[10px] font-display uppercase tracking-[.14em] text-[#dcdcdc] transition-colors hover:bg-white/5"
+                                        class="inline-flex h-7 items-center justify-center border border-[#dcdcdc] bg-transparent px-2.5 py-0 text-[9px] font-display uppercase tracking-[.14em] text-[#dcdcdc] transition-colors hover:bg-white/5"
                                         @click="openInfoModal()"
                                     >
                                         Info
@@ -142,7 +142,7 @@
         @keydown.escape.window="closeInfoModal()"
         @click.self="closeInfoModal()"
     >
-        <div class="w-full max-w-[600px] border border-[#2b2b2b] bg-[#111] p-5 shadow-[0_24px_80px_rgba(0,0,0,.65)]">
+        <div class="w-full border border-[#2b2b2b] bg-[#111] p-5 shadow-[0_24px_80px_rgba(0,0,0,.65)]" style="width:min(560px, calc(100vw - 32px)); max-width:none;">
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <div class="home-badge" x-text="activeProgram.badge || 'On deck'"></div>
