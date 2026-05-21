@@ -44,14 +44,19 @@
     }
 
     $heroEpisode = $featured;
-    $sidebarEpisodes = array_values($episodes);
+    $sidebarEpisodes = array_slice($episodes, 1);
+
+    if ($sidebarEpisodes === [] && $episodes !== []) {
+        $sidebarEpisodes = $episodes;
+    }
 @endphp
 
 <div
-    class="mt-[60px] grid gap-6 lg:grid-cols-[1.12fr_.88fr]"
+    class="mt-[60px] grid gap-6 lg:grid-cols-[1.15fr_.85fr]"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
+        infoModalOpen: false,
         playing: false,
         muted: false,
         volume: 85,
@@ -81,6 +86,18 @@
                 archive_url: episode?.archive_url || '',
                 url: episode?.url || episode?.archive_url || episode?.src || '',
             };
+        },
+        selectEpisode(episode) {
+            this.activeEpisode = this.normalizeEpisode(episode);
+            this.infoModalOpen = false;
+            this.syncAudio(false);
+            this.play();
+        },
+        openInfoModal() {
+            this.infoModalOpen = true;
+        },
+        closeInfoModal() {
+            this.infoModalOpen = false;
         },
         syncAudio(autoplay = false) {
             const audio = this.$refs.audio;
@@ -120,12 +137,6 @@
             if (autoplay) {
                 this.play();
             }
-        },
-        selectEpisode(episode) {
-            const normalized = this.normalizeEpisode(episode);
-            this.activeEpisode = normalized;
-            this.syncAudio(false);
-            this.play();
         },
         async play() {
             const audio = this.$refs.audio;
@@ -219,30 +230,43 @@
 >
     <article class="home-panel overflow-hidden">
         <div class="p-4 md:p-6 lg:p-7">
-            <div class="overflow-hidden border border-[#2b2b2b] bg-[#0f0f0f] shadow-[0_18px_48px_rgba(0,0,0,.35)]">
+            <div class="overflow-hidden border border-[#2b2b2b] bg-[#111]">
                 <img
                     :src="activeEpisode.image"
                     :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
-                    class="block h-[250px] w-full bg-[#111] object-contain p-4 sm:h-[290px] md:h-[330px] lg:h-[360px]"
+                    class="block h-[220px] w-full bg-[#111] object-contain p-3 sm:h-[250px] md:h-[300px]"
                 >
             </div>
 
             <div class="mt-4 flex items-center gap-3">
-                <span class="h-px w-14 bg-lucille-accent/90"></span>
-                <span class="h-px w-10 bg-lucille-accent/90"></span>
+                <span class="h-px w-16 bg-lucille-accent/90"></span>
+                <span class="h-px w-12 bg-lucille-accent/90"></span>
             </div>
 
-            <div class="mt-4 max-w-[680px]">
+            <div class="mt-4 max-w-[620px]">
                 <span class="home-badge" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></span>
 
                 <div class="mt-3">
-                    <p class="text-[11px] uppercase tracking-[.28em] text-[#bfbfbf]" x-text="activeEpisode.date || 'Archive.org'"></p>
-                    <h3 class="mt-3 font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-text="activeEpisode.program || activeEpisode.title"></h3>
-                    <p class="mt-3 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeEpisode.host || ''"></p>
-                    <p class="mt-4 max-w-[62ch] text-sm leading-7 text-[#d8d8d8]" x-text="activeEpisode.summary || 'Episodio listo para escuchar desde la portada.'"></p>
-                </div>
+                    <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-text="activeEpisode.program || activeEpisode.title"></h3>
+                            <p class="mt-3 text-[12px] uppercase tracking-[.24em] text-[#dcdcdc]" x-text="activeEpisode.date || 'Archive.org'"></p>
+                            <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeEpisode.host || ''"></p>
+                        </div>
 
-                <x-home.repro-seven />
+                        <div class="flex flex-wrap gap-2 md:shrink-0 md:pt-1">
+                            <button
+                                type="button"
+                                class="inline-flex h-7 items-center justify-center border border-[#dcdcdc] bg-transparent px-2.5 py-0 text-[9px] font-display uppercase tracking-[.14em] text-[#dcdcdc] transition-colors hover:bg-white/5"
+                                @click="openInfoModal()"
+                            >
+                                Info
+                            </button>
+                        </div>
+                    </div>
+
+                    <x-home.repro-seven />
+                </div>
             </div>
         </div>
     </article>
@@ -286,4 +310,53 @@
             </div>
         @endif
     </aside>
+
+    <div
+        x-show="infoModalOpen"
+        x-cloak
+        class="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 px-4 py-8"
+        @keydown.escape.window="closeInfoModal()"
+        @click.self="closeInfoModal()"
+    >
+        <div class="w-full border border-[#2b2b2b] bg-[#111] p-5 shadow-[0_24px_80px_rgba(0,0,0,.65)]" style="width:min(560px, calc(100vw - 32px)); max-width:none;">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <div class="home-badge" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></div>
+                    <h4 class="mt-3 font-display text-[22px] uppercase leading-none tracking-[.12em]" x-text="activeEpisode.program || activeEpisode.title || 'Podcast'"></h4>
+                    <p class="mt-2 text-xs uppercase tracking-[.24em] text-[#bfbfbf]" x-text="activeEpisode.date || 'Archive.org'"></p>
+                    <p class="mt-1 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeEpisode.host || ''"></p>
+                </div>
+
+                <button
+                    type="button"
+                    class="h-10 w-10 border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:bg-white/5"
+                    @click="closeInfoModal()"
+                    aria-label="Cerrar"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="mt-4 space-y-3 border-t border-[#2b2b2b] pt-4">
+                <p class="text-sm leading-7 text-[#d8d8d8]" x-text="activeEpisode.summary || 'Episodio listo para escuchar desde la portada.'"></p>
+                <div class="flex flex-wrap gap-3">
+                    <a
+                        class="lucille-button-solid"
+                        :href="activeEpisode.archive_url || activeEpisode.url || '#'"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        Abrir en Archive.org
+                    </a>
+                    <button
+                        type="button"
+                        class="lucille-button-solid"
+                        @click="closeInfoModal()"
+                    >
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
