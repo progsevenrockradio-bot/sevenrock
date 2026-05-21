@@ -69,27 +69,30 @@
             <div class="mt-4 max-w-[620px]">
                 <span class="home-badge" x-text="activeProgram.badge || 'On deck'"></span>
 
-                <div class="mt-3 grid gap-4 md:grid-cols-[1fr_auto] md:items-start">
-                    <div>
-                        <p class="text-[11px] uppercase tracking-[.28em] text-[#bfbfbf]" x-text="activeProgram.subtitle || ''"></p>
-                        <h3 class="mt-3 font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-html="activeProgram.title_html || activeProgram.title || ''"></h3>
-                        <div class="mt-3 text-[12px] uppercase tracking-[.24em] text-[#dcdcdc]" x-text="activeProgram.schedule || ''"></div>
-                        <div class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeProgram.host || ''"></div>
-                    </div>
+                <div class="mt-3">
+                    <p class="text-[11px] uppercase tracking-[.28em] text-[#bfbfbf]" x-text="activeProgram.subtitle || ''"></p>
 
-                    <div class="flex flex-wrap gap-3 md:justify-end md:self-start md:pt-1">
-                        <a
-                            class="lucille-button-solid"
-                            :href="activeProgram.button?.url || '{{ route('events') }}'"
-                            x-text="activeProgram.button?.label || 'Ver programación'"
-                        ></a>
-                        <button
-                            type="button"
-                            class="lucille-button-solid"
-                            @click="openInfoModal()"
-                        >
-                            Info
-                        </button>
+                    <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-html="activeProgram.title_html || activeProgram.title || ''"></h3>
+                            <div class="mt-3 text-[12px] uppercase tracking-[.24em] text-[#dcdcdc]" x-text="activeProgram.schedule || ''"></div>
+                            <div class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeProgram.host || ''"></div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3 md:shrink-0 md:pt-1">
+                            <a
+                                class="lucille-button-solid"
+                                :href="activeProgram.button?.url || '{{ route('events') }}'"
+                                x-text="activeProgram.button?.label || 'Ver programación'"
+                            ></a>
+                            <button
+                                type="button"
+                                class="lucille-button-solid"
+                                @click="openInfoModal()"
+                            >
+                                Info
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -139,7 +142,7 @@
         @keydown.escape.window="closeInfoModal()"
         @click.self="closeInfoModal()"
     >
-        <div class="w-full max-w-[840px] border border-[#2b2b2b] bg-[#111] p-5 shadow-[0_24px_80px_rgba(0,0,0,.65)]">
+        <div class="w-full max-w-[720px] border border-[#2b2b2b] bg-[#111] p-5 shadow-[0_24px_80px_rgba(0,0,0,.65)]">
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <div class="home-badge" x-text="activeProgram.badge || 'On deck'"></div>
