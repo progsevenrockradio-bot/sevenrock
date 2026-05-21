@@ -33,3 +33,13 @@ if (! function_exists('formatear_titulo')) {
         return '<span class="text-white">' . e($base) . '</span> <span class="text-lucille-accent">' . e($accent) . '</span>';
     }
 }
+
+foreach ([
+    App\Http\Controllers\SearchController::class => 'SearchController',
+    App\Http\Controllers\CommentController::class => 'CommentController',
+    App\Http\Controllers\Admin\UserController::class => 'UserController',
+] as $targetClass => $legacyClass) {
+    if (class_exists($targetClass) && ! class_exists($legacyClass, false)) {
+        class_alias($targetClass, $legacyClass);
+    }
+}
