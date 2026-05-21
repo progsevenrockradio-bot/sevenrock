@@ -35,7 +35,7 @@ class SiteController extends Controller
             'video' => $this->safeValue(fn () => Video::query()->latest()->first(), null),
             'galleryImages' => $this->safeValue(fn () => GalleryImage::query()->ordered()->limit(7)->get(), collect()),
             'posts' => $this->latestPosts(),
-            'nextProgram' => app(ProgramScheduleService::class)->resolve(),
+            'nextProgram' => app(ProgramScheduleService::class)->resolve(5),
             'headlineTicker' => $this->headlineTicker(),
             'featuredStories' => $theme->featuredStories(),
             'latestPodcasts' => $latestPodcasts,

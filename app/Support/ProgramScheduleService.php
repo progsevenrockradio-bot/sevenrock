@@ -23,9 +23,9 @@ class ProgramScheduleService
         'DOMINGO' => 7,
     ];
 
-    public function resolve(int $limit = 3): array
+    public function resolve(int $limit = 5): array
     {
-        $cacheKey = 'program-schedule:v7';
+        $cacheKey = 'program-schedule:v8';
         $cached = Cache::get($cacheKey);
         if (is_array($cached) && $cached !== []) {
             return $cached;
@@ -39,21 +39,7 @@ class ProgramScheduleService
             $upcoming = $this->upcomingProgramsFromSchedule($scheduledPrograms, $current, $limit);
 
             $payload = [
-                'label' => 'Próximo programa',
-                'subtitle' => 'Avance editorial del siguiente bloque en parrilla',
-                'title' => mb_strtoupper($current->name ?: 'PROGRAMACIÓN'),
-                'host' => $current->host ?: 'Seven Rock Radio',
-                'location' => $current->schedule ?: 'Próxima emisión',
-                'schedule' => $current->schedule,
-                'show' => $current->name ?: 'Programación',
-                'timezone' => $current->timezone ?: 'America/Caracas',
-                'summary' => $this->summaryFor($current),
-                'image' => $this->imageForProgram($current, $theme),
-                'badge' => $this->programIsLiveNow($current) ? 'On air' : 'On deck',
-                'button' => [
-                    'label' => 'Ver programación',
-                    'url' => route('events'),
-                ],
+                ...$this->programPayload($current, $theme, $this->programIsLiveNow($current) ? 'On air' : 'On deck'),
                 'upcoming' => $this->mapUpcoming($upcoming, $theme),
             ];
 
@@ -83,7 +69,26 @@ class ProgramScheduleService
             'badge' => 'On deck',
             'button' => ['label' => 'Ver programación', 'url' => route('events')],
             'upcoming' => [
-                ['time' => 'Cargando', 'title' => 'PROGRAMACIÓN', 'host' => 'Seven Rock Radio', 'image' => 'assets/lucille/microphone-1206364_1920.jpg'],
+                [
+                    ...$this->fallbackProgramPayload('PROGRAMACIÓN', 'Seven Rock Radio', 'Próxima emisión', 'assets/lucille/microphone-1206364_1920.jpg'),
+                    'time' => 'Cargando',
+                ],
+                [
+                    ...$this->fallbackProgramPayload('SEVEN ROCK RADIO', 'Seven Rock Radio', 'Programación continua', 'assets/lucille/pedalboard-1511069_1920.jpg'),
+                    'time' => 'Cargando',
+                ],
+                [
+                    ...$this->fallbackProgramPayload('MULTIMEDIA', 'Seven Rock Radio', 'Bloque especial', 'assets/lucille/music-1284505_1920.jpg'),
+                    'time' => 'Cargando',
+                ],
+                [
+                    ...$this->fallbackProgramPayload('EVENTOS', 'Seven Rock Radio', 'Agenda en vivo', 'assets/lucille/live-slider-bg.jpg'),
+                    'time' => 'Cargando',
+                ],
+                [
+                    ...$this->fallbackProgramPayload('ENTREVISTAS', 'Seven Rock Radio', 'Cápsulas y especial', 'assets/lucille/guitar-1758005_1920.jpg'),
+                    'time' => 'Cargando',
+                ],
             ],
         ];
     }
@@ -205,7 +210,11 @@ class ProgramScheduleService
             return $indexed->take($limit);
         }
 
-        return $indexed->slice($currentIndex + 1)->take($limit)->values();
+        return $indexed
+            ->slice($currentIndex + 1)
+            ->concat($indexed->slice(0, $currentIndex))
+            ->take($limit)
+            ->values();
     }
 
     /**
@@ -284,7 +293,12 @@ class ProgramScheduleService
             return $indexed->take($limit)->pluck('program')->values();
         }
 
-        return $indexed->slice($currentIndex + 1)->take($limit)->pluck('program')->values();
+        return $indexed
+            ->slice($currentIndex + 1)
+            ->concat($indexed->slice(0, $currentIndex))
+            ->take($limit)
+            ->pluck('program')
+            ->values();
     }
 
     private function programIsLiveNow(MasterProgram $program, ?Carbon $now = null): bool
@@ -403,17 +417,59 @@ class ProgramScheduleService
     private function mapUpcoming(Collection $programs, ThemeSetting $theme): array
     {
         return $programs
-            ->take(3)
+            ->take(5)
             ->map(function (MasterProgram $program) use ($theme): array {
                 return [
+                    ...$this->programPayload($program, $theme, 'On deck'),
                     'time' => $program->schedule ?: 'Próxima emisión',
-                    'title' => mb_strtoupper($program->name ?: 'PROGRAMACIÓN'),
-                    'host' => $program->host ?: 'Seven Rock Radio',
-                    'image' => $this->imageForProgram($program, $theme),
                 ];
             })
             ->values()
             ->all();
+    }
+
+    private function programPayload(MasterProgram $program, ThemeSetting $theme, string $badge): array
+    {
+        return [
+            'label' => 'Próximo programa',
+            'subtitle' => 'Avance editorial del siguiente bloque en parrilla',
+            'title' => mb_strtoupper($program->name ?: 'PROGRAMACIÓN'),
+            'title_html' => formatear_titulo(mb_strtoupper($program->name ?: 'PROGRAMACIÓN')),
+            'host' => $program->host ?: 'Seven Rock Radio',
+            'location' => $program->schedule ?: 'Próxima emisión',
+            'schedule' => $program->schedule ?: 'Próxima emisión',
+            'show' => $program->name ?: 'Programación',
+            'timezone' => $program->timezone ?: 'America/Caracas',
+            'summary' => $this->summaryFor($program),
+            'image' => $this->imageForProgram($program, $theme),
+            'badge' => $badge,
+            'button' => [
+                'label' => 'Ver programación',
+                'url' => route('events'),
+            ],
+        ];
+    }
+
+    private function fallbackProgramPayload(string $title, string $host, string $schedule, string $image): array
+    {
+        return [
+            'label' => 'Próximo programa',
+            'subtitle' => 'Avance editorial del siguiente bloque en parrilla',
+            'title' => $title,
+            'title_html' => formatear_titulo($title),
+            'host' => $host,
+            'location' => $schedule,
+            'schedule' => $schedule,
+            'show' => $title,
+            'timezone' => 'America/Caracas',
+            'summary' => sprintf('Programación destacada de %s.', $title),
+            'image' => $image,
+            'badge' => 'On deck',
+            'button' => [
+                'label' => 'Ver programación',
+                'url' => route('events'),
+            ],
+        ];
     }
 
     /**
@@ -470,7 +526,7 @@ class ProgramScheduleService
 
     private function warmRemoteCache(int $limit): void
     {
-        if (! Cache::add('program-schedule:warmup:v6', true, now()->addSeconds(20))) {
+        if (! Cache::add('program-schedule:warmup:v7', true, now()->addSeconds(20))) {
             return;
         }
 
@@ -483,7 +539,7 @@ class ProgramScheduleService
                 }
 
                 $payload = $this->resolveFromRemoteEvents($events, $theme, $limit);
-                Cache::put('program-schedule:v7', $payload, now()->addSeconds(30));
+                Cache::put('program-schedule:v8', $payload, now()->addSeconds(30));
             } catch (\Throwable) {
                 // keep silent; the page already has a fallback
             }
