@@ -14,8 +14,7 @@
                     <div class="text-[10px] uppercase tracking-[.28em] text-[#7b7b7b]">
                         ReproSeven
                     </div>
-                    <h4 class="mt-1 truncate font-display text-[14px] uppercase tracking-[.12em] text-[#e8e8e8]" x-text="activeEpisode.program || activeEpisode.title || 'Podcast'"></h4>
-                    <p class="mt-1 truncate text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeEpisode.host || ''"></p>
+                    <p class="mt-1 truncate font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent" x-text="activeEpisode.episode_title || 'Último episodio'"></p>
                 </div>
             </div>
         </div>

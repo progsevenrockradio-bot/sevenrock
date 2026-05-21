@@ -48,7 +48,6 @@
     };
 
     $episodes = collect(data_get($podcasts, 'episodes', []))
-        ->take(7)
         ->map(fn (array $episode) => $normalizeEpisode($episode))
         ->unique($episodeIdentity)
         ->values()
@@ -62,14 +61,27 @@
 
     $heroEpisode = $featured;
     $heroKey = $episodeIdentity($heroEpisode);
+    $programIdentity = static function (array $episode) use ($episodeIdentity): string {
+        $program = trim((string) ($episode['program'] ?? $episode['title'] ?? ''));
+        $program = strtolower(preg_replace('/\s+/', ' ', $program) ?: '');
 
-    $sidebarEpisodes = array_values(array_filter(
-        array_slice($episodes, 0),
-        static fn (array $episode) => $episodeIdentity($episode) !== $heroKey
-    ));
+        return $program !== '' ? $program : $episodeIdentity($episode);
+    };
+    $heroProgramKey = $programIdentity($heroEpisode);
+
+    $sidebarEpisodes = collect($episodes)
+        ->reject(static fn (array $episode): bool => $episodeIdentity($episode) === $heroKey)
+        ->reject(static fn (array $episode): bool => $programIdentity($episode) === $heroProgramKey)
+        ->unique($programIdentity)
+        ->values()
+        ->all();
 
     if ($sidebarEpisodes === [] && $episodes !== []) {
-        $sidebarEpisodes = array_slice($episodes, 1);
+        $sidebarEpisodes = collect($episodes)
+            ->reject(static fn (array $episode): bool => $episodeIdentity($episode) === $heroKey)
+            ->unique($programIdentity)
+            ->values()
+            ->all();
     }
 
     $sidebarEpisodes = array_slice($sidebarEpisodes, 0, 6);
@@ -171,6 +183,10 @@
             this.syncAudio(false);
 
             try {
+                if (!audio.currentSrc || audio.networkState === 0) {
+                    audio.load();
+                }
+
                 await audio.play();
             } catch (error) {
                 this.playing = false;
@@ -330,8 +346,8 @@
                             <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-[#dcdcdc] md:text-[15px]">
                                 {{ $episode['program'] }}
                             </div>
-                            <div class="mt-1 truncate text-[12px] text-[#7b7b7b]">
-                                {{ $episode['host'] }}
+                            <div class="mt-1 truncate text-[12px] text-[#9a9a9a]">
+                                {{ $episode['episode_title'] }}
                             </div>
                         </div>
                     </button>

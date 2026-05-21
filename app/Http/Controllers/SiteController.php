@@ -23,7 +23,7 @@ class SiteController extends Controller
     public function home(ArchiveOrgService $archiveOrgService): View
     {
         $theme = ThemeSetting::current();
-        $latestPodcasts = $this->safeValue(fn () => $archiveOrgService->homePodcastPayload(7), []);
+        $latestPodcasts = $this->safeValue(fn () => $archiveOrgService->homePodcastPayload(12), []);
 
         if (! is_array($latestPodcasts) || empty($latestPodcasts['episodes'] ?? [])) {
             $latestPodcasts = $theme->latestPodcasts();

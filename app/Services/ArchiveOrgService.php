@@ -17,7 +17,7 @@ use Throwable;
 
 final class ArchiveOrgService
 {
-    private const HOME_CACHE_KEY = 'archive-org:home-podcasts:v3';
+    private const HOME_CACHE_KEY = 'archive-org:home-podcasts:v4';
     private const EPISODE_CACHE_KEY = 'archive-org:latest-episode:v3';
     private const WARMUP_CACHE_KEY = 'archive-org:warmup:v3';
     private const MAX_NETWORK_CALLS_PER_REQUEST = 20;
@@ -177,6 +177,7 @@ final class ArchiveOrgService
                     'rp.live_title',
                     'rp.live_description',
                     'rp.comentario_episodio',
+                    'rp.archivo_mp3',
                     'rp.caratula_programa',
                     'rp.imagen_episodio',
                     'rp.imagen_invitado',
@@ -227,7 +228,17 @@ final class ArchiveOrgService
             }
 
             if ($src === '' && $identifier !== '') {
-                $src = $this->buildEpisodeFallbackSrc($identifier);
+                $storedPath = trim((string) ($row->archivo_mp3 ?? ''));
+                if ($storedPath !== '') {
+                    $src = $this->buildArchiveDownloadSrc($identifier, $storedPath);
+                }
+            }
+
+            if ($src === '') {
+                $storedPath = trim((string) ($row->archivo_mp3 ?? ''));
+                if ($storedPath !== '') {
+                    $src = asset('storage/' . ltrim(str_replace('\\', '/', $storedPath), '/'));
+                }
             }
 
             if ($src === '') {
@@ -306,14 +317,16 @@ final class ArchiveOrgService
         return [];
     }
 
-    private function buildEpisodeFallbackSrc(string $identifier): string
+    private function buildArchiveDownloadSrc(string $identifier, string $path): string
     {
         $identifier = trim($identifier);
-        if ($identifier === '') {
+        $path = trim(str_replace('\\', '/', $path), '/');
+
+        if ($identifier === '' || $path === '') {
             return '';
         }
 
-        return 'https://archive.org/download/' . rawurlencode($identifier) . '/' . rawurlencode($identifier) . '.mp3';
+        return 'https://archive.org/download/' . rawurlencode($identifier) . '/' . implode('/', array_map('rawurlencode', explode('/', $path)));
     }
 
     public function getPodcastItem(string $identifier, string $defaultTitle = 'Podcast', string $defaultCover = '', int $limit = 12): ?array
