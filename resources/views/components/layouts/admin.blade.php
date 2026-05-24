@@ -19,8 +19,6 @@
 </head>
 <body
     class="antialiased"
-    x-data="adminConfirmDialog()"
-    x-on:keydown.escape.window="close()"
     style="
         --lucille-accent: {{ $theme->accent_color }};
         --lucille-nav: {{ $theme->nav_color }};
@@ -36,58 +34,49 @@
 >
     <div class="lucille-fixed-bg" aria-hidden="true"></div>
 
-    <template x-if="open">
-        <div
-            x-cloak
-            x-transition.opacity.duration.150ms
-            class="fixed inset-0 z-[200] flex items-center justify-center p-4"
-            aria-hidden="true"
+    <div id="admin-confirm-modal" class="fixed inset-0 z-[200] hidden items-center justify-center p-4" aria-hidden="true">
+        <button
+            id="admin-confirm-backdrop"
+            type="button"
+            class="absolute inset-0 cursor-default bg-[rgba(0,0,0,.78)] backdrop-blur-md"
+            aria-label="Cerrar confirmación"
+        ></button>
+
+        <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-confirm-title"
+            class="relative w-full max-w-lg overflow-hidden border border-[rgba(220,220,220,.16)] bg-[rgba(12,12,13,.96)] shadow-[0_30px_90px_rgba(0,0,0,.72)]"
         >
-            <button
-                type="button"
-                class="absolute inset-0 cursor-default bg-[rgba(0,0,0,.78)] backdrop-blur-md"
-                @click="close()"
-                aria-label="Cerrar confirmación"
-            ></button>
+            <div id="admin-confirm-tone" class="h-1 w-full bg-[#c32720]"></div>
 
-            <section
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="admin-confirm-title"
-                class="relative w-full max-w-lg overflow-hidden border border-[rgba(220,220,220,.16)] bg-[rgba(12,12,13,.96)] shadow-[0_30px_90px_rgba(0,0,0,.72)]"
-            >
-                <div class="h-1 w-full" :class="tone === 'danger' ? 'bg-[#c32720]' : 'bg-[var(--color-lucille-accent)]'"></div>
-
-                <div class="relative p-6 sm:p-7">
-                    <div class="flex items-start gap-4">
-                        <div
-                            class="mt-1 flex h-12 w-12 shrink-0 items-center justify-center border text-sm font-bold uppercase tracking-[.22em]"
-                            :class="tone === 'danger'
-                                ? 'border-[#5c2a2a] bg-[rgba(195,39,32,.12)] text-[#ffd0d0]'
-                                : 'border-[rgba(220,220,220,.16)] bg-[rgba(255,255,255,.03)] text-[#dcdcdc]'"
-                        >
-                            !
-                        </div>
-
-                        <div class="min-w-0 flex-1">
-                            <p class="font-display text-[10px] uppercase tracking-[.32em] text-[#8a8a8a]" x-text="tone === 'danger' ? 'Acción destructiva' : 'Confirmación'"></p>
-                            <h2 id="admin-confirm-title" class="mt-2 font-display text-2xl uppercase tracking-[.08em] text-[#f2f2f2]" x-text="title"></h2>
-                            <div class="mt-3 inline-flex items-center gap-2 border border-[rgba(220,220,220,.16)] bg-[rgba(255,255,255,.03)] px-3 py-1 text-[10px] uppercase tracking-[.22em] text-[#9d9d9d]">
-                                <span>Método</span>
-                                <span x-text="method"></span>
-                            </div>
-                            <p class="mt-3 text-sm leading-7 text-[#c3c3c3]" x-text="message"></p>
-                        </div>
+            <div class="relative p-6 sm:p-7">
+                <div class="flex items-start gap-4">
+                    <div
+                        id="admin-confirm-icon"
+                        class="mt-1 flex h-12 w-12 shrink-0 items-center justify-center border text-sm font-bold uppercase tracking-[.22em] border-[#5c2a2a] bg-[rgba(195,39,32,.12)] text-[#ffd0d0]"
+                    >
+                        !
                     </div>
 
-                    <div class="mt-7 flex flex-wrap justify-end gap-3">
-                        <button type="button" class="lucille-button" @click="close()" x-text="cancelLabel"></button>
-                        <button type="button" class="lucille-button-solid" @click="confirm()" x-text="confirmLabel"></button>
+                    <div class="min-w-0 flex-1">
+                        <p id="admin-confirm-kicker" class="font-display text-[10px] uppercase tracking-[.32em] text-[#8a8a8a]">Acción destructiva</p>
+                        <h2 id="admin-confirm-title" class="mt-2 font-display text-2xl uppercase tracking-[.08em] text-[#f2f2f2]"></h2>
+                        <div class="mt-3 inline-flex items-center gap-2 border border-[rgba(220,220,220,.16)] bg-[rgba(255,255,255,.03)] px-3 py-1 text-[10px] uppercase tracking-[.22em] text-[#9d9d9d]">
+                            <span>Método</span>
+                            <span id="admin-confirm-method"></span>
+                        </div>
+                        <p id="admin-confirm-message" class="mt-3 text-sm leading-7 text-[#c3c3c3]"></p>
                     </div>
                 </div>
-            </section>
-        </div>
-    </template>
+
+                <div class="mt-7 flex flex-wrap justify-end gap-3">
+                    <button type="button" id="admin-confirm-cancel" class="lucille-button">Cancelar</button>
+                    <button type="button" id="admin-confirm-accept" class="lucille-button-solid">Confirmar</button>
+                </div>
+            </div>
+        </section>
+    </div>
 
     @php
         $brandDisplayMode = $theme->brand_display_mode ?? 'mark';
@@ -162,5 +151,132 @@
     <main class="mx-auto max-w-6xl px-6 pb-16">
         {{ $slot }}
     </main>
+
+    <script>
+        (() => {
+            const modal = document.getElementById('admin-confirm-modal');
+            if (!modal) {
+                return;
+            }
+
+            const backdrop = document.getElementById('admin-confirm-backdrop');
+            const titleEl = document.getElementById('admin-confirm-title');
+            const messageEl = document.getElementById('admin-confirm-message');
+            const methodEl = document.getElementById('admin-confirm-method');
+            const kickerEl = document.getElementById('admin-confirm-kicker');
+            const toneBar = document.getElementById('admin-confirm-tone');
+            const icon = document.getElementById('admin-confirm-icon');
+            const cancelBtn = document.getElementById('admin-confirm-cancel');
+            const acceptBtn = document.getElementById('admin-confirm-accept');
+
+            let activeForm = null;
+            let activeSubmitter = null;
+
+            const resetTone = () => {
+                toneBar.className = 'h-1 w-full bg-[#c32720]';
+                icon.className = 'mt-1 flex h-12 w-12 shrink-0 items-center justify-center border text-sm font-bold uppercase tracking-[.22em] border-[#5c2a2a] bg-[rgba(195,39,32,.12)] text-[#ffd0d0]';
+                kickerEl.textContent = 'Acción destructiva';
+            };
+
+            const setTone = (tone) => {
+                if (tone === 'soft') {
+                    toneBar.className = 'h-1 w-full bg-[var(--color-lucille-accent)]';
+                    icon.className = 'mt-1 flex h-12 w-12 shrink-0 items-center justify-center border text-sm font-bold uppercase tracking-[.22em] border-[rgba(220,220,220,.16)] bg-[rgba(255,255,255,.03)] text-[#dcdcdc]';
+                    kickerEl.textContent = 'Confirmación';
+                    return;
+                }
+
+                resetTone();
+            };
+
+            const openModal = (form, submitter) => {
+                activeForm = form;
+                activeSubmitter = submitter ?? null;
+
+                const message = (form.dataset.confirm ?? '').trim();
+                const title = (form.dataset.confirmTitle ?? '').trim() || 'Confirmar acción';
+                const confirmLabel = (form.dataset.confirmAction ?? '').trim() || 'Confirmar';
+                const cancelLabel = (form.dataset.confirmCancel ?? '').trim() || 'Cancelar';
+                const tone = (form.dataset.confirmTone ?? 'danger').trim();
+                const method = (form.querySelector('input[name="_method"]')?.value || form.method || 'POST').toUpperCase();
+
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+                methodEl.textContent = method;
+                cancelBtn.textContent = cancelLabel;
+                acceptBtn.textContent = confirmLabel;
+                setTone(tone);
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.body.classList.add('overflow-hidden');
+                cancelBtn.focus({ preventScroll: true });
+            };
+
+            const closeModal = () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.classList.remove('overflow-hidden');
+                activeForm = null;
+                activeSubmitter = null;
+            };
+
+            const submitActiveForm = () => {
+                if (!activeForm) {
+                    closeModal();
+                    return;
+                }
+
+                const form = activeForm;
+                const submitter = activeSubmitter;
+
+                closeModal();
+                form.dataset.confirmBypass = '1';
+
+                window.setTimeout(() => {
+                    delete form.dataset.confirmBypass;
+                }, 0);
+
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit(submitter ?? undefined);
+                    return;
+                }
+
+                form.submit();
+            };
+
+            document.addEventListener('submit', (event) => {
+                const form = event.target;
+                if (! (form instanceof HTMLFormElement)) {
+                    return;
+                }
+
+                if (form.dataset.confirmBypass === '1') {
+                    return;
+                }
+
+                const message = (form.dataset.confirm ?? '').trim();
+                if (message === '') {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                openModal(form, event.submitter ?? null);
+            }, true);
+
+            backdrop?.addEventListener('click', closeModal);
+            cancelBtn?.addEventListener('click', closeModal);
+            acceptBtn?.addEventListener('click', submitActiveForm);
+            window.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                    closeModal();
+                }
+            });
+
+            resetTone();
+            closeModal();
+        })();
+    </script>
 </body>
 </html>
