@@ -639,14 +639,19 @@ final class UploadMp3Job implements ShouldQueue
 
             $verification = $this->verifyTaggedMetadata($ruta, $tags);
             if (! ($verification['verified'] ?? false)) {
-                throw new \RuntimeException((string) ($verification['message'] ?? 'No se pudo verificar la metadata escrita en el MP3.'));
+                Log::warning('Metadata tagging verification mismatch; continuing processing.', [
+                    'file' => basename((string) $ruta),
+                    'program' => (string) $programa,
+                    'message' => $verification['message'] ?? 'No se pudo verificar la metadata escrita en el MP3.',
+                    'verification' => $verification,
+                ]);
+            } else {
+                Log::info('Metadata tagging verified.', [
+                    'file' => basename((string) $ruta),
+                    'program' => (string) $programa,
+                    'verification' => $verification,
+                ]);
             }
-
-            Log::info('Metadata tagging verified.', [
-                'file' => basename((string) $ruta),
-                'program' => (string) $programa,
-                'verification' => $verification,
-            ]);
         } catch (Throwable $exception) {
             Log::warning('Metadata tagging failed with exception.', [
                 'file' => basename((string) $ruta),
