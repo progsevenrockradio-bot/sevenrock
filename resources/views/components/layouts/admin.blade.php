@@ -34,7 +34,7 @@
 >
     <div class="lucille-fixed-bg" aria-hidden="true"></div>
 
-    <div id="admin-confirm-modal" class="fixed inset-0 z-[200] hidden items-center justify-center p-4" aria-hidden="true">
+    <div id="admin-confirm-modal" class="fixed inset-0 z-[200] hidden" aria-hidden="true">
         <button
             id="admin-confirm-backdrop"
             type="button"
@@ -46,7 +46,7 @@
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-confirm-title"
-            class="relative w-full max-w-[24rem] overflow-hidden border border-[rgba(220,220,220,.16)] bg-[rgba(12,12,13,.96)] shadow-[0_30px_90px_rgba(0,0,0,.72)]"
+            class="absolute left-1/2 top-1/2 w-[min(92vw,24rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden border border-[rgba(220,220,220,.16)] bg-[rgba(12,12,13,.96)] shadow-[0_30px_90px_rgba(0,0,0,.72)]"
         >
             <div id="admin-confirm-tone" class="h-1 w-full bg-[#c32720]"></div>
 
