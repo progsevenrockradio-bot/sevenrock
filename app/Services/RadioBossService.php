@@ -35,9 +35,7 @@ class RadioBossService
         try {
             $this->ensureRemoteDirectory($connection, $folder);
 
-            if ($clearBeforeUpload) {
-                $this->clearRemoteFilesOnly($connection, $folder);
-            }
+            $this->clearRemoteMp3Files($connection, $folder);
 
             $this->uploadStream($connection, $remotePath, $localPath);
         } finally {
@@ -149,10 +147,21 @@ class RadioBossService
             : @ftp_connect($host, $port, $timeout);
 
         if ($connection === false) {
+            Log::warning('RadioBossService: no se pudo abrir conexión FTP con RadioBOSS.', [
+                'host' => $host,
+                'port' => $port,
+                'ssl' => $ssl,
+            ]);
             throw new RuntimeException("No se pudo abrir conexión FTP con RadioBOSS en {$host}:{$port}");
         }
 
         if (! @ftp_login($connection, $user, $password)) {
+            Log::warning('RadioBossService: fallo de autenticación FTP con RadioBOSS.', [
+                'host' => $host,
+                'port' => $port,
+                'user' => $user,
+                'ssl' => $ssl,
+            ]);
             ftp_close($connection);
             throw new RuntimeException('No se pudo autenticar con RadioBOSS.');
         }
@@ -192,22 +201,32 @@ class RadioBossService
         }
     }
 
-    private function clearRemoteFilesOnly($connection, string $folder): void
+    private function clearRemoteMp3Files($connection, string $folder): void
     {
         try {
-            $files = @ftp_rawlist($connection, $folder);
-            if (! is_array($files)) {
+            $files = $this->listRemoteFiles($connection, $folder);
+            if ($files === []) {
                 return;
             }
 
-            foreach ($files as $line) {
-                $parts = preg_split('/\s+/', trim((string) $line), 9);
-                $name = $parts[8] ?? '';
-                if ($name === '' || $name === '.' || $name === '..') {
+            foreach ($files as $file) {
+                if (strtolower(pathinfo($file, PATHINFO_EXTENSION)) !== 'mp3') {
                     continue;
                 }
 
-                @ftp_delete($connection, $folder . '/' . ltrim($name, '/'));
+                $deleted = @ftp_delete($connection, $file);
+                if ($deleted) {
+                    Log::info('RadioBossService: archivo MP3 remoto eliminado antes de la subida.', [
+                        'folder' => $folder,
+                        'file' => $file,
+                    ]);
+                    continue;
+                }
+
+                Log::warning('RadioBossService: no se pudo eliminar un archivo MP3 remoto antes de la subida.', [
+                    'folder' => $folder,
+                    'file' => $file,
+                ]);
             }
         } catch (Throwable $exception) {
             Log::warning('RadioBossService: no se pudieron limpiar los archivos remotos', [
@@ -215,6 +234,65 @@ class RadioBossService
                 'exception' => $exception->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function listRemoteFiles($connection, string $folder): array
+    {
+        $listing = @ftp_rawlist($connection, $folder);
+        if (! is_array($listing)) {
+            return [];
+        }
+
+        $files = [];
+        foreach ($listing as $line) {
+            $entry = $this->parseRawListLine((string) $line);
+            if ($entry === null) {
+                continue;
+            }
+
+            if ($entry['name'] === '.' || $entry['name'] === '..') {
+                continue;
+            }
+
+            if ($entry['type'] !== 'file') {
+                continue;
+            }
+
+            $files[] = $folder . '/' . ltrim($entry['name'], '/');
+        }
+
+        return $files;
+    }
+
+    /**
+     * @return array{type:'file'|'dir'|'unknown', name:string}|null
+     */
+    private function parseRawListLine(string $line): ?array
+    {
+        $line = trim($line);
+        if ($line === '') {
+            return null;
+        }
+
+        $parts = preg_split('/\s+/', $line, 9);
+        if (! is_array($parts) || count($parts) < 9) {
+            return null;
+        }
+
+        $name = trim((string) ($parts[8] ?? ''));
+        $type = match ($line[0] ?? '') {
+            'd' => 'dir',
+            '-' => 'file',
+            default => 'unknown',
+        };
+
+        return [
+            'type' => $type,
+            'name' => $name,
+        ];
     }
 
     private function normalizeRemotePath(string $path): string
