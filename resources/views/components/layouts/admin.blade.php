@@ -40,6 +40,7 @@
         x-cloak
         x-show="open"
         x-transition.opacity.duration.150ms
+        style="display: none;"
         class="fixed inset-0 z-[200] flex items-center justify-center p-4"
         aria-hidden="true"
     >
