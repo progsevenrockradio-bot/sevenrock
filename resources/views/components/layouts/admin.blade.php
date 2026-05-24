@@ -19,6 +19,8 @@
 </head>
 <body
     class="antialiased"
+    x-data="adminConfirmDialog()"
+    x-on:keydown.escape.window="close()"
     style="
         --lucille-accent: {{ $theme->accent_color }};
         --lucille-nav: {{ $theme->nav_color }};
@@ -33,6 +35,58 @@
     "
 >
     <div class="lucille-fixed-bg" aria-hidden="true"></div>
+
+    <div
+        x-cloak
+        x-show="open"
+        x-transition.opacity.duration.150ms
+        class="fixed inset-0 z-[200] flex items-center justify-center p-4"
+        aria-hidden="true"
+    >
+        <button
+            type="button"
+            class="absolute inset-0 cursor-default bg-[rgba(0,0,0,.78)] backdrop-blur-md"
+            @click="close()"
+            aria-label="Cerrar confirmación"
+        ></button>
+
+        <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-confirm-title"
+            class="relative w-full max-w-lg overflow-hidden border border-[rgba(220,220,220,.16)] bg-[rgba(12,12,13,.96)] shadow-[0_30px_90px_rgba(0,0,0,.72)]"
+        >
+            <div class="h-1 w-full" :class="tone === 'danger' ? 'bg-[#c32720]' : 'bg-[var(--color-lucille-accent)]'"></div>
+
+            <div class="relative p-6 sm:p-7">
+                <div class="flex items-start gap-4">
+                    <div
+                        class="mt-1 flex h-12 w-12 shrink-0 items-center justify-center border text-sm font-bold uppercase tracking-[.22em]"
+                        :class="tone === 'danger'
+                            ? 'border-[#5c2a2a] bg-[rgba(195,39,32,.12)] text-[#ffd0d0]'
+                            : 'border-[rgba(220,220,220,.16)] bg-[rgba(255,255,255,.03)] text-[#dcdcdc]'"
+                    >
+                        !
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <p class="font-display text-[10px] uppercase tracking-[.32em] text-[#8a8a8a]" x-text="tone === 'danger' ? 'Acción destructiva' : 'Confirmación'"></p>
+                        <h2 id="admin-confirm-title" class="mt-2 font-display text-2xl uppercase tracking-[.08em] text-[#f2f2f2]" x-text="title"></h2>
+                        <div class="mt-3 inline-flex items-center gap-2 border border-[rgba(220,220,220,.16)] bg-[rgba(255,255,255,.03)] px-3 py-1 text-[10px] uppercase tracking-[.22em] text-[#9d9d9d]">
+                            <span>Método</span>
+                            <span x-text="method"></span>
+                        </div>
+                        <p class="mt-3 text-sm leading-7 text-[#c3c3c3]" x-text="message"></p>
+                    </div>
+                </div>
+
+                <div class="mt-7 flex flex-wrap justify-end gap-3">
+                    <button type="button" class="lucille-button" @click="close()" x-text="cancelLabel"></button>
+                    <button type="button" class="lucille-button-solid" @click="confirm()" x-text="confirmLabel"></button>
+                </div>
+            </div>
+        </section>
+    </div>
 
     @php
         $brandDisplayMode = $theme->brand_display_mode ?? 'mark';

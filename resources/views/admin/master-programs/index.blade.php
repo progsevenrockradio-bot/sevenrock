@@ -108,7 +108,14 @@
                                                             <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
                                                         </svg>
                                                     </a>
-                                                    <form action="{{ route('admin.master-programs.destroy', $masterProgram) }}" method="POST" onsubmit="return confirm('Eliminar este programa maestro?')">
+                                                    <form
+                                                        action="{{ route('admin.master-programs.destroy', $masterProgram) }}"
+                                                        method="POST"
+                                                        data-confirm="¿Eliminar este programa maestro?"
+                                                        data-confirm-title="Eliminar programa maestro"
+                                                        data-confirm-action="Eliminar"
+                                                        data-confirm-tone="danger"
+                                                    >
                                                         @csrf
                                                         @method('DELETE')
                                                         <button

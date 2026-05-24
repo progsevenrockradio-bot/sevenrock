@@ -267,7 +267,10 @@
                             <form
                                 action="{{ route('admin.podcast-uploads.destroy', $upload->id) }}"
                                 method="POST"
-                                onsubmit="return confirm('¿Eliminar este episodio?')"
+                                data-confirm="¿Eliminar este episodio?"
+                                data-confirm-title="Eliminar episodio"
+                                data-confirm-action="Eliminar"
+                                data-confirm-tone="danger"
                             >
                                 @csrf
                                 @method('DELETE')

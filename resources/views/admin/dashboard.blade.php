@@ -104,7 +104,14 @@
                             <span class="inline-flex items-center gap-2 border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] px-3 py-2 text-xs uppercase tracking-[.12em] text-[#dcdcdc]">
                                 {{ $taxonomy->name }}
                                 <a href="{{ route('admin.taxonomies.edit', $taxonomy) }}" class="text-[#7b7b7b] transition hover:text-[#dcdcdc]">edit</a>
-                                <form action="{{ route('admin.taxonomies.destroy', $taxonomy) }}" method="POST" onsubmit="return confirm('Delete ' + @json($taxonomy->name) + '?')">
+                                <form
+                                    action="{{ route('admin.taxonomies.destroy', $taxonomy) }}"
+                                    method="POST"
+                                    data-confirm="{{ 'Delete ' . $taxonomy->name . '?' }}"
+                                    data-confirm-title="Delete taxonomy"
+                                    data-confirm-action="Delete"
+                                    data-confirm-tone="danger"
+                                >
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-[#7b7b7b] transition hover:text-[#c32720]">×</button>

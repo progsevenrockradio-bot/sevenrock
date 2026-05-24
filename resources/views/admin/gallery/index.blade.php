@@ -33,7 +33,14 @@
                         <td class="px-5 py-4">
                             <div class="flex flex-wrap gap-2">
                                 <a href="{{ route('admin.gallery.edit', $image) }}" class="lucille-button">{{ $admin['edit'] }}</a>
-                                <form action="{{ route('admin.gallery.destroy', $image) }}" method="POST" onsubmit="return confirm('{{ $admin['delete_confirm_image'] }}')">
+                                <form
+                                    action="{{ route('admin.gallery.destroy', $image) }}"
+                                    method="POST"
+                                    data-confirm="{{ $admin['delete_confirm_image'] }}"
+                                    data-confirm-title="{{ $admin['delete'] }}"
+                                    data-confirm-action="{{ $admin['delete'] }}"
+                                    data-confirm-tone="danger"
+                                >
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="lucille-button-solid">{{ $admin['delete'] }}</button>

@@ -40,7 +40,14 @@
                         <td class="px-5 py-4">
                             <div class="flex flex-wrap gap-2">
                                 <a href="{{ route('admin.products.edit', $product) }}" class="lucille-button">{{ $admin['edit'] }}</a>
-                                <form action="{{ route('admin.products.destroy', $product) }}" method="POST" onsubmit="return confirm('{{ $admin['delete_confirm_product'] }}')">
+                                <form
+                                    action="{{ route('admin.products.destroy', $product) }}"
+                                    method="POST"
+                                    data-confirm="{{ $admin['delete_confirm_product'] }}"
+                                    data-confirm-title="{{ $admin['delete'] }}"
+                                    data-confirm-action="{{ $admin['delete'] }}"
+                                    data-confirm-tone="danger"
+                                >
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="lucille-button-solid">{{ $admin['delete'] }}</button>

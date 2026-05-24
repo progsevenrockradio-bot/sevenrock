@@ -34,7 +34,14 @@
                         <td class="px-5 py-4">
                             <div class="flex flex-wrap gap-2">
                                 <a href="{{ route('admin.songs.edit', $song) }}" class="lucille-button">Edit</a>
-                                <form action="{{ route('admin.songs.destroy', $song) }}" method="POST" onsubmit="return confirm('Delete this song?')">
+                                <form
+                                    action="{{ route('admin.songs.destroy', $song) }}"
+                                    method="POST"
+                                    data-confirm="Delete this song?"
+                                    data-confirm-title="Delete song"
+                                    data-confirm-action="Delete"
+                                    data-confirm-tone="danger"
+                                >
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="lucille-button-solid">Delete</button>

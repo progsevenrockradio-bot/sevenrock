@@ -32,7 +32,14 @@
                         <td class="px-5 py-4">
                             <div class="flex flex-wrap gap-2">
                                 <a href="{{ route('admin.band-profiles.edit', $profile) }}" class="lucille-button">Edit</a>
-                                <form action="{{ route('admin.band-profiles.destroy', $profile) }}" method="POST" onsubmit="return confirm('Delete this band profile?')">
+                                <form
+                                    action="{{ route('admin.band-profiles.destroy', $profile) }}"
+                                    method="POST"
+                                    data-confirm="Delete this band profile?"
+                                    data-confirm-title="Delete band profile"
+                                    data-confirm-action="Delete"
+                                    data-confirm-tone="danger"
+                                >
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="lucille-button-solid">Delete</button>
