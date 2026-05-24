@@ -40,6 +40,7 @@ class RadioProgram extends Model
         'delivery_verified_at',
         'delivery_last_error',
         'delivery_metadata',
+        'status_message',
         'informacion_fija_programa',
         'genero_musical',
         'facebook_url',

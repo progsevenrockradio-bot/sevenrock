@@ -237,6 +237,11 @@
                                     RadioBOSS: {{ $upload->enviado_radioboss ? 'enviado' : 'pendiente' }}
                                     · Archive.org: {{ $upload->archive_org_status ?: 'sin estado' }}
                                 </div>
+                                @if ($upload->status_message)
+                                    <div class="mt-2 max-w-xl text-[11px] leading-5 text-[#c7c7c7]">
+                                        Estado: {{ $upload->status_message }}
+                                    </div>
+                                @endif
                                 @if ($upload->archive_org_last_error)
                                     <div class="mt-2 max-w-xl text-[11px] leading-5 text-[#ff9e9e]">
                                         Último error Archive.org: {{ \Illuminate\Support\Str::limit((string) $upload->archive_org_last_error, 180) }}
@@ -258,6 +263,15 @@
                             <form action="{{ route('admin.podcast-uploads.retry', $upload) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="lucille-button">Reprocesar</button>
+                            </form>
+                            <form
+                                action="{{ route('admin.podcast-uploads.destroy', $upload->id) }}"
+                                method="POST"
+                                onsubmit="return confirm('¿Eliminar este episodio?')"
+                            >
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="lucille-button">Eliminar</button>
                             </form>
                         </div>
                     </article>

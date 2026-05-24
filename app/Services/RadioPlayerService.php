@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Schema;
 
 class RadioPlayerService
 {
-    private const STATUS_CACHE_KEY = 'radio-player-status:v5';
+    private const STATUS_CACHE_KEY = 'radio-player-status:v6';
 
     public function __construct(
         private readonly RadioPlayerStateStore $store,
@@ -28,14 +28,12 @@ class RadioPlayerService
 
     public function resolve(): array
     {
-        return Cache::remember(self::STATUS_CACHE_KEY, now()->addSeconds(2), function (): array {
-            return $this->build();
-        });
+        return $this->build();
     }
 
     public function forgetCache(): void
     {
-        Cache::forget(self::STATUS_CACHE_KEY);
+        // No-op: the public status endpoint is generated on demand.
     }
 
     public function storeTrack(array $payload): void
@@ -128,9 +126,7 @@ class RadioPlayerService
             $song?->lyrics,
             Arr::get($state, 'lyrics'),
         ]);
-        $programs = $this->hasTable('radio_programs')
-            ? Program::query()->active()->orderBy('sort_order')->orderBy('name')->get()
-            : collect();
+        $programs = $this->loadPrograms();
         $currentProgram = $this->resolveCurrentProgram($state, $song, $programs);
         $nextProgram = $this->resolveNextProgram(
             $currentProgram,
@@ -330,11 +326,18 @@ class RadioPlayerService
             return [];
         }
 
-        return Song::query()
+        $query = Song::query()
             ->published()
-            ->where('program_id', $program->id)
-            ->where('sort_order', '>', $song->sort_order)
-            ->orderBy('sort_order')
+            ->where('program_id', $program->id);
+
+        if ($this->hasColumn('songs', 'sort_order')) {
+            $query->where('sort_order', '>', (int) $song->sort_order);
+            $query->orderBy('sort_order');
+        } else {
+            $query->whereKeyNot($song->getKey());
+        }
+
+        return $query
             ->limit(5)
             ->get()
             ->map(fn (Song $item): array => [
@@ -719,5 +722,42 @@ class RadioPlayerService
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    private function hasColumn(string $table, string $column): bool
+    {
+        try {
+            return Schema::hasColumn($table, $column);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, Program>
+     */
+    private function loadPrograms()
+    {
+        if (! $this->hasTable('radio_programs')) {
+            return collect();
+        }
+
+        $query = Program::query()->active();
+
+        if ($this->hasColumn('radio_programs', 'sort_order')) {
+            $query->orderBy('sort_order');
+        } elseif ($this->hasColumn('radio_programs', 'numero_episodio')) {
+            $query->orderBy('numero_episodio');
+        } elseif ($this->hasColumn('radio_programs', 'fecha_emision')) {
+            $query->orderByDesc('fecha_emision');
+        }
+
+        if ($this->hasColumn('radio_programs', 'name')) {
+            $query->orderBy('name');
+        } elseif ($this->hasColumn('radio_programs', 'titulo_programa')) {
+            $query->orderBy('titulo_programa');
+        }
+
+        return $query->get();
     }
 }

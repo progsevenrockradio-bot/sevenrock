@@ -11,6 +11,7 @@ use App\Models\RadioProgram;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -89,8 +90,15 @@ final class PodcastUploadController extends Controller
         $syncArchiveOrg = $request->boolean('sync_archive_org', true);
         $downloadProcessedMp3 = $request->boolean('download_processed_mp3', false);
 
-        $storedPath = Storage::disk('public')->putFileAs($inboxFolder, $request->file('archivo_mp3'), $fileName);
-        if (! is_string($storedPath) || $storedPath === '') {
+        $mp3File = $request->file('archivo_mp3');
+        $storedPath = $inboxFolder . '/' . $fileName;
+        if (! app()->environment('testing')) {
+            File::ensureDirectoryExists(storage_path('app/public/' . $inboxFolder));
+        }
+        $storedOk = $mp3File !== null
+            && Storage::disk('public')->put($storedPath, file_get_contents((string) $mp3File->getRealPath()) ?: '');
+
+        if (! $storedOk || $storedPath === '') {
             return back()->withInput()->withErrors(['archivo_mp3' => 'No se pudo guardar el archivo localmente.']);
         }
 
@@ -109,6 +117,7 @@ final class PodcastUploadController extends Controller
                 'archivo_mp3' => $storedPath,
                 'enviado_radioboss' => false,
                 'sync_archive_org' => $syncArchiveOrg,
+                'status_message' => 'Episodio guardado. Pendiente de procesamiento.',
                 'imagen_episodio' => $imagePath,
                 'caratula_programa' => (string) $master->caratula_url,
                 'ruta_ftp_radioboss' => (string) $master->ruta_ftp,
@@ -156,6 +165,7 @@ final class PodcastUploadController extends Controller
         }
 
         try {
+            $radioProgram->forceFill(['status_message' => 'Reproceso solicitado desde el panel.'])->saveQuietly();
             UploadMp3Job::dispatch(
                 $radioProgram->fresh(['masterProgram']) ?? $radioProgram,
                 (string) $radioProgram->archivo_mp3,
@@ -181,6 +191,32 @@ final class PodcastUploadController extends Controller
         $downloadName = basename(str_replace('\\', '/', $path));
 
         return Storage::disk('public')->download($path, $downloadName);
+    }
+
+    public function destroy(int $id): RedirectResponse
+    {
+        $radioProgram = RadioProgram::query()->findOrFail($id);
+
+        try {
+            $pathsToDelete = array_values(array_filter([
+                $this->normalizeStoragePath($radioProgram->archivo_mp3),
+                $this->normalizeStoragePath($radioProgram->imagen_episodio),
+            ]));
+
+            foreach ($pathsToDelete as $path) {
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
+
+            $radioProgram->delete();
+        } catch (Throwable $exception) {
+            return back()->with('status', 'No se pudo eliminar el episodio: ' . $exception->getMessage());
+        }
+
+        return redirect()
+            ->route('admin.podcast-uploads.index')
+            ->with('status', 'Episodio eliminado correctamente.');
     }
 
     private function buildInboxFolder(MasterProgram $master): string
@@ -223,10 +259,13 @@ final class PodcastUploadController extends Controller
                 $extension = strtolower((string) ($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg'));
                 $imageName = trim($date . '-' . $slug . '-cover', '-');
                 $imageName = ($imageName !== '' ? $imageName : 'cover') . '.' . $extension;
-                $imageFolder = trim($inboxFolder . '/artwork', '/');
+                if (! app()->environment('testing')) {
+                    File::ensureDirectoryExists(storage_path('app/public/' . $inboxFolder));
+                }
 
-                $storedImagePath = Storage::disk('public')->putFileAs($imageFolder, $file, $imageName);
-                if (is_string($storedImagePath) && $storedImagePath !== '') {
+                $storedImagePath = $inboxFolder . '/' . $imageName;
+                $storedImageOk = Storage::disk('public')->put($storedImagePath, file_get_contents((string) $file->getRealPath()) ?: '');
+                if ($storedImageOk && $storedImagePath !== '') {
                     return $storedImagePath;
                 }
             }
@@ -235,6 +274,16 @@ final class PodcastUploadController extends Controller
         $imageUrl = trim((string) ($data['imagen_episodio_url'] ?? ''));
 
         return $imageUrl !== '' ? $imageUrl : null;
+    }
+
+    private function normalizeStoragePath(mixed $path): ?string
+    {
+        $path = trim((string) $path);
+        if ($path === '' || str_contains($path, '://')) {
+            return null;
+        }
+
+        return ltrim(str_replace('\\', '/', $path), '/');
     }
 
     private function nextEpisodeNumber(MasterProgram $master): int

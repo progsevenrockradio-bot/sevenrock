@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\ThemeSetting;
 use App\Services\AuditTrailService;
 use App\Services\ArchiveOrgPodcastService;
+use App\Services\RadioBossService;
 use App\Support\ExternalHttp;
 use App\Support\PublicMediaUrl;
 use JamesHeinrich\GetID3\GetID3;
@@ -52,7 +53,7 @@ final class UploadMp3Job implements ShouldQueue
     ) {
     }
 
-    public function handle(ArchiveOrgPodcastService $archiveOrgPodcastService, AuditTrailService $auditTrailService): void
+    public function handle(ArchiveOrgPodcastService $archiveOrgPodcastService, AuditTrailService $auditTrailService, RadioBossService $radioBossService): void
     {
         ini_set('memory_limit', '512M');
         set_time_limit(600);
@@ -70,11 +71,15 @@ final class UploadMp3Job implements ShouldQueue
                 'preserve_local_copy' => $this->preserveLocalCopy,
             ]);
 
+            RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
+                'status_message' => 'Procesando y etiquetando el MP3.',
+            ]));
+
             $master = $this->radioProgram->masterProgram
                 ?: MasterProgram::query()->find($this->radioProgram->master_program_id);
 
             $folder = $this->resolveUploadFolder($master);
-            $episodeNumber = $this->syncEpisodeNumberBeforeProcessing($master, $folder);
+            $episodeNumber = $this->syncEpisodeNumberBeforeProcessing($master, $folder, $radioBossService);
             $numeroEp = str_pad((string) $episodeNumber, 3, '0', STR_PAD_LEFT);
             $nombreProg = strtoupper(trim((string) $this->radioProgram->titulo_programa));
             $fecha = $this->radioProgram->fecha_emision ? $this->radioProgram->fecha_emision->format('d-m-Y') : date('d-m-Y');
@@ -115,6 +120,7 @@ final class UploadMp3Job implements ShouldQueue
 
             $rutaAbsoluta = storage_path('app/public/' . $nuevaRuta);
             $this->escribirMetadata($rutaAbsoluta, $master, $nombreProg, $invitado, $fecha, $fechaTitulo, $anio);
+            $fileName = basename($nuevaRuta);
             $auditTrailService->recordSystem('upload.metadata_verified', 'Metadata del MP3 verificada', [
                 'actor' => $actor,
                 'program_id' => $this->radioProgram->id,
@@ -122,7 +128,10 @@ final class UploadMp3Job implements ShouldQueue
                 'local_path' => $nuevaRuta,
             ]);
 
-            $fileName = basename($nuevaRuta);
+            RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
+                'status_message' => 'Metadata escrita. Enviando a RadioBOSS.',
+            ]));
+
             $remotePath = $folder . '/' . $fileName;
             $ftpHost = trim((string) config('filesystems.disks.radioboss.host', ''));
             $archiveShouldSync = (bool) ($this->radioProgram->sync_archive_org ?? true);
@@ -149,10 +158,10 @@ final class UploadMp3Job implements ShouldQueue
             ];
 
             if ($ftpHost !== '') {
-                $uploadOk = $this->uploadToRadiobossWithRetries($folder, $remotePath, $nuevaRuta);
+                $uploadOk = $this->uploadToRadiobossWithRetries($radioBossService, $folder, $remotePath, $nuevaRuta);
 
                 if ($uploadOk) {
-                    $radiobossVerification = $this->verifyRadiobossUpload($remotePath, $nuevaRuta);
+                    $radiobossVerification = $this->verifyRadiobossUpload($radioBossService, $remotePath, $nuevaRuta);
                     $uploadOk = (bool) ($radiobossVerification['verified'] ?? false);
                     $auditTrailService->recordSystem(
                         'upload.radioboss.' . ($uploadOk ? 'verified' : 'error'),
@@ -187,6 +196,10 @@ final class UploadMp3Job implements ShouldQueue
                         'remote_path' => $remotePath,
                         'error' => $this->radiobossError,
                     ]);
+
+                    RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
+                        'status_message' => 'RadioBOSS no respondió correctamente.',
+                    ]));
                 }
             } else {
                 Log::warning("RADIOBOSS_FTP_SERVER no está configurado. Se omite subida remota para {$fileName}.");
@@ -206,6 +219,10 @@ final class UploadMp3Job implements ShouldQueue
             $archiveUploadOk = false;
             if ($archiveCanSync) {
                 try {
+                    RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
+                        'status_message' => 'RadioBOSS procesado. Sincronizando Archive.org.',
+                    ]));
+
                     $archiveResult = $archiveOrgPodcastService->syncEpisode($this->radioProgram->fresh(['masterProgram']) ?? $this->radioProgram);
                     $archiveUploadOk = true;
                     $archiveVerification = (array) ($archiveResult['verification'] ?? []);
@@ -247,6 +264,7 @@ final class UploadMp3Job implements ShouldQueue
                             'last_error' => $archiveError->getMessage(),
                             'synced_at' => now()->toIso8601String(),
                         ]),
+                        'status_message' => 'Archive.org falló al sincronizar.',
                     ]));
                 }
             } elseif ($archiveShouldSync) {
@@ -264,6 +282,9 @@ final class UploadMp3Job implements ShouldQueue
                     'verified' => false,
                     'message' => 'Faltan credenciales de Archive.org para verificar la entrega.',
                 ];
+                RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
+                    'status_message' => 'Archive.org omitido por credenciales incompletas.',
+                ]));
             } else {
                 RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
                     'archive_org_status' => 'skipped',
@@ -274,6 +295,9 @@ final class UploadMp3Job implements ShouldQueue
                     'verified' => false,
                     'message' => 'La sincronización con Archive.org está desactivada.',
                 ];
+                RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
+                    'status_message' => 'Archive.org desactivado para este episodio.',
+                ]));
             }
 
             $deliveryStatus = $archiveShouldSync
@@ -293,6 +317,9 @@ final class UploadMp3Job implements ShouldQueue
                 'delivery_status' => $deliveryStatus,
                 'delivery_verified_at' => $deliveryStatus === 'verified' ? now() : null,
                 'delivery_last_error' => $deliveryError !== '' ? $deliveryError : null,
+                'status_message' => $deliveryStatus === 'verified'
+                    ? 'Procesamiento finalizado correctamente.'
+                    : 'Procesamiento finalizado con incidencias.',
                 'delivery_metadata' => [
                     'status' => $deliveryStatus,
                     'verified' => $deliveryStatus === 'verified',
@@ -382,6 +409,10 @@ final class UploadMp3Job implements ShouldQueue
                 RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update(['enviado_radioboss' => false]));
             }
 
+            RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
+                'status_message' => 'El procesamiento del episodio falló.',
+            ]));
+
             $auditTrailService->recordSystem('upload.failed', 'Procesamiento del MP3 falló', [
                 'actor' => $actor,
                 'program_id' => $this->radioProgram->id,
@@ -422,44 +453,14 @@ final class UploadMp3Job implements ShouldQueue
         ];
     }
 
-    protected function uploadToRadioboss(string $folder, string $remotePath, string $localPath): void
+    protected function uploadToRadioboss(RadioBossService $radioBossService, string $folder, string $remotePath, string $localPath): void
     {
-        $disk = Storage::disk('radioboss');
-
-        if (method_exists($disk, 'createDirectory')) {
-            $disk->createDirectory($folder);
-        }
-
-        if (filter_var(config('filesystems.disks.radioboss.clear_before_upload', false), FILTER_VALIDATE_BOOL)) {
-            $this->clearRemoteFilesOnly($disk, $folder);
-        }
-
-        $stream = Storage::disk('public')->readStream($localPath);
-        if (! is_resource($stream)) {
-            throw new \RuntimeException("UploadMp3Job: No se pudo abrir stream local para {$localPath}");
-        }
-
-        if (function_exists('stream_set_chunk_size')) {
-            stream_set_chunk_size($stream, 5 * 1024 * 1024);
-        }
-
-        try {
-            $uploaded = $disk->writeStream($remotePath, $stream);
-
-            if ($uploaded === false) {
-                rewind($stream);
-                $binary = stream_get_contents($stream);
-                if (is_string($binary) && $binary !== '') {
-                    $uploaded = $disk->put($remotePath, $binary);
-                }
-            }
-        } finally {
-            fclose($stream);
-        }
-
-        if ($uploaded === false) {
-            throw new \RuntimeException("UploadMp3Job: La subida FTP fallo o no pudo verificarse en {$remotePath}");
-        }
+        $radioBossService->upload(
+            $folder,
+            $remotePath,
+            storage_path('app/public/' . ltrim($localPath, '/')),
+            filter_var(config('filesystems.disks.radioboss.clear_before_upload', false), FILTER_VALIDATE_BOOL)
+        );
     }
 
     /**
@@ -474,14 +475,13 @@ final class UploadMp3Job implements ShouldQueue
      *     message: string|null,
      * }
      */
-    protected function verifyRadiobossUpload(string $remotePath, string $localPath): array
+    protected function verifyRadiobossUpload(RadioBossService $radioBossService, string $remotePath, string $localPath): array
     {
-        $disk = Storage::disk('radioboss');
         $localAbsolutePath = storage_path('app/public/' . ltrim($localPath, '/'));
         $localSize = $this->fileSizeInBytes($localAbsolutePath);
         $localChecksum = $this->checksumFile($localAbsolutePath);
 
-        if (! $disk->exists($remotePath)) {
+        if (! $radioBossService->exists($remotePath)) {
             return [
                 'verified' => false,
                 'remote_path' => $remotePath,
@@ -494,8 +494,8 @@ final class UploadMp3Job implements ShouldQueue
             ];
         }
 
-        $stream = $disk->readStream($remotePath);
-        if (! is_resource($stream)) {
+        $binary = $radioBossService->read($remotePath);
+        if (! is_string($binary) || $binary === '') {
             return [
                 'verified' => false,
                 'remote_path' => $remotePath,
@@ -508,28 +508,8 @@ final class UploadMp3Job implements ShouldQueue
             ];
         }
 
-        $remoteSize = 0;
-        $hashContext = hash_init('sha256');
-
-        try {
-            while (! feof($stream)) {
-                $chunk = fread($stream, 8192);
-                if ($chunk === false) {
-                    break;
-                }
-
-                if ($chunk === '') {
-                    continue;
-                }
-
-                $remoteSize += strlen($chunk);
-                hash_update($hashContext, $chunk);
-            }
-        } finally {
-            fclose($stream);
-        }
-
-        $remoteChecksum = hash_final($hashContext);
+        $remoteSize = strlen($binary);
+        $remoteChecksum = hash('sha256', $binary);
 
         if ($localSize > 0 && $remoteSize !== $localSize) {
             return [
@@ -585,14 +565,14 @@ final class UploadMp3Job implements ShouldQueue
         return is_string($checksum) && $checksum !== '' ? $checksum : null;
     }
 
-    protected function uploadToRadiobossWithRetries(string $folder, string $remotePath, string $localPath): bool
+    protected function uploadToRadiobossWithRetries(RadioBossService $radioBossService, string $folder, string $remotePath, string $localPath): bool
     {
         $attempts = 3;
         $delays = [2, 5, 10];
 
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
             try {
-                $this->uploadToRadioboss($folder, $remotePath, $localPath);
+                $this->uploadToRadioboss($radioBossService, $folder, $remotePath, $localPath);
                 $this->radiobossError = null;
 
                 return true;
@@ -777,12 +757,12 @@ final class UploadMp3Job implements ShouldQueue
         return trim(str_replace(['..', '\\'], '', $folder), '/\\') ?: 'Programas';
     }
 
-    private function syncEpisodeNumberBeforeProcessing(?MasterProgram $master, string $folder): int
+    private function syncEpisodeNumberBeforeProcessing(?MasterProgram $master, string $folder, RadioBossService $radioBossService): int
     {
         $currentEpisodeNumber = max(1, (int) ($this->radioProgram->numero_episodio ?? 0));
         $dbMaxEpisodeNumber = $this->resolveMaxEpisodeNumberFromDatabase($master, $folder);
         $remoteMaxEpisodeNumber = filter_var(config('filesystems.disks.radioboss.scan_remote_for_episode_number', false), FILTER_VALIDATE_BOOL)
-            ? $this->resolveMaxEpisodeNumberFromRemoteFolder($folder)
+            ? $this->resolveMaxEpisodeNumberFromRemoteFolder($radioBossService, $folder)
             : 0;
 
         if ($this->shouldPreserveManualEpisodeNumber($currentEpisodeNumber, $dbMaxEpisodeNumber)) {
@@ -843,18 +823,14 @@ final class UploadMp3Job implements ShouldQueue
             ->max('numero_episodio');
     }
 
-    private function resolveMaxEpisodeNumberFromRemoteFolder(string $folder): int
+    private function resolveMaxEpisodeNumberFromRemoteFolder(RadioBossService $radioBossService, string $folder): int
     {
-        $ftpHost = trim((string) config('filesystems.disks.radioboss.host', ''));
-        if ($ftpHost === '') {
+        if (! $radioBossService->canSync()) {
             return 0;
         }
 
         try {
-            $disk = Storage::disk('radioboss');
-            $files = method_exists($disk, 'allFiles')
-                ? $disk->allFiles($folder)
-                : $disk->files($folder);
+            $files = $radioBossService->files($folder);
         } catch (Throwable $exception) {
             Log::warning('UploadMp3Job: no se pudo leer la carpeta remota para calcular el siguiente episodio', [
                 'program_id' => $this->radioProgram->id,
@@ -910,25 +886,6 @@ final class UploadMp3Job implements ShouldQueue
         }
 
         return $defaultMailer;
-    }
-
-    private function clearRemoteFilesOnly($disk, string $folder): void
-    {
-        try {
-            $files = method_exists($disk, 'files') ? $disk->files($folder) : [];
-
-            foreach ($files as $file) {
-                if (trim((string) $file) !== '') {
-                    $disk->delete($file);
-                }
-            }
-        } catch (Throwable $exception) {
-            Log::warning('UploadMp3Job: no se pudieron limpiar los archivos remotos', [
-                'program_id' => $this->radioProgram->id,
-                'folder' => $folder,
-                'exception' => $exception->getMessage(),
-            ]);
-        }
     }
 
     /**

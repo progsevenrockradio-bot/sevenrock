@@ -25,12 +25,6 @@ class ProgramScheduleService
 
     public function resolve(int $limit = 5): array
     {
-        $cacheKey = 'program-schedule:v8';
-        $cached = Cache::get($cacheKey);
-        if (is_array($cached) && $cached !== []) {
-            return $cached;
-        }
-
         $theme = ThemeSetting::current();
         $scheduledPrograms = $this->programsWithNextStart();
 
@@ -38,17 +32,11 @@ class ProgramScheduleService
             $current = $this->currentProgramFromSchedule($scheduledPrograms) ?? $scheduledPrograms->first()['program'];
             $upcoming = $this->upcomingProgramsFromSchedule($scheduledPrograms, $current, $limit);
 
-            $payload = [
+            return [
                 ...$this->programPayload($current, $theme, $this->programIsLiveNow($current) ? 'On air' : 'On deck'),
                 'upcoming' => $this->mapUpcoming($upcoming, $theme),
             ];
-
-            Cache::put($cacheKey, $payload, now()->addSeconds(30));
-
-            return $payload;
         }
-
-        $this->warmRemoteCache($limit);
 
         return $this->fallback();
     }
@@ -526,24 +514,7 @@ class ProgramScheduleService
 
     private function warmRemoteCache(int $limit): void
     {
-        if (! Cache::add('program-schedule:warmup:v7', true, now()->addSeconds(20))) {
-            return;
-        }
-
-        dispatch(function () use ($limit): void {
-            try {
-                $theme = ThemeSetting::current();
-                $events = $this->remoteUpcomingEvents($limit);
-                if ($events === []) {
-                    return;
-                }
-
-                $payload = $this->resolveFromRemoteEvents($events, $theme, $limit);
-                Cache::put('program-schedule:v8', $payload, now()->addSeconds(30));
-            } catch (\Throwable) {
-                // keep silent; the page already has a fallback
-            }
-        })->afterResponse();
+        // Cache warmup disabled on public page rendering to avoid file cache failures.
     }
 
     /**

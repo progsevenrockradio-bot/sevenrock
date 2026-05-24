@@ -62,4 +62,106 @@ class Program extends Model
 
         return $this->cover_image ? asset($this->cover_image) : '';
     }
+
+    public function getNameAttribute(mixed $value): string
+    {
+        $value = trim((string) $value);
+        if ($value !== '') {
+            return $value;
+        }
+
+        return trim((string) ($this->attributes['titulo_programa'] ?? ''));
+    }
+
+    public function getDescriptionAttribute(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value !== '') {
+            return $value;
+        }
+
+        $legacy = trim((string) ($this->attributes['resena'] ?? ''));
+        if ($legacy !== '') {
+            return $legacy;
+        }
+
+        $legacy = trim((string) ($this->attributes['informacion_fija_programa'] ?? ''));
+
+        return $legacy !== '' ? $legacy : null;
+    }
+
+    public function getHostAttribute(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value !== '') {
+            return $value;
+        }
+
+        $legacy = trim((string) ($this->attributes['conductor'] ?? ''));
+
+        return $legacy !== '' ? $legacy : null;
+    }
+
+    public function getScheduleAttribute(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value !== '') {
+            return $value;
+        }
+
+        $parts = array_filter([
+            trim((string) ($this->attributes['dia_transmision'] ?? '')),
+            trim((string) ($this->attributes['hora_inicio'] ?? '')),
+            trim((string) ($this->attributes['hora_fin'] ?? '')),
+        ]);
+
+        if ($parts === []) {
+            return null;
+        }
+
+        if (count($parts) === 1) {
+            return $parts[0];
+        }
+
+        $day = array_shift($parts);
+
+        return trim($day . ' ' . implode(' - ', $parts));
+    }
+
+    public function getSlugAttribute(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value !== '') {
+            return $value;
+        }
+
+        $label = $this->getNameAttribute(null);
+
+        return $label !== '' ? \Illuminate\Support\Str::slug($label) : null;
+    }
+
+    public function getCoverImageAttribute(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value !== '') {
+            return $value;
+        }
+
+        $legacy = trim((string) ($this->attributes['caratula_programa'] ?? ''));
+
+        return $legacy !== '' ? $legacy : null;
+    }
+
+    public function getSortOrderAttribute(mixed $value): int
+    {
+        if ($value !== null && $value !== '') {
+            return (int) $value;
+        }
+
+        if (isset($this->attributes['numero_episodio']) && $this->attributes['numero_episodio'] !== '') {
+            return (int) $this->attributes['numero_episodio'];
+        }
+
+        return 0;
+    }
 }

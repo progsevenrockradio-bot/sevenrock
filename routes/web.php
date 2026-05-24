@@ -108,6 +108,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::post('/podcast-uploads', [AdminPodcastUploadController::class, 'store'])->name('podcast-uploads.store');
         Route::post('/podcast-uploads/{radioProgram}/retry', [AdminPodcastUploadController::class, 'retry'])->name('podcast-uploads.retry');
         Route::get('/podcast-uploads/{radioProgram}/download', [AdminPodcastUploadController::class, 'download'])->name('podcast-uploads.download');
+        Route::delete('/podcast-uploads/{id}', [AdminPodcastUploadController::class, 'destroy'])->name('podcast-uploads.destroy');
         Route::get('/band-profiles', [AdminBandProfileController::class, 'index'])->name('band-profiles.index');
         Route::get('/band-profiles/create', [AdminBandProfileController::class, 'create'])->name('band-profiles.create');
         Route::get('/band-profiles/search', [AdminBandProfileController::class, 'search'])->name('band-profiles.search');

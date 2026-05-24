@@ -38,7 +38,18 @@ final class ArchiveOrgPodcastService
 
         $master = $episode->masterProgram;
         $identifier = $this->resolveIdentifier($episode, $master);
-        $absolutePath = $this->resolveLocalPath($episode);
+
+        try {
+            $absolutePath = $this->resolveLocalPath($episode);
+        } catch (Throwable $exception) {
+            $episode->forceFill([
+                'archive_org_status' => 'error',
+                'archive_org_last_error' => $exception->getMessage(),
+                'status_message' => 'Archive.org no pudo iniciar: falta el MP3 local.',
+            ])->saveQuietly();
+
+            throw $exception;
+        }
         $remotePath = $this->resolveRemotePath($episode);
         $itemExistsBefore = $this->itemExists($identifier);
         $created = ! $itemExistsBefore;
@@ -59,6 +70,7 @@ final class ArchiveOrgPodcastService
             'archive_org_status' => 'pending',
             'archive_org_last_error' => null,
             'archive_org_metadata' => $snapshot,
+            'status_message' => 'Sincronizando Archive.org.',
         ])->saveQuietly();
 
         $this->uploadFile($identifier, $remotePath, $absolutePath, $itemMetadata);
@@ -85,6 +97,7 @@ final class ArchiveOrgPodcastService
                 'remote_path' => $remotePath,
                 'verification' => $verification,
             ]),
+            'status_message' => 'Archive.org sincronizado correctamente.',
         ])->saveQuietly();
 
         return [
@@ -113,13 +126,25 @@ final class ArchiveOrgPodcastService
             throw new RuntimeException('No se pudo determinar el archivo remoto del capítulo.');
         }
 
+        try {
+            $absolutePath = $this->resolveLocalPath($episode);
+        } catch (Throwable $exception) {
+            $episode->forceFill([
+                'archive_org_status' => 'error',
+                'archive_org_last_error' => $exception->getMessage(),
+                'status_message' => 'Archive.org no pudo verificar la metadata porque falta el MP3 local.',
+            ])->saveQuietly();
+
+            throw $exception;
+        }
+
         if (! $this->itemExists($identifier)) {
             throw new RuntimeException("El item {$identifier} todavía no existe en Archive.org.");
         }
 
         $fileMetadata = $this->buildEpisodeFileMetadata($episode, $master);
         $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
-        $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $this->resolveLocalPath($episode));
+        $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
 
         if (! ($verification['verified'] ?? false)) {
             throw new RuntimeException((string) ($verification['message'] ?? 'No se pudo verificar la metadata de Archive.org.'));
@@ -247,8 +272,9 @@ final class ArchiveOrgPodcastService
             $response = $this->client->request('GET', $this->downloadEndpoint() . '/' . rawurlencode($identifier) . '/' . $this->encodePath($remotePath), [
                 'stream' => true,
             ]);
-            $body = (string) $response->getBody();
-            if ($body === '') {
+
+            $body = $response->getBody();
+            if (! method_exists($body, 'detach')) {
                 return null;
             }
 
@@ -257,7 +283,21 @@ final class ArchiveOrgPodcastService
                 return null;
             }
 
-            fwrite($stream, $body);
+            $remoteStream = $body->detach();
+            if (! is_resource($remoteStream)) {
+                fclose($stream);
+
+                return null;
+            }
+
+            try {
+                if (stream_copy_to_stream($remoteStream, $stream) === false) {
+                    return null;
+                }
+            } finally {
+                fclose($remoteStream);
+            }
+
             rewind($stream);
 
             return $stream;

@@ -8,6 +8,7 @@ use App\Mail\ProgramUploadedNotification;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
 use App\Models\User;
+use App\Services\RadioBossService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -24,6 +25,7 @@ class AdminPodcastUploadTest extends TestCase
         Storage::fake('public');
         Storage::fake('radioboss');
         Mail::fake();
+        $this->fakeRadioBossService();
         config(['services.archive_org.access_key' => '', 'services.archive_org.secret_key' => '']);
 
         $admin = User::factory()->create([
@@ -68,7 +70,7 @@ class AdminPodcastUploadTest extends TestCase
         $this->assertTrue(Storage::disk('public')->exists((string) $episode->imagen_episodio), 'La imagen del episodio no quedó en el disco public.');
 
         $this->assertTrue(Storage::disk('public')->exists((string) $episode->archivo_mp3), 'El MP3 no quedó en el disco public.');
-        $this->assertNotEmpty(Storage::disk('radioboss')->files('Programas'), 'No se subió ningún archivo al disco radioboss fake.');
+        $this->assertSame('verified', $episode->radioboss_status, 'RadioBOSS no quedó verificado.');
 
         Mail::assertSent(ProgramUploadedNotification::class);
     }
@@ -78,6 +80,7 @@ class AdminPodcastUploadTest extends TestCase
         Storage::fake('public');
         Storage::fake('radioboss');
         Mail::fake();
+        $this->fakeRadioBossService();
         config(['services.archive_org.access_key' => '', 'services.archive_org.secret_key' => '']);
 
         $admin = User::factory()->create([
@@ -132,6 +135,7 @@ class AdminPodcastUploadTest extends TestCase
         Storage::fake('public');
         Storage::fake('radioboss');
         Mail::fake();
+        $this->fakeRadioBossService();
         config(['services.archive_org.access_key' => '', 'services.archive_org.secret_key' => '']);
 
         $admin = User::factory()->create([
@@ -212,5 +216,39 @@ class AdminPodcastUploadTest extends TestCase
         } finally {
             Carbon::setTestNow();
         }
+    }
+
+    private function fakeRadioBossService(): void
+    {
+        $this->app->instance(RadioBossService::class, new class extends RadioBossService {
+            public function canSync(): bool
+            {
+                return true;
+            }
+
+            public function upload(string $folder, string $remotePath, string $localPath, bool $clearBeforeUpload = false): void
+            {
+                $disk = Storage::disk('radioboss');
+                $disk->makeDirectory($folder);
+                $disk->put($remotePath, file_get_contents($localPath) ?: '');
+            }
+
+            public function exists(string $remotePath): bool
+            {
+                return Storage::disk('radioboss')->exists($remotePath);
+            }
+
+            public function read(string $remotePath): ?string
+            {
+                $contents = Storage::disk('radioboss')->get($remotePath);
+
+                return is_string($contents) && $contents !== '' ? $contents : null;
+            }
+
+            public function files(string $folder): array
+            {
+                return Storage::disk('radioboss')->files($folder);
+            }
+        });
     }
 }

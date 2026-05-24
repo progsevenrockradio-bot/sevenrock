@@ -91,7 +91,7 @@
         @play="onPlay()"
         @pause="onPause()"
         @ended="onEnded()"
-        @error="tryNextAudioSource()"
+        x-on:error="tryNextAudioSource()"
         @volumechange="volume = Math.round(($event.target.volume || 0) * 100); muted = $event.target.muted"
     ></audio>
 </div>

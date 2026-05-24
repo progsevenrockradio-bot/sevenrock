@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\BandProfile;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class BandInfoResolver
@@ -27,27 +26,13 @@ class BandInfoResolver
             return $this->emptyPayload();
         }
 
-        $cacheKey = 'band-info:v11:' . Str::slug($artist);
-
-        if ($cached = Cache::get($cacheKey)) {
-            return is_array($cached) ? $cached : $this->emptyPayload($artist);
-        }
-
         $local = $this->resolveLocalProfile($artist);
         if ($local !== null) {
-            Cache::put($cacheKey, $local, now()->addMinutes(60));
-
             return $local;
         }
 
         $payload = app(BandInfoAggregator::class)->aggregate($artist);
         $payload = is_array($payload) ? $payload : $this->emptyPayload($artist);
-
-        Cache::put(
-            $cacheKey,
-            $payload,
-            $this->hasMeaningfulPayload($payload) ? now()->addMinutes(60) : now()->addMinutes(10)
-        );
 
         return $payload;
     }

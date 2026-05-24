@@ -100,7 +100,7 @@
 
         $extraEpisodes = collect($episodes)
             ->reject(static fn (array $episode): bool => $episodeIdentity($episode) === $heroKey)
-            ->reject(static fn (array $episode) use ($episodeIdentity, $currentKeys): bool => $currentKeys->has($episodeIdentity($episode)))
+            ->reject(static fn (array $episode): bool => $currentKeys->has($episodeIdentity($episode)))
             ->values()
             ->all();
 

@@ -35,9 +35,15 @@ class SiteController extends Controller
             'video' => $this->safeValue(fn () => Video::query()->latest()->first(), null),
             'galleryImages' => $this->safeValue(fn () => GalleryImage::query()->ordered()->limit(7)->get(), collect()),
             'posts' => $this->latestPosts(),
-            'nextProgram' => app(ProgramScheduleService::class)->resolve(5),
+            'nextProgram' => $this->safeValue(
+                fn () => app(ProgramScheduleService::class)->resolve(5),
+                app(ProgramScheduleService::class)->fallback()
+            ),
             'headlineTicker' => $this->headlineTicker(),
-            'featuredStories' => $theme->featuredStories(),
+            'featuredStories' => $this->safeValue(
+                fn () => $theme->featuredStories(),
+                ThemeSetting::defaults()['featured_stories'] ?? []
+            ),
             'latestPodcasts' => $latestPodcasts,
         ]);
     }

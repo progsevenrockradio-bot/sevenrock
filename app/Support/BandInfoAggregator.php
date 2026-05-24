@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\BandProfile;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Throwable;
@@ -29,9 +28,7 @@ class BandInfoAggregator
             return $this->emptyPayload();
         }
 
-        $cacheKey = 'band-info:agg:v6:' . Str::slug($artist);
-
-        $payload = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($artist): array {
+        $payload = (function () use ($artist): array {
             $local = $this->localProfile($artist);
             if ($local) {
                 return $local;
@@ -59,7 +56,7 @@ class BandInfoAggregator
             }
 
             return $this->emptyPayload($artist);
-        });
+        })();
 
         return is_array($payload) ? $payload : $this->emptyPayload($artist);
     }
