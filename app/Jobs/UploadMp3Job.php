@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Mail\ProgramUploadedNotification;
+use App\Mail\PodcastUploadedMail;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
 use App\Models\User;
@@ -200,6 +200,37 @@ final class UploadMp3Job implements ShouldQueue
                     RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
                         'status_message' => 'RadioBOSS no respondió correctamente.',
                     ]));
+                } else {
+                    try {
+                        $notificationMailer = $this->resolveNotificationMailer();
+                        $notificationTo = 'oficialpatriciashaki@gmail.com';
+                        $notificationCopy = 'NOTI.SEVENROCKRADIO@GMAIL.COM';
+
+                        Mail::mailer($notificationMailer)
+                            ->to($notificationTo)
+                            ->cc($notificationCopy)
+                            ->send(new PodcastUploadedMail(
+                                episode: $this->radioProgram->fresh(['masterProgram']) ?? $this->radioProgram,
+                                localPath: $nuevaRuta,
+                                remotePath: $remotePath,
+                            ));
+
+                        $auditTrailService->recordSystem('upload.notification.sent', 'Correo de notificación de RadioBOSS enviado', [
+                            'actor' => $actor,
+                            'program_id' => $this->radioProgram->id,
+                            'recipient' => $notificationTo,
+                            'copy' => $notificationCopy,
+                            'mailer' => $notificationMailer,
+                            'remote_path' => $remotePath,
+                        ]);
+                    } catch (Throwable $mailError) {
+                        Log::error('UploadMp3Job: fallo enviando correo de notificación de RadioBOSS', [
+                            'program_id' => $this->radioProgram->id,
+                            'file' => $fileName,
+                            'remote_path' => $remotePath,
+                            'exception' => $mailError,
+                        ]);
+                    }
                 }
             } else {
                 Log::warning("RADIOBOSS_FTP_SERVER no está configurado. Se omite subida remota para {$fileName}.");
@@ -333,63 +364,6 @@ final class UploadMp3Job implements ShouldQueue
                     ],
                 ],
             ]));
-
-            $emailDestinos = $this->resolveNotificationRecipients($master);
-            if ($emailDestinos !== []) {
-                try {
-                    foreach ($emailDestinos as $emailDestino) {
-                        $pendingMail = Mail::mailer($this->resolveNotificationMailer())
-                            ->to($emailDestino)
-                            ->from(
-                                $this->resolveNotificationFromAddress() ?? (string) config('mail.from.address', 'hello@example.com'),
-                                (string) config('mail.from.name', config('app.name', 'SevenRockRadio'))
-                            );
-
-                        $replyTo = $this->resolveNotificationReplyToAddress();
-                        if ($replyTo !== null) {
-                            $pendingMail->replyTo($replyTo, (string) config('app.name', 'SevenRockRadio'));
-                        }
-
-                        $pendingMail->send(new ProgramUploadedNotification(
-                                fileName: $fileName,
-                                uploadedToRadioboss: $uploadOk,
-                                archiveVerified: $archiveUploadOk,
-                                deliveryStatus: $deliveryStatus,
-                                deliveryMetadata: (array) ($this->radioProgram->delivery_metadata ?? []),
-                                failureReason: $deliveryError !== '' ? $deliveryError : null,
-                            ));
-                    }
-                    $auditTrailService->recordSystem('upload.notification.sent', 'Correo de notificación enviado', [
-                        'actor' => $actor,
-                        'program_id' => $this->radioProgram->id,
-                        'recipients' => $emailDestinos,
-                        'mailer' => $this->resolveNotificationMailer(),
-                        'delivery_status' => $deliveryStatus,
-                    ]);
-                } catch (Throwable $mailError) {
-                    Log::error('UploadMp3Job: fallo enviando email de notificacion', [
-                        'program_id' => $this->radioProgram->id,
-                        'emails' => $emailDestinos,
-                        'file' => $fileName,
-                        'uploaded_to_radioboss' => $uploadOk,
-                        'delivery_status' => $deliveryStatus,
-                        'exception' => $mailError,
-                    ]);
-                }
-            } else {
-                Log::warning('UploadMp3Job: no se envio correo porque no hay un destinatario valido configurado', [
-                    'program_id' => $this->radioProgram->id,
-                    'master_program_id' => $master?->id,
-                    'email_notificacion' => $master?->email_notificacion,
-                    'email_copia_notificacion' => $master?->email_copia_notificacion,
-                    'global_copy_email' => $this->resolveGlobalNotificationCopyRecipient(),
-                    'file' => $fileName,
-                ]);
-                $auditTrailService->recordSystem('upload.notification.skipped', 'No había destinatarios válidos para el correo', [
-                    'actor' => $actor,
-                    'program_id' => $this->radioProgram->id,
-                ], 'warning');
-            }
 
             if ($deliveryStatus === 'verified' && ! $this->preserveLocalCopy) {
                 Storage::disk('public')->delete($nuevaRuta);
