@@ -64,16 +64,14 @@ class SiteController extends Controller
 
     public function discography(): View
     {
-        $albums = $this->safeValue(fn () => Album::query()->orderByDesc('released_at')->orderBy('title')->get(), collect());
-
-        if ($albums->count() < 2) {
-            $albums = $albums->concat($this->discographyFallbackAlbums()->reject(function (Album $fallbackAlbum) use ($albums) {
-                return $albums->contains('slug', $fallbackAlbum->slug);
-            }));
-        }
+        $albums = \App\Models\TalentAlbum::query()
+            ->where('is_published', true)
+            ->with('talent')
+            ->orderByDesc('release_date')
+            ->get();
 
         return view('pages.discography', [
-            'albums' => $albums->values(),
+            'albums' => $albums,
         ]);
     }
 
@@ -109,8 +107,15 @@ class SiteController extends Controller
 
     public function videos(): View
     {
+        $videos = \App\Models\TalentMedia::query()
+            ->where('type', 'video')
+            ->whereHas('talent', fn ($q) => $q->where('subscription_status', 'active'))
+            ->with('talent')
+            ->latest()
+            ->get();
+
         return view('pages.videos', [
-            'videos' => $this->safeValue(fn () => Video::query()->latest()->get(), collect()),
+            'videos' => $videos,
         ]);
     }
 
@@ -141,8 +146,40 @@ class SiteController extends Controller
 
     public function gallery(): View
     {
+        $images = \App\Models\TalentMedia::query()
+            ->where('type', 'photo')
+            ->whereHas('talent', fn ($q) => $q->where('subscription_status', 'active'))
+            ->with('talent')
+            ->latest()
+            ->get();
+
         return view('pages.gallery', [
-            'images' => $this->safeValue(fn () => GalleryImage::query()->ordered()->get(), collect()),
+            'images' => $images,
+        ]);
+    }
+
+        public function talentAlbumSingle(string $id, string $slug): View
+    {
+        $album = \App\Models\TalentAlbum::query()
+            ->whereKey((int) $id)
+            ->where('is_published', true)
+            ->with('talent.media')
+            ->firstOrFail();
+
+        if ($album->slug !== $slug) {
+            abort(404);
+        }
+
+        // Get talent's MP3 media for preview URLs
+        $talentMp3s = $album->talent?->media()
+            ->where('type', 'mp3')
+            ->latest()
+            ->get() ?? collect();
+
+        return view('pages.talent-album-single', [
+            'album' => $album,
+            'talent' => $album->talent,
+            'talentMp3s' => $talentMp3s,
         ]);
     }
 

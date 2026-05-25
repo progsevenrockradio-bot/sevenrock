@@ -40,6 +40,7 @@ Route::get('/videos', [SiteController::class, 'videos'])->name('videos');
 Route::get('/js_videos/{slug}', [SiteController::class, 'videoSingle'])->name('videos.single');
 Route::get('/gallery', [SiteController::class, 'gallery'])->name('gallery');
 Route::get('/js_photo_albums/5', [SiteController::class, 'photoAlbum'])->name('gallery.green-day');
+Route::get('/discografia/{id}-{slug}', [SiteController::class, 'talentAlbumSingle'])->name('talents.album.show');
 Route::get('/blog', [SiteController::class, 'blog'])->name('blog');
 Route::get('/blog-standard', [SiteController::class, 'blogStandard'])->name('blog.standard');
 Route::get('/legacy-wp-uploads/{path}', [LegacyWordPressUploadController::class, 'show'])
@@ -184,6 +185,14 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
         Route::post('/media/upload', [TalentMediaController::class, 'upload'])->name('media.upload');
         Route::post('/media', [TalentMediaController::class, 'store'])->name('media.store');
         Route::delete('/media/{id}', [TalentMediaController::class, 'destroy'])->name('media.destroy');
+        Route::prefix('albums')->name('albums.')->group(function (): void {
+            Route::get('/', [\App\Http\Controllers\Talent\AlbumController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Talent\AlbumController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Talent\AlbumController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [\App\Http\Controllers\Talent\AlbumController::class, 'edit'])->name('edit');
+            Route::post('/{id}', [\App\Http\Controllers\Talent\AlbumController::class, 'update'])->name('update');
+            Route::delete('/{id}', [\App\Http\Controllers\Talent\AlbumController::class, 'destroy'])->name('destroy');
+        });
         Route::post('/logout', [TalentAuthController::class, 'logout'])->name('logout');
     });
 

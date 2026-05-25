@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\File;
 
 final class LegacyWordPressUploadController extends Controller
 {
-    public function show(string $path): Response
+    public function show(string $path)
     {
         $relative = ltrim(str_replace('\\', '/', $path), '/');
         $candidate = PublicMediaUrl::resolveLegacyWordPressUploadFilesystemPath($relative);

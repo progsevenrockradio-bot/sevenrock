@@ -54,6 +54,11 @@ class Program extends Model
         return $query->where('is_active', true);
     }
 
+    public function scopeLatestEditorial(Builder $query): Builder
+    {
+        return $query->latest();
+    }
+
     public function getCoverUrlAttribute(): string
     {
         if ($resolved = PublicMediaUrl::normalizePublicUrl($this->cover_image)) {

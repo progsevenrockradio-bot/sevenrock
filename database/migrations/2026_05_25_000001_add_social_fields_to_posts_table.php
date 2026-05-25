@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('posts', function (Blueprint $table): void {
-            $table->string('facebook_url')->nullable()->after('featured_image');
+            $table->string('facebook_url')->nullable()->after('featured_image_path');
             $table->string('instagram_url')->nullable()->after('facebook_url');
             $table->string('twitter_url')->nullable()->after('instagram_url');
             $table->string('youtube_url')->nullable()->after('twitter_url');

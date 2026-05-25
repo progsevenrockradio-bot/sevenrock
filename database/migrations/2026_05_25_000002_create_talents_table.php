@@ -14,7 +14,7 @@ return new class extends Migration
 
         Schema::create('talents', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
             $table->string('band_name')->unique();
             $table->string('email')->unique();
             $table->string('password');
