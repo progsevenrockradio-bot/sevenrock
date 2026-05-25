@@ -75,7 +75,7 @@
                             <article class="lucille-shop-product group text-center">
                                 <a href="{{ route('products.single', $related['slug']) }}" class="lucille-shop-thumb block overflow-hidden bg-[#1d1d1d]">
                                     @if (! empty($related['sale']))
-                                        <span class="lucille-shop-sale-badge">Sale!</span>
+                                        <span class="lucille-shop-sale-badge">¡Oferta!</span>
                                     @endif
                                     <img src="{{ $related['image'] }}" alt="{{ $related['title'] }}" class="mx-auto w-full transition duration-500 ease-out group-hover:scale-[1.025] group-hover:opacity-90">
                                 </a>
