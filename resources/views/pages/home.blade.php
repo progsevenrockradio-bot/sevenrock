@@ -102,15 +102,16 @@
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['send_message']['title']" :accent="$homeHeadings['send_message']['accent']" :subtitle="$homeHeadings['send_message']['subtitle']" />
             <div class="mt-[80px]">
-                <form class="grid gap-x-4 gap-y-8">
+                <form method="POST" action="{{ route('home.contact.send') }}" class="grid gap-x-4 gap-y-8">
+                @csrf
                     <div class="grid gap-4 md:grid-cols-3">
-                        <input type="text" placeholder="{{ $ui['your_name'] }}" class="lucille-home-input">
-                        <input type="email" placeholder="{{ $ui['email_address'] }}" class="lucille-home-input">
-                        <input type="tel" placeholder="{{ $ui['phone'] }}" class="lucille-home-input">
+                        <input type="text" name="name" placeholder="{{ $ui['your_name'] }}" class="lucille-home-input" required>
+                        <input type="email" name="email" placeholder="{{ $ui['email_address'] }}" class="lucille-home-input" required>
+                        <input type="tel" name="phone" placeholder="{{ $ui['phone'] }}" class="lucille-home-input">
                     </div>
-                    <textarea placeholder="{{ $ui['write_comment'] }}" rows="7" class="lucille-home-input lucille-home-textarea"></textarea>
+                    <textarea name="message" placeholder="{{ $ui['write_comment'] }}" rows="7" class="lucille-home-input lucille-home-textarea" required></textarea>
                     <div>
-                        <button type="button" class="lucille-button-solid">{{ $ui['send_email'] }}</button>
+                        <button type="submit" class="lucille-button-solid">{{ $ui['send_email'] }}</button>
                     </div>
                 </form>
             </div>

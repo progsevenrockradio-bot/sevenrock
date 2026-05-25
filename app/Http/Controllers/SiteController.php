@@ -414,6 +414,58 @@ class SiteController extends Controller
         return $text !== '' ? \Illuminate\Support\Str::limit($text, 140, '') : '';
     }
 
+
+
+    public function contactSend(\Illuminate\Http\Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'nullable|string|max:50',
+            'message' => 'required|string|max:5000',
+        ]);
+
+        try {
+            \Illuminate\Support\Facades\Mail::to(config('mail.from.address', 'prog.sevenrockradio@gmail.com'))
+                ->send(new \App\Mail\ContactMail(
+                    senderName: $validated['name'],
+                    senderEmail: $validated['email'],
+                    senderPhone: $validated['phone'] ?? '',
+                    messageBody: $validated['message'],
+                    source: 'Contacto',
+                ));
+
+            return redirect()->route('contact')->with('success', 'Mensaje enviado correctamente. Nos pondremos en contacto pronto.');
+        } catch (\Throwable $e) {
+            return redirect()->route('contact')->with('error', 'Error al enviar el mensaje. Intenta de nuevo m\u00e1s tarde.');
+        }
+    }
+
+    public function homeContactSend(\Illuminate\Http\Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'nullable|string|max:50',
+            'message' => 'required|string|max:5000',
+        ]);
+
+        try {
+            \Illuminate\Support\Facades\Mail::to(config('mail.from.address', 'prog.sevenrockradio@gmail.com'))
+                ->send(new \App\Mail\ContactMail(
+                    senderName: $validated['name'],
+                    senderEmail: $validated['email'],
+                    senderPhone: $validated['phone'] ?? '',
+                    messageBody: $validated['message'],
+                    source: 'Inicio',
+                ));
+
+            return redirect()->route('home')->with('success', 'Mensaje enviado correctamente. Nos pondremos en contacto pronto.');
+        } catch (\Throwable $e) {
+            return redirect()->route('home')->with('error', 'Error al enviar el mensaje. Intenta de nuevo m\u00e1s tarde.');
+        }
+    }
+
     /**
      * @template T
      * @param callable():T $callback

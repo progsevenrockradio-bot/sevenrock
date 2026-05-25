@@ -15,6 +15,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="{{ $theme['google_fonts_url'] }}" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        /* Fondo granulada visible en todo el sitio */
+        .section-band {
+            background: rgba(8, 26, 36, 0.2) !important;
+        }
+        .home-section-texture::before {
+            opacity: 0.5;
+        }
+        .lucille-page-heading .lucille-card-image + div[class="absolute inset-0"] {
+            background: rgba(21, 21, 21, 0.3) !important;
+        }
+    </style>
 </head>
 <body
     class="antialiased"
