@@ -165,9 +165,10 @@ class PostController extends Controller
                 'max:255',
                 Rule::unique('posts', 'slug')->ignore($ignoreId),
             ],
-            'author' => ['required', 'string', 'max:255'],
+            'author' => ['nullable', 'string', 'max:255'],
             'excerpt' => ['nullable', 'string'],
             'content_text' => ['nullable', 'string'],
+            'content' => ['nullable'],
             'quote' => ['nullable', 'string'],
             'featured_image' => ['nullable', 'string', 'max:2048', 'required_without:featured_image_file'],
             'featured_image_file' => ['nullable', 'image', 'max:6144'],
@@ -182,22 +183,31 @@ class PostController extends Controller
             'meta_title' => ['nullable', 'string', 'max:120'],
             'meta_description' => ['nullable', 'string'],
             'published_at' => ['nullable', 'date'],
+            'status' => ['nullable', 'string', Rule::in(['draft', 'published'])],
             'categories_text' => ['nullable', 'string'],
             'tags_text' => ['nullable', 'string'],
             'is_published' => ['nullable', 'boolean'],
         ]);
 
+        $validated['author'] = trim((string) ($validated['author'] ?? '')) !== ''
+            ? trim((string) $validated['author'])
+            : 'admin';
         $validated['published_at'] = ! empty($validated['published_at']) ? Carbon::parse($validated['published_at']) : null;
-        $validated['content'] = WordPressContent::toRenderableBlocks((string) ($validated['content_text'] ?? ''));
+        $contentSource = $validated['content_text'] ?? $validated['content'] ?? '';
+        $validated['content'] = WordPressContent::toRenderableBlocks($contentSource);
         $validated['categories'] = $this->splitCsv((string) ($validated['categories_text'] ?? ''));
         $validated['tags'] = $this->splitCsv((string) ($validated['tags_text'] ?? ''));
-        $validated['is_published'] = $request->boolean('is_published', true);
+        $validated['is_published'] = $request->has('is_published')
+            ? $request->boolean('is_published')
+            : ($ignoreId === null ? true : (($validated['status'] ?? null) === 'published'));
+        $validated['status'] = (string) ($validated['status'] ?? ($validated['is_published'] ? 'published' : 'draft'));
 
-        if (! Schema::hasColumn('posts', 'is_published') && Schema::hasColumn('posts', 'status')) {
-            $validated['status'] = $validated['is_published'] ? 'published' : 'draft';
-        }
-
-        unset($validated['content_text'], $validated['categories_text'], $validated['tags_text'], $validated['featured_image_file']);
+        unset(
+            $validated['content_text'],
+            $validated['categories_text'],
+            $validated['tags_text'],
+            $validated['featured_image_file']
+        );
 
         return $validated;
     }

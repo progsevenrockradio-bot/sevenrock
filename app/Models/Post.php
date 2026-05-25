@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Support\WordPressContent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Model;
@@ -15,11 +16,13 @@ class Post extends Model
     protected $fillable = [
         'title',
         'slug',
+        'user_id',
         'author',
         'excerpt',
         'content',
         'quote',
         'featured_image',
+        'featured_image_path',
         'facebook_url',
         'instagram_url',
         'twitter_url',
@@ -31,6 +34,7 @@ class Post extends Model
         'meta_title',
         'meta_description',
         'published_at',
+        'status',
         'categories',
         'tags',
         'is_published',
@@ -39,12 +43,40 @@ class Post extends Model
     protected function casts(): array
     {
         return [
-            'content' => 'array',
             'categories' => 'array',
             'tags' => 'array',
             'published_at' => 'datetime',
             'is_published' => 'bool',
         ];
+    }
+
+    public function getContentAttribute(mixed $value): mixed
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && $value !== '') {
+            $decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+
+            return [['type' => 'raw', 'value' => $value]];
+        }
+
+        return $value;
+    }
+
+    public function setContentAttribute(mixed $value): void
+    {
+        $blocks = WordPressContent::toRenderableBlocks($value);
+        $this->attributes['content'] = json_encode($blocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[]';
+    }
+
+    public function getFeaturedImageAttribute(?string $value): ?string
+    {
+        return $value ?: ($this->featured_image_path ?: null);
     }
 
     public function scopePublished(Builder $query): Builder
@@ -62,7 +94,7 @@ class Post extends Model
 
     public function getIsPublishedAttribute(mixed $value): bool
     {
-        if ($value !== null) {
+        if ($value !== null && $value !== '') {
             return filter_var($value, FILTER_VALIDATE_BOOLEAN);
         }
 
