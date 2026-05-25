@@ -274,6 +274,15 @@
                 }
             });
 
+            document.addEventListener('click', function(e) {
+                const summary = e.target.closest('.lucille-admin-dropdown summary');
+                if (!summary) return;
+                const clicked = summary.closest('.lucille-admin-dropdown');
+                document.querySelectorAll('.lucille-admin-dropdown').forEach(details => {
+                    if (details !== clicked && details.open) details.open = false;
+                });
+            });
+
             resetTone();
             closeModal();
         })();

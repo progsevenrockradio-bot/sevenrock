@@ -272,17 +272,18 @@
         gap: 14px;
         min-height: 42px;
         padding: 0 14px;
-        color: #878787;
+        color: #fff;
         font-family: var(--font-display);
         font-size: 10px;
-        letter-spacing: .32em;
+        font-weight: 700;
+        letter-spacing: .3px;
         text-transform: uppercase;
         cursor: pointer;
         user-select: none;
     }
 
     .lucille-admin-dropdown[open] .lucille-admin-dropdown-summary {
-        color: #b7b7b7;
+        color: #fff;
     }
 
     .lucille-admin-dropdown-caret {
