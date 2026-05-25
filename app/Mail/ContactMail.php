@@ -17,11 +17,11 @@ final class ContactMail extends Mailable
     use SerializesModels;
 
     public function __construct(
-        public readonly string ,
-        public readonly string ,
-        public readonly string ,
-        public readonly string ,
-        public readonly string ,
+        public readonly string $senderName,
+        public readonly string $senderEmail,
+        public readonly string $senderPhone,
+        public readonly string $messageBody,
+        public readonly string $source,
     ) {
     }
 
@@ -30,12 +30,12 @@ final class ContactMail extends Mailable
         return new Envelope(
             from: new Address(
                 config('mail.from.address', 'prog.sevenrockradio@gmail.com'),
-                ->senderName,
+                $this->senderName,
             ),
             replyTo: [
-                new Address(->senderEmail, ->senderName),
+                new Address($this->senderEmail, $this->senderName),
             ],
-            subject: 'Nuevo mensaje desde ' . ->source . ' - Seven Rock Radio',
+            subject: 'Nuevo mensaje desde ' . $this->source . ' - Seven Rock Radio',
         );
     }
 
@@ -44,11 +44,11 @@ final class ContactMail extends Mailable
         return new Content(
             markdown: 'emails.contact',
             with: [
-                'senderName' => ->senderName,
-                'senderEmail' => ->senderEmail,
-                'senderPhone' => ->senderPhone,
-                'messageBody' => ->messageBody,
-                'source' => ->source,
+                'senderName' => $this->senderName,
+                'senderEmail' => $this->senderEmail,
+                'senderPhone' => $this->senderPhone,
+                'messageBody' => $this->messageBody,
+                'source' => $this->source,
             ],
         );
     }
