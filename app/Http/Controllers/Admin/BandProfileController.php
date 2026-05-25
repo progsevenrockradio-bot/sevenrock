@@ -34,6 +34,7 @@ class BandProfileController extends Controller
             'featuredFactsText' => '',
             'officialLinksText' => '',
             'relatedArtistsText' => '',
+            'labelsText' => '',
         ]);
     }
 
@@ -51,6 +52,7 @@ class BandProfileController extends Controller
             'featuredFactsText' => $this->linesToText($bandProfile->featured_facts ?? []),
             'officialLinksText' => $this->linksToText($bandProfile->official_links ?? []),
             'relatedArtistsText' => implode("\n", array_map('strval', (array) ($bandProfile->related_artists ?? []))),
+            'labelsText' => (string) ($bandProfile->labels ?? ''),
         ]);
     }
 
@@ -103,16 +105,26 @@ class BandProfileController extends Controller
             'biography' => ['nullable', 'string'],
             'editorial_summary' => ['nullable', 'string'],
             'image_path' => ['nullable', 'string', 'max:2048'],
+            'founded_date' => ['nullable', 'date'],
+            'logo_path' => ['nullable', 'url', 'max:2048'],
+            'country' => ['nullable', 'string', 'max:255'],
+            'genre' => ['nullable', 'string', 'max:255'],
+            'members_count' => ['nullable', 'integer', 'min:0'],
+            'status' => ['nullable', 'string', 'in:active,on_hold,disbanded,unknown'],
+            'labels' => ['nullable', 'string'],
             'featured_facts_text' => ['nullable', 'string'],
             'official_links_text' => ['nullable', 'string'],
             'related_artists_text' => ['nullable', 'string'],
             'source' => ['nullable', 'string', 'max:255'],
         ]);
 
+        $validated['members_count'] = $validated['members_count'] !== null ? (int) $validated['members_count'] : null;
+        $validated['status'] = $validated['status'] !== '' ? $validated['status'] : null;
         $validated['featured_facts'] = $this->splitLines((string) ($validated['featured_facts_text'] ?? ''));
         $validated['official_links'] = $this->splitLinks((string) ($validated['official_links_text'] ?? ''));
         $validated['related_artists'] = $this->splitLines((string) ($validated['related_artists_text'] ?? ''));
         $validated['source'] = $validated['source'] ?: 'Seven Rock Radio';
+        $validated['labels'] = trim((string) ($validated['labels'] ?? '')) !== '' ? trim((string) $validated['labels']) : null;
 
         unset($validated['featured_facts_text'], $validated['official_links_text'], $validated['related_artists_text']);
 

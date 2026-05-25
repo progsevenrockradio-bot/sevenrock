@@ -22,6 +22,13 @@ class RadioArtist extends Model
         'biography',
         'editorial_summary',
         'image_path',
+        'founded_date',
+        'logo_path',
+        'country',
+        'genre',
+        'members_count',
+        'status',
+        'labels',
         'featured_facts',
         'milestones',
         'related_artists',
@@ -33,6 +40,8 @@ class RadioArtist extends Model
     protected function casts(): array
     {
         return [
+            'founded_date' => 'date',
+            'members_count' => 'integer',
             'featured_facts' => 'array',
             'milestones' => 'array',
             'related_artists' => 'array',
@@ -47,7 +56,15 @@ class RadioArtist extends Model
             return $resolved;
         }
 
-        return $this->image_path ? asset($this->image_path) : null;
+        if ($this->image_path) {
+            return asset($this->image_path);
+        }
+
+        if ($this->logo_path) {
+            return $this->logo_path;
+        }
+
+        return null;
     }
 
     public function publicSlug(): string

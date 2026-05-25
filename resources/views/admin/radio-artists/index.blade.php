@@ -20,6 +20,9 @@
                     <th class="px-5 py-4">Name</th>
                     <th class="px-5 py-4">Summary</th>
                     <th class="px-5 py-4">Image</th>
+                    <th class="px-5 py-4">Logo</th>
+                    <th class="px-5 py-4">Country</th>
+                    <th class="px-5 py-4">Genre</th>
                     <th class="px-5 py-4">Actions</th>
                 </tr>
             </thead>
@@ -29,6 +32,9 @@
                         <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">{{ $profile->name }}</td>
                         <td class="px-5 py-4">{{ \Illuminate\Support\Str::limit($profile->editorial_summary ?: $profile->biography, 120) }}</td>
                         <td class="px-5 py-4">{{ $profile->image_path }}</td>
+                        <td class="px-5 py-4">{{ $profile->logo_path ?: '—' }}</td>
+                        <td class="px-5 py-4">{{ $profile->country ?: '—' }}</td>
+                        <td class="px-5 py-4">{{ $profile->genre ?: '—' }}</td>
                         <td class="px-5 py-4">
                             <div class="flex flex-wrap gap-2">
                                 <a href="{{ route('admin.radio-artists.edit', $profile) }}" class="lucille-button">Edit</a>
@@ -49,7 +55,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="px-5 py-10 text-center text-[#7b7b7b]">No radio artists yet.</td>
+                        <td colspan="7" class="px-5 py-10 text-center text-[#7b7b7b]">No radio artists yet.</td>
                     </tr>
                 @endforelse
             </tbody>
