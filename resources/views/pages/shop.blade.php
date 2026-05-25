@@ -1,16 +1,16 @@
-<x-layouts.site title="Seven Rock Radio - Shop">
+<x-layouts.site title="Seven Rock Radio - Tienda">
     @php $ui = $themeAppearance['ui_texts']; @endphp
     <x-sections.page-heading title="" />
 
     <section>
         <div class="lucille-content-box">
             <div class="mb-10 flex flex-col gap-4 text-[#7b7b7b] md:flex-row md:items-center md:justify-between">
-                <p>Showing all {{ count($products) }} results</p>
+                <p>Mostrando {{ count($products) }} resultados</p>
                 <select class="border border-[#2b2b2b] bg-transparent px-3 py-2 text-[#7b7b7b] focus:border-lucille-accent focus:outline-none">
-                    <option>Default sorting</option>
-                    <option>Sort by popularity</option>
-                    <option>Sort by average rating</option>
-                    <option>Sort by latest</option>
+                    <option>Orden por defecto</option>
+                    <option>Ordenar por popularidad</option>
+                    <option>Ordenar por puntuación</option>
+                    <option>Ordenar por más recientes</option>
                 </select>
             </div>
 

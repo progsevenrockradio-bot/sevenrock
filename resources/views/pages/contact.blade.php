@@ -1,10 +1,10 @@
-<x-layouts.site title="Seven Rock Radio - Contact">
+<x-layouts.site title="Seven Rock Radio - Contacto">
     @php
         $contact = $themeAppearance['contact'];
         $ui = $themeAppearance['ui_texts'];
     @endphp
 
-    <x-sections.page-heading title="Contact" overlay="rgba(0,0,0,0)" :image="$themeAppearance['background_url']" />
+    <x-sections.page-heading title="Contacto" overlay="rgba(0,0,0,0)" :image="$themeAppearance['background_url']" />
 
     <section>
         <div class="lucille-content-box">

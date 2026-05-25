@@ -58,6 +58,7 @@
 
 @layer components {
     .lucille-fixed-bg {
+        background: #151515;
         position: fixed;
         inset: 0;
         z-index: -1000;
@@ -76,11 +77,11 @@
     }
 
     .section-band {
-        background: var(--lucille-section-blue, rgba(7, 16, 33, .4));
+        background: rgba(8, 26, 36, 0.6);
     }
 
     .section-band-strong {
-        background: var(--lucille-section-blue-strong, rgba(7, 16, 33, .58));
+        background: rgba(8, 26, 36, 0.8);
     }
 
     .home-section-texture {
@@ -115,7 +116,7 @@
 
     .home-section-blue,
     .home-section-cool {
-        background-color: var(--lucille-section-blue, rgba(7, 16, 33, .4));
+        background-color: rgba(8, 26, 36, 0.6);
     }
 
     .home-section-gray {

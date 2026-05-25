@@ -1,5 +1,5 @@
-<x-layouts.site title="Seven Rock Radio - Blog Standard">
-    <x-sections.page-heading title="Blog Standard" />
+<x-layouts.site title="Seven Rock Radio - Blog">
+    <x-sections.page-heading title="Blog" />
     @php $ui = $themeAppearance['ui_texts']; @endphp
 
     <section>
@@ -34,8 +34,8 @@
                             </a>
 
                             <div class="lucille-standard-meta">
-                                <span>Posted at&nbsp;{{ $date }}</span>
-                                <span>by <a href="#">admin</a></span>
+                                <span>Publicado el<span>Posted at&nbsp;nbsp;{{ $date }}</span>
+                                <span>por <a href="#">admin</a></span>
                                 <span>in&nbsp;</span>
                                 @foreach ($categories ?: [data_get($post, 'category')] as $category)
                                     <a href="#">{{ $category }}</a>@if (! $loop->last) <span>·</span> @endif
