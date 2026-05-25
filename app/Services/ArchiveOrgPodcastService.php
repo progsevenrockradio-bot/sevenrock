@@ -22,7 +22,7 @@ final class ArchiveOrgPodcastService
     public function __construct()
     {
         $this->client = new Client([
-            'timeout' => 120,
+            'timeout' => 600,
             'connect_timeout' => 20,
             'http_errors' => true,
         ]);
@@ -197,6 +197,59 @@ final class ArchiveOrgPodcastService
     private function verifyUploadedEpisode(string $identifier, string $remotePath, string $absolutePath): array
     {
         $localSize = is_file($absolutePath) ? (int) filesize($absolutePath) : 0;
+        $largeFile = $localSize > 50 * 1024 * 1024;
+
+        if ($largeFile) {
+            try {
+                $response = $this->client->request('HEAD', $this->downloadEndpoint() . '/' . rawurlencode($identifier) . '/' . $this->encodePath($remotePath), [
+                    'http_errors' => false,
+                ]);
+
+                if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 400) {
+                    return [
+                        'verified' => false,
+                        'identifier' => $identifier,
+                        'remote_path' => $remotePath,
+                        'local_size' => $localSize,
+                        'remote_size' => null,
+                        'message' => 'Archive.org no confirmó el archivo remoto mediante HEAD.',
+                    ];
+                }
+
+                $remoteSizeHeader = trim((string) $response->getHeaderLine('Content-Length'));
+                $remoteSize = $remoteSizeHeader !== '' ? (int) $remoteSizeHeader : null;
+
+                if ($remoteSize !== null && $localSize > 0 && $remoteSize !== $localSize) {
+                    return [
+                        'verified' => false,
+                        'identifier' => $identifier,
+                        'remote_path' => $remotePath,
+                        'local_size' => $localSize,
+                        'remote_size' => $remoteSize,
+                        'message' => 'El tamaño remoto no coincide con el archivo local en Archive.org.',
+                    ];
+                }
+
+                return [
+                    'verified' => true,
+                    'identifier' => $identifier,
+                    'remote_path' => $remotePath,
+                    'local_size' => $localSize,
+                    'remote_size' => $remoteSize,
+                    'message' => null,
+                ];
+            } catch (Throwable) {
+                return [
+                    'verified' => false,
+                    'identifier' => $identifier,
+                    'remote_path' => $remotePath,
+                    'local_size' => $localSize,
+                    'remote_size' => null,
+                    'message' => 'Archive.org no pudo verificarse mediante HEAD.',
+                ];
+            }
+        }
+
         $remoteStream = $this->downloadRemoteFile($identifier, $remotePath);
 
         if (! is_resource($remoteStream)) {

@@ -21,6 +21,9 @@ final class PodcastUploadedMail extends Mailable
         public readonly RadioProgram $episode,
         public readonly string $localPath,
         public readonly string $remotePath,
+        public readonly bool $radiobossVerified,
+        public readonly bool $archiveVerified,
+        public readonly string $deliveryStatus,
     ) {
     }
 
@@ -28,24 +31,38 @@ final class PodcastUploadedMail extends Mailable
     {
         $programName = trim((string) ($this->episode->titulo_programa ?: $this->episode->masterProgram?->name ?: 'Seven Rock Radio'));
         $episodeNumber = (int) ($this->episode->numero_episodio ?? 0);
+        $subjectPrefix = match ($this->deliveryStatus) {
+            'verified' => '✅ Entrega completa',
+            'partial' => '⚠️ Entrega parcial',
+            'failed' => '❌ Error en entrega',
+            default => '⚠️ Estado de entrega',
+        };
 
         return new Envelope(
             from: new Address(
                 (string) config('mail.from.address', 'prog.sevenrockradio@gmail.com'),
                 (string) config('mail.from.name', config('app.name', 'Seven Rock Radio'))
             ),
-            subject: sprintf('Nuevo episodio subido - %s #%d', $programName, $episodeNumber),
+            subject: sprintf('%s - %s #%d', $subjectPrefix, $programName, $episodeNumber),
         );
     }
 
     public function content(): Content
     {
+        $identifier = (string) data_get($this->episode->archive_org_metadata, 'identifier', '');
+
         return new Content(
             markdown: 'emails.podcast-uploaded',
             with: [
                 'episode' => $this->episode,
                 'localPath' => $this->localPath,
                 'remotePath' => $this->remotePath,
+                'radiobossVerified' => $this->radiobossVerified,
+                'archiveVerified' => $this->archiveVerified,
+                'deliveryStatus' => $this->deliveryStatus,
+                'archiveItemUrl' => $this->archiveVerified && $identifier !== ''
+                    ? 'https://archive.org/details/' . rawurlencode($identifier)
+                    : null,
             ],
         );
     }

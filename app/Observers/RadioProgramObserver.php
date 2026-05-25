@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
-use App\Jobs\UploadMp3Job;
+use App\Jobs\ProcessMp3Job;
 use App\Models\RadioProgram;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,7 +23,7 @@ final class RadioProgramObserver
             return;
         }
 
-        UploadMp3Job::dispatch(
+        ProcessMp3Job::dispatch(
             $radioProgram,
             (string) $radioProgram->archivo_mp3,
             false,

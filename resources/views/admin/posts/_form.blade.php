@@ -232,6 +232,61 @@
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['featured_image_file_label'] }}</label>
         <input type="file" name="featured_image_file" class="block w-full text-sm text-[#7b7b7b]">
     </div>
+    <div class="md:col-span-2 border border-[#2b2b2b] bg-[rgba(0,0,0,.14)] p-5">
+        <div class="mb-4">
+            <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">🌐 Redes del Artista / Fuente</h3>
+            <p class="mt-2 text-sm text-[#7b7b7b]">Enlaces a las redes del artista, banda o fuente mencionada (solo informativo)</p>
+        </div>
+        <div class="grid gap-5 md:grid-cols-2">
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Facebook URL</label>
+                <input name="facebook_url" value="{{ old('facebook_url', $post->facebook_url) }}" class="lucille-product-field w-full">
+            </div>
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Instagram URL</label>
+                <input name="instagram_url" value="{{ old('instagram_url', $post->instagram_url) }}" class="lucille-product-field w-full">
+            </div>
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Twitter URL</label>
+                <input name="twitter_url" value="{{ old('twitter_url', $post->twitter_url) }}" class="lucille-product-field w-full">
+            </div>
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">YouTube URL</label>
+                <input name="youtube_url" value="{{ old('youtube_url', $post->youtube_url) }}" class="lucille-product-field w-full">
+            </div>
+        </div>
+    </div>
+    <div class="md:col-span-2 border border-[#2b2b2b] bg-[rgba(0,0,0,.14)] p-5">
+        <div class="mb-4">
+            <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">🔗 Enlace externo y créditos</h3>
+        </div>
+        <div class="grid gap-5 md:grid-cols-2">
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">External link URL</label>
+                <input name="external_link_url" value="{{ old('external_link_url', $post->external_link_url) }}" class="lucille-product-field w-full">
+            </div>
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">External link label</label>
+                <input name="external_link_label" value="{{ old('external_link_label', $post->external_link_label) }}" class="lucille-product-field w-full">
+            </div>
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Source name</label>
+                <input name="source_name" value="{{ old('source_name', $post->source_name) }}" class="lucille-product-field w-full">
+            </div>
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Source URL</label>
+                <input name="source_url" value="{{ old('source_url', $post->source_url) }}" class="lucille-product-field w-full">
+            </div>
+        </div>
+    </div>
+    <div class="md:col-span-2">
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Meta title</label>
+        <input name="meta_title" value="{{ old('meta_title', $post->meta_title) }}" class="lucille-product-field w-full">
+    </div>
+    <div class="md:col-span-2">
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Meta description</label>
+        <textarea name="meta_description" rows="4" class="lucille-product-field w-full">{{ old('meta_description', $post->meta_description) }}</textarea>
+    </div>
     <label class="flex items-center gap-3 text-sm text-[#dcdcdc] md:col-span-2">
         <input type="checkbox" name="is_published" value="1" @checked(old('is_published', $post->is_published ?? true))>
         {{ $admin['published_label'] }}

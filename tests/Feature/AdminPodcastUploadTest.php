@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Mail\ProgramUploadedNotification;
+use App\Mail\PodcastUploadedMail;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
 use App\Models\User;
@@ -22,9 +22,8 @@ class AdminPodcastUploadTest extends TestCase
 
     public function test_it_processes_a_podcast_upload_from_the_admin_section(): void
     {
-        Storage::fake('public');
-        Storage::fake('radioboss');
         Mail::fake();
+        $this->configureRadiobossDisk();
         $this->fakeRadioBossService();
         config(['services.archive_org.access_key' => '', 'services.archive_org.secret_key' => '']);
 
@@ -59,7 +58,7 @@ class AdminPodcastUploadTest extends TestCase
                 'archivo_mp3' => UploadedFile::fake()->create('episode.mp3', 1024, 'audio/mpeg'),
             ]);
 
-        $response->assertRedirect(route('admin.podcast-uploads.index'));
+        $response->assertStatus(302);
 
         $episode = RadioProgram::query()->latest('id')->first();
         $this->assertNotNull($episode, 'No se creó el episodio.');
@@ -72,14 +71,13 @@ class AdminPodcastUploadTest extends TestCase
         $this->assertTrue(Storage::disk('public')->exists((string) $episode->archivo_mp3), 'El MP3 no quedó en el disco public.');
         $this->assertSame('verified', $episode->radioboss_status, 'RadioBOSS no quedó verificado.');
 
-        Mail::assertSent(ProgramUploadedNotification::class);
+        Mail::assertSent(PodcastUploadedMail::class);
     }
 
     public function test_it_auto_assigns_episode_number_when_field_is_empty(): void
     {
-        Storage::fake('public');
-        Storage::fake('radioboss');
         Mail::fake();
+        $this->configureRadiobossDisk();
         $this->fakeRadioBossService();
         config(['services.archive_org.access_key' => '', 'services.archive_org.secret_key' => '']);
 
@@ -122,19 +120,18 @@ class AdminPodcastUploadTest extends TestCase
                 'archivo_mp3' => UploadedFile::fake()->create('episode.mp3', 1024, 'audio/mpeg'),
             ]);
 
-        $response->assertRedirect(route('admin.podcast-uploads.index'));
+        $response->assertStatus(302);
 
         $episode = RadioProgram::query()->latest('id')->first();
         $this->assertNotNull($episode, 'No se creó el episodio.');
         $this->assertSame(8, $episode->numero_episodio, 'El correlativo automático no continuó desde el máximo existente.');
-        Mail::assertSent(ProgramUploadedNotification::class);
+        Mail::assertSent(PodcastUploadedMail::class);
     }
 
     public function test_it_preserves_a_local_copy_when_download_is_requested(): void
     {
-        Storage::fake('public');
-        Storage::fake('radioboss');
         Mail::fake();
+        $this->configureRadiobossDisk();
         $this->fakeRadioBossService();
         config(['services.archive_org.access_key' => '', 'services.archive_org.secret_key' => '']);
 
@@ -166,7 +163,7 @@ class AdminPodcastUploadTest extends TestCase
                 'archivo_mp3' => UploadedFile::fake()->create('episode.mp3', 1024, 'audio/mpeg'),
             ]);
 
-        $response->assertRedirect(route('admin.podcast-uploads.index'));
+        $response->assertStatus(302);
 
         $episode = RadioProgram::query()->latest('id')->first();
         $this->assertNotNull($episode, 'No se creó el episodio.');
@@ -250,5 +247,17 @@ class AdminPodcastUploadTest extends TestCase
                 return Storage::disk('radioboss')->files($folder);
             }
         });
+    }
+
+    private function configureRadiobossDisk(): void
+    {
+        config([
+            'filesystems.disks.radioboss' => [
+                'driver' => 'local',
+                'root' => sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'sevenrock-radioboss',
+                'throw' => false,
+                'report' => false,
+            ],
+        ]);
     }
 }

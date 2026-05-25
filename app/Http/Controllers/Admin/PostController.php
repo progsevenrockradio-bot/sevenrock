@@ -10,10 +10,12 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Illuminate\Database\Eloquent\Model;
 
@@ -46,18 +48,33 @@ class PostController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $this->validated($request);
-        $categories = $data['categories'];
-        $tags = $data['tags'];
-        unset($data['categories'], $data['tags']);
-        $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
-        $data['featured_image'] = $this->resolveImage($request, null, $data['featured_image'] ?? null);
-        $data = $this->persistableAttributes($data);
+        try {
+            $data = $this->validated($request);
+            $categories = $data['categories'];
+            $tags = $data['tags'];
+            unset($data['categories'], $data['tags']);
+            $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
+            $data['featured_image'] = $this->resolveImage($request, null, $data['featured_image'] ?? null);
+            $data = $this->persistableAttributes($data);
 
-        $post = Post::query()->create($data);
-        $this->syncTaxonomies($post, $categories, $tags);
+            $post = Post::query()->create($data);
+            $this->syncTaxonomies($post, $categories, $tags);
 
-        return redirect()->route('admin.posts.index')->with('status', 'Post created.');
+            return redirect()->route('admin.posts.index')->with('status', 'Post created.');
+        } catch (\Throwable $exception) {
+            if ($exception instanceof ValidationException) {
+                throw $exception;
+            }
+
+            Log::error('Error al crear post', [
+                'exception' => $exception,
+                'input' => $request->except(['featured_image_file']),
+            ]);
+
+            return back()
+                ->withInput()
+                ->withErrors(['general' => 'No se pudo crear el post. Inténtalo de nuevo.']);
+        }
     }
 
     public function edit(Post $post): View
@@ -74,18 +91,34 @@ class PostController extends Controller
 
     public function update(Request $request, Post $post): RedirectResponse
     {
-        $data = $this->validated($request, $post->id);
-        $categories = $data['categories'];
-        $tags = $data['tags'];
-        unset($data['categories'], $data['tags']);
-        $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
-        $data['featured_image'] = $this->resolveImage($request, $post->featured_image, $data['featured_image'] ?? null);
-        $data = $this->persistableAttributes($data);
+        try {
+            $data = $this->validated($request, $post->id);
+            $categories = $data['categories'];
+            $tags = $data['tags'];
+            unset($data['categories'], $data['tags']);
+            $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
+            $data['featured_image'] = $this->resolveImage($request, $post->featured_image, $data['featured_image'] ?? null);
+            $data = $this->persistableAttributes($data);
 
-        $post->update($data);
-        $this->syncTaxonomies($post, $categories, $tags);
+            $post->update($data);
+            $this->syncTaxonomies($post, $categories, $tags);
 
-        return redirect()->route('admin.posts.index')->with('status', 'Post updated.');
+            return redirect()->route('admin.posts.index')->with('status', 'Post updated.');
+        } catch (\Throwable $exception) {
+            if ($exception instanceof ValidationException) {
+                throw $exception;
+            }
+
+            Log::error('Error al actualizar post', [
+                'post_id' => $post->id,
+                'exception' => $exception,
+                'input' => $request->except(['featured_image_file']),
+            ]);
+
+            return back()
+                ->withInput()
+                ->withErrors(['general' => 'No se pudo actualizar el post. Inténtalo de nuevo.']);
+        }
     }
 
     public function destroy(Post $post): RedirectResponse
@@ -138,6 +171,16 @@ class PostController extends Controller
             'quote' => ['nullable', 'string'],
             'featured_image' => ['nullable', 'string', 'max:2048', 'required_without:featured_image_file'],
             'featured_image_file' => ['nullable', 'image', 'max:6144'],
+            'facebook_url' => ['nullable', 'url', 'max:2048'],
+            'instagram_url' => ['nullable', 'url', 'max:2048'],
+            'twitter_url' => ['nullable', 'url', 'max:2048'],
+            'youtube_url' => ['nullable', 'url', 'max:2048'],
+            'external_link_url' => ['nullable', 'url', 'max:2048'],
+            'external_link_label' => ['nullable', 'string', 'max:255'],
+            'source_name' => ['nullable', 'string', 'max:255'],
+            'source_url' => ['nullable', 'url', 'max:2048'],
+            'meta_title' => ['nullable', 'string', 'max:120'],
+            'meta_description' => ['nullable', 'string'],
             'published_at' => ['nullable', 'date'],
             'categories_text' => ['nullable', 'string'],
             'tags_text' => ['nullable', 'string'],
@@ -188,6 +231,23 @@ class PostController extends Controller
             unset($data['tags']);
         }
 
+        foreach ([
+            'facebook_url',
+            'instagram_url',
+            'twitter_url',
+            'youtube_url',
+            'external_link_url',
+            'external_link_label',
+            'source_name',
+            'source_url',
+            'meta_title',
+            'meta_description',
+        ] as $column) {
+            if (! Schema::hasColumn($table, $column)) {
+                unset($data[$column]);
+            }
+        }
+
         return $data;
     }
 
@@ -233,17 +293,24 @@ class PostController extends Controller
             return;
         }
 
-        $taxonomyIds = [];
+        try {
+            $taxonomyIds = [];
 
-        foreach ($categories as $name) {
-            $taxonomyIds[] = $this->ensureTaxonomy(PostTaxonomy::TYPE_CATEGORY, $name)->id;
+            foreach ($categories as $name) {
+                $taxonomyIds[] = $this->ensureTaxonomy(PostTaxonomy::TYPE_CATEGORY, $name)->id;
+            }
+
+            foreach ($tags as $name) {
+                $taxonomyIds[] = $this->ensureTaxonomy(PostTaxonomy::TYPE_TAG, $name)->id;
+            }
+
+            $post->taxonomies()->sync(array_values(array_unique($taxonomyIds)));
+        } catch (\Throwable $exception) {
+            Log::warning('No se pudieron sincronizar las taxonomías del post.', [
+                'post_id' => $post->id,
+                'exception' => $exception,
+            ]);
         }
-
-        foreach ($tags as $name) {
-            $taxonomyIds[] = $this->ensureTaxonomy(PostTaxonomy::TYPE_TAG, $name)->id;
-        }
-
-        $post->taxonomies()->sync(array_values(array_unique($taxonomyIds)));
     }
 
     private function ensureTaxonomy(string $type, string $name): PostTaxonomy
@@ -267,14 +334,22 @@ class PostController extends Controller
     private function taxonomyNames(Post $post, string $type, string $attribute): array
     {
         if (Schema::hasTable('post_taxonomy_post')) {
-            $names = $post->taxonomies()
-                ->where('type', $type)
-                ->orderBy('name')
-                ->pluck('name')
-                ->all();
+            try {
+                $names = $post->taxonomies()
+                    ->where('type', $type)
+                    ->orderBy('name')
+                    ->pluck('name')
+                    ->all();
 
-            if ($names !== []) {
-                return $names;
+                if ($names !== []) {
+                    return $names;
+                }
+            } catch (\Throwable $exception) {
+                Log::warning('No se pudieron leer las taxonomías del post.', [
+                    'post_id' => $post->id,
+                    'type' => $type,
+                    'exception' => $exception,
+                ]);
             }
         }
 

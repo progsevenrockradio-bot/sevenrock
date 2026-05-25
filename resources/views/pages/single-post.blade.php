@@ -28,6 +28,47 @@
                             @endif
                         </div>
 
+                        @php
+                            $socialLinks = array_filter([
+                                ['label' => 'Facebook', 'url' => $post['facebook_url'] ?? ''],
+                                ['label' => 'Instagram', 'url' => $post['instagram_url'] ?? ''],
+                                ['label' => 'Twitter', 'url' => $post['twitter_url'] ?? ''],
+                                ['label' => 'YouTube', 'url' => $post['youtube_url'] ?? ''],
+                            ], static fn (array $item): bool => trim((string) ($item['url'] ?? '')) !== '');
+                            $externalLinkUrl = trim((string) ($post['external_link_url'] ?? ''));
+                            $externalLinkLabel = trim((string) ($post['external_link_label'] ?? '')) ?: 'Abrir enlace externo';
+                            $sourceName = trim((string) ($post['source_name'] ?? ''));
+                            $sourceUrl = trim((string) ($post['source_url'] ?? ''));
+                        @endphp
+
+                        @if ($socialLinks !== [])
+                            <div class="mt-8">
+                                <h3 class="lucille-sidebar-title mb-4">Sigue al artista</h3>
+                                <div class="flex flex-wrap gap-3">
+                                    @foreach ($socialLinks as $socialLink)
+                                        <a href="{{ $socialLink['url'] }}" target="_blank" rel="noreferrer" class="lucille-button">{{ $socialLink['label'] }}</a>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($externalLinkUrl !== '')
+                            <div class="mt-6">
+                                <a href="{{ $externalLinkUrl }}" target="_blank" rel="noreferrer" class="lucille-button-solid">{{ $externalLinkLabel }}</a>
+                            </div>
+                        @endif
+
+                        @if ($sourceName !== '')
+                            <div class="mt-6 text-sm text-[#dcdcdc]">
+                                <span class="uppercase tracking-[.18em] text-[#7b7b7b]">Fuente:</span>
+                                @if ($sourceUrl !== '')
+                                    <a href="{{ $sourceUrl }}" target="_blank" rel="noreferrer" class="transition hover:text-lucille-accent">{{ $sourceName }}</a>
+                                @else
+                                    <span>{{ $sourceName }}</span>
+                                @endif
+                            </div>
+                        @endif
+
                         <div class="lucille-share-row">
                             <span>{{ $ui['share'] }}</span>
                             <a href="#" aria-label="Share on Twitter">T</a>

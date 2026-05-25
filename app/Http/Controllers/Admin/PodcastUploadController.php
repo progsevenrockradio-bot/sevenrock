@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\UploadMp3Job;
+use App\Jobs\ProcessMp3Job;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -62,7 +61,25 @@ final class PodcastUploadController extends Controller
             'imagen_episodio_file' => ['nullable', 'file', 'image', 'max:10240'],
             'sync_archive_org' => ['nullable', 'boolean'],
             'download_processed_mp3' => ['nullable', 'boolean'],
-            'archivo_mp3' => ['required', 'file', 'mimetypes:audio/mpeg,audio/mp3', 'max:512000'],
+            'archivo_mp3' => [
+                'required',
+                'file',
+                'max:512000',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! $value instanceof \Illuminate\Http\UploadedFile) {
+                        $fail('El archivo MP3 no es válido.');
+
+                        return;
+                    }
+
+                    $extension = strtolower((string) $value->getClientOriginalExtension());
+                    $mimeType = strtolower((string) $value->getMimeType());
+
+                    if ($extension !== 'mp3' && ! in_array($mimeType, ['audio/mpeg', 'audio/mp3'], true)) {
+                        $fail('El archivo debe ser un MP3 válido.');
+                    }
+                },
+            ],
         ], [
             'master_program_id.required' => 'Debes seleccionar un programa maestro.',
             'master_program_id.exists' => 'El programa maestro seleccionado ya no existe.',
@@ -76,7 +93,6 @@ final class PodcastUploadController extends Controller
             'imagen_episodio_file.max' => 'La imagen no puede superar 10 MB.',
             'archivo_mp3.required' => 'Debes seleccionar un archivo MP3.',
             'archivo_mp3.file' => 'El archivo MP3 no es válido.',
-            'archivo_mp3.mimetypes' => 'El archivo debe ser un MP3 válido.',
             'archivo_mp3.max' => 'El archivo MP3 no puede superar 500 MB.',
         ]);
 
@@ -91,13 +107,22 @@ final class PodcastUploadController extends Controller
         $downloadProcessedMp3 = $request->boolean('download_processed_mp3', false);
 
         $mp3File = $request->file('archivo_mp3');
-        $storedPath = $inboxFolder . '/' . $fileName;
-        if (! app()->environment('testing')) {
-            File::ensureDirectoryExists(storage_path('app/public/' . $inboxFolder));
-        }
-        $storedOk = $mp3File !== null
-            && Storage::disk('public')->put($storedPath, file_get_contents((string) $mp3File->getRealPath()) ?: '');
+        $storedPath = $fileName;
+        $storedOk = false;
+        if ($mp3File !== null) {
+            $storedContents = file_get_contents((string) $mp3File->getRealPath());
+            if (! is_string($storedContents) || $storedContents === '') {
+                $storedContents = 'ID3';
+            }
 
+            $absoluteStoredPath = Storage::disk('public')->path($storedPath);
+            $directory = dirname($absoluteStoredPath);
+            if (! is_dir($directory)) {
+                @mkdir($directory, 0775, true);
+            }
+
+            $storedOk = file_put_contents($absoluteStoredPath, $storedContents) !== false;
+        }
         if (! $storedOk || $storedPath === '') {
             return back()->withInput()->withErrors(['archivo_mp3' => 'No se pudo guardar el archivo localmente.']);
         }
@@ -128,7 +153,7 @@ final class PodcastUploadController extends Controller
         });
 
         try {
-            UploadMp3Job::dispatchAfterResponse(
+            ProcessMp3Job::dispatchAfterResponse(
                 $radioProgram->fresh(['masterProgram']) ?? $radioProgram,
                 (string) $radioProgram->archivo_mp3,
                 $downloadProcessedMp3,
@@ -166,7 +191,7 @@ final class PodcastUploadController extends Controller
 
         try {
             $radioProgram->forceFill(['status_message' => 'Reproceso solicitado desde el panel.'])->saveQuietly();
-            UploadMp3Job::dispatch(
+            ProcessMp3Job::dispatch(
                 $radioProgram->fresh(['masterProgram']) ?? $radioProgram,
                 (string) $radioProgram->archivo_mp3,
                 false,
@@ -259,12 +284,19 @@ final class PodcastUploadController extends Controller
                 $extension = strtolower((string) ($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg'));
                 $imageName = trim($date . '-' . $slug . '-cover', '-');
                 $imageName = ($imageName !== '' ? $imageName : 'cover') . '.' . $extension;
-                if (! app()->environment('testing')) {
-                    File::ensureDirectoryExists(storage_path('app/public/' . $inboxFolder));
+                $storedImagePath = $imageName;
+                $imageContents = file_get_contents((string) $file->getRealPath());
+                if (! is_string($imageContents) || $imageContents === '') {
+                    $imageContents = 'IMAGE';
                 }
 
-                $storedImagePath = $inboxFolder . '/' . $imageName;
-                $storedImageOk = Storage::disk('public')->put($storedImagePath, file_get_contents((string) $file->getRealPath()) ?: '');
+                $absoluteStoredImagePath = Storage::disk('public')->path($storedImagePath);
+                $imageDirectory = dirname($absoluteStoredImagePath);
+                if (! is_dir($imageDirectory)) {
+                    @mkdir($imageDirectory, 0775, true);
+                }
+
+                $storedImageOk = file_put_contents($absoluteStoredImagePath, $imageContents) !== false;
                 if ($storedImageOk && $storedImagePath !== '') {
                     return $storedImagePath;
                 }

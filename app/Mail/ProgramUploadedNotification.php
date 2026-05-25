@@ -10,6 +10,9 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
+/**
+ * @deprecated Use PodcastUploadedMail instead.
+ */
 final class ProgramUploadedNotification extends Mailable
 {
     use Queueable;
