@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\RequireAdmin;
+use App\Http\Middleware\RequireTalent;
 use App\Http\Middleware\TrackAdminAuditTrail;
 use App\Http\Middleware\SecurityHeaders;
 
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => RequireAdmin::class,
+            'talent' => RequireTalent::class,
             'audit' => TrackAdminAuditTrail::class,
         ]);
     })

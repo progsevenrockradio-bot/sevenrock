@@ -18,14 +18,14 @@ class BandProfileController extends Controller
 {
     public function index(): View
     {
-        return view('admin.band-profiles.index', [
+        return view('admin.radio-artists.index', [
             'bandProfiles' => BandProfile::query()->orderBy('name')->get(),
         ]);
     }
 
     public function create(): View
     {
-        return view('admin.band-profiles.create', [
+        return view('admin.radio-artists.create', [
             'bandProfile' => new BandProfile([
                 'featured_facts' => [],
                 'official_links' => [],
@@ -41,12 +41,12 @@ class BandProfileController extends Controller
     {
         BandProfile::query()->create($this->validated($request));
 
-        return redirect()->route('admin.band-profiles.index')->with('status', 'Band profile created.');
+        return redirect()->route('admin.radio-artists.index')->with('status', 'Radio artist created.');
     }
 
     public function edit(BandProfile $bandProfile): View
     {
-        return view('admin.band-profiles.edit', [
+        return view('admin.radio-artists.edit', [
             'bandProfile' => $bandProfile,
             'featuredFactsText' => $this->linesToText($bandProfile->featured_facts ?? []),
             'officialLinksText' => $this->linksToText($bandProfile->official_links ?? []),
@@ -58,14 +58,14 @@ class BandProfileController extends Controller
     {
         $bandProfile->update($this->validated($request, $bandProfile->id));
 
-        return redirect()->route('admin.band-profiles.index')->with('status', 'Band profile updated.');
+        return redirect()->route('admin.radio-artists.index')->with('status', 'Radio artist updated.');
     }
 
     public function destroy(BandProfile $bandProfile): RedirectResponse
     {
         $bandProfile->delete();
 
-        return redirect()->route('admin.band-profiles.index')->with('status', 'Band profile deleted.');
+        return redirect()->route('admin.radio-artists.index')->with('status', 'Radio artist deleted.');
     }
 
     public function search(Request $request, BandProfileMatcher $matcher): JsonResponse
@@ -99,7 +99,7 @@ class BandProfileController extends Controller
     private function validated(Request $request, ?int $ignoreId = null): array
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('band_profiles', 'name')->ignore($ignoreId)],
+            'name' => ['required', 'string', 'max:255', Rule::unique('radio_artists', 'name')->ignore($ignoreId)],
             'biography' => ['nullable', 'string'],
             'editorial_summary' => ['nullable', 'string'],
             'image_path' => ['nullable', 'string', 'max:2048'],

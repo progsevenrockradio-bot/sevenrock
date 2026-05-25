@@ -14,6 +14,9 @@ use Illuminate\Support\Str;
 class BandProfile extends Model
 {
     use Auditable;
+
+    protected $table = 'radio_artists';
+
     protected $fillable = [
         'name',
         'biography',

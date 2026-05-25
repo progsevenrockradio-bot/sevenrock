@@ -139,7 +139,7 @@
                     <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
                 </summary>
                 <div class="lucille-admin-dropdown-panel">
-                    <a href="{{ route('admin.band-profiles.index') }}" class="lucille-admin-link">{{ $admin['bands_heading'] ?? 'Band Profiles' }}</a>
+                    <a href="{{ route('admin.radio-artists.index') }}" class="lucille-admin-link">{{ $admin['bands_heading'] ?? 'Radio Artists' }}</a>
                     <a href="{{ route('admin.albums.index') }}" class="lucille-admin-link">{{ $admin['albums_heading'] ?? 'Albums' }}</a>
                     <a href="{{ route('admin.videos.index') }}" class="lucille-admin-link">{{ $admin['videos_heading'] ?? 'Videos' }}</a>
                     <a href="{{ route('admin.gallery.index') }}" class="lucille-admin-link">{{ $admin['gallery_heading'] ?? 'Gallery' }}</a>

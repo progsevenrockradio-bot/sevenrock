@@ -172,7 +172,7 @@ class BandProfileMatcher
     private function hasTable(): bool
     {
         try {
-            return Schema::hasTable('band_profiles');
+            return Schema::hasTable('radio_artists');
         } catch (\Throwable) {
             return false;
         }

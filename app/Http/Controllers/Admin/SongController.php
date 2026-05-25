@@ -85,7 +85,7 @@ class SongController extends Controller
             'slug' => ['nullable', 'string', 'max:255', Rule::unique('songs', 'slug')->ignore($ignoreId)],
             'title' => ['required', 'string', 'max:255'],
             'artist' => ['required', 'string', 'max:255'],
-            'band_profile_id' => ['nullable', 'integer', 'exists:band_profiles,id'],
+            'band_profile_id' => ['nullable', 'integer', 'exists:radio_artists,id'],
             'album' => ['nullable', 'string', 'max:255'],
             'duration_seconds' => ['nullable', 'integer', 'min:0'],
             'audio_url' => ['nullable', 'string', 'max:2048'],

@@ -24,7 +24,7 @@ class DashboardController extends Controller
             'stats' => [
                 'users' => User::query()->count(),
                 'admin_users' => $this->countAdminUsers(),
-                'band_profiles' => $this->countIfTable('band_profiles', BandProfile::query()),
+                'radio_artists' => $this->countIfTable('radio_artists', BandProfile::query()),
                 'songs' => $this->countIfTable('songs', Song::query()),
                 'master_programs' => $this->countIfTable('master_programs', MasterProgram::query()),
                 'radio_programs' => $this->countIfTable('radio_programs', RadioProgram::query()),

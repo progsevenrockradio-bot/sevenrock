@@ -265,7 +265,7 @@ class RadioPlayerService
 
     private function resolveBandProfile(array $state, ?Song $song)
     {
-        if (! $this->hasTable('band_profiles')) {
+        if (! $this->hasTable('radio_artists')) {
             return null;
         }
 

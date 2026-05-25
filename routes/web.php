@@ -17,6 +17,11 @@ use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
 use App\Http\Controllers\LegacyWordPressUploadController;
+use App\Http\Controllers\Talent\DashboardController as TalentDashboardController;
+use App\Http\Controllers\Talent\AuthController as TalentAuthController;
+use App\Http\Controllers\Talent\MediaController as TalentMediaController;
+use App\Http\Controllers\Talent\ProfileController as TalentProfileController;
+use App\Http\Controllers\Talent\PublicController as TalentPublicController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SearchController;
@@ -109,13 +114,13 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::post('/podcast-uploads/{radioProgram}/retry', [AdminPodcastUploadController::class, 'retry'])->name('podcast-uploads.retry');
         Route::get('/podcast-uploads/{radioProgram}/download', [AdminPodcastUploadController::class, 'download'])->name('podcast-uploads.download');
         Route::delete('/podcast-uploads/{id}', [AdminPodcastUploadController::class, 'destroy'])->name('podcast-uploads.destroy');
-        Route::get('/band-profiles', [AdminBandProfileController::class, 'index'])->name('band-profiles.index');
-        Route::get('/band-profiles/create', [AdminBandProfileController::class, 'create'])->name('band-profiles.create');
-        Route::get('/band-profiles/search', [AdminBandProfileController::class, 'search'])->name('band-profiles.search');
-        Route::post('/band-profiles', [AdminBandProfileController::class, 'store'])->name('band-profiles.store');
-        Route::get('/band-profiles/{bandProfile}/edit', [AdminBandProfileController::class, 'edit'])->name('band-profiles.edit');
-        Route::put('/band-profiles/{bandProfile}', [AdminBandProfileController::class, 'update'])->name('band-profiles.update');
-        Route::delete('/band-profiles/{bandProfile}', [AdminBandProfileController::class, 'destroy'])->name('band-profiles.destroy');
+        Route::get('/radio-artists', [AdminBandProfileController::class, 'index'])->name('radio-artists.index');
+        Route::get('/radio-artists/create', [AdminBandProfileController::class, 'create'])->name('radio-artists.create');
+        Route::get('/radio-artists/search', [AdminBandProfileController::class, 'search'])->name('radio-artists.search');
+        Route::post('/radio-artists', [AdminBandProfileController::class, 'store'])->name('radio-artists.store');
+        Route::get('/radio-artists/{bandProfile}/edit', [AdminBandProfileController::class, 'edit'])->name('radio-artists.edit');
+        Route::put('/radio-artists/{bandProfile}', [AdminBandProfileController::class, 'update'])->name('radio-artists.update');
+        Route::delete('/radio-artists/{bandProfile}', [AdminBandProfileController::class, 'destroy'])->name('radio-artists.destroy');
         Route::get('/songs', [AdminSongController::class, 'index'])->name('songs.index');
         Route::get('/songs/create', [AdminSongController::class, 'create'])->name('songs.create');
         Route::post('/songs', [AdminSongController::class, 'store'])->name('songs.store');
@@ -130,5 +135,26 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::put('/posts/{post}', [AdminPostController::class, 'update'])->name('posts.update');
         Route::delete('/posts/{post}', [AdminPostController::class, 'destroy'])->name('posts.destroy');
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+    });
+});
+
+Route::prefix('talentos')->name('talents.')->group(function (): void {
+    Route::get('/', [TalentPublicController::class, 'index'])->name('explore');
+
+    Route::middleware('guest:talent')->group(function (): void {
+        Route::get('/register', [TalentAuthController::class, 'showRegister'])->name('register');
+        Route::post('/register', [TalentAuthController::class, 'register'])->name('register.store');
+        Route::get('/login', [TalentAuthController::class, 'showLogin'])->name('login');
+        Route::post('/login', [TalentAuthController::class, 'login'])->name('login.store');
+    });
+
+    Route::middleware(['talent'])->group(function (): void {
+        Route::get('/dashboard', [TalentDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/profile', [TalentProfileController::class, 'edit'])->name('profile');
+        Route::put('/profile', [TalentProfileController::class, 'update'])->name('profile.update');
+        Route::get('/media', [TalentMediaController::class, 'index'])->name('media.index');
+        Route::post('/media', [TalentMediaController::class, 'store'])->name('media.store');
+        Route::delete('/media/{talentMedia}', [TalentMediaController::class, 'destroy'])->name('media.destroy');
+        Route::post('/logout', [TalentAuthController::class, 'logout'])->name('logout');
     });
 });

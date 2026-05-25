@@ -15,8 +15,8 @@
                     <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ $stats['admin_users'] }}</div>
                 </div>
                 <div class="border border-[#2b2b2b] bg-[#151515] p-5">
-                    <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b]">Band profiles</div>
-                    <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ $stats['band_profiles'] }}</div>
+                    <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b]">Radio artists</div>
+                    <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ $stats['radio_artists'] }}</div>
                 </div>
                 <div class="border border-[#2b2b2b] bg-[#151515] p-5">
                     <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b]">Songs</div>
@@ -52,7 +52,7 @@
                 <div class="mt-4 flex flex-wrap gap-3">
                     <a href="{{ route('admin.settings.edit') }}" class="lucille-button-solid">{{ $admin['theme_settings'] }}</a>
                     <a href="{{ route('admin.master-programs.index') }}" class="lucille-button">Master programs</a>
-                    <a href="{{ route('admin.band-profiles.index') }}" class="lucille-button">Band profiles</a>
+                    <a href="{{ route('admin.radio-artists.index') }}" class="lucille-button">Radio artists</a>
                     <a href="{{ route('admin.songs.index') }}" class="lucille-button">Songs</a>
                     <a href="{{ route('admin.podcast-uploads.index') }}" class="lucille-button">Podcast uploads</a>
                     <a href="{{ route('admin.posts.index') }}" class="lucille-button">{{ $admin['posts_heading'] }}</a>

@@ -23,6 +23,11 @@
             ['label' => 'Blog Standard', 'route' => 'blog.standard'],
             ['label' => 'Single Post', 'url' => route('posts.single', ['year' => '2016', 'month' => '09', 'day' => '06', 'slug' => 'inspiration'])],
         ]],
+        ['label' => 'Talentos', 'route' => 'talents.explore', 'children' => [
+            ['label' => 'Acceder', 'route' => 'talents.login'],
+            ['label' => 'Registrarse', 'route' => 'talents.register'],
+            ['label' => 'Explorar Talentos', 'route' => 'talents.explore'],
+        ]],
         ['label' => 'Shop', 'route' => 'shop'],
         ['label' => 'Contact', 'route' => 'contact'],
     ];

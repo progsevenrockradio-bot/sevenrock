@@ -73,7 +73,7 @@ class BandInfoAggregator
      */
     private function localProfile(string $artist): ?array
     {
-        if (! $this->hasTable('band_profiles')) {
+        if (! $this->hasTable('radio_artists')) {
             return null;
         }
 
@@ -468,7 +468,7 @@ class BandInfoAggregator
 
     private function persistLocalProfile(string $artist, array $payload): void
     {
-        if (! $this->hasTable('band_profiles')) {
+        if (! $this->hasTable('radio_artists')) {
             return;
         }
 

@@ -79,6 +79,19 @@ return [
             'report' => false,
         ],
 
+        'backblaze-b2' => [
+            'driver' => 's3',
+            'key' => env('BACKBLAZE_B2_KEY_ID', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('BACKBLAZE_B2_APPLICATION_KEY', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('BACKBLAZE_B2_REGION', env('AWS_DEFAULT_REGION', 'us-east-1')),
+            'bucket' => env('BACKBLAZE_B2_BUCKET', env('AWS_BUCKET')),
+            'url' => env('BACKBLAZE_B2_URL', env('AWS_URL')),
+            'endpoint' => env('BACKBLAZE_B2_ENDPOINT', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => filter_var(env('BACKBLAZE_B2_USE_PATH_STYLE_ENDPOINT', false), FILTER_VALIDATE_BOOL),
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

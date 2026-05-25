@@ -18,10 +18,10 @@
         <input name="artist" value="{{ old('artist', $song->artist) }}" class="lucille-product-field w-full">
     </div>
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Band Profile</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Radio Artist</label>
         <div
             x-data="bandProfilePicker({
-                searchUrl: @js(route('admin.band-profiles.search')),
+                searchUrl: @js(route('admin.radio-artists.search')),
                 selectedId: @js(old('band_profile_id', $song->band_profile_id)),
                 selectedLabel: @js(optional($selectedBandProfile)->name ?? ''),
                 minLength: 3,
@@ -40,7 +40,7 @@
                     @keydown.enter="handleEnter($event)"
                     @keydown.escape.prevent="open = false"
                     @blur="closeSoon()"
-                    placeholder="Search band name"
+                    placeholder="Search radio artist"
                     autocomplete="off"
                     aria-autocomplete="list"
                     aria-controls="band-profile-picker-results"
@@ -75,7 +75,7 @@
                 <div class="max-h-72 overflow-auto">
                     <template x-if="! loading && results.length === 0">
                         <div class="px-4 py-5 text-sm text-[#7b7b7b]">
-                            No band profile matches this search.
+                            No radio artist matches this search.
                         </div>
                     </template>
                     <template x-for="(result, index) in results" :key="result.id">
@@ -89,7 +89,7 @@
                         :aria-selected="activeIndex === index ? 'true' : 'false'"
                     >
                         <span class="font-display text-sm uppercase tracking-[.12em] text-white" x-text="result.text"></span>
-                        <span class="text-xs text-[#9d9d9d]" x-text="result.summary || 'Band profile'"></span>
+                        <span class="text-xs text-[#9d9d9d]" x-text="result.summary || 'Radio artist'"></span>
                     </button>
                     </template>
                 </div>
