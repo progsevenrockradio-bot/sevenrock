@@ -88,7 +88,13 @@ class BandInfoAggregator
         $thumbnail = (string) ($profile->normalizedImageUrl() ?? '');
         $socialLinks = $this->normalizeLocalLinks((array) ($profile->official_links ?? []));
         $facts = $this->normalizeFacts((array) ($profile->featured_facts ?? []));
-        $formedYear = $this->extractYearFromText($summary);
+        $formedYear = $profile->founded_date?->year ?: $this->extractYearFromText($summary);
+        $logoPath = (string) ($profile->logo_path ?? '');
+        $country = (string) ($profile->country ?? '');
+        $genre = (string) ($profile->genre ?? '');
+        $membersCount = $profile->members_count;
+        $status = (string) ($profile->status ?? '');
+        $labels = (string) ($profile->labels ?? '');
 
         if (! $this->hasMeaningfulExternalPayload([
             'summary' => $summary,
@@ -105,6 +111,36 @@ class BandInfoAggregator
             'thumbnail' => $thumbnail,
             'social_links' => $socialLinks,
             'formed_year' => $formedYear,
+            'logo_path' => $logoPath,
+                'country' => $country,
+                'genre' => $genre,
+                'members_count' => $membersCount,
+                'status' => $status,
+                'labels' => $labels,
+                'logo_path' => $this->firstFilledString([
+                $local['logo_path'] ?? '',
+                $audioDb['logo_path'] ?? '',
+            ]),
+            'country' => $this->firstFilledString([
+                $local['country'] ?? '',
+                $audioDb['country'] ?? '',
+            ]),
+            'genre' => $this->firstFilledString([
+                $local['genre'] ?? '',
+                $audioDb['genre'] ?? '',
+            ]),
+            'members_count' => $this->firstPositiveInteger([
+                [$local['members_count'] ?? null],
+                [$audioDb['members_count'] ?? null],
+            ]),
+            'status' => $this->firstFilledString([
+                $local['status'] ?? '',
+                $audioDb['status'] ?? '',
+            ]),
+            'labels' => $this->firstFilledString([
+                $local['labels'] ?? '',
+                $audioDb['labels'] ?? '',
+            ]),
             'formed_label' => $formedYear ? sprintf('Se formó en %d', $formedYear) : '',
             'facts' => $facts,
         ];
@@ -368,6 +404,12 @@ class BandInfoAggregator
             return [
                 'summary' => $this->cleanText((string) ($data['strBiographyEN'] ?? '')),
                 'thumbnail' => (string) ($data['strArtistThumb'] ?? ''),
+                'logo_path' => (string) ($data['strArtistLogo'] ?? ''),
+                'country' => $this->cleanText((string) ($data['strCountry'] ?? '')),
+                'genre' => $this->cleanText((string) ($data['strGenre'] ?? '')),
+                'members_count' => $this->positiveInt($data['intMembers'] ?? null),
+                'status' => $this->cleanText((string) ($data['strStatus'] ?? '')),
+                'labels' => $this->cleanText((string) ($data['strLabel'] ?? '')),
                 'facts' => array_values(array_filter([
                     $this->cleanText((string) ($data['strGenre'] ?? '')),
                     $this->cleanText((string) ($data['strStyle'] ?? '')),
@@ -461,6 +503,36 @@ class BandInfoAggregator
             'thumbnail' => $thumbnail,
             'social_links' => $this->normalizeLinks($socialLinks),
             'formed_year' => $formedYear,
+            'logo_path' => $logoPath,
+                'country' => $country,
+                'genre' => $genre,
+                'members_count' => $membersCount,
+                'status' => $status,
+                'labels' => $labels,
+                'logo_path' => $this->firstFilledString([
+                $local['logo_path'] ?? '',
+                $audioDb['logo_path'] ?? '',
+            ]),
+            'country' => $this->firstFilledString([
+                $local['country'] ?? '',
+                $audioDb['country'] ?? '',
+            ]),
+            'genre' => $this->firstFilledString([
+                $local['genre'] ?? '',
+                $audioDb['genre'] ?? '',
+            ]),
+            'members_count' => $this->firstPositiveInteger([
+                [$local['members_count'] ?? null],
+                [$audioDb['members_count'] ?? null],
+            ]),
+            'status' => $this->firstFilledString([
+                $local['status'] ?? '',
+                $audioDb['status'] ?? '',
+            ]),
+            'labels' => $this->firstFilledString([
+                $local['labels'] ?? '',
+                $audioDb['labels'] ?? '',
+            ]),
             'formed_label' => $formedYear ? sprintf('Se formó en %d', $formedYear) : '',
             'facts' => $facts,
         ];
@@ -481,6 +553,13 @@ class BandInfoAggregator
                     'image_path' => $payload['thumbnail'] ?? '',
                     'featured_facts' => $payload['facts'] ?? [],
                     'official_links' => $payload['social_links'] ?? [],
+                    'founded_date' => isset($payload['formed_year']) && $payload['formed_year'] ? now()->setYear((int)$payload['formed_year'])->startOfYear() : null,
+                    'logo_path' => !empty($payload['logo_path']) ? $payload['logo_path'] : null,
+                    'country' => !empty($payload['country']) ? $payload['country'] : null,
+                    'genre' => !empty($payload['genre']) ? $payload['genre'] : null,
+                    'members_count' => $payload['members_count'] ?? null,
+                    'status' => !empty($payload['status']) ? strtolower($payload['status']) : null,
+                    'labels' => !empty($payload['labels']) ? $payload['labels'] : null,
                     'last_verified_at' => now(),
                     'source' => 'Seven Rock Radio',
                 ]
@@ -513,6 +592,12 @@ class BandInfoAggregator
             'thumbnail' => trim((string) ($payload['thumbnail'] ?? '')),
             'social_links' => $this->normalizeLocalLinks((array) ($payload['social_links'] ?? [])),
             'formed_year' => $this->positiveInt($payload['formed_year'] ?? null),
+            'logo_path' => trim((string) ($payload['logo_path'] ?? '')),
+            'country' => trim((string) ($payload['country'] ?? '')),
+            'genre' => trim((string) ($payload['genre'] ?? '')),
+            'members_count' => $this->positiveInt($payload['members_count'] ?? null),
+            'status' => trim((string) ($payload['status'] ?? '')),
+            'labels' => trim((string) ($payload['labels'] ?? '')),
             'formed_label' => trim((string) ($payload['formed_label'] ?? '')),
             'facts' => $this->normalizeFacts((array) ($payload['facts'] ?? [])),
         ];
@@ -753,6 +838,12 @@ class BandInfoAggregator
                 )
                 : 'No hay información ampliada disponible en este momento.',
             'thumbnail' => '',
+            'logo_path' => '',
+            'country' => '',
+            'genre' => '',
+            'members_count' => null,
+            'status' => '',
+            'labels' => '',
             'social_links' => [],
             'formed_year' => null,
             'formed_label' => '',

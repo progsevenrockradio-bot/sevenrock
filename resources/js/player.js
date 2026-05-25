@@ -635,6 +635,12 @@ export function registerRadioPlayer(Alpine) {
                     cover: this.track.band_thumbnail || this.track.cover || this.bandPanel.cover || this.fallbackCover,
                     foundedLabel: this.track.band_founded_label || this.bandPanel.foundedLabel || '',
                     facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : (this.bandPanel.facts || []),
+                    logo: this.track.band_logo || this.bandPanel.logo || '',
+                    country: this.track.band_country || this.bandPanel.country || '',
+                    genre: this.track.band_genre || this.bandPanel.genre || '',
+                    membersCount: this.track.band_members_count ?? this.bandPanel.membersCount ?? null,
+                    status: this.track.band_status || this.bandPanel.status || '',
+                    labels: this.track.band_labels || this.bandPanel.labels || '',
                 };
             } catch (error) {
                 // ignore band info lookup failures

@@ -306,6 +306,15 @@
                             <section x-show="activeTab === 'band'" style="display:grid; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
                                 <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Info de banda</h4>
                                 <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="bandPanel.info || track.band_info || track.comment || 'Buscando información de banda...'"></p>
+                                <div x-show="bandPanel.country || bandPanel.genre || bandPanel.membersCount || bandPanel.status" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
+                                    <span x-show="bandPanel.country" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase;" x-text="'🌍 ' + bandPanel.country"></span>
+                                    <span x-show="bandPanel.genre" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase;" x-text="'🎵 ' + bandPanel.genre"></span>
+                                    <span x-show="bandPanel.membersCount" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase;" x-text="'👥 ' + bandPanel.membersCount + ' miembros'"></span>
+                                    <span x-show="bandPanel.status" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase;" x-text="bandPanel.status === 'active' ? '✅ Activo' : (bandPanel.status === 'on_hold' ? '⏸ En pausa' : (bandPanel.status === 'disbanded' ? '❌ Disuelto' : bandPanel.status))"></span>
+                                </div>
+                                <div x-show="bandPanel.logo" style="margin-top:6px;">
+                                    <img :src="bandPanel.logo" alt="" style="max-height:48px; width:auto; object-fit:contain; opacity:0.8;" onerror="this.style.display='none'">
+                                </div>
                             </section>
                         </div>
                     </div>

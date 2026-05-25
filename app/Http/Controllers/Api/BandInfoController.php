@@ -40,6 +40,12 @@ class BandInfoController extends Controller
                 'data' => [
                     'summary' => 'No hay información ampliada disponible en este momento.',
                     'thumbnail' => '',
+                    'logo_path' => '',
+                    'country' => '',
+                    'genre' => '',
+                    'members_count' => null,
+                    'status' => '',
+                    'labels' => '',
                     'social_links' => [],
                     'formed_year' => null,
                     'formed_label' => '',

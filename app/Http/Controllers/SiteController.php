@@ -17,6 +17,7 @@ use App\Support\ProgramScheduleService;
 use App\Support\WordPressContent;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
+use App\Mail\ContactMail;
 
 class SiteController extends Controller
 {
@@ -416,7 +417,9 @@ class SiteController extends Controller
 
 
 
-    public function contactSend(\Illuminate\Http\Request $request): \Illuminate\Http\RedirectResponse
+
+
+        public function contactSend(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -425,22 +428,16 @@ class SiteController extends Controller
             'message' => 'required|string|max:5000',
         ]);
 
-        try {
-            \Illuminate\Support\Facades\Mail::to(config('mail.from.address', 'prog.sevenrockradio@gmail.com'))
-                ->send(new \App\Mail\ContactMail(
-                    senderName: $validated['name'],
-                    senderEmail: $validated['email'],
-                    senderPhone: $validated['phone'] ?? '',
-                    messageBody: $validated['message'],
-                    source: 'Contacto',
-                ));
+        Mail::to('prog.sevenrockradio@gmail.com')->send(new ContactMail(
+            senderName: $validated['name'],
+            senderEmail: $validated['email'],
+            senderPhone: $validated['phone'] ?? '',
+            messageBody: $validated['message'],
+            source: 'Contacto',
+        ));
 
-            return redirect()->route('contact')->with('success', 'Mensaje enviado correctamente. Nos pondremos en contacto pronto.');
-        } catch (\Throwable $e) {
-            return redirect()->route('contact')->with('error', 'Error al enviar el mensaje. Intenta de nuevo m\u00e1s tarde.');
-        }
+        return redirect()->back()->with('success', '¡Mensaje enviado correctamente!');
     }
-
     public function homeContactSend(\Illuminate\Http\Request $request): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validate([

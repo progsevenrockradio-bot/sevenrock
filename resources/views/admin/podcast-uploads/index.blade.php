@@ -264,6 +264,7 @@
                                 @csrf
                                 <button type="submit" class="lucille-button">Reprocesar</button>
                             </form>
+                            <a href="{{ route('admin.podcast-uploads.download', $upload) }}" class="lucille-button">Descargar MP3</a>
                             <form
                                 action="{{ route('admin.podcast-uploads.destroy', $upload->id) }}"
                                 method="POST"

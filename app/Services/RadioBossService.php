@@ -43,6 +43,11 @@ class RadioBossService
         }
     }
 
+    /**
+     * Verifica si un archivo existe en el servidor FTP de RadioBOSS.
+     * Usa ftp_size como método principal, y ftp_rawlist como fallback
+     * (algunos servidores FTP no soportan el comando SIZE).
+     */
     public function exists(string $remotePath): bool
     {
         $remotePath = $this->normalizeRemotePath($remotePath);
@@ -53,9 +58,32 @@ class RadioBossService
         $connection = $this->connect();
 
         try {
+            // Método 1: ftp_size (rápido, pero no todos los servidores lo soportan)
             $size = @ftp_size($connection, $remotePath);
+            if ($size >= 0) {
+                return true;
+            }
 
-            return $size >= 0;
+            // Método 2: fallback a ftp_rawlist para servidores que no soportan SIZE
+            $directory = dirname($remotePath);
+            $filename = basename($remotePath);
+
+            if ($directory === '.' || $directory === '') {
+                $directory = '/';
+            }
+
+            $listing = @ftp_rawlist($connection, $directory);
+            if (is_array($listing)) {
+                foreach ($listing as $line) {
+                    $parts = preg_split('/\s+/', trim((string) $line), 9);
+                    $name = $parts[8] ?? '';
+                    if ($name === $filename) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         } finally {
             ftp_close($connection);
         }
@@ -187,6 +215,8 @@ class RadioBossService
 
     private function uploadStream($connection, string $remotePath, string $localPath): void
     {
+        // Set a high timeout for the FTP data transfer (large MP3 files)
+        @ftp_set_option($connection, FTP_TIMEOUT_SEC, 600);
         $stream = fopen($localPath, 'rb');
         if ($stream === false) {
             throw new RuntimeException("No se pudo abrir el archivo local para RadioBOSS: {$localPath}");
@@ -194,7 +224,15 @@ class RadioBossService
 
         try {
             if (! @ftp_fput($connection, $remotePath, $stream, FTP_BINARY)) {
-                throw new RuntimeException("La subida FTP a RadioBOSS falló para {$remotePath}");
+                $error = error_get_last();
+                $ftpMessage = $error["message"] ?? "sin mensaje de error";
+                Log::error("RadioBossService: ftp_fput falló", [
+                    "remote_path" => $remotePath,
+                    "local_path" => $localPath,
+                    "local_size" => filesize($localPath),
+                    "error" => $ftpMessage,
+                ]);
+                throw new RuntimeException("La subida FTP a RadioBOSS falló para {$remotePath}: {$ftpMessage}");
             }
         } finally {
             fclose($stream);

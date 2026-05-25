@@ -1,22 +1,22 @@
 <x-mail::message>
 # Nuevo mensaje de contacto
 
-Has recibido un nuevo mensaje a través del formulario de **{{  }}** de Seven Rock Radio.
+Has recibido un nuevo mensaje a través del formulario de **{{ $source }}** de Seven Rock Radio.
 
 ---
 
-**Nombre:** {{  }}
-**Email:** {{  }}
-**Teléfono:** {{  ?: 'No indicado' }}
+**Nombre:** {{ $senderName }}
+**Email:** {{ $senderEmail }}
+**Teléfono:** {{ $senderPhone ?: "No indicado" }}
 
 **Mensaje:**
 
-{{  }}
+{{ $messageBody }}
 
 ---
 
-<x-mail::button :url=mailto:{{ $senderEmail }}>
-Responder a {{  }}
+<x-mail::button :url="mailto:{{ $senderEmail }}">
+Responder a {{ $senderName }}
 </x-mail::button>
 
 Saludos,<br>

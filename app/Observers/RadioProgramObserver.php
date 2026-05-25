@@ -7,6 +7,7 @@ namespace App\Observers;
 use App\Jobs\ProcessMp3Job;
 use App\Models\RadioProgram;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 final class RadioProgramObserver
 {
@@ -31,5 +32,24 @@ final class RadioProgramObserver
             Auth::user()?->name,
             Auth::user()?->email,
         );
+    }
+
+    /**
+     * Cuando se elimina un programa de radio, también se eliminan
+     * los trabajos pendientes y fallidos asociados a él.
+     */
+    public function deleted(RadioProgram $radioProgram): void
+    {
+        $programId = $radioProgram->id;
+
+        // Eliminar jobs pendientes que referencien este programa
+        DB::table('jobs')
+            ->where('payload', 'like', '%radioProgramId%;i:' . $programId . ';%')
+            ->delete();
+
+        // Eliminar failed jobs que referencien este programa
+        DB::table('failed_jobs')
+            ->where('payload', 'like', '%radioProgramId%;i:' . $programId . ';%')
+            ->delete();
     }
 }
