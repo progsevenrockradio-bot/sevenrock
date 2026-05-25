@@ -35,6 +35,7 @@ class DatabaseSeeder extends Seeder
         );
 
         ThemeSetting::query()->firstOrCreate([], ThemeSetting::defaults());
+        $this->call(TalentPlanSeeder::class);
         $this->call(MasterProgramsSeeder::class);
         $this->call(PostTaxonomySeeder::class);
 

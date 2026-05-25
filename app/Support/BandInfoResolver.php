@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
-use App\Models\BandProfile;
+use App\Models\RadioArtist;
 use Illuminate\Support\Str;
 
 class BandInfoResolver
@@ -69,7 +69,7 @@ class BandInfoResolver
      *     facts:array<int,string>
      * }|null
      */
-    private function buildProfilePayload(BandProfile $profile): ?array
+    private function buildProfilePayload(RadioArtist $profile): ?array
     {
         $summary = $this->formatSummaryText((string) ($profile->editorial_summary ?: $profile->biography ?: ''));
         $thumbnail = (string) ($profile->normalizedImageUrl() ?? '');

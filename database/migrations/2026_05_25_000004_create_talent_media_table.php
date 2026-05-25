@@ -15,14 +15,16 @@ return new class extends Migration
         Schema::create('talent_media', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('talent_id')->constrained('talents')->cascadeOnDelete();
-            $table->enum('type', ['photo', 'mp3', 'document']);
+            $table->enum('type', ['photo', 'mp3', 'document', 'video']);
             $table->string('filename');
             $table->string('backblaze_key');
             $table->string('url');
             $table->string('title')->nullable();
             $table->text('description')->nullable();
+            $table->string('mime_type');
             $table->unsignedBigInteger('size')->default(0);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

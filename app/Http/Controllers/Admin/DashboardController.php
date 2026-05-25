@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\BandProfile;
+use App\Models\RadioArtist;
 use App\Models\MasterProgram;
 use App\Models\PostTaxonomy;
 use App\Models\Post;
@@ -24,7 +24,7 @@ class DashboardController extends Controller
             'stats' => [
                 'users' => User::query()->count(),
                 'admin_users' => $this->countAdminUsers(),
-                'radio_artists' => $this->countIfTable('radio_artists', BandProfile::query()),
+                'radio_artists' => $this->countIfTable('radio_artists', RadioArtist::query()),
                 'songs' => $this->countIfTable('songs', Song::query()),
                 'master_programs' => $this->countIfTable('master_programs', MasterProgram::query()),
                 'radio_programs' => $this->countIfTable('radio_programs', RadioProgram::query()),

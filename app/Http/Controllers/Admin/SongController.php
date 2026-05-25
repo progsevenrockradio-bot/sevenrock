@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\BandProfile;
+use App\Models\RadioArtist;
 use App\Models\Song;
 use App\Models\Program;
 use Carbon\Carbon;
@@ -152,11 +152,11 @@ class SongController extends Controller
         return $links;
     }
 
-    private function selectedBandProfile(Request $request, ?Song $song = null): ?BandProfile
+    private function selectedBandProfile(Request $request, ?Song $song = null): ?RadioArtist
     {
         $selectedId = $request->old('band_profile_id');
         if (is_numeric($selectedId)) {
-            return BandProfile::query()->find((int) $selectedId);
+            return RadioArtist::query()->find((int) $selectedId);
         }
 
         if ($song?->band_profile_id) {

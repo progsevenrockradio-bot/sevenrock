@@ -15,11 +15,14 @@ return new class extends Migration
         Schema::create('talent_subscriptions', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('talent_id')->constrained('talents')->cascadeOnDelete();
-            $table->enum('plan', ['free', 'basic', 'pro', 'premium']);
+            $table->string('plan');
             $table->decimal('amount', 8, 2)->default(0);
+            $table->string('currency', 3)->default('EUR');
+            $table->string('payment_provider');
+            $table->string('payment_id')->nullable();
             $table->date('start_date');
-            $table->date('end_date');
-            $table->enum('status', ['active', 'cancelled', 'expired'])->default('active');
+            $table->date('end_date')->nullable();
+            $table->enum('status', ['active', 'cancelled', 'expired', 'pending'])->default('pending');
             $table->timestamps();
         });
     }

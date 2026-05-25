@@ -16,12 +16,16 @@ use App\Http\Controllers\Admin\PostTaxonomyController as AdminPostTaxonomyContro
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
+use App\Http\Controllers\Admin\TalentAdminController as AdminTalentController;
 use App\Http\Controllers\LegacyWordPressUploadController;
 use App\Http\Controllers\Talent\DashboardController as TalentDashboardController;
 use App\Http\Controllers\Talent\AuthController as TalentAuthController;
 use App\Http\Controllers\Talent\MediaController as TalentMediaController;
+use App\Http\Controllers\Talent\ProductController as TalentProductController;
 use App\Http\Controllers\Talent\ProfileController as TalentProfileController;
-use App\Http\Controllers\Talent\PublicController as TalentPublicController;
+use App\Http\Controllers\Talent\NotificationController as TalentNotificationController;
+use App\Http\Controllers\Talent\SubscriptionController as TalentSubscriptionController;
+use App\Http\Controllers\Talent\PublicProfileController as TalentPublicProfileController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SearchController;
@@ -134,27 +138,56 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/posts/{post}/edit', [AdminPostController::class, 'edit'])->name('posts.edit');
         Route::put('/posts/{post}', [AdminPostController::class, 'update'])->name('posts.update');
         Route::delete('/posts/{post}', [AdminPostController::class, 'destroy'])->name('posts.destroy');
+        Route::get('/talents', [AdminTalentController::class, 'index'])->name('talents.index');
+        Route::get('/talents/media', [AdminTalentController::class, 'media'])->name('talents.media');
+        Route::get('/talents/{talent}/edit', [AdminTalentController::class, 'edit'])->name('talents.edit');
+        Route::post('/talents/{talent}', [AdminTalentController::class, 'update'])->name('talents.update');
+        Route::patch('/talents/{talent}/featured', [AdminTalentController::class, 'toggleFeatured'])->name('talents.toggle-featured');
+        Route::post('/talents/{talent}/suspend', [AdminTalentController::class, 'suspend'])->name('talents.suspend');
+        Route::post('/talents/{talent}/activate', [AdminTalentController::class, 'activate'])->name('talents.activate');
+        Route::delete('/talents/media/{media}', [AdminTalentController::class, 'deleteMedia'])->name('talents.media.delete');
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
     });
 });
 
 Route::prefix('talentos')->name('talents.')->group(function (): void {
-    Route::get('/', [TalentPublicController::class, 'index'])->name('explore');
+    Route::get('/', [TalentPublicProfileController::class, 'index'])->name('explore');
+
+    Route::post('/webhook/{gateway}', [TalentSubscriptionController::class, 'webhook'])->name('payment.webhook');
 
     Route::middleware('guest:talent')->group(function (): void {
-        Route::get('/register', [TalentAuthController::class, 'showRegister'])->name('register');
+        Route::get('/register', [TalentAuthController::class, 'showRegisterForm'])->name('register');
         Route::post('/register', [TalentAuthController::class, 'register'])->name('register.store');
-        Route::get('/login', [TalentAuthController::class, 'showLogin'])->name('login');
+        Route::get('/login', [TalentAuthController::class, 'showLoginForm'])->name('login');
         Route::post('/login', [TalentAuthController::class, 'login'])->name('login.store');
     });
 
     Route::middleware(['talent'])->group(function (): void {
         Route::get('/dashboard', [TalentDashboardController::class, 'index'])->name('dashboard');
+        Route::prefix('store')->name('store.')->group(function (): void {
+            Route::get('/', [TalentProductController::class, 'index'])->name('index');
+            Route::get('/create', [TalentProductController::class, 'create'])->name('create');
+            Route::post('/', [TalentProductController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [TalentProductController::class, 'edit'])->name('edit');
+            Route::post('/{id}', [TalentProductController::class, 'update'])->name('update');
+            Route::delete('/{id}', [TalentProductController::class, 'destroy'])->name('destroy');
+        });
+        Route::get('/subscriptions/plans', [TalentSubscriptionController::class, 'selectPlan'])->name('subscriptions.plans');
+        Route::post('/subscriptions/checkout', [TalentSubscriptionController::class, 'checkout'])->name('subscriptions.checkout');
+        Route::get('/subscriptions/success', [TalentSubscriptionController::class, 'success'])->name('payment.success');
+        Route::get('/subscriptions/cancel', [TalentSubscriptionController::class, 'cancel'])->name('payment.cancel');
         Route::get('/profile', [TalentProfileController::class, 'edit'])->name('profile');
         Route::put('/profile', [TalentProfileController::class, 'update'])->name('profile.update');
+        Route::get('/notifications', [TalentNotificationController::class, 'edit'])->name('notifications.edit');
+        Route::put('/notifications', [TalentNotificationController::class, 'update'])->name('notifications.update');
         Route::get('/media', [TalentMediaController::class, 'index'])->name('media.index');
+        Route::post('/media/upload', [TalentMediaController::class, 'upload'])->name('media.upload');
         Route::post('/media', [TalentMediaController::class, 'store'])->name('media.store');
-        Route::delete('/media/{talentMedia}', [TalentMediaController::class, 'destroy'])->name('media.destroy');
+        Route::delete('/media/{id}', [TalentMediaController::class, 'destroy'])->name('media.destroy');
         Route::post('/logout', [TalentAuthController::class, 'logout'])->name('logout');
     });
+
+    Route::get('/{bandName}', [TalentPublicProfileController::class, 'show'])->name('show');
+    Route::post('/{bandName}/like', [TalentPublicProfileController::class, 'like'])->name('like');
+    Route::post('/{bandName}/comment', [TalentPublicProfileController::class, 'comment'])->name('comment');
 });

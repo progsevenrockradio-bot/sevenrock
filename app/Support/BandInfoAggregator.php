@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
-use App\Models\BandProfile;
+use App\Models\RadioArtist;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Throwable;
@@ -473,7 +473,7 @@ class BandInfoAggregator
         }
 
         try {
-            BandProfile::query()->updateOrCreate(
+            RadioArtist::query()->updateOrCreate(
                 ['name' => $artist],
                 [
                     'biography' => $payload['summary'] ?? '',

@@ -7,6 +7,6 @@
     <form action="{{ route('admin.radio-artists.update', $bandProfile) }}" method="POST" class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
         @csrf
         @method('PUT')
-        @include('admin.band-profiles._form')
+        @include('admin.radio-artists._form')
     </form>
 </x-layouts.admin>

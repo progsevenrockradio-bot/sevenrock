@@ -14,23 +14,33 @@ class DashboardController extends Controller
     public function index(): View
     {
         $talent = Auth::guard('talent')->user();
-        $plan = $talent?->planDefinition() ?? TalentPlan::definition('free');
+        $plan = $talent?->planLimits() ?? TalentPlan::definition('free')['limits'];
+        $planMeta = $talent?->planDefinition() ?? TalentPlan::definition('free');
         $media = $talent ? $talent->media()->latest()->get() : collect();
         $subscription = $talent ? $talent->activeSubscription() : null;
 
-        $used = [
-            'photo' => (int) $media->where('type', 'photo')->count(),
-            'mp3' => (int) $media->where('type', 'mp3')->count(),
-            'document' => (int) $media->where('type', 'document')->count(),
-            'interacts' => (int) ($talent?->interacts ?? 0),
+        $usage = [
+            'photos' => (int) $media->where('type', 'photo')->count(),
+            'songs' => (int) $media->where('type', 'mp3')->count(),
+            'documents' => (int) $media->where('type', 'document')->count(),
+            'videos' => (int) $media->where('type', 'video')->count(),
+            'visits' => (int) ($talent?->interacts ?? 0),
+            'storage_used_mb' => round(((int) ($talent?->storageUsed() ?? 0)) / 1024 / 1024, 2),
         ];
+
+        $storageLimitMb = (int) ($plan['storage_mb'] ?? 0);
+        $storageUsedMb = (float) $usage['storage_used_mb'];
 
         return view('talentos.dashboard', [
             'talent' => $talent,
-            'plan' => $plan,
-            'used' => $used,
+            'plan' => $planMeta,
+            'limits' => $plan,
+            'usage' => $usage,
             'subscription' => $subscription,
             'media' => $media,
+            'storageProgress' => $storageLimitMb > 0
+                ? min(100, (int) round(($storageUsedMb / $storageLimitMb) * 100))
+                : 0,
         ]);
     }
 }

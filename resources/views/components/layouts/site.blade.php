@@ -53,5 +53,6 @@
             <div>{{ $theme['site_name'] }} © Laravel Blade Edition</div>
         </div>
     </footer>
+    @stack('scripts')
 </body>
 </html>

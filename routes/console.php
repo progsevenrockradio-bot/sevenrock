@@ -7,6 +7,13 @@ use App\Models\Post;
 use App\Jobs\UploadMp3Job;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
+use App\Models\Talent;
+use App\Models\TalentSubscription;
+use App\Mail\SubscriptionExpiredMail;
+use App\Mail\SubscriptionRenewalMail;
+use App\Services\FeaturedTalentService;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schedule;
 use App\Support\PublicMediaUrl;
 use App\Support\WordPressContent;
 use Illuminate\Support\Carbon;
@@ -316,3 +323,59 @@ Artisan::command('sevenrock:test-upload {--file= : Ruta relativa en storage/app/
 
     return 0;
 })->purpose('Ejecuta un upload temporal real y muestra el estado guardado en radio_programs');
+
+Artisan::command('talents:refresh-featured {--limit=6}', function () {
+    $limit = max(1, (int) $this->option('limit'));
+    $featuredIds = app(FeaturedTalentService::class)->getFeatured($limit)->pluck('id')->all();
+
+    Talent::query()->update(['is_featured' => false]);
+
+    if ($featuredIds !== []) {
+        Talent::query()->whereIn('id', $featuredIds)->update(['is_featured' => true]);
+    }
+
+    $this->info('Featured talents refreshed: ' . count($featuredIds));
+
+    return 0;
+})->purpose('Refresh featured talents based on recent interactions');
+
+Artisan::command('talents:send-renewal-reminders', function () {
+    $renewalDate = today()->addDays(7);
+    $expiredDate = today()->subDay();
+
+    $renewals = TalentSubscription::query()
+        ->where('status', 'active')
+        ->whereDate('end_date', $renewalDate)
+        ->with('talent')
+        ->get();
+
+    $expired = TalentSubscription::query()
+        ->whereIn('status', ['expired', 'cancelled'])
+        ->whereDate('end_date', $expiredDate)
+        ->with('talent')
+        ->get();
+
+    foreach ($renewals as $subscription) {
+        $talent = $subscription->talent;
+        if (! $talent || ! filled($talent->email) || ! $talent->notificationPreferenceEnabled('renewals')) {
+            continue;
+        }
+
+        Mail::to($talent->email)->queue(new SubscriptionRenewalMail($subscription));
+    }
+
+    foreach ($expired as $subscription) {
+        $talent = $subscription->talent;
+        if (! $talent || ! filled($talent->email) || ! $talent->notificationPreferenceEnabled('renewals')) {
+            continue;
+        }
+
+        Mail::to($talent->email)->queue(new SubscriptionExpiredMail($subscription));
+    }
+
+    $this->info(sprintf('Renewals queued: %d, expired queued: %d', $renewals->count(), $expired->count()));
+
+    return 0;
+})->purpose('Send talent renewal and expiration reminders');
+
+Schedule::command('talents:send-renewal-reminders')->dailyAt('09:00');

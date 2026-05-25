@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
-use App\Models\BandProfile;
+use App\Models\RadioArtist;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 class BandProfileMatcher
 {
     /**
-     * @return Collection<int, BandProfile>
+     * @return Collection<int, RadioArtist>
      */
     public function search(string $term, int $limit = 10): Collection
     {
@@ -24,7 +24,7 @@ class BandProfileMatcher
         $normalizedTerm = $this->normalizeKey($term);
         $like = '%' . mb_strtolower($term) . '%';
 
-        $candidates = BandProfile::query()
+        $candidates = RadioArtist::query()
             ->where(function ($query) use ($like): void {
                 $query
                     ->whereRaw('LOWER(name) LIKE ?', [$like])
@@ -36,7 +36,7 @@ class BandProfileMatcher
             ->get();
 
         if ($candidates->isEmpty()) {
-            $candidates = BandProfile::query()
+            $candidates = RadioArtist::query()
                 ->orderBy('name')
                 ->limit(150)
                 ->get();
@@ -47,17 +47,17 @@ class BandProfileMatcher
             ->values();
     }
 
-    public function exactMatch(string $term): ?BandProfile
+    public function exactMatch(string $term): ?RadioArtist
     {
         return $this->bestMatch($term, false);
     }
 
-    public function fuzzyMatch(string $term): ?BandProfile
+    public function fuzzyMatch(string $term): ?RadioArtist
     {
         return $this->bestMatch($term, true);
     }
 
-    private function bestMatch(string $term, bool $allowFuzzy): ?BandProfile
+    private function bestMatch(string $term, bool $allowFuzzy): ?RadioArtist
     {
         $term = trim($term);
         if ($term === '' || ! $this->hasTable()) {
@@ -70,12 +70,12 @@ class BandProfileMatcher
         }
 
         $candidate = $this->rankCandidates(
-            BandProfile::query()->get(),
+            RadioArtist::query()->get(),
             $term,
             $normalizedTerm
         )->first();
 
-        if (! $candidate instanceof BandProfile) {
+        if (! $candidate instanceof RadioArtist) {
             return null;
         }
 
@@ -91,17 +91,17 @@ class BandProfileMatcher
     }
 
     /**
-     * @param Collection<int, BandProfile> $candidates
-     * @return Collection<int, BandProfile>
+     * @param Collection<int, RadioArtist> $candidates
+     * @return Collection<int, RadioArtist>
      */
     private function rankCandidates(Collection $candidates, string $term, string $normalizedTerm): Collection
     {
         return $candidates
-            ->sortByDesc(fn (BandProfile $candidate): int => $this->scoreCandidate($candidate, $term, $normalizedTerm))
+            ->sortByDesc(fn (RadioArtist $candidate): int => $this->scoreCandidate($candidate, $term, $normalizedTerm))
             ->values();
     }
 
-    private function scoreCandidate(BandProfile $candidate, string $term, string $normalizedTerm): int
+    private function scoreCandidate(RadioArtist $candidate, string $term, string $normalizedTerm): int
     {
         $normalizedName = $this->normalizeKey((string) $candidate->name);
         if ($normalizedName === $normalizedTerm) {

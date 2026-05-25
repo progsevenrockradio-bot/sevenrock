@@ -16,6 +16,11 @@ class TalentInteraction extends Model
         'content',
     ];
 
+    protected function casts(): array
+    {
+        return [];
+    }
+
     public function talent(): BelongsTo
     {
         return $this->belongsTo(Talent::class);

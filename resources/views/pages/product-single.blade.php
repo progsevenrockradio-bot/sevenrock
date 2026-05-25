@@ -24,9 +24,15 @@
                     </p>
 
                     <div class="mt-8 flex flex-wrap items-center gap-4">
-                        <label class="font-display text-sm uppercase tracking-[.3em] text-[#7b7b7b]" for="quantity">{{ $ui['quantity'] }}</label>
-                        <input id="quantity" type="number" min="1" value="1" class="lucille-product-qty">
-                        <button type="button" class="lucille-button-solid">{{ $ui['add_to_cart'] }}</button>
+                        @if (! empty($product['external_payment_url']))
+                            <a href="{{ $product['external_payment_url'] }}" target="_blank" rel="nofollow noopener" class="lucille-button-solid">
+                                {{ $product['external_payment_label'] ?? $ui['add_to_cart'] }} ↗
+                            </a>
+                        @else
+                            <label class="font-display text-sm uppercase tracking-[.3em] text-[#7b7b7b]" for="quantity">{{ $ui['quantity'] }}</label>
+                            <input id="quantity" type="number" min="1" value="1" class="lucille-product-qty">
+                            <button type="button" class="lucille-button-solid">{{ $ui['add_to_cart'] }}</button>
+                        @endif
                     </div>
 
                     <div class="mt-8 border-t border-[#2b2b2b] pt-6 text-[14px] leading-7 text-[#7b7b7b]">

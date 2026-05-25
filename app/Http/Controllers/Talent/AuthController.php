@@ -7,51 +7,70 @@ namespace App\Http\Controllers\Talent;
 use App\Http\Controllers\Controller;
 use App\Models\Talent;
 use App\Models\User;
+use App\Mail\WelcomeTalentMail;
 use App\Support\TalentPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    public function showRegister(): View
+    public function showRegisterForm(): View
     {
-        return view('talentos.register', [
+        return view('talentos.auth.register', [
             'plans' => TalentPlan::definitions(),
         ]);
+    }
+
+    public function showRegister(): View
+    {
+        return $this->showRegisterForm();
     }
 
     public function register(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'band_name' => ['required', 'string', 'max:255'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'band_name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('talents', 'email')],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'plan' => ['required', Rule::in(TalentPlan::keys())],
         ]);
 
-        $talent = DB::transaction(function () use ($validated): Talent {
+        $bandName = trim((string) ($validated['name'] ?? ''));
+        $bandName = $bandName !== '' ? $bandName : trim((string) ($request->input('band_name', '')));
+        if ($bandName === '') {
+            return back()->withInput()->withErrors([
+                'name' => 'El nombre de la banda es obligatorio.',
+            ]);
+        }
+
+        $talent = DB::transaction(function () use ($validated, $bandName): Talent {
             $user = User::query()->firstOrCreate(
                 ['email' => $validated['email']],
                 [
-                    'name' => $validated['band_name'],
+                    'name' => $bandName,
                     'password' => Hash::make($validated['password']),
                 ]
             );
 
             $talent = Talent::query()->create([
                 'user_id' => $user->id,
-                'band_name' => $validated['band_name'],
+                'band_name' => $bandName,
                 'email' => $validated['email'],
                 'password' => $validated['password'],
                 'plan' => $validated['plan'],
-                'subscription_status' => 'active',
+                'subscription_status' => $validated['plan'] === 'free' ? 'active' : 'inactive',
                 'payment_customer_id' => null,
+                'payment_provider' => null,
                 'interacts' => 0,
+                'is_featured' => false,
+                'email_verified_at' => null,
             ]);
 
             $talent->subscriptions()->create([
@@ -59,7 +78,9 @@ class AuthController extends Controller
                 'amount' => TalentPlan::amount($validated['plan']),
                 'start_date' => today(),
                 'end_date' => today()->addMonth(),
-                'status' => 'active',
+                'status' => $validated['plan'] === 'free' ? 'active' : 'pending',
+                'currency' => 'EUR',
+                'payment_provider' => 'manual',
             ]);
 
             return $talent;
@@ -68,12 +89,23 @@ class AuthController extends Controller
         Auth::guard('talent')->login($talent, true);
         $request->session()->regenerate();
 
-        return redirect()->route('talents.dashboard');
+        if (filled($talent->email)) {
+            Mail::to($talent->email)->queue(new WelcomeTalentMail($talent));
+        }
+
+        return redirect()->route('talents.dashboard')->with('status', $validated['plan'] === 'free'
+            ? 'Cuenta creada.'
+            : 'Cuenta creada. Completa el pago para activar tu suscripción.');
+    }
+
+    public function showLoginForm(): View
+    {
+        return view('talentos.auth.login');
     }
 
     public function showLogin(): View
     {
-        return view('talentos.login');
+        return $this->showLoginForm();
     }
 
     public function login(Request $request): RedirectResponse
@@ -85,7 +117,7 @@ class AuthController extends Controller
 
         if (! Auth::guard('talent')->attempt($credentials, $request->boolean('remember'))) {
             return back()->withErrors([
-                'email' => 'Invalid credentials.',
+                'email' => 'Credenciales inválidas.',
             ])->onlyInput('email');
         }
 

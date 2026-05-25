@@ -145,6 +145,20 @@
                     <a href="{{ route('admin.gallery.index') }}" class="lucille-admin-link">{{ $admin['gallery_heading'] ?? 'Gallery' }}</a>
                 </div>
             </details>
+
+            <details class="lucille-admin-dropdown">
+                <summary class="lucille-admin-dropdown-summary">
+                    <span>Talents</span>
+                    <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
+                </summary>
+                <div class="lucille-admin-dropdown-panel">
+                    <a href="{{ route('admin.talents.index') }}" class="lucille-admin-link">Dashboard</a>
+                    <a href="{{ route('admin.talents.index') }}" class="lucille-admin-link">Lista de talentos</a>
+                    <a href="{{ route('admin.talents.media') }}" class="lucille-admin-link">Contenido subido</a>
+                    <a href="{{ route('admin.talents.index') }}" class="lucille-admin-link">Suscripciones</a>
+                    <a href="#" class="lucille-admin-link">Reportes</a>
+                </div>
+            </details>
         </nav>
     </div>
 

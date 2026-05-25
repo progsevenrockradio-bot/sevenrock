@@ -1,5 +1,5 @@
-<x-layouts.site :title="'Talentos - Media'">
-    <section class="mx-auto max-w-6xl px-5 pt-10">
+<x-layouts.talent :title="'Talentos - Media'" :talent="$talent">
+    <section class="space-y-6">
         @if (session('status'))
             <div class="mb-6 border border-[#1e4d2b] bg-[rgba(16,64,30,.2)] px-4 py-3 text-sm text-[#b8e6c3]">
                 {{ session('status') }}
@@ -7,40 +7,46 @@
         @endif
 
         <div class="grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
-            <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
+            <div class="border border-white/10 bg-[#10161b] p-8">
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Media</h1>
-                <p class="mt-2 text-sm text-[#7b7b7b]">Sube fotos, MP3 o documentos al storage de Backblaze B2.</p>
+                <p class="mt-2 text-sm text-[#7b7b7b]">Sube fotos, MP3, documentos o videos al almacenamiento de Backblaze B2.</p>
+                <div class="mt-4 text-sm text-[#c7d0d8]">
+                    Has usado {{ number_format((float) ($usage['storage_used_mb'] ?? 0), 2) }} MB de {{ (int) ($limits['storage_mb'] ?? 0) }} MB /
+                    {{ ($usage['photos'] ?? 0) + ($usage['songs'] ?? 0) + ($usage['documents'] ?? 0) + ($usage['videos'] ?? 0) }}
+                    de {{ (int) ($limits['photos'] ?? 0) + (int) ($limits['songs'] ?? 0) + (int) ($limits['documents'] ?? 0) + (int) ($limits['videos'] ?? 0) }} archivos
+                </div>
 
-                <form action="{{ route('talents.media.store') }}" method="POST" enctype="multipart/form-data" class="mt-8 space-y-5">
+                <form action="{{ route('talents.media.upload') }}" method="POST" enctype="multipart/form-data" class="mt-8 space-y-5">
                     @csrf
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Type</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Tipo</label>
                         <select name="type" class="lucille-product-field w-full">
-                            <option value="photo" @selected(old('type') === 'photo')>Photo</option>
+                            <option value="photo" @selected(old('type') === 'photo')>Foto</option>
                             <option value="mp3" @selected(old('type') === 'mp3')>MP3</option>
-                            <option value="document" @selected(old('type') === 'document')>Document</option>
+                            <option value="document" @selected(old('type') === 'document')>Documento</option>
+                            <option value="video" @selected(old('type') === 'video')>Video</option>
                         </select>
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Title</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Título</label>
                         <input name="title" value="{{ old('title') }}" class="lucille-product-field w-full">
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Description</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Descripción</label>
                         <textarea name="description" rows="4" class="lucille-product-field w-full">{{ old('description') }}</textarea>
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">File</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Archivo</label>
                         <input type="file" name="file" class="lucille-product-field w-full">
                     </div>
-                    <button type="submit" class="lucille-button-solid">Upload</button>
+                    <button type="submit" class="lucille-button-solid">Subir archivo</button>
                 </form>
             </div>
 
-            <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
+            <div class="border border-white/10 bg-[#10161b] p-8">
                 <div class="flex items-center justify-between">
-                    <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Library</h2>
-                    <a href="{{ route('talents.dashboard') }}" class="lucille-button">Dashboard</a>
+                    <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Biblioteca</h2>
+                    <a href="{{ route('talents.dashboard') }}" class="lucille-button">Panel</a>
                 </div>
                 <div class="mt-6 grid gap-4 md:grid-cols-2">
                     @forelse ($media as $item)
@@ -51,19 +57,19 @@
                                 <p class="mt-3 text-sm text-[#7b7b7b]">{{ $item->description }}</p>
                             @endif
                             <div class="mt-4 flex flex-wrap gap-2">
-                                <a href="{{ $item->url }}" target="_blank" rel="noreferrer" class="lucille-button">Open</a>
-                                <form action="{{ route('talents.media.destroy', $item) }}" method="POST">
+                                <a href="{{ $item->url }}" target="_blank" rel="noreferrer" class="lucille-button">Abrir</a>
+                                <form action="{{ route('talents.media.destroy', ['id' => $item->id]) }}" method="POST">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="lucille-button-solid">Delete</button>
+                                    <button type="submit" class="lucille-button-solid">Eliminar</button>
                                 </form>
                             </div>
                         </div>
                     @empty
-                        <div class="text-sm text-[#7b7b7b]">No media uploaded yet.</div>
+                        <div class="text-sm text-[#7b7b7b]">Todavía no has subido contenido.</div>
                     @endforelse
                 </div>
             </div>
         </div>
     </section>
-</x-layouts.site>
+</x-layouts.talent>

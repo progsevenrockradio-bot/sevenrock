@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\BandProfile;
+use App\Models\RadioArtist;
 use App\Models\Song;
 use App\Support\BandProfileMatcher;
 use App\Support\BandInfoResolver;
@@ -100,7 +100,7 @@ class BandInfoController extends Controller
         ]);
     }
 
-    private function resolveBandProfile(string $artist): ?BandProfile
+    private function resolveBandProfile(string $artist): ?RadioArtist
     {
         $artist = trim($artist);
         if ($artist === '') {
@@ -188,7 +188,7 @@ class BandInfoController extends Controller
             || str_contains($lookupArtist, $songArtist);
     }
 
-    private function bandProfileMatchesArtist(BandProfile $bandProfile, string $artist): bool
+    private function bandProfileMatchesArtist(RadioArtist $bandProfile, string $artist): bool
     {
         $artist = trim($artist);
         if ($artist === '') {
@@ -315,7 +315,7 @@ class BandInfoController extends Controller
         }
     }
 
-    private function persistResolvedMetadata(?Song $song, ?BandProfile $bandProfile, array $payload, string $lyrics): void
+    private function persistResolvedMetadata(?Song $song, ?RadioArtist $bandProfile, array $payload, string $lyrics): void
     {
         if (! $song) {
             return;
@@ -341,7 +341,7 @@ class BandInfoController extends Controller
         }
     }
 
-    private function yearFromBandProfile(BandProfile $bandProfile): ?int
+    private function yearFromBandProfile(RadioArtist $bandProfile): ?int
     {
         $summary = trim((string) ($bandProfile->editorial_summary ?: $bandProfile->biography ?: ''));
         if ($summary !== '' && preg_match('/\b((?:18|19|20)\d{2})\b/u', $summary, $matches)) {

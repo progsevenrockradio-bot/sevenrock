@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\BandProfile;
+use App\Models\RadioArtist;
 use App\Support\BandProfileMatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -19,14 +19,14 @@ class BandProfileController extends Controller
     public function index(): View
     {
         return view('admin.radio-artists.index', [
-            'bandProfiles' => BandProfile::query()->orderBy('name')->get(),
+            'bandProfiles' => RadioArtist::query()->orderBy('name')->get(),
         ]);
     }
 
     public function create(): View
     {
         return view('admin.radio-artists.create', [
-            'bandProfile' => new BandProfile([
+            'bandProfile' => new RadioArtist([
                 'featured_facts' => [],
                 'official_links' => [],
                 'related_artists' => [],
@@ -39,12 +39,12 @@ class BandProfileController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        BandProfile::query()->create($this->validated($request));
+        RadioArtist::query()->create($this->validated($request));
 
         return redirect()->route('admin.radio-artists.index')->with('status', 'Radio artist created.');
     }
 
-    public function edit(BandProfile $bandProfile): View
+    public function edit(RadioArtist $bandProfile): View
     {
         return view('admin.radio-artists.edit', [
             'bandProfile' => $bandProfile,
@@ -54,14 +54,14 @@ class BandProfileController extends Controller
         ]);
     }
 
-    public function update(Request $request, BandProfile $bandProfile): RedirectResponse
+    public function update(Request $request, RadioArtist $bandProfile): RedirectResponse
     {
         $bandProfile->update($this->validated($request, $bandProfile->id));
 
         return redirect()->route('admin.radio-artists.index')->with('status', 'Radio artist updated.');
     }
 
-    public function destroy(BandProfile $bandProfile): RedirectResponse
+    public function destroy(RadioArtist $bandProfile): RedirectResponse
     {
         $bandProfile->delete();
 
@@ -79,7 +79,7 @@ class BandProfileController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'results' => $profiles->map(function (BandProfile $profile): array {
+                'results' => $profiles->map(function (RadioArtist $profile): array {
                     $summary = trim((string) ($profile->editorial_summary ?: $profile->biography ?: ''));
 
                     return [

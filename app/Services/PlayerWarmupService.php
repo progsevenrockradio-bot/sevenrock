@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Song;
-use App\Models\BandProfile;
+use App\Models\RadioArtist;
 use App\Support\BandInfoAggregator;
 use Illuminate\Support\Facades\Log;
 use App\Support\LyricsResolver;
@@ -23,9 +23,9 @@ final class PlayerWarmupService
             try {
                 app(BandInfoAggregator::class)->aggregate($artist);
 
-                $profile = BandProfile::query()
+                $profile = RadioArtist::query()
                     ->get()
-                    ->first(function (BandProfile $candidate) use ($artist): bool {
+                    ->first(function (RadioArtist $candidate) use ($artist): bool {
                         $normalizedArtist = preg_replace('/[^a-z0-9]+/i', '', mb_strtolower(trim($artist))) ?: '';
 
                         if (preg_replace('/[^a-z0-9]+/i', '', mb_strtolower($candidate->name)) === $normalizedArtist) {

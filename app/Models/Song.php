@@ -50,7 +50,7 @@ class Song extends Model
 
     public function bandProfile(): BelongsTo
     {
-        return $this->belongsTo(BandProfile::class);
+        return $this->belongsTo(RadioArtist::class, 'band_profile_id');
     }
 
     public function scopePublished(Builder $query): Builder

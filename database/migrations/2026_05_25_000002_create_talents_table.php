@@ -14,18 +14,21 @@ return new class extends Migration
 
         Schema::create('talents', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('band_name');
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('band_name')->unique();
             $table->string('email')->unique();
             $table->string('password');
             $table->text('bio')->nullable();
             $table->string('logo')->nullable();
             $table->enum('plan', ['free', 'basic', 'pro', 'premium'])->default('free');
-            $table->enum('subscription_status', ['active', 'cancelled', 'expired'])->default('active');
+            $table->enum('subscription_status', ['active', 'inactive', 'cancelled'])->default('inactive');
             $table->string('payment_customer_id')->nullable();
-            $table->unsignedInteger('interacts')->default(0);
+            $table->string('payment_provider')->nullable();
+            $table->integer('interacts')->default(0);
+            $table->boolean('is_featured')->default(false);
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
