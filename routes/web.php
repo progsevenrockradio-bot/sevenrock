@@ -40,6 +40,7 @@ Route::get('/videos', [SiteController::class, 'videos'])->name('videos');
 Route::get('/js_videos/{slug}', [SiteController::class, 'videoSingle'])->name('videos.single');
 Route::get('/gallery', [SiteController::class, 'gallery'])->name('gallery');
 Route::get('/js_photo_albums/5', [SiteController::class, 'photoAlbum'])->name('gallery.green-day');
+Route::get('/discografia/{id}-{slug}', [SiteController::class, 'talentAlbumSingle'])->name('talents.album.show');
 Route::get('/blog', [SiteController::class, 'blog'])->name('blog');
 Route::get('/blog-standard', [SiteController::class, 'blogStandard'])->name('blog.standard');
 Route::get('/legacy-wp-uploads/{path}', [LegacyWordPressUploadController::class, 'show'])
@@ -51,6 +52,8 @@ Route::get('/{year}/{month}/{day}/{slug}', [SiteController::class, 'singlePost']
 Route::get('/shop', [SiteController::class, 'shop'])->name('shop');
 Route::get('/product/{slug}', [SiteController::class, 'productSingle'])->name('products.single');
 Route::get('/contact', [SiteController::class, 'contact'])->name('contact');
+Route::post('/contact', [SiteController::class, 'contactSend'])->name('contact.send');
+Route::post('/home-contact', [SiteController::class, 'homeContactSend'])->name('home.contact.send');
 Route::get('/player/popup', [PlayerController::class, 'show'])->name('player.popup');
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('posts.comments.store');
@@ -184,6 +187,14 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
         Route::post('/media/upload', [TalentMediaController::class, 'upload'])->name('media.upload');
         Route::post('/media', [TalentMediaController::class, 'store'])->name('media.store');
         Route::delete('/media/{id}', [TalentMediaController::class, 'destroy'])->name('media.destroy');
+        Route::prefix('albums')->name('albums.')->group(function (): void {
+            Route::get('/', [\App\Http\Controllers\Talent\AlbumController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Talent\AlbumController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Talent\AlbumController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [\App\Http\Controllers\Talent\AlbumController::class, 'edit'])->name('edit');
+            Route::post('/{id}', [\App\Http\Controllers\Talent\AlbumController::class, 'update'])->name('update');
+            Route::delete('/{id}', [\App\Http\Controllers\Talent\AlbumController::class, 'destroy'])->name('destroy');
+        });
         Route::post('/logout', [TalentAuthController::class, 'logout'])->name('logout');
     });
 

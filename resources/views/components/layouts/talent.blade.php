@@ -44,6 +44,7 @@
                 <a href="{{ route('talents.notifications.edit') }}" class="lucille-button">Notificaciones</a>
                 <a href="{{ route('talents.media.index') }}" class="lucille-button">Mi Música</a>
                 <a href="{{ route('talentos.store.index') }}" class="lucille-button">Mi Tienda</a>
+                <a href="{{ route('talents.albums.index') }}" class="lucille-button">Mis Álbumes</a>
                 <form method="POST" action="{{ route('talents.logout') }}">
                     @csrf
                     <button type="submit" class="lucille-button-solid">Cerrar sesión</button>

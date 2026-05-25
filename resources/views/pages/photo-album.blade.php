@@ -7,7 +7,7 @@
 
     <x-sections.page-heading
         :title="$album['title']"
-        subtitle="Gallery Post"
+        subtitle="Galería de Fotos"
         overlay="rgba(0,0,0,0)"
         :categories="$album['categories']"
     />
@@ -23,7 +23,7 @@
             <article class="mx-auto max-w-[1200px]">
                 <div class="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
                     <div class="space-y-6 text-[#7b7b7b]">
-                        <h3 class="font-display text-[18px] font-bold uppercase tracking-[.12em] text-[#dcdcdc]">Outstanding Gallery Layout</h3>
+                        <h3 class="font-display text-[18px] font-bold uppercase tracking-[.12em] text-[#dcdcdc]">Galería Destacada</h3>
                         <p>This was a phenomenal performance. Auerbach radiated energy and the the audience responded in kind. It was the perfect balance of performance and appreciation. The music was terrific and the visuals were delightful. The many familiar favorites were played with inventiveness and spontaneity. Nothing was stale.</p>
                         <p>This was a phenomenal performance. Auerbach radiated energy and the the audience responded in kind. It was the perfect balance of performance and appreciation. The music was terrific and the visuals were delightful. The many familiar favorites were played with inventiveness and spontaneity. Nothing was stale.</p>
                         <p>This was a phenomenal performance. Auerbach radiated energy and the the audience responded in kind. It was the perfect balance of performance and appreciation. The music was terrific and the visuals were delightful. The many familiar favorites were played with inventiveness and spontaneity. Nothing was stale.</p>

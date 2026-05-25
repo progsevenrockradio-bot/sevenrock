@@ -1,9 +1,9 @@
 <x-layouts.site :title="'Talentos'">
     <section class="mx-auto max-w-7xl px-5 py-16">
         <div class="mb-8 border border-white/10 bg-[#10161b] p-8">
-            <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Talentos</div>
-            <h1 class="mt-2 font-display text-4xl uppercase tracking-[.12em] text-white">Explora bandas activas</h1>
-            <p class="mt-3 max-w-3xl text-sm text-[#8b8b8b]">Busca bandas emergentes, filtra por plan y entra en su perfil público para ver contenidos, likes y comentarios.</p>
+            <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Muro del Rock</div>
+            <h1 class="mt-2 font-display text-4xl uppercase tracking-[.12em] text-white">Muro del Rock</h1>
+            <p class="mt-3 max-w-3xl text-sm text-[#8b8b8b]">Todas las bandas ordenadas por actividad — las más activas primero. Interactúa con ellas, descubre su música y sígueles la pista.</p>
         </div>
 
         <form method="GET" action="{{ route('talents.explore') }}" class="grid gap-4 border border-white/10 bg-[#10161b] p-6 md:grid-cols-[1.5fr_1fr_auto]">

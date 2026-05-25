@@ -13,13 +13,13 @@
         <div class="mx-auto flex max-w-[1180px] flex-col gap-1 px-6 lg:px-8">
             <div class="flex flex-wrap items-center gap-1.5">
                 <div class="flex items-center gap-1.5">
-                    <span class="font-display text-[8px] uppercase tracking-[.3em] text-[#dcdcdc]">{{ data_get($ticker, 'label', 'Editorial feed') }}</span>
+                    <span class="font-display text-[8px] uppercase tracking-[.3em] text-[#dcdcdc]">{{ data_get($ticker, 'label', 'Feed editorial') }}</span>
                     <span class="h-px w-5 bg-white/10"></span>
-                    <span class="font-display text-[8px] uppercase tracking-[.3em] text-lucille-accent">{{ data_get($ticker, 'subtitle', 'Latest headlines') }}</span>
+                    <span class="font-display text-[8px] uppercase tracking-[.3em] text-lucille-accent">{{ data_get($ticker, 'subtitle', 'Últimos titulares') }}</span>
                 </div>
                 <span class="hidden h-px flex-1 bg-white/10 md:block"></span>
                 <a href="{{ route('blog') }}" class="font-display text-[7px] uppercase tracking-[.3em] text-[#7b7b7b] transition hover:text-white">
-                    View blog
+                    Ver blog
                 </a>
             </div>
 

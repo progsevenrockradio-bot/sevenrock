@@ -3,29 +3,29 @@
 @php
     $ui = $themeAppearance['ui_texts'];
     $items ??= [
-        ['label' => 'Home', 'route' => 'home'],
+        ['label' => 'Inicio', 'route' => 'home'],
         ['label' => 'Multimedia', 'route' => 'discography', 'children' => [
-            ['label' => 'Discography', 'route' => 'discography'],
+            ['label' => 'Discografía', 'route' => 'discography'],
             ['label' => 'Videos', 'route' => 'videos'],
-            ['label' => 'Gallery', 'route' => 'gallery'],
-            ['label' => 'Single Album', 'url' => route('albums.single', ['slug' => 'nightride'])],
-            ['label' => 'Single Video', 'url' => route('videos.single', ['slug' => 'gold-on-the-ceiling'])],
-            ['label' => 'Single Gallery', 'route' => 'gallery.green-day'],
+            ['label' => 'Galería', 'route' => 'gallery'],
+            ['label' => 'Álbum', 'url' => route('albums.single', ['slug' => 'nightride'])],
+            ['label' => 'Video', 'url' => route('videos.single', ['slug' => 'gold-on-the-ceiling'])],
+            ['label' => 'Álbum de fotos', 'route' => 'gallery.green-day'],
         ]],
-        ['label' => 'Events', 'route' => 'events', 'children' => [
-            ['label' => 'Upcoming Events', 'route' => 'events'],
-            ['label' => 'Past Events', 'route' => 'events'],
-            ['label' => 'All Events', 'route' => 'events'],
-            ['label' => 'Single Event', 'url' => route('events.single', ['slug' => 'rockness-festival'])],
+        ['label' => 'Eventos', 'route' => 'events', 'children' => [
+            ['label' => 'Proximos eventos', 'route' => 'events'],
+            ['label' => 'Eventos pasados', 'route' => 'events'],
+            ['label' => 'Todos los eventos', 'route' => 'events'],
+            ['label' => 'Evento', 'url' => route('events.single', ['slug' => 'rockness-festival'])],
         ]],
         ['label' => 'Blog', 'route' => 'blog', 'children' => [
-            ['label' => 'Blog Masonry', 'route' => 'blog'],
-            ['label' => 'Blog Standard', 'route' => 'blog.standard'],
-            ['label' => 'Single Post', 'url' => route('posts.single', ['year' => '2016', 'month' => '09', 'day' => '06', 'slug' => 'inspiration'])],
+            ['label' => 'Blog', 'route' => 'blog'],
+            ['label' => 'Blog', 'route' => 'blog.standard'],
+            ['label' => 'Entrada', 'url' => route('posts.single', ['year' => '2016', 'month' => '09', 'day' => '06', 'slug' => 'inspiration'])],
         ]],
-        ['label' => 'Talentos', 'route' => 'talents.explore'],
-        ['label' => 'Shop', 'route' => 'shop'],
-        ['label' => 'Contact', 'route' => 'contact'],
+        ['label' => 'Muro del Rock', 'route' => 'talents.explore'],
+        ['label' => 'Tienda', 'route' => 'shop'],
+        ['label' => 'Contacto', 'route' => 'contact'],
     ];
     $themeData = is_array($theme ?? null) ? $theme : $themeAppearance;
     $brandMark = $themeData['visual']['brand_mark'] ?? $themeData['brand_mark'] ?? $themeData['site_name'] ?? 'Seven Rock Radio';
@@ -59,7 +59,7 @@
                             {{ $item['label'] }}
                         </a>
 
-                        @if (($item['label'] ?? '') === 'Talentos')
+                        @if (($item['label'] ?? '') === 'Muro del Rock')
                             <ul class="invisible absolute left-0 top-full min-w-48 bg-[rgba(8,26,36,.96)] py-3 opacity-0 shadow-[0_10px_30px_rgba(0,0,0,.22)] transition-all duration-300 group-hover:visible group-hover:opacity-100">
                                 @auth('talent')
                                     <li>
@@ -89,7 +89,7 @@
                                 @endauth
                                 <li>
                                     <a href="{{ route('talents.explore') }}" class="block whitespace-nowrap px-5 py-2 text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent">
-                                        Explorar Talentos
+                                        Índice de bandas
                                     </a>
                                 </li>
                             </ul>
@@ -129,13 +129,13 @@
                     <li x-data="{ childOpen: false }" class="py-1">
                         <div class="flex items-center justify-between">
                             <a href="{{ $item['url'] ?? route($item['route']) }}" class="block py-3 font-display text-sm uppercase tracking-[.08em] text-white">{{ $item['label'] }}</a>
-                            @if (($item['label'] ?? '') === 'Talentos')
+                            @if (($item['label'] ?? '') === 'Muro del Rock')
                                 <button type="button" class="px-4 py-3 text-white" @click.prevent="childOpen = ! childOpen" aria-label="Toggle submenu">+</button>
                             @elseif (! empty($item['children']))
                                 <button type="button" class="px-4 py-3 text-white" @click.prevent="childOpen = ! childOpen" aria-label="Toggle submenu">+</button>
                             @endif
                         </div>
-                        @if (($item['label'] ?? '') === 'Talentos')
+                        @if (($item['label'] ?? '') === 'Muro del Rock')
                             <ul x-show="childOpen" x-transition class="pb-2 pl-5">
                                 @auth('talent')
                                     <li><a href="{{ route('talents.dashboard') }}" class="block py-2 text-[13px] text-[#b7b7b7]">Mi Panel</a></li>
@@ -149,7 +149,7 @@
                                     <li><a href="{{ route('talents.login') }}" class="block py-2 text-[13px] text-[#b7b7b7]">Acceder</a></li>
                                     <li><a href="{{ route('talents.register') }}" class="block py-2 text-[13px] text-[#b7b7b7]">Registrarse</a></li>
                                 @endauth
-                                <li><a href="{{ route('talents.explore') }}" class="block py-2 text-[13px] text-[#b7b7b7]">Explorar Talentos</a></li>
+                                <li><a href="{{ route('talents.explore') }}" class="block py-2 text-[13px] text-[#b7b7b7]">Índice de bandas</a></li>
                             </ul>
                         @elseif (! empty($item['children']))
                             <ul x-show="childOpen" x-transition class="pb-2 pl-5">

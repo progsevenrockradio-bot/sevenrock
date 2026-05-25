@@ -18,6 +18,8 @@ class Talent extends Authenticatable
     use Notifiable;
     use SoftDeletes;
 
+    protected $table = 'talents';
+
     protected $fillable = [
         'user_id',
         'band_name',
@@ -83,6 +85,11 @@ class Talent extends Authenticatable
     public function media(): HasMany
     {
         return $this->hasMany(TalentMedia::class);
+    }
+
+    public function albums(): HasMany
+    {
+        return $this->hasMany(TalentAlbum::class);
     }
 
     public function products(): HasMany

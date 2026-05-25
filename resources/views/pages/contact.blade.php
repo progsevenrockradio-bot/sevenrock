@@ -1,25 +1,26 @@
-<x-layouts.site title="Seven Rock Radio - Contact">
+<x-layouts.site title="Seven Rock Radio - Contacto">
     @php
         $contact = $themeAppearance['contact'];
         $ui = $themeAppearance['ui_texts'];
     @endphp
 
-    <x-sections.page-heading title="Contact" overlay="rgba(0,0,0,0)" :image="$themeAppearance['background_url']" />
+    <x-sections.page-heading title="Contacto" overlay="rgba(0,0,0,0)" :image="$themeAppearance['background_url']" />
 
     <section>
         <div class="lucille-content-box">
             <div class="grid gap-12 lg:grid-cols-2">
                 <div class="md:pr-[15px]">
                     <h3 class="mb-10 mt-[30px] font-display text-[16px] font-light tracking-[.04em] text-[#dcdcdc]">{{ $contact['form_title'] }}</h3>
-                    <form class="space-y-6">
+                    <form method="POST" action="{{ route("contact.send") }}" class="space-y-6">
+                        @csrf
                         <div class="grid gap-6 md:grid-cols-3">
-                            <input type="text" placeholder="{{ $ui['your_name'] }}" class="lucille-form-field w-full">
-                            <input type="email" placeholder="{{ $ui['email_address'] }}" class="lucille-form-field w-full">
-                            <input type="tel" placeholder="{{ $ui['phone'] }}" class="lucille-form-field w-full">
+                            <input type="text" name="name" placeholder="{{ $ui['your_name'] }}" class="lucille-form-field w-full" required>
+                            <input type="email" name="email" placeholder="{{ $ui['email_address'] }}" class="lucille-form-field w-full" required>
+                            <input type="tel" name="phone" placeholder="{{ $ui['phone'] }}" class="lucille-form-field w-full">
                         </div>
-                        <textarea placeholder="{{ $ui['write_comment'] }}" rows="10" class="lucille-form-field min-h-[220px] w-full"></textarea>
+                        <textarea name="message" placeholder="{{ $ui['write_comment'] }}" rows="10" class="lucille-form-field min-h-[220px] w-full" required></textarea>
                         <div class="pt-2">
-                            <button type="button" class="lucille-button-solid">{{ $ui['send_email'] }}</button>
+                            <button type="submit" class="lucille-button-solid">{{ $ui['send_email'] }}</button>
                         </div>
                     </form>
                 </div>
