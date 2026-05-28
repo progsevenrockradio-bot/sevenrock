@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
 use App\Http\Controllers\Admin\OutreachController as AdminOutreachController;
+use App\Http\Controllers\Admin\ProgramCodeController as AdminProgramCodeController;
 use App\Http\Controllers\Admin\TalentAdminController as AdminTalentController;
 use App\Http\Controllers\LegacyWordPressUploadController;
 use App\Http\Controllers\Talent\DashboardController as TalentDashboardController;
@@ -124,6 +125,12 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/master-programs/{masterProgram}/edit', [AdminMasterProgramController::class, 'edit'])->name('master-programs.edit');
         Route::put('/master-programs/{masterProgram}', [AdminMasterProgramController::class, 'update'])->name('master-programs.update');
         Route::delete('/master-programs/{masterProgram}', [AdminMasterProgramController::class, 'destroy'])->name('master-programs.destroy');
+        Route::prefix('programs')->name('programs.')->group(function (): void {
+            Route::get('/', [AdminProgramCodeController::class, 'index'])->name('index');
+            Route::get('/invitations', [AdminProgramCodeController::class, 'invitations'])->name('invitations');
+            Route::post('/{program}/generate-code', [AdminProgramCodeController::class, 'generateCode'])->name('generate-code');
+            Route::post('/{program}/send-invitation', [AdminProgramCodeController::class, 'sendInvitation'])->name('send-invitation');
+        });
         Route::get('/podcast-uploads', [AdminPodcastUploadController::class, 'index'])->name('podcast-uploads.index');
         Route::post('/podcast-uploads', [AdminPodcastUploadController::class, 'store'])->name('podcast-uploads.store');
         Route::post('/podcast-uploads/{radioProgram}/retry', [AdminPodcastUploadController::class, 'retry'])->name('podcast-uploads.retry');
@@ -180,6 +187,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::get('/campaigns/{campaign}', [AdminOutreachController::class, 'campaignsShow'])->name('campaigns.show');
 
             Route::post('/send-test', [AdminOutreachController::class, 'sendTest'])->name('send-test');
+            Route::get('/contacts/{contact}', [AdminOutreachController::class, 'contactsShow'])->name('contacts.show');
         });
         Route::get('/talents', [AdminTalentController::class, 'index'])->name('talents.index');
         Route::get('/talents/media', [AdminTalentController::class, 'media'])->name('talents.media');

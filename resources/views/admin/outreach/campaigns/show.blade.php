@@ -3,7 +3,12 @@
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $campaign->name }}</h1>
-                <p class="mt-3 max-w-3xl text-sm text-[#7b7b7b]">{{ $campaign->description ?: 'Sin descripción.' }}</p>
+                <p class="mt-3 max-w-3xl text-sm text-[#7b7b7b]">
+                    {{ $campaign->description ?: 'Sin descripción.' }}
+                    @if ($campaign->program_code)
+                        · Programa: {{ $campaign->program_code }}
+                    @endif
+                </p>
             </div>
             <div class="flex flex-wrap gap-3">
                 <a href="{{ route('admin.outreach.campaigns.index') }}" class="lucille-button">Volver</a>
@@ -32,7 +37,7 @@
             <table class="w-full min-w-[980px] text-left text-sm">
                 <thead class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
                     <tr>
-                        <th class="py-3 pr-4">Banda</th>
+                        <th class="py-3 pr-4">Banda/Programa</th>
                         <th class="py-3 pr-4">Email</th>
                         <th class="py-3 pr-4">Asunto</th>
                         <th class="py-3 pr-4">Status</th>
@@ -42,7 +47,10 @@
                 <tbody>
                     @forelse ($logs as $log)
                         <tr class="border-t border-[#242424] align-top">
-                            <td class="py-4 pr-4 text-[#dcdcdc]">{{ $log->bandContact?->displayName() ?? 'Sin banda' }}</td>
+                            <td class="py-4 pr-4 text-[#dcdcdc]">
+                                {{ $log->bandContact?->displayName() ?? $log->recipient_email }}
+                                <div class="mt-1 text-xs text-[#7b7b7b]">{{ $log->bandContact?->programLabel() ?? $campaign->program?->name ?? 'Productor' }}</div>
+                            </td>
                             <td class="py-4 pr-4 text-[#9f9f9f]">{{ $log->recipient_email }}</td>
                             <td class="py-4 pr-4 text-[#9f9f9f]">{{ $log->subject }}</td>
                             <td class="py-4 pr-4 text-[#9f9f9f]">{{ $log->status }}</td>

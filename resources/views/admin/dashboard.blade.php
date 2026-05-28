@@ -42,6 +42,10 @@
                     <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b]">Outreach sent</div>
                     <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ $stats['outreach_sent'] }}</div>
                 </div>
+                <div class="border border-[#2b2b2b] bg-[#151515] p-5">
+                    <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b]">Programs</div>
+                    <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ \App\Models\MasterProgram::query()->count() }}</div>
+                </div>
             </div>
 
         </section>
@@ -64,6 +68,7 @@
                     <a href="{{ route('admin.songs.index') }}" class="lucille-button">Songs</a>
                     <a href="{{ route('admin.podcast-uploads.index') }}" class="lucille-button">Podcast uploads</a>
                     <a href="{{ route('admin.outreach.index') }}" class="lucille-button">Outreach</a>
+                    <a href="{{ route('admin.programs.index') }}" class="lucille-button">Programs codes</a>
                     <a href="{{ route('admin.posts.index') }}" class="lucille-button">{{ $admin['posts_heading'] }}</a>
                     <a href="#taxonomias" class="lucille-button">Taxonomías</a>
                     <a href="{{ route('home') }}" class="lucille-button">{{ $admin['open_site'] }}</a>

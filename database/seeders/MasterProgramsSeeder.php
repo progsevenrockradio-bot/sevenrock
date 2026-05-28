@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\MasterProgram;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -42,9 +43,18 @@ class MasterProgramsSeeder extends Seeder
             $stats = is_array($program['stats'] ?? null) ? $program['stats'] : [];
             $createdAt = ! empty($stats['updated_at']) ? date('Y-m-d H:i:s', strtotime((string) $stats['updated_at'])) : now();
 
+            $baseCode = MasterProgram::normalizeProgramCode((string) ($program['codigo'] ?? $program['nombre'] ?? 'PROGRAMA'));
+            if ($baseCode === '') {
+                $baseCode = 'PROGRAMA';
+            }
+
+            $programCode = MasterProgram::generateUniqueProgramCode($baseCode);
+
             DB::table('master_programs')->insert([
                 'id' => $index + 1,
                 'nombre' => trim((string) ($program['nombre'] ?? '')),
+                'program_code' => $programCode,
+                'code_prefix' => $baseCode,
                 'conductor' => trim((string) ($program['artista'] ?? '')),
                 'dia_transmision' => $diasMap[$diaCodigo] ?? 'LUNES',
                 'hora_transmision' => $this->normalizeTime($program['horaTransmision'] ?? null),

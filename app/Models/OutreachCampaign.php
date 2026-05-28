@@ -12,6 +12,7 @@ class OutreachCampaign extends Model
 {
     protected $fillable = [
         'template_id',
+        'program_code',
         'name',
         'description',
         'sent_count',
@@ -25,6 +26,7 @@ class OutreachCampaign extends Model
     {
         return [
             'template_id' => 'integer',
+            'program_code' => 'string',
             'sent_count' => 'integer',
             'opened_count' => 'integer',
             'responded_count' => 'integer',
@@ -36,6 +38,11 @@ class OutreachCampaign extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(OutreachTemplate::class, 'template_id');
+    }
+
+    public function program(): BelongsTo
+    {
+        return $this->belongsTo(MasterProgram::class, 'program_code', 'program_code');
     }
 
     public function logs(): HasMany

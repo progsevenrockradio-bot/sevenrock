@@ -1,12 +1,21 @@
 @php
-    $isEdit = $template->exists;
     $csrf = csrf_token();
+    $placeholderGroups = collect($availableVariables)->groupBy(function (array $item): string {
+        return match (true) {
+            in_array($item['key'], ['{band_name}', '{band_genre}', '{band_country}', '{contact_person}'], true) => 'Banda',
+            in_array($item['key'], ['{program_code}', '{program_name}', '{producer_name}'], true) => 'Programa',
+            in_array($item['key'], ['{image_specs}', '{audio_specs}', '{submission_days}', '{launch_date}'], true) => 'Specs y fechas',
+            default => 'General',
+        };
+    });
 @endphp
 
 <section class="mt-8 border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6" x-data="{
     previewOpen: false,
     previewSubject: '',
     previewBody: '',
+    previewProgramId: '{{ old('preview_program_id', $programs->first()?->id ?? '') }}',
+    previewContactId: '{{ old('preview_contact_id', $sampleContacts->first()?->id ?? '') }}',
     insertAtCursor(field, value) {
         const el = document.getElementById(field);
         if (!el) return;
@@ -28,10 +37,8 @@
             body: JSON.stringify({
                 subject: document.getElementById('outreach-subject').value,
                 body: document.getElementById('outreach-body').value,
-                band_name: 'Green Velvet Riot',
-                band_genre: 'Rock',
-                band_country: 'ES',
-                contact_person: 'Alicia',
+                program_id: this.previewProgramId || null,
+                contact_id: this.previewContactId || null,
             }),
         });
         const payload = await response.json();
@@ -56,7 +63,7 @@
                     <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $template->is_active ?? true))>
                     Activa
                 </label>
-                <button type="button" class="lucille-button" @click="preview()">Vista previa</button>
+                <button type="button" class="lucille-button" @click="preview()">Vista previa con datos reales</button>
             </div>
         </div>
 
@@ -66,16 +73,50 @@
         </div>
 
         <div>
-            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Cuerpo</label>
+            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Cuerpo HTML</label>
             <textarea id="outreach-body" name="body" rows="12" class="lucille-product-field w-full">{{ old('body', $template->body) }}</textarea>
         </div>
 
-        <div class="border border-[#2b2b2b] bg-[#151515] p-4">
-            <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Variables disponibles</div>
-            <div class="mt-3 flex flex-wrap gap-2">
-                @foreach ($availableVariables as $variable)
-                    <button type="button" class="lucille-button text-xs" @click="insertAtCursor('outreach-body', '{{ $variable['key'] }}')">{{ $variable['key'] }}</button>
-                @endforeach
+        <div class="grid gap-6 lg:grid-cols-[1fr_.85fr]">
+            <div class="border border-[#2b2b2b] bg-[#151515] p-4">
+                <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Variables disponibles</div>
+                <div class="mt-4 space-y-4">
+                    @foreach ($placeholderGroups as $groupName => $groupItems)
+                        <div>
+                            <div class="text-[11px] uppercase tracking-[.18em] text-[#9d9d9d]">{{ $groupName }}</div>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                @foreach ($groupItems as $variable)
+                                    <button type="button" class="lucille-button text-xs" @click="insertAtCursor('outreach-body', '{{ $variable['key'] }}')">{{ $variable['key'] }}</button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="border border-[#2b2b2b] bg-[#151515] p-4 space-y-4">
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Programa para preview</label>
+                    <select class="lucille-product-field w-full" x-model="previewProgramId">
+                        <option value="">Sin programa</option>
+                        @foreach ($programs as $program)
+                            <option value="{{ $program->id }}">{{ $program->program_code }} - {{ $program->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Banda para preview</label>
+                    <select class="lucille-product-field w-full" x-model="previewContactId">
+                        <option value="">Contacto demo</option>
+                        @foreach ($sampleContacts as $contact)
+                            <option value="{{ $contact->id }}">{{ $contact->displayName() }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Preview rápido</div>
+                <p class="text-sm leading-6 text-[#9f9f9f]">
+                    El render de prueba usa el programa y la banda seleccionados para validar placeholders antes de enviar.
+                </p>
             </div>
         </div>
 

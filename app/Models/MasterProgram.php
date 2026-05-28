@@ -23,6 +23,8 @@ class MasterProgram extends Model
 
     protected $fillable = [
         'nombre',
+        'program_code',
+        'code_prefix',
         'conductor',
         'dia_transmision',
         'hora_transmision',
@@ -67,9 +69,43 @@ class MasterProgram extends Model
         'vistas_totales' => 'integer',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (self $program): void {
+            if (! filled($program->program_code)) {
+                $program->program_code = static::generateUniqueProgramCode(
+                    (string) ($program->code_prefix ?: $program->name ?: $program->nombre ?: 'PROGRAMA'),
+                    $program->getKey()
+                );
+            } else {
+                $program->program_code = static::normalizeProgramCode((string) $program->program_code);
+            }
+
+            if ($program->program_code === '') {
+                $program->program_code = static::generateUniqueProgramCode((string) ($program->name ?: 'PROGRAMA'), $program->getKey());
+            }
+
+            if (! filled($program->code_prefix)) {
+                $program->code_prefix = static::normalizeProgramCode((string) ($program->name ?: $program->nombre ?: 'PROGRAMA'));
+            } else {
+                $program->code_prefix = static::normalizeProgramCode((string) $program->code_prefix);
+            }
+        });
+    }
+
     public function radioPrograms(): HasMany
     {
         return $this->hasMany(RadioProgram::class, 'master_program_id');
+    }
+
+    public function outreachContacts(): HasMany
+    {
+        return $this->hasMany(BandContact::class, 'program_code', 'program_code');
+    }
+
+    public function outreachCampaigns(): HasMany
+    {
+        return $this->hasMany(OutreachCampaign::class, 'program_code', 'program_code');
     }
 
     public static function adminListing(): Collection
@@ -119,6 +155,16 @@ class MasterProgram extends Model
         return trim((string) ($this->nombre ?: ''));
     }
 
+    public function getProgramNameAttribute(): string
+    {
+        return $this->name;
+    }
+
+    public function getProgramCodeAttribute(?string $value): string
+    {
+        return trim((string) $value);
+    }
+
     public function getHostAttribute(): string
     {
         $host = trim((string) $this->conductor);
@@ -166,6 +212,54 @@ class MasterProgram extends Model
     public function publicSlug(): string
     {
         return Str::slug($this->name ?: 'programa');
+    }
+
+    public function programCodeLabel(): string
+    {
+        return $this->program_code !== '' ? $this->program_code : 'SIN CODIGO';
+    }
+
+    public static function normalizeProgramCode(string $value): string
+    {
+        $value = Str::of($value)
+            ->ascii()
+            ->upper()
+            ->replaceMatches('/[^A-Z0-9]+/', '')
+            ->trim()
+            ->toString();
+
+        return substr($value, 0, 12);
+    }
+
+    public static function generateUniqueProgramCode(string $source, ?int $ignoreId = null): string
+    {
+        $base = static::normalizeProgramCode($source);
+        if ($base === '') {
+            $base = 'PROGRAMA';
+        }
+
+        $base = substr($base, 0, 12);
+        $query = static::query();
+        if ($ignoreId !== null) {
+            $query->whereKeyNot($ignoreId);
+        }
+
+        $existing = $query->pluck('program_code')->filter()->map(static fn ($code) => strtoupper(trim((string) $code)))->all();
+        if (! in_array($base, $existing, true)) {
+            return $base;
+        }
+
+        for ($i = 1; $i <= 99; $i++) {
+            $suffix = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+            $prefixLength = max(0, 12 - strlen($suffix));
+            $candidate = substr($base, 0, $prefixLength) . $suffix;
+
+            if (! in_array($candidate, $existing, true)) {
+                return $candidate;
+            }
+        }
+
+        return substr($base, 0, 10) . now()->format('s');
     }
 
     /**

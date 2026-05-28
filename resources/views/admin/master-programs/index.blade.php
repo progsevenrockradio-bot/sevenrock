@@ -7,8 +7,17 @@
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Master programs</h1>
             </div>
 
-            <a href="{{ route('admin.master-programs.create') }}" class="lucille-button-solid">Nuevo programa</a>
+            <div class="flex flex-wrap gap-3">
+                <a href="{{ route('admin.programs.index') }}" class="lucille-button">Panel códigos</a>
+                <a href="{{ route('admin.master-programs.create') }}" class="lucille-button-solid">Nuevo programa</a>
+            </div>
         </div>
+
+        <form method="GET" class="mt-6 flex flex-wrap gap-3">
+            <input name="search" value="{{ $search }}" class="lucille-product-field min-w-[260px] flex-1" placeholder="Buscar por nombre, código, productor o email">
+            <button type="submit" class="lucille-button-solid">Filtrar</button>
+            <a href="{{ route('admin.master-programs.index') }}" class="lucille-button">Limpiar</a>
+        </form>
 
         <div class="mt-8" x-data='{"activeDay": "{{ $activeDay }}"}'>
             <div class="flex flex-wrap gap-3 border border-[#242424] bg-[#131313] p-3">
@@ -60,6 +69,7 @@
                                     <tr>
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Imagen</th>
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Programa</th>
+                                        <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Código</th>
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Horario</th>
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Estado</th>
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Acciones</th>
@@ -85,6 +95,10 @@
                                             <td class="px-4 py-4">
                                                 <div class="font-display text-base uppercase tracking-[.08em] text-[#dcdcdc]">{{ $masterProgram->name }}</div>
                                                 <div class="mt-1 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $masterProgram->conductor }}</div>
+                                            </td>
+                                            <td class="px-4 py-4 text-[#9d9d9d]">
+                                                <div class="font-mono text-sm text-[#dcdcdc]">{{ $masterProgram->program_code ?: 'Sin código' }}</div>
+                                                <div class="mt-1 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $masterProgram->code_prefix ?: 'Base auto' }}</div>
                                             </td>
                                             <td class="px-4 py-4 text-[#9d9d9d]">
                                                 <div>{{ $masterProgram->dia_transmision }}</div>

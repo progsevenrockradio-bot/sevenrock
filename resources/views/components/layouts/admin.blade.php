@@ -118,7 +118,6 @@
                     <a href="{{ route('admin.events.index') }}" class="lucille-admin-link">{{ $admin['events_heading'] ?? 'Events' }}</a>
                     <a href="{{ route('admin.events.single') }}" class="lucille-admin-link">Single Event</a>
                     <a href="{{ route('admin.audit-logs.index') }}" class="lucille-admin-link">Audit trail</a>
-                    <a href="{{ route('admin.outreach.index') }}" class="lucille-admin-link">📬 Convocatoria Bandas</a>
                     <a href="{{ route('admin.comments.index') }}" class="lucille-admin-link">Comentarios</a>
                 </div>
             </details>
@@ -159,6 +158,20 @@
                     <a href="{{ route('admin.talents.media') }}" class="lucille-admin-link">Contenido subido</a>
                     <a href="{{ route('admin.talents.index') }}" class="lucille-admin-link">Suscripciones</a>
                     <a href="#" class="lucille-admin-link">Reportes</a>
+                </div>
+            </details>
+
+            <details class="lucille-admin-dropdown">
+                <summary class="lucille-admin-dropdown-summary">
+                    <span>Convocatoria</span>
+                    <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
+                </summary>
+                <div class="lucille-admin-dropdown-panel">
+                    <a href="{{ route('admin.outreach.index') }}" class="lucille-admin-link">📊 Dashboard</a>
+                    <a href="{{ route('admin.outreach.templates.index') }}" class="lucille-admin-link">📝 Plantillas</a>
+                    <a href="{{ route('admin.outreach.contacts.index') }}" class="lucille-admin-link">👥 Contactos</a>
+                    <a href="{{ route('admin.outreach.campaigns.index') }}" class="lucille-admin-link">📨 Campañas</a>
+                    <a href="{{ route('admin.programs.index') }}" class="lucille-admin-link">🎙️ Programas</a>
                 </div>
             </details>
         </nav>

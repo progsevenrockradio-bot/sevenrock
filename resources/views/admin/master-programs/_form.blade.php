@@ -20,6 +20,13 @@
         </div>
 
         <div class="flex flex-wrap gap-3">
+            @if ($masterProgram->exists && filled($generateCodeAction ?? null))
+                <form action="{{ $generateCodeAction }}" method="POST">
+                    @csrf
+                    <button type="submit" class="lucille-button">Generar código automático</button>
+                </form>
+            @endif
+            <a href="{{ route('admin.programs.index') }}" class="lucille-button">Panel de códigos</a>
             <a href="{{ route('admin.master-programs.index') }}" class="lucille-button">Volver</a>
         </div>
     </div>
@@ -78,6 +85,18 @@
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Género</label>
                     <input name="genero" value="{{ old('genero', $masterProgram->genero) }}" class="lucille-product-field w-full" required>
                     @error('genero')<p class="mt-2 text-sm text-red-400">{{ $message }}</p>@enderror
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Código de programa</label>
+                    <input name="program_code" value="{{ old('program_code', $masterProgram->program_code) }}" class="lucille-product-field w-full" maxlength="12" placeholder="ROCKNOCHE24">
+                    @error('program_code')<p class="mt-2 text-sm text-red-400">{{ $message }}</p>@enderror
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Prefijo base</label>
+                    <input name="code_prefix" value="{{ old('code_prefix', $masterProgram->code_prefix) }}" class="lucille-product-field w-full" maxlength="12" placeholder="ROCKNOCHE">
+                    @error('code_prefix')<p class="mt-2 text-sm text-red-400">{{ $message }}</p>@enderror
                 </div>
             </div>
 

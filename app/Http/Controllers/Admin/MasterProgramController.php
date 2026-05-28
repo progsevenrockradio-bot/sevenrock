@@ -18,6 +18,15 @@ final class MasterProgramController extends Controller
     {
         $masterPrograms = MasterProgram::adminListing();
 
+        if ($search = trim((string) request()->input('search', ''))) {
+            $masterPrograms = $masterPrograms->filter(function (MasterProgram $program) use ($search): bool {
+                return str_contains(mb_strtolower($program->name), mb_strtolower($search))
+                    || str_contains(mb_strtolower((string) $program->program_code), mb_strtolower($search))
+                    || str_contains(mb_strtolower((string) $program->conductor), mb_strtolower($search))
+                    || str_contains(mb_strtolower((string) $program->email_notificacion), mb_strtolower($search));
+            })->values();
+        }
+
         $dayTabs = [
             'LUNES' => 'Lunes',
             'MARTES' => 'Martes',
@@ -40,6 +49,7 @@ final class MasterProgramController extends Controller
             'dayTabs' => $dayTabs,
             'programsByDay' => $programsByDay,
             'activeDay' => $this->currentDayKey(),
+            'search' => (string) request()->input('search', ''),
         ]);
     }
 
@@ -59,6 +69,7 @@ final class MasterProgramController extends Controller
             'defaultNewsIdsText' => '',
             'liveNewsIdsText' => '',
             'previewNewsIdsText' => '',
+            'generateCodeAction' => null,
         ]);
     }
 
@@ -78,6 +89,7 @@ final class MasterProgramController extends Controller
             'defaultNewsIdsText' => $this->idListToText($masterProgram->default_news_ids),
             'liveNewsIdsText' => $this->idListToText($masterProgram->live_news_ids),
             'previewNewsIdsText' => $this->idListToText($masterProgram->preview_news_ids),
+            'generateCodeAction' => route('admin.programs.generate-code', $masterProgram),
         ]);
     }
 
@@ -112,6 +124,8 @@ final class MasterProgramController extends Controller
             'timezone' => ['required', 'string', 'max:255'],
             'duracion_minutos' => ['required', 'integer', 'min:1', 'max:1440'],
             'genero' => ['required', 'string', 'max:255'],
+            'program_code' => ['nullable', 'string', 'max:12', 'unique:master_programs,program_code' . ($ignoreId ? ',' . $ignoreId : '')],
+            'code_prefix' => ['nullable', 'string', 'max:12'],
             'caratula_url' => ['nullable', 'string', 'max:255'],
             'descripcion' => ['nullable', 'string'],
             'live_title' => ['nullable', 'string', 'max:255'],
@@ -137,6 +151,8 @@ final class MasterProgramController extends Controller
         ]);
 
         $validated['hora_transmision'] = $this->normalizeTime((string) ($validated['hora_transmision'] ?? ''));
+        $validated['program_code'] = $this->normalizeProgramCode((string) ($validated['program_code'] ?? '')) ?: null;
+        $validated['code_prefix'] = $this->normalizeProgramCode((string) ($validated['code_prefix'] ?? '')) ?: null;
         $validated['live_starts_at'] = $this->normalizeDateTime((string) ($validated['live_starts_at'] ?? ''));
         $validated['live_ends_at'] = $this->normalizeDateTime((string) ($validated['live_ends_at'] ?? ''));
         $validated['stats_updated_at'] = $this->normalizeDateTime((string) ($validated['stats_updated_at'] ?? ''));
@@ -186,6 +202,19 @@ final class MasterProgramController extends Controller
         }
 
         return Carbon::parse($value)->toDateTimeString();
+    }
+
+    private function normalizeProgramCode(string $value): string
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        $value = \Illuminate\Support\Str::of($value)->ascii()->upper()->replaceMatches('/[^A-Z0-9]+/', '')->toString();
+
+        return substr($value, 0, 12);
     }
 
     private function currentDayKey(): string
