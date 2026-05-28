@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
 class BackblazeService
 {
@@ -14,17 +13,16 @@ class BackblazeService
      */
     public function upload(UploadedFile $file, string $path): array
     {
-        $storedPath = Storage::disk('backblaze')->putFile($path, $file);
-        $storedPath = is_string($storedPath) ? $storedPath : '';
+        $result = app(FileUploadService::class)->upload($file, $path);
 
         return [
-            'key' => $storedPath,
-            'url' => $storedPath !== '' ? Storage::disk('backblaze')->url($storedPath) : '',
+            'key' => $result['key'],
+            'url' => $result['url'],
         ];
     }
 
     public function delete(string $key): bool
     {
-        return Storage::disk('backblaze')->delete($key);
+        return app(FileUploadService::class)->delete($key);
     }
 }

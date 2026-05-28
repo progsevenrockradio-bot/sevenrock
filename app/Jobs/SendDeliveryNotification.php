@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\Jobs\Concerns\InteractsWithPodcastUploadPipeline;
 use App\Mail\PodcastUploadedMail;
 use App\Models\RadioProgram;
+use App\Services\FileUploadService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -112,8 +113,10 @@ class SendDeliveryNotification implements ShouldQueue
                 ]));
 
                 if ($deliveryStatus === 'verified' && ! (bool) data_get($radioProgram->delivery_metadata, 'preserve_local_copy', false)) {
-                    if ($localPath !== '' && \Illuminate\Support\Facades\Storage::disk('public')->exists($localPath)) {
-                        \Illuminate\Support\Facades\Storage::disk('public')->delete($localPath);
+                    $disk = (string) $radioProgram->archivo_mp3_disk;
+
+                    if ($localPath !== '') {
+                        app(FileUploadService::class)->delete($localPath, $disk);
                     }
                 }
             } catch (Throwable $exception) {

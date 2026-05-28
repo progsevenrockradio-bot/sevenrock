@@ -11,6 +11,30 @@ class PublicMediaUrl
     public static function normalize(mixed $value): ?string
     {
         if (is_array($value)) {
+            if (array_key_exists('disk', $value) && array_key_exists('key', $value)) {
+                $disk = trim((string) $value['disk']);
+                $key = trim((string) $value['key']);
+
+                if ($disk !== '' && $key !== '') {
+                    $resolved = self::resolveStoredFileUrl($key, $disk);
+                    if ($resolved !== null) {
+                        return $resolved;
+                    }
+                }
+            }
+
+            if (array_key_exists('disk', $value) && array_key_exists('path', $value)) {
+                $disk = trim((string) $value['disk']);
+                $key = trim((string) $value['path']);
+
+                if ($disk !== '' && $key !== '') {
+                    $resolved = self::resolveStoredFileUrl($key, $disk);
+                    if ($resolved !== null) {
+                        return $resolved;
+                    }
+                }
+            }
+
             foreach (['url', 'src', 'image', 'path', 'file', 'asset', 'thumbnail', 'poster'] as $key) {
                 if (array_key_exists($key, $value)) {
                     $resolved = self::normalize($value[$key]);
@@ -78,6 +102,16 @@ class PublicMediaUrl
             if ($storageCandidate !== '' && Storage::disk('public')->exists($storageCandidate)) {
                 return Storage::disk('public')->url($storageCandidate);
             }
+
+            if ($storageCandidate !== '' && self::isBackblazeConfigured()) {
+                try {
+                    if (Storage::disk('backblaze')->exists($storageCandidate)) {
+                        return Storage::disk('backblaze')->url($storageCandidate);
+                    }
+                } catch (\Throwable) {
+                    // Ignore and keep checking other candidates.
+                }
+            }
         }
 
         if (str_contains($relative, '/wp-content/uploads/')) {
@@ -125,6 +159,52 @@ class PublicMediaUrl
         }
 
         return File::exists(public_path($clean)) || File::exists(base_path($clean));
+    }
+
+    private static function resolveStoredFileUrl(string $key, string $disk): ?string
+    {
+        $key = ltrim(str_replace('\\', '/', trim($key)), '/');
+        if ($key === '') {
+            return null;
+        }
+
+        $disk = strtolower(trim($disk));
+        if ($disk === 'backblaze-b2') {
+            $disk = 'backblaze';
+        }
+
+        try {
+            if ($disk === 'backblaze' && self::isBackblazeConfigured()) {
+                if (Storage::disk('backblaze')->exists($key)) {
+                    return Storage::disk('backblaze')->url($key);
+                }
+
+                if (Storage::disk('public')->exists($key)) {
+                    return Storage::disk('public')->url($key);
+                }
+            }
+
+            if (Storage::disk('public')->exists($key)) {
+                return Storage::disk('public')->url($key);
+            }
+
+            if ($disk !== 'public' && self::isBackblazeConfigured() && Storage::disk('backblaze')->exists($key)) {
+                return Storage::disk('backblaze')->url($key);
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return null;
+    }
+
+    private static function isBackblazeConfigured(): bool
+    {
+        return trim((string) config('filesystems.disks.backblaze.account_id', '')) !== ''
+            && trim((string) config('filesystems.disks.backblaze.application_key', '')) !== ''
+            && trim((string) config('filesystems.disks.backblaze.bucket_id', '')) !== ''
+            && trim((string) config('filesystems.disks.backblaze.bucket_name', '')) !== ''
+            && trim((string) config('filesystems.disks.backblaze.url', '')) !== '';
     }
 
     private static function resolveLegacyWordPressUploadUrl(string $value): ?string

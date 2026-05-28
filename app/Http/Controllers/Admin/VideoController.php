@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Video;
+use App\Services\FileUploadService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -86,7 +87,7 @@ class VideoController extends Controller
         if ($request->hasFile('image_file')) {
             $this->deleteUploaded($current);
 
-            return $request->file('image_file')->store($directory, 'public');
+            return app(FileUploadService::class)->upload($request->file('image_file'), $directory)['key'];
         }
 
         return trim((string) $input) !== '' ? trim((string) $input) : (string) $current;
@@ -98,6 +99,6 @@ class VideoController extends Controller
             return;
         }
 
-        Storage::disk('public')->delete($path);
+        app(FileUploadService::class)->delete($path);
     }
 }

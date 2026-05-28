@@ -6,13 +6,13 @@ namespace App\Jobs;
 
 use App\Jobs\Concerns\InteractsWithPodcastUploadPipeline;
 use App\Models\RadioProgram;
+use App\Services\FileUploadService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class UploadRadiobossJob implements ShouldQueue
@@ -42,9 +42,11 @@ class UploadRadiobossJob implements ShouldQueue
         $radioProgram = RadioProgram::query()->with('masterProgram')->findOrFail($this->radioProgramId);
         $remotePath = trim($this->remoteFolder, '/\\') . '/' . basename(str_replace('\\', '/', $this->localPath));
         $remotePath = trim(str_replace(['//', '\\'], ['/', '/'], $remotePath), '/');
+        $fileUploadService = app(FileUploadService::class);
+        $absolutePath = $fileUploadService->localPath($this->localPath, (string) $radioProgram->archivo_mp3_disk);
 
         try {
-            if (! Storage::disk('public')->exists($this->localPath)) {
+            if (! is_string($absolutePath) || $absolutePath === '' || ! is_file($absolutePath)) {
                 throw new \RuntimeException("No se pudo leer el MP3 local: {$this->localPath}");
             }
 
@@ -64,10 +66,14 @@ class UploadRadiobossJob implements ShouldQueue
 
                 $this->dispatchDeliveryNotification($radioProgram->id);
 
+                if (str_starts_with($absolutePath, storage_path('app/tmp/backblaze')) && is_file($absolutePath)) {
+                    @unlink($absolutePath);
+                }
+
                 return;
             }
 
-            $uploadOk = $this->uploadToRadiobossWithRetries($this->remoteFolder, $remotePath, $this->localPath);
+            $uploadOk = $this->uploadToRadiobossWithRetries($this->remoteFolder, $remotePath, $absolutePath, $this->localPath);
 
             $radiobossVerification = [
                 'verified' => false,
@@ -81,7 +87,7 @@ class UploadRadiobossJob implements ShouldQueue
             ];
 
             if ($uploadOk) {
-                $radiobossVerification = $this->verifyRadiobossUpload($remotePath, $this->localPath);
+                $radiobossVerification = $this->verifyRadiobossUpload($remotePath, $absolutePath, $this->localPath);
                 $uploadOk = (bool) ($radiobossVerification['verified'] ?? false);
             }
 
@@ -112,6 +118,10 @@ class UploadRadiobossJob implements ShouldQueue
 
             $this->dispatchDeliveryNotification($radioProgram->id);
         } catch (Throwable $exception) {
+            if (is_string($absolutePath) && $absolutePath !== '' && str_starts_with($absolutePath, storage_path('app/tmp/backblaze')) && is_file($absolutePath)) {
+                @unlink($absolutePath);
+            }
+
             RadioProgram::withoutEvents(fn (): bool => (bool) $radioProgram->update([
                 'enviado_radioboss' => false,
                 'radioboss_status' => 'error',
@@ -136,6 +146,10 @@ class UploadRadiobossJob implements ShouldQueue
             $this->dispatchDeliveryNotification($radioProgram->id);
 
             throw $exception;
+        }
+
+        if (is_string($absolutePath) && $absolutePath !== '' && str_starts_with($absolutePath, storage_path('app/tmp/backblaze')) && is_file($absolutePath)) {
+            @unlink($absolutePath);
         }
     }
 }

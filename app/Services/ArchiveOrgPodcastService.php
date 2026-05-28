@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
+use App\Services\FileUploadService;
 use App\Support\ExternalHttp;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
@@ -113,6 +114,8 @@ final class ArchiveOrgPodcastService
             'status_message' => 'Archive.org sincronizado correctamente.',
         ])->saveQuietly();
 
+        $this->cleanupLocalPath($absolutePath, (string) $episode->archivo_mp3_disk);
+
         return [
             'success' => true,
             'created' => $created,
@@ -182,6 +185,8 @@ final class ArchiveOrgPodcastService
             'archive_org_last_error' => null,
             'archive_org_metadata' => $snapshot,
         ])->saveQuietly();
+
+        $this->cleanupLocalPath($absolutePath, (string) $episode->archivo_mp3_disk);
 
         return [
             'success' => true,
@@ -415,11 +420,13 @@ final class ArchiveOrgPodcastService
             throw new RuntimeException('El episodio no tiene archivo MP3 local asociado.');
         }
 
-        if (! Storage::disk('public')->exists($stored)) {
+        $disk = (string) $episode->archivo_mp3_disk;
+        $absolutePath = app(FileUploadService::class)->localPath($stored, $disk);
+        if (! is_string($absolutePath) || $absolutePath === '' || ! file_exists($absolutePath)) {
             throw new RuntimeException("No se pudo leer el MP3 local: {$stored}");
         }
 
-        return Storage::disk('public')->path(ltrim($stored, '/'));
+        return $absolutePath;
     }
 
     private function resolveRemotePath(RadioProgram $episode): string
@@ -430,6 +437,17 @@ final class ArchiveOrgPodcastService
         }
 
         return basename(str_replace('\\', '/', $stored));
+    }
+
+    private function cleanupLocalPath(string $absolutePath, string $disk): void
+    {
+        if (! str_starts_with($absolutePath, storage_path('app/tmp/backblaze'))) {
+            return;
+        }
+
+        if (is_file($absolutePath)) {
+            @unlink($absolutePath);
+        }
     }
 
     /**

@@ -454,13 +454,13 @@ trait InteractsWithPodcastUploadPipeline
         ];
     }
 
-    private function uploadToRadioboss(string $folder, string $remotePath, string $localPath): void
+    private function uploadToRadioboss(string $folder, string $remotePath, string $absolutePath, string $localPath): void
     {
         $radioBossService = app(\App\Services\RadioBossService::class);
         $radioBossService->upload(
             $folder,
             $remotePath,
-            Storage::disk('public')->path(ltrim($localPath, '/')),
+            $absolutePath,
             filter_var(config('filesystems.disks.radioboss.clear_before_upload', false), FILTER_VALIDATE_BOOL)
         );
     }
@@ -477,12 +477,11 @@ trait InteractsWithPodcastUploadPipeline
      *     message: string|null,
      * }
      */
-    private function verifyRadiobossUpload(string $remotePath, string $localPath): array
+    private function verifyRadiobossUpload(string $remotePath, string $absolutePath, string $localPath): array
     {
         $radioBossService = app(\App\Services\RadioBossService::class);
-        $localAbsolutePath = Storage::disk('public')->path(ltrim($localPath, '/'));
-        $localSize = $this->fileSizeInBytes($localAbsolutePath);
-        $localChecksum = $this->checksumFile($localAbsolutePath);
+        $localSize = $this->fileSizeInBytes($absolutePath);
+        $localChecksum = $this->checksumFile($absolutePath);
 
         if (! $radioBossService->exists($remotePath)) {
             return [
@@ -552,14 +551,14 @@ trait InteractsWithPodcastUploadPipeline
         ];
     }
 
-    private function uploadToRadiobossWithRetries(string $folder, string $remotePath, string $localPath): bool
+    private function uploadToRadiobossWithRetries(string $folder, string $remotePath, string $absolutePath, string $localPath): bool
     {
         $attempts = 3;
         $delays = [2, 5, 10];
 
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
             try {
-                $this->uploadToRadioboss($folder, $remotePath, $localPath);
+                $this->uploadToRadioboss($folder, $remotePath, $absolutePath, $localPath);
                 $this->radiobossError = null;
 
                 return true;

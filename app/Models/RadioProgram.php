@@ -24,6 +24,7 @@ class RadioProgram extends Model
         'fecha_emision',
         'biografia_invitado',
         'archivo_mp3',
+        'archivo_mp3_disk',
         'enviado_radioboss',
         'radioboss_status',
         'radioboss_verified_at',
@@ -77,6 +78,13 @@ class RadioProgram extends Model
             'live_news_ids' => 'array',
             'preview_news_ids' => 'array',
         ];
+    }
+
+    public function getArchivoMp3DiskAttribute(?string $value): string
+    {
+        $value = trim((string) $value);
+
+        return $value !== '' ? $value : 'public';
     }
 
     public function masterProgram(): BelongsTo

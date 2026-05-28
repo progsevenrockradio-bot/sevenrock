@@ -8,13 +8,13 @@ use App\Jobs\Concerns\InteractsWithPodcastUploadPipeline;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
 use App\Services\AuditTrailService;
+use App\Services\FileUploadService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class ProcessMp3Job implements ShouldQueue
@@ -49,6 +49,9 @@ class ProcessMp3Job implements ShouldQueue
         set_time_limit(600);
 
         $actor = $this->resolveAuditActor($this->initiatedByUserId, $this->initiatedByName, $this->initiatedByEmail);
+        $fileUploadService = app(FileUploadService::class);
+        $sourceDisk = (string) $this->radioProgram->archivo_mp3_disk;
+        $sourceAbsolutePath = null;
 
         try {
             $auditTrailService->recordSystem('upload.started', 'Procesamiento del MP3 iniciado', [
@@ -56,6 +59,7 @@ class ProcessMp3Job implements ShouldQueue
                 'program_id' => $this->radioProgram->id,
                 'master_program_id' => $this->radioProgram->master_program_id,
                 'local_path' => $this->localPath,
+                'disk' => $sourceDisk,
                 'preserve_local_copy' => $this->preserveLocalCopy,
             ]);
 
@@ -87,34 +91,52 @@ class ProcessMp3Job implements ShouldQueue
                 ? (string) $this->localPath
                 : 'programas_procesados/' . $nombreFtp;
 
-            if (! Storage::disk('public')->exists($this->localPath)) {
+            $sourceAbsolutePath = $fileUploadService->localPath($this->localPath, $sourceDisk);
+            if ($sourceAbsolutePath === null || ! is_file($sourceAbsolutePath)) {
                 Log::warning('ProcessMp3Job: No se encontró el MP3 crudo.', [
                     'program_id' => $this->radioProgram->id,
                     'local_path' => $this->localPath,
+                    'disk' => $sourceDisk,
                 ]);
+
+                if ($sourceAbsolutePath !== null && str_starts_with($sourceAbsolutePath, storage_path('app/tmp/backblaze')) && is_file($sourceAbsolutePath)) {
+                    @unlink($sourceAbsolutePath);
+                }
 
                 return;
             }
 
-            if (! $this->isProcessedLocalBackup($this->localPath)) {
-                $sourceContents = Storage::disk('public')->get($this->localPath);
+            if (! $this->isProcessedLocalBackup($this->localPath) || $sourceDisk !== 'public') {
+                $sourceContents = file_get_contents($sourceAbsolutePath);
                 if (! is_string($sourceContents)) {
                     throw new \RuntimeException("No se pudo leer el archivo de origen {$this->localPath}");
                 }
 
-                $copied = Storage::disk('public')->put($nuevaRuta, $sourceContents);
-                if (! $copied) {
+                $upload = $fileUploadService->uploadRaw($sourceContents, $nuevaRuta, $sourceDisk === 'backblaze' ? 'backblaze' : 'public');
+                if ($upload['key'] === '') {
                     throw new \RuntimeException("No se pudo copiar el archivo de {$this->localPath} a {$nuevaRuta}");
                 }
 
-                Storage::disk('public')->delete($this->localPath);
+                if ($sourceDisk === 'public' && ! $this->isProcessedLocalBackup($this->localPath)) {
+                    $fileUploadService->delete($this->localPath, 'public');
+                } elseif ($sourceDisk === 'backblaze' && $this->localPath !== $nuevaRuta && ! $this->preserveLocalCopy) {
+                    $fileUploadService->delete($this->localPath, 'backblaze');
+                }
 
-                RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update(['archivo_mp3' => $nuevaRuta]));
+                RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
+                    'archivo_mp3' => $upload['key'],
+                    'archivo_mp3_disk' => $upload['disk'],
+                ]));
             } elseif ((string) $this->radioProgram->archivo_mp3 !== $nuevaRuta) {
-                RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update(['archivo_mp3' => $nuevaRuta]));
+                RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
+                    'archivo_mp3' => $nuevaRuta,
+                    'archivo_mp3_disk' => $sourceDisk !== '' ? $sourceDisk : 'public',
+                ]));
             }
 
-            $rutaAbsoluta = Storage::disk('public')->path(ltrim($nuevaRuta, '/'));
+            $rutaAbsoluta = $sourceDisk === 'backblaze'
+                ? $sourceAbsolutePath
+                : \Illuminate\Support\Facades\Storage::disk('public')->path(ltrim($nuevaRuta, '/'));
             try {
                 $this->escribirMetadata($rutaAbsoluta, $master, $this->radioProgram, $nombreProg, $invitado, $fecha, $fechaTitulo, $anio);
             } catch (Throwable $metadataException) {
@@ -158,6 +180,10 @@ class ProcessMp3Job implements ShouldQueue
                 'archive_org_status' => $this->radioProgram->archive_org_status,
             ], 'info');
         } catch (Throwable $e) {
+            if ($sourceAbsolutePath !== null && str_starts_with($sourceAbsolutePath, storage_path('app/tmp/backblaze')) && is_file($sourceAbsolutePath)) {
+                @unlink($sourceAbsolutePath);
+            }
+
             RadioProgram::withoutEvents(fn (): bool => (bool) $this->radioProgram->update([
                 'status_message' => 'El procesamiento del episodio falló.',
             ]));
@@ -176,6 +202,10 @@ class ProcessMp3Job implements ShouldQueue
             ]);
 
             throw $e;
+        }
+
+        if ($sourceAbsolutePath !== null && str_starts_with($sourceAbsolutePath, storage_path('app/tmp/backblaze')) && is_file($sourceAbsolutePath)) {
+            @unlink($sourceAbsolutePath);
         }
     }
 

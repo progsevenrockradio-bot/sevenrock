@@ -13,7 +13,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class UploadArchiveOrgJob implements ShouldQueue
@@ -76,10 +75,6 @@ class UploadArchiveOrgJob implements ShouldQueue
                 $this->dispatchDeliveryNotification($radioProgram->id);
 
                 return;
-            }
-
-            if (! Storage::disk('public')->exists($this->localPath)) {
-                throw new \RuntimeException("No se pudo leer el MP3 local: {$this->localPath}");
             }
 
             $archiveResult = $archiveOrgPodcastService->syncEpisode($radioProgram);

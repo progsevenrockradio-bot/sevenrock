@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ThemeSetting;
+use App\Services\FileUploadService;
 use App\Support\ThemeAppearance;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -136,7 +137,7 @@ class ThemeSettingsController extends Controller
         ] as $input => $column) {
             if ($request->hasFile($input)) {
                 $this->removeIfUploaded($settings->{$column});
-                $settings->{$column} = $request->file($input)->store('theme', 'public');
+                $settings->{$column} = app(FileUploadService::class)->upload($request->file($input), 'theme')['key'];
             }
         }
 
@@ -169,7 +170,7 @@ class ThemeSettingsController extends Controller
             return;
         }
 
-        Storage::disk('public')->delete($path);
+        app(FileUploadService::class)->delete($path);
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Album;
+use App\Services\FileUploadService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -103,7 +104,7 @@ class AlbumController extends Controller
         if ($request->hasFile('cover_image_file')) {
             $this->deleteUploaded($current);
 
-            return $request->file('cover_image_file')->store($directory, 'public');
+            return app(FileUploadService::class)->upload($request->file('cover_image_file'), $directory)['key'];
         }
 
         return trim((string) $input) !== '' ? trim((string) $input) : (string) $current;
@@ -115,7 +116,7 @@ class AlbumController extends Controller
             return;
         }
 
-        Storage::disk('public')->delete($path);
+        app(FileUploadService::class)->delete($path);
     }
 
     /**

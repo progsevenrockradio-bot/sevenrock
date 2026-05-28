@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\PostTaxonomy;
+use App\Services\FileUploadService;
 use App\Support\WordPressContent;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -289,7 +290,7 @@ class PostController extends Controller
         if ($request->hasFile('featured_image_file')) {
             $this->deleteUploaded($current);
 
-            return $request->file('featured_image_file')->store('catalog/posts', 'public');
+            return app(FileUploadService::class)->upload($request->file('featured_image_file'), 'catalog/posts')['key'];
         }
 
         return trim((string) $input) !== '' ? trim((string) $input) : (string) $current;
@@ -301,14 +302,14 @@ class PostController extends Controller
             return;
         }
 
-        Storage::disk('public')->delete($path);
+        app(FileUploadService::class)->delete($path);
     }
 
     private function storeContentImage(\Illuminate\Http\UploadedFile $file): string
     {
-        $path = $file->store('catalog/posts/content-images', 'public');
+        $result = app(FileUploadService::class)->upload($file, 'catalog/posts/content-images');
 
-        return Storage::disk('public')->url($path);
+        return $result['url'];
     }
 
     private function splitCsv(string $text): array

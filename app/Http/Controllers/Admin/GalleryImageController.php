@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\GalleryImage;
+use App\Services\FileUploadService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -79,7 +80,7 @@ class GalleryImageController extends Controller
         if ($request->hasFile('image_file')) {
             $this->deleteUploaded($current);
 
-            return $request->file('image_file')->store('catalog/gallery', 'public');
+            return app(FileUploadService::class)->upload($request->file('image_file'), 'catalog/gallery')['key'];
         }
 
         return trim((string) $input) !== '' ? trim((string) $input) : (string) $current;
@@ -91,6 +92,6 @@ class GalleryImageController extends Controller
             return;
         }
 
-        Storage::disk('public')->delete($path);
+        app(FileUploadService::class)->delete($path);
     }
 }

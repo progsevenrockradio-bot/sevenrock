@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Services\FileUploadService;
 use App\Support\PublicMediaUrl;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -124,7 +125,7 @@ class EventController extends Controller
         if ($request->hasFile('poster_file')) {
             $this->deleteUploaded($current);
 
-            return $request->file('poster_file')->store('catalog/events', 'public');
+            return app(FileUploadService::class)->upload($request->file('poster_file'), 'catalog/events')['key'];
         }
 
         $value = trim((string) $input);
@@ -138,7 +139,7 @@ class EventController extends Controller
             return;
         }
 
-        Storage::disk('public')->delete($path);
+        app(FileUploadService::class)->delete($path);
     }
 
     /**

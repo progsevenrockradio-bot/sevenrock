@@ -8,12 +8,12 @@ use App\Http\Controllers\Controller;
 use App\Jobs\ProcessMp3Job;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
+use App\Services\FileUploadService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
@@ -108,6 +108,7 @@ final class PodcastUploadController extends Controller
 
         $mp3File = $request->file('archivo_mp3');
         $storedPath = $fileName;
+        $storedDisk = 'public';
         $storedOk = false;
         if ($mp3File !== null) {
             $storedContents = file_get_contents((string) $mp3File->getRealPath());
@@ -115,19 +116,16 @@ final class PodcastUploadController extends Controller
                 $storedContents = 'ID3';
             }
 
-            $absoluteStoredPath = Storage::disk('public')->path($storedPath);
-            $directory = dirname($absoluteStoredPath);
-            if (! is_dir($directory)) {
-                @mkdir($directory, 0775, true);
-            }
-
-            $storedOk = file_put_contents($absoluteStoredPath, $storedContents) !== false;
+            $upload = app(FileUploadService::class)->uploadRaw($storedContents, $storedPath);
+            $storedPath = $upload['key'];
+            $storedDisk = $upload['disk'];
+            $storedOk = $storedPath !== '';
         }
         if (! $storedOk || $storedPath === '') {
             return back()->withInput()->withErrors(['archivo_mp3' => 'No se pudo guardar el archivo localmente.']);
         }
 
-        $radioProgram = RadioProgram::withoutEvents(function () use ($master, $data, $storedPath, $syncArchiveOrg, $imagePath, $manualEpisodeNumber): RadioProgram {
+        $radioProgram = RadioProgram::withoutEvents(function () use ($master, $data, $storedPath, $storedDisk, $syncArchiveOrg, $imagePath, $manualEpisodeNumber): RadioProgram {
             return RadioProgram::query()->create([
                 'master_program_id' => $master->id,
                 'titulo_programa' => (string) $master->nombre,
@@ -140,6 +138,7 @@ final class PodcastUploadController extends Controller
                 'live_description' => trim((string) ($data['resena'] ?? '')) ?: null,
                 'comentario_episodio' => trim((string) ($data['resena'] ?? '')) ?: null,
                 'archivo_mp3' => $storedPath,
+                'archivo_mp3_disk' => $storedDisk,
                 'enviado_radioboss' => false,
                 'sync_archive_org' => $syncArchiveOrg,
                 'status_message' => 'Episodio guardado. Pendiente de procesamiento.',
@@ -153,7 +152,7 @@ final class PodcastUploadController extends Controller
         });
 
         try {
-            ProcessMp3Job::dispatchAfterResponse(
+        ProcessMp3Job::dispatchAfterResponse(
                 $radioProgram->fresh(['masterProgram']) ?? $radioProgram,
                 (string) $radioProgram->archivo_mp3,
                 $downloadProcessedMp3,
@@ -209,13 +208,27 @@ final class PodcastUploadController extends Controller
     public function download(RadioProgram $radioProgram): Response|RedirectResponse
     {
         $path = trim((string) $radioProgram->archivo_mp3);
-        if ($path === '' || ! Storage::disk('public')->exists($path)) {
+        if ($path === '') {
             return back()->with('status', 'No existe un MP3 local listo para descargar.');
         }
 
         $downloadName = basename(str_replace('\\', '/', $path));
+        $disk = app(FileUploadService::class)->detectDisk($path, (string) $radioProgram->archivo_mp3_disk);
 
-        return Storage::disk('public')->download($path, $downloadName);
+        if ($disk === 'public') {
+            if (! \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+                return back()->with('status', 'No existe un MP3 local listo para descargar.');
+            }
+
+            return \Illuminate\Support\Facades\Storage::disk('public')->download($path, $downloadName);
+        }
+
+        $localPath = app(FileUploadService::class)->localPath($path, $disk);
+        if ($localPath === null || ! is_file($localPath)) {
+            return back()->with('status', 'No existe un MP3 disponible para descargar.');
+        }
+
+        return response()->download($localPath, $downloadName)->deleteFileAfterSend(true);
     }
 
     public function destroy(int $id): RedirectResponse
@@ -229,9 +242,7 @@ final class PodcastUploadController extends Controller
             ]));
 
             foreach ($pathsToDelete as $path) {
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
+                app(FileUploadService::class)->delete($path, (string) $radioProgram->archivo_mp3_disk);
             }
 
             $radioProgram->delete();
@@ -290,13 +301,9 @@ final class PodcastUploadController extends Controller
                     $imageContents = 'IMAGE';
                 }
 
-                $absoluteStoredImagePath = Storage::disk('public')->path($storedImagePath);
-                $imageDirectory = dirname($absoluteStoredImagePath);
-                if (! is_dir($imageDirectory)) {
-                    @mkdir($imageDirectory, 0775, true);
-                }
-
-                $storedImageOk = file_put_contents($absoluteStoredImagePath, $imageContents) !== false;
+                $storedImage = app(FileUploadService::class)->uploadRaw($imageContents, $storedImagePath);
+                $storedImagePath = $storedImage['key'];
+                $storedImageOk = $storedImagePath !== '';
                 if ($storedImageOk && $storedImagePath !== '') {
                     return $storedImagePath;
                 }
