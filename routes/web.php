@@ -34,12 +34,15 @@ use App\Http\Controllers\CommentController;
 
 Route::get('/', [SiteController::class, 'home'])->name('home');
 Route::get('/events', [SiteController::class, 'events'])->name('events');
+Route::redirect('/eventos', '/events');
 Route::get('/js_events/{slug}', [SiteController::class, 'eventSingle'])->name('events.single');
 Route::get('/discography', [SiteController::class, 'discography'])->name('discography');
+Route::redirect('/discografia', '/discography');
 Route::get('/js_albums/{slug}', [SiteController::class, 'albumSingle'])->name('albums.single');
 Route::get('/videos', [SiteController::class, 'videos'])->name('videos');
 Route::get('/js_videos/{slug}', [SiteController::class, 'videoSingle'])->name('videos.single');
 Route::get('/gallery', [SiteController::class, 'gallery'])->name('gallery');
+Route::redirect('/galeria', '/gallery');
 Route::get('/js_photo_albums/5', [SiteController::class, 'photoAlbum'])->name('gallery.green-day');
 Route::get('/discografia/{id}-{slug}', [SiteController::class, 'talentAlbumSingle'])->name('talents.album.show');
 Route::get('/blog', [SiteController::class, 'blog'])->name('blog');
