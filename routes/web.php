@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
+use App\Http\Controllers\Admin\OutreachController as AdminOutreachController;
 use App\Http\Controllers\Admin\TalentAdminController as AdminTalentController;
 use App\Http\Controllers\LegacyWordPressUploadController;
 use App\Http\Controllers\Talent\DashboardController as TalentDashboardController;
@@ -155,6 +156,31 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::post('/comments/{comment}/approve', [AdminCommentController::class, 'approve'])->name('comments.approve');
         Route::post('/comments/{comment}/unapprove', [AdminCommentController::class, 'unapprove'])->name('comments.unapprove');
         Route::delete('/comments/{comment}', [AdminCommentController::class, 'destroy'])->name('comments.destroy');
+        Route::prefix('outreach')->name('outreach.')->group(function (): void {
+            Route::get('/', [AdminOutreachController::class, 'index'])->name('index');
+
+            Route::get('/templates', [AdminOutreachController::class, 'templates'])->name('templates.index');
+            Route::get('/templates/create', [AdminOutreachController::class, 'templatesCreate'])->name('templates.create');
+            Route::post('/templates', [AdminOutreachController::class, 'templatesStore'])->name('templates.store');
+            Route::get('/templates/{template}/edit', [AdminOutreachController::class, 'templatesEdit'])->name('templates.edit');
+            Route::put('/templates/{template}', [AdminOutreachController::class, 'templatesUpdate'])->name('templates.update');
+            Route::delete('/templates/{template}', [AdminOutreachController::class, 'templatesDestroy'])->name('templates.destroy');
+            Route::post('/templates/preview', [AdminOutreachController::class, 'templatePreview'])->name('templates.preview');
+
+            Route::get('/contacts', [AdminOutreachController::class, 'contacts'])->name('contacts.index');
+            Route::get('/contacts/create', [AdminOutreachController::class, 'contactsCreate'])->name('contacts.create');
+            Route::post('/contacts/import', [AdminOutreachController::class, 'contactsImport'])->name('contacts.import');
+            Route::post('/contacts', [AdminOutreachController::class, 'contactsStore'])->name('contacts.store');
+            Route::get('/contacts/{contact}/edit', [AdminOutreachController::class, 'contactsEdit'])->name('contacts.edit');
+            Route::put('/contacts/{contact}', [AdminOutreachController::class, 'contactsUpdate'])->name('contacts.update');
+
+            Route::get('/campaigns', [AdminOutreachController::class, 'campaigns'])->name('campaigns.index');
+            Route::get('/campaigns/create', [AdminOutreachController::class, 'campaignsCreate'])->name('campaigns.create');
+            Route::post('/campaigns', [AdminOutreachController::class, 'campaignsStore'])->name('campaigns.store');
+            Route::get('/campaigns/{campaign}', [AdminOutreachController::class, 'campaignsShow'])->name('campaigns.show');
+
+            Route::post('/send-test', [AdminOutreachController::class, 'sendTest'])->name('send-test');
+        });
         Route::get('/talents', [AdminTalentController::class, 'index'])->name('talents.index');
         Route::get('/talents/media', [AdminTalentController::class, 'media'])->name('talents.media');
         Route::get('/talents/{talent}/edit', [AdminTalentController::class, 'edit'])->name('talents.edit');

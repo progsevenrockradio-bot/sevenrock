@@ -118,6 +118,7 @@
                     <a href="{{ route('admin.events.index') }}" class="lucille-admin-link">{{ $admin['events_heading'] ?? 'Events' }}</a>
                     <a href="{{ route('admin.events.single') }}" class="lucille-admin-link">Single Event</a>
                     <a href="{{ route('admin.audit-logs.index') }}" class="lucille-admin-link">Audit trail</a>
+                    <a href="{{ route('admin.outreach.index') }}" class="lucille-admin-link">📬 Convocatoria Bandas</a>
                     <a href="{{ route('admin.comments.index') }}" class="lucille-admin-link">Comentarios</a>
                 </div>
             </details>

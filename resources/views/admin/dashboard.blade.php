@@ -34,6 +34,14 @@
                     <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b]">{{ $admin['posts_label'] }}</div>
                     <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ $stats['posts'] }}</div>
                 </div>
+                <div class="border border-[#2b2b2b] bg-[#151515] p-5">
+                    <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b]">Outreach contacts</div>
+                    <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ $stats['outreach_contacts'] }}</div>
+                </div>
+                <div class="border border-[#2b2b2b] bg-[#151515] p-5">
+                    <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b]">Outreach sent</div>
+                    <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ $stats['outreach_sent'] }}</div>
+                </div>
             </div>
 
         </section>
@@ -55,6 +63,7 @@
                     <a href="{{ route('admin.radio-artists.index') }}" class="lucille-button">Radio artists</a>
                     <a href="{{ route('admin.songs.index') }}" class="lucille-button">Songs</a>
                     <a href="{{ route('admin.podcast-uploads.index') }}" class="lucille-button">Podcast uploads</a>
+                    <a href="{{ route('admin.outreach.index') }}" class="lucille-button">Outreach</a>
                     <a href="{{ route('admin.posts.index') }}" class="lucille-button">{{ $admin['posts_heading'] }}</a>
                     <a href="#taxonomias" class="lucille-button">Taxonomías</a>
                     <a href="{{ route('home') }}" class="lucille-button">{{ $admin['open_site'] }}</a>
@@ -123,6 +132,64 @@
                     </div>
                 </div>
             @endforeach
+        </div>
+    </section>
+
+    <section class="mt-8 border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Outreach</h2>
+                <p class="mt-2 max-w-3xl text-sm text-[#7b7b7b]">
+                    Estado general de la convocatoria a bandas y actividad reciente del gestor de correos.
+                </p>
+            </div>
+            <div class="text-sm text-[#7b7b7b]">
+                <span class="text-[#dcdcdc]">Responded:</span> {{ $stats['outreach_responded'] }} ·
+                <span class="text-[#dcdcdc]">Registered:</span> {{ $stats['outreach_registered'] }}
+            </div>
+        </div>
+
+        <div class="mt-6 grid gap-6 lg:grid-cols-2">
+            <div class="border border-[#2b2b2b] bg-[#151515] p-5">
+                <div class="flex items-center justify-between gap-4">
+                    <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Campañas recientes</h3>
+                    <a href="{{ route('admin.outreach.campaigns.index') }}" class="lucille-button">Ver campañas</a>
+                </div>
+                <div class="mt-4 space-y-3">
+                    @forelse (\App\Models\OutreachCampaign::query()->with('template')->latest()->limit(5)->get() as $campaign)
+                        <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
+                            <div class="flex items-center justify-between gap-4">
+                                <div>
+                                    <div class="text-sm text-[#dcdcdc]">{{ $campaign->name }}</div>
+                                    <div class="text-xs uppercase tracking-[.14em] text-[#7b7b7b]">{{ $campaign->template?->name ?? 'Sin plantilla' }}</div>
+                                </div>
+                                <div class="text-xs text-[#7b7b7b]">
+                                    {{ $campaign->sent_count }} sent
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-sm text-[#7b7b7b]">No hay campañas todavía.</p>
+                    @endforelse
+                </div>
+            </div>
+
+            <div class="border border-[#2b2b2b] bg-[#151515] p-5">
+                <div class="flex items-center justify-between gap-4">
+                    <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Contactos recientes</h3>
+                    <a href="{{ route('admin.outreach.contacts.index') }}" class="lucille-button">Ver contactos</a>
+                </div>
+                <div class="mt-4 space-y-3">
+                    @forelse ($recentContacts as $contact)
+                        <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
+                            <div class="text-sm text-[#dcdcdc]">{{ $contact->displayName() }}</div>
+                            <div class="text-xs text-[#7b7b7b]">{{ $contact->email ?: 'Sin email' }} · {{ $contact->status }}</div>
+                        </div>
+                    @empty
+                        <p class="text-sm text-[#7b7b7b]">No hay contactos todavía.</p>
+                    @endforelse
+                </div>
+            </div>
         </div>
     </section>
 </x-layouts.admin>

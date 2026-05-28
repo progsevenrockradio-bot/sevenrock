@@ -7,6 +7,9 @@ use App\Models\RadioArtist;
 use App\Models\MasterProgram;
 use App\Models\PostTaxonomy;
 use App\Models\Post;
+use App\Models\BandContact;
+use App\Models\OutreachCampaign;
+use App\Models\OutreachLog;
 use App\Models\RadioProgram;
 use App\Models\Song;
 use App\Models\ThemeSetting;
@@ -31,6 +34,10 @@ class DashboardController extends Controller
                 'posts' => $this->countIfTable('posts', Post::query()),
                 'categories' => $this->countTaxonomies(PostTaxonomy::TYPE_CATEGORY),
                 'tags' => $this->countTaxonomies(PostTaxonomy::TYPE_TAG),
+                'outreach_contacts' => $this->countIfTable('band_contacts', BandContact::query()),
+                'outreach_sent' => $this->countIfTable('outreach_logs', OutreachLog::query()->where('status', 'sent')),
+                'outreach_responded' => $this->countIfTable('outreach_logs', OutreachLog::query()->where('status', 'responded')),
+                'outreach_registered' => $this->countIfTable('band_contacts', BandContact::query()->where('status', 'registered')),
             ],
             'taxonomies' => [
                 'categories' => $this->taxonomiesFor(PostTaxonomy::TYPE_CATEGORY),
