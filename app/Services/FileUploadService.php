@@ -76,10 +76,9 @@ class FileUploadService
         $disk = $this->normalizeDisk($disk);
 
         if ($disk === 'backblaze' && $this->isB2Configured()) {
-            try {
-                return Storage::disk('backblaze')->url($key);
-            } catch (Throwable) {
-                // Fall through to public storage.
+            $b2Url = config('filesystems.disks.backblaze.url');
+            if ($b2Url) {
+                return rtrim($b2Url, '/') . '/' . ltrim($key, '/');
             }
         }
 
