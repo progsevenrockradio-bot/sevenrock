@@ -27,7 +27,7 @@
                     <div class="group relative border border-white/10 bg-[#10161b] transition hover:border-white/30">
                         <div class="aspect-square overflow-hidden bg-[#1d1d1d]">
                             @if ($album->coverUrl())
-                                <img src="{{ $album->coverUrl() }}" alt="{{ $album->title }}" class="h-full w-full object-cover">
+                                <img src="{{ $album->coverUrl() }}" alt="{{ $album->title }}" loading="lazy" class="h-full w-full object-cover">
                             @else
                                 <div class="flex h-full items-center justify-center font-display text-4xl uppercase tracking-[.1em] text-[#3a3a3a]">
                                     {{ Str::limit($album->title, 2, '') }}

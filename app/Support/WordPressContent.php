@@ -147,10 +147,19 @@ final class WordPressContent
             return '';
         }
 
+        // Normalize: WordPress blocks use 'content' key instead of 'value'
+        if (!isset($block['value'])) {
+            if (isset($block['content']['html']) && is_string($block['content']['html'])) {
+                $block['value'] = $block['content']['html'];
+            } elseif (isset($block['content']) && is_string($block['content'])) {
+                $block['value'] = $block['content'];
+            }
+        }
+
         $type = (string) ($block['type'] ?? 'raw');
 
         return match ($type) {
-            'paragraph' => self::wrapHtml((string) ($block['value'] ?? '')),
+            'paragraph' => self::wrapHtml((string) ($block['value'] ?? ''), $block['links'] ?? []),
             'heading' => self::wrapHeading((string) ($block['value'] ?? ''), (int) ($block['level'] ?? 2)),
             'quote' => self::wrapQuote((string) ($block['value'] ?? ''), (string) ($block['cite'] ?? '')),
             'image' => self::wrapImage((string) ($block['src'] ?? ''), (string) ($block['alt'] ?? '')),
@@ -176,12 +185,45 @@ final class WordPressContent
         return trim($html);
     }
 
-    private static function wrapHtml(string $text): string
+    private static function wrapHtml(string $text, array $links = []): string
     {
         $text = trim($text);
 
         if ($text === '') {
             return '';
+        }
+
+        // Process inline links (word → URL replacements)
+        if ($links !== []) {
+            $placeholders = [];
+            $replacements = [];
+            $i = 0;
+            $workingText = $text;
+
+            foreach ($links as $link) {
+                $word = trim((string) ($link['word'] ?? ''));
+                $url = trim((string) ($link['url'] ?? ''));
+                if ($word === '' || $url === '') {
+                    continue;
+                }
+                $placeholder = "\x00LINK{$i}\x00";
+                // Escape the word for regex and replace first occurrence
+                $pattern = '/' . preg_quote($word, '/') . '/i';
+                if (preg_match($pattern, $workingText, $matches, PREG_OFFSET_CAPTURE)) {
+                    $pos = $matches[0][1];
+                    $workingText = substr_replace($workingText, $placeholder, $pos, strlen($matches[0][0]));
+                    $placeholders[] = $placeholder;
+                    $replacements[] = '<a href="' . e($url) . '">' . e($word) . '</a>';
+                    $i++;
+                }
+            }
+
+            if ($placeholders !== []) {
+                // Escape the text, then replace placeholders with actual links
+                $escaped = e($workingText);
+                $escaped = str_replace($placeholders, $replacements, $escaped);
+                return '<p>' . $escaped . '</p>';
+            }
         }
 
         if (preg_match('/<\s*(p|img|figure|blockquote|ul|ol|li|h[1-6]|div|section|article|br|iframe)\b/i', $text)) {

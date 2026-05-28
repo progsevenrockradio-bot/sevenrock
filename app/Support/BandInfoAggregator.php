@@ -36,11 +36,13 @@ class BandInfoAggregator
 
             $providers = [
                 fn (): ?array => $this->fetchDiscogsProfile($artist),
-                fn (): ?array => $this->fetchWikipediaProfile($artist),
                 fn (): ?array => $this->fetchLastFmProfile($artist),
-                fn (): ?array => $this->fetchTadbProfile($artist),
                 fn (): ?array => $this->fetchMusicBrainzProfile($artist),
+                fn (): ?array => $this->fetchTadbProfile($artist),
+                fn (): ?array => $this->fetchWikipediaProfile($artist),
             ];
+
+            $bestPayload = null;
 
             foreach ($providers as $provider) {
                 $payload = $provider();
@@ -50,9 +52,31 @@ class BandInfoAggregator
                 }
 
                 $payload = $this->normalizePayload($payload);
-                $this->persistLocalProfile($artist, $payload);
 
-                return $payload;
+                // If this provider has a summary, use it immediately (best source)
+                if (!empty($payload['summary'])) {
+                    $this->persistLocalProfile($artist, $payload);
+                    return $payload;
+                }
+
+                // Otherwise, keep the best metadata-only result as fallback
+                if ($bestPayload === null) {
+                    $bestPayload = $payload;
+                }
+            }
+
+            // No provider returned a summary. Use the best metadata-only payload.
+            if ($bestPayload !== null) {
+                // Build a basic summary from available metadata
+                $parts = [];
+                if (!empty($bestPayload['country'])) $parts[] = 'País: ' . $bestPayload['country'];
+                if (!empty($bestPayload['genre'])) $parts[] = 'Género: ' . $bestPayload['genre'];
+                if (!empty($bestPayload['labels'])) $parts[] = 'Sello: ' . $bestPayload['labels'];
+                if (!empty($bestPayload['members_count'])) $parts[] = 'Miembros: ' . $bestPayload['members_count'];
+                if (!empty($parts)) $bestPayload['summary'] = implode(' | ', $parts);
+
+                $this->persistLocalProfile($artist, $bestPayload);
+                return $bestPayload;
             }
 
             return $this->emptyPayload($artist);
@@ -161,8 +185,8 @@ class BandInfoAggregator
 
             $search = ExternalHttp::client()->withHeaders($headers)
                 ->retry(1, 100)
-                ->connectTimeout(1)
-                ->timeout(2)
+                ->connectTimeout(4)
+                ->timeout(6)
                 ->get('https://api.discogs.com/database/search', [
                     'q' => $artist,
                     'type' => 'artist',
@@ -176,8 +200,8 @@ class BandInfoAggregator
             $artistId = (string) data_get($search->json(), 'results.0.id');
             $details = ExternalHttp::client()->withHeaders($headers)
                 ->retry(1, 100)
-                ->connectTimeout(1)
-                ->timeout(2)
+                ->connectTimeout(4)
+                ->timeout(6)
                 ->get("https://api.discogs.com/artists/{$artistId}");
 
             if (! $details->successful()) {
@@ -199,6 +223,7 @@ class BandInfoAggregator
                 'social_links' => $this->normalizeLinks((array) ($data['urls'] ?? [])),
                 'formed_year' => $this->positiveInt($data['members'][0]['active_year_range']['start'] ?? null),
                 'formed_label' => '',
+                'members' => $this->extractMembers($data['members'] ?? []),
             ];
         } catch (Throwable) {
             return null;
@@ -222,22 +247,33 @@ class BandInfoAggregator
         try {
             $baseUrl = "https://{$language}.wikipedia.org";
 
-            $search = ExternalHttp::client()->retry(1, 100)
-                ->connectTimeout(1)
-                ->timeout(3)
-                ->get("{$baseUrl}/w/api.php", [
-                    'action' => 'opensearch',
-                    'search' => $artist,
-                    'limit' => 1,
-                    'namespace' => 0,
-                    'format' => 'json',
-                ]);
+            // Try with (banda)/(band) suffix first for disambiguation
+            $suffix = $language === 'es' ? ' (banda)' : ' (band)';
+            $searchTerms = [$artist . $suffix, $artist];
+            $title = '';
 
-            $title = trim((string) data_get($search->json(), '1.0', ''));
+            foreach ($searchTerms as $searchTerm) {
+                $search = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.shop)'])->retry(1, 100)
+                    ->connectTimeout(4)
+                    ->timeout(6)
+                    ->get("{$baseUrl}/w/api.php", [
+                        'action' => 'opensearch',
+                        'search' => $searchTerm,
+                        'limit' => 1,
+                        'namespace' => 0,
+                        'format' => 'json',
+                    ]);
+
+                $title = trim((string) data_get($search->json(), '1.0', ''));
+                if ($title !== '') {
+                    break;
+                }
+            }
+
             if ($title === '') {
-                $query = ExternalHttp::client()->retry(1, 100)
-                    ->connectTimeout(1)
-                    ->timeout(3)
+                $query = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.shop)'])->retry(1, 100)
+                    ->connectTimeout(4)
+                    ->timeout(6)
                     ->get("{$baseUrl}/w/api.php", [
                         'action' => 'query',
                         'list' => 'search',
@@ -253,9 +289,9 @@ class BandInfoAggregator
                 return null;
             }
 
-            $summary = ExternalHttp::client()->retry(1, 100)
-                ->connectTimeout(1)
-                ->timeout(3)
+            $summary = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.shop)'])->retry(1, 100)
+                ->connectTimeout(4)
+                ->timeout(6)
                 ->get("{$baseUrl}/api/rest_v1/page/summary/" . rawurlencode($title));
 
             if (! $summary->successful()) {
@@ -297,9 +333,9 @@ class BandInfoAggregator
         }
 
         try {
-            $response = ExternalHttp::client()->retry(1, 100)
-                ->connectTimeout(1)
-                ->timeout(2)
+            $response = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.shop)'])->retry(1, 100)
+                ->connectTimeout(4)
+                ->timeout(6)
                 ->get('https://ws.audioscrobbler.com/2.0/', [
                     'method' => 'artist.getinfo',
                     'artist' => $artist,
@@ -337,8 +373,8 @@ class BandInfoAggregator
         try {
             $search = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (metadata)'])
                 ->retry(1, 100)
-                ->connectTimeout(1)
-                ->timeout(2)
+                ->connectTimeout(4)
+                ->timeout(6)
                 ->get('https://musicbrainz.org/ws/2/artist/', [
                     'query' => 'artist:"' . $artist . '"',
                     'fmt' => 'json',
@@ -352,8 +388,8 @@ class BandInfoAggregator
             $id = (string) data_get($search->json(), 'artists.0.id');
             $details = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (metadata)'])
                 ->retry(1, 100)
-                ->connectTimeout(1)
-                ->timeout(2)
+                ->connectTimeout(4)
+                ->timeout(6)
                 ->get("https://musicbrainz.org/ws/2/artist/{$id}", [
                     'fmt' => 'json',
                     'inc' => 'url-rels',
@@ -389,8 +425,8 @@ class BandInfoAggregator
     {
         try {
             $response = ExternalHttp::client()->retry(1, 100)
-                ->connectTimeout(1)
-                ->timeout(2)
+                ->connectTimeout(4)
+                ->timeout(6)
                 ->get('https://www.theaudiodb.com/api/v1/json/2/search.php', [
                     's' => $artist,
                 ]);
@@ -600,6 +636,7 @@ class BandInfoAggregator
             'labels' => trim((string) ($payload['labels'] ?? '')),
             'formed_label' => trim((string) ($payload['formed_label'] ?? '')),
             'facts' => $this->normalizeFacts((array) ($payload['facts'] ?? [])),
+            'members' => $payload['members'] ?? [],
         ];
     }
 
@@ -816,6 +853,25 @@ class BandInfoAggregator
     private function normalizeKey(string $value): string
     {
         return preg_replace('/[^a-z0-9]+/i', '', mb_strtolower(trim($value))) ?: '';
+    }
+
+    /**
+     * @param array $membersData
+     * @return array
+     */
+    private function extractMembers(array $membersData): array
+    {
+        $result = [];
+        foreach ($membersData as $m) {
+            if (empty($m['name'])) {
+                continue;
+            }
+            $result[] = [
+                'name' => trim((string) $m['name']),
+                'role' => trim((string) ($m['role'] ?? '')),
+            ];
+        }
+        return $result;
     }
 
     /**

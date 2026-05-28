@@ -42,7 +42,15 @@ class PublicMediaUrl
         }
 
         if (filter_var($value, FILTER_VALIDATE_URL)) {
-            return self::resolveLegacyWordPressUploadUrl($value) ?? $value;
+            // Fast path: convert WordPress upload URLs to local legacy-wp-uploads
+            // without scanning the filesystem (avoids slow RecursiveDirectoryIterator)
+            $relative = self::extractLegacyWordPressUploadRelativePath($value);
+            if ($relative !== null) {
+                if (Route::has("legacy-wp-uploads.show")) {
+                    return route("legacy-wp-uploads.show", ["path" => $relative]);
+                }
+            }
+            return $value;
         }
 
         if (str_starts_with($value, '//')) {

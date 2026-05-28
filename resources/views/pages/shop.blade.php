@@ -1,4 +1,4 @@
-<x-layouts.site title="Seven Rock Radio - Tienda">
+<x-layouts.site title="Seven Rock Radio - Tienda" description="Tienda oficial de Seven Rock Radio. Camisetas, merch y productos oficiales de tus bandas favoritas de rock.">
     @php $ui = $themeAppearance['ui_texts']; @endphp
     <x-sections.page-heading title="" />
 
@@ -21,7 +21,7 @@
                             @if (! empty($product['sale']))
                                 <span class="lucille-shop-sale-badge">¡Oferta!</span>
                             @endif
-                            <img src="{{ $product['image'] }}" alt="{{ $product['title'] }}" class="mx-auto w-full transition duration-500 ease-out group-hover:scale-[1.025] group-hover:opacity-90">
+                            <img src="{{ $product['image'] }}" alt="{{ $product['title'] }}" class="mx-auto w-full transition duration-500 ease-out group-hover:scale-[1.025] group-hover:opacity-90" loading="lazy">
                         </a>
                         <h2 class="mt-4 font-display text-sm font-light text-[#dcdcdc] transition duration-300 group-hover:text-lucille-accent">{{ $product['title'] }}</h2>
                         <p class="mt-2 text-base text-lucille-accent">

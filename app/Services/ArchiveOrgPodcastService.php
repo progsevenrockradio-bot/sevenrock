@@ -10,6 +10,7 @@ use App\Support\ExternalHttp;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -22,8 +23,9 @@ final class ArchiveOrgPodcastService
     public function __construct()
     {
         $this->client = new Client([
-            'timeout' => 600,
-            'connect_timeout' => 20,
+            'timeout' => 900,
+            'connect_timeout' => 30,
+            'read_timeout' => 900,
             'http_errors' => true,
         ]);
     }
@@ -74,7 +76,18 @@ final class ArchiveOrgPodcastService
         ])->saveQuietly();
 
         $this->uploadFile($identifier, $remotePath, $absolutePath, $itemMetadata);
-        $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
+
+        // Apply metadata if possible (non-blocking - archive.org may still be indexing)
+        try {
+            $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
+        } catch (Throwable $metadataException) {
+            Log::warning('ArchiveOrgPodcastService: metadata apply skipped (archive.org still indexing)', [
+                'identifier' => $identifier,
+                'remote_path' => $remotePath,
+                'error' => $metadataException->getMessage(),
+            ]);
+        }
+
         $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
 
         if (! ($verification['verified'] ?? false)) {
@@ -524,7 +537,9 @@ final class ArchiveOrgPodcastService
                     'body' => $stream,
                 ]);
             } finally {
-                fclose($stream);
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
             }
         });
     }
@@ -611,9 +626,7 @@ final class ArchiveOrgPodcastService
 
     private function apiEndpoint(): string
     {
-        $endpoint = trim((string) config('services.archive_org.endpoint', 'https://s3.us.archive.org'));
-
-        return rtrim($endpoint, '/');
+        return 'https://archive.org';
     }
 
     private function downloadEndpoint(): string
@@ -623,7 +636,9 @@ final class ArchiveOrgPodcastService
 
     private function s3Endpoint(): string
     {
-        return $this->apiEndpoint();
+        $endpoint = trim((string) config('services.archive_org.endpoint', 'https://s3.us.archive.org'));
+
+        return rtrim($endpoint, '/');
     }
 
     private function encodePath(string $path): string

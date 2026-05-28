@@ -13,7 +13,7 @@
                 <div class="flex flex-wrap gap-8">
                     @if ($album->coverUrl())
                         <div class="w-40">
-                            <img src="{{ $album->coverUrl() }}" alt="{{ $album->title }}" class="w-full">
+                            <img src="{{ $album->coverUrl() }}" alt="{{ $album->title }}" class="w-full" loading="lazy">
                             <label class="mt-2 flex items-center gap-2 text-xs text-[#7b7b7b]">
                                 <input type="checkbox" name="remove_cover" value="1">
                                 Eliminar portada

@@ -119,13 +119,8 @@ class RadioPlayerService
                     ?? $defaults['cover']
             )
         );
-        $bandProfilePayload = $bandProfile
-            ? $this->bandInfoResolver->resolve((string) $bandProfile->name)
-            : ($trackArtist !== '' ? $this->bandInfoResolver->resolve($trackArtist) : []);
-        $lyrics = $this->firstFilledString([
-            $song?->lyrics,
-            Arr::get($state, 'lyrics'),
-        ]);
+        $bandProfilePayload = [];  // Band enrichment via band-info API endpoint only
+        $lyrics = $song?->lyrics ?? '';  // From band-info API only
         $programs = $this->loadPrograms();
         $currentProgram = $this->resolveCurrentProgram($state, $song, $programs);
         $nextProgram = $this->resolveNextProgram(
@@ -173,21 +168,15 @@ class RadioPlayerService
             ]),
             'cover' => $cover,
             'lyrics' => is_string($lyrics) ? $lyrics : '',
-            'band_info' => $song?->band_info
-                ?: ($bandProfile?->editorial_summary ?: $bandProfile?->biography)
-                ?: Arr::get($state, 'band_info')
-                ?: Arr::get($state, 'comment')
-                ?: ($bandProfilePayload['summary'] ?? ''),
-            'band_thumbnail' => Arr::get($state, 'band_thumbnail')
-                ?: ($bandProfile?->normalizedImageUrl() ?? '')
-                ?: ($bandProfilePayload['thumbnail'] ?? ''),
-            'band_founded_year' => Arr::get($bandProfilePayload, 'formed_year'),
-            'band_founded_label' => Arr::get($bandProfilePayload, 'formed_label'),
+            'band_info' => '',  // Enriched via band-info API endpoint
+            'band_thumbnail' => '',  // Enriched via band-info API endpoint
+            'band_founded_year' => null,  // From band-info API
+            'band_founded_label' => '',  // From band-info API
             'comment' => Arr::get($state, 'comment'),
             'band_members' => $song?->band_members ?? Arr::get($state, 'band_members', []),
             'social_links' => ! empty($song?->social_links)
                 ? $song->social_links
-                : (Arr::get($state, 'social_links', []) ?: ($bandProfilePayload['social_links'] ?? [])),
+                : (Arr::get($state, 'social_links', []) ?: []),
             'audio_url' => $song?->audio_url ?: Arr::get($state, 'audio_url'),
             'program_id' => $currentProgram?->id ?? Arr::get($state, 'program_id'),
             'program_name' => $currentProgram?->name,

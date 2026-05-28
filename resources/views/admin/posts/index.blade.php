@@ -1,5 +1,5 @@
 @php $admin = $themeAppearance['admin_texts']; @endphp
-<x-layouts.admin :title="$admin['posts_heading'].' - '.$themeSettings->site_name">
+<x-layouts.admin :title="$admin['posts_heading'] . ' - ' . $themeSettings->site_name">
     @if (session('status'))
         <div class="mb-6 border border-[#1e4d2b] bg-[rgba(16,64,30,.2)] px-4 py-3 text-sm text-[#b8e6c3]">
             {{ session('status') }}
@@ -31,7 +31,20 @@
                         <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">{{ $post->title }}</td>
                         <td class="px-5 py-4">{{ $post->published_at?->format('d M Y') }}</td>
                         <td class="px-5 py-4">{{ implode(', ', $post->categoryNames()) }}</td>
-                        <td class="px-5 py-4">{{ $post->is_published ? $admin['status_published'] : $admin['status_draft'] }}</td>
+                        <td class="px-5 py-4">
+                            @php
+                                $isScheduled = !$post->is_published && $post->published_at && $post->published_at->isFuture();
+                            @endphp
+                            @if ($isScheduled)
+                                <span class="inline-flex items-center gap-1 rounded border border-[#b8860b] bg-[rgba(184,134,11,.15)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[.12em] text-[#d4a843]">
+                                    ⏳ {{ $admin['status_scheduled'] ?? 'Scheduled' }}
+                                </span>
+                            @elseif ($post->is_published)
+                                <span class="text-[#b8e6c3]">{{ $admin['status_published'] }}</span>
+                            @else
+                                <span class="text-[#7b7b7b]">{{ $admin['status_draft'] }}</span>
+                            @endif
+                        </td>
                         <td class="px-5 py-4">
                             <div class="flex flex-wrap gap-2">
                                 <a href="{{ route('admin.posts.edit', $post) }}" class="lucille-button">{{ $admin['edit'] }}</a>
@@ -58,4 +71,10 @@
             </tbody>
         </table>
     </div>
+
+    @if ($posts->hasPages())
+        <div class="mt-6">
+            {{ $posts->links('vendor.pagination.tailwind') }}
+        </div>
+    @endif
 </x-layouts.admin>

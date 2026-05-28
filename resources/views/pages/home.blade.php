@@ -1,4 +1,4 @@
-<x-layouts.site title="Seven Rock Radio - Inicio">
+<x-layouts.site title="Seven Rock Radio - Inicio" description="Seven Rock Radio — Musica rock, entrevistas, eventos y la mejor vibra. Tu radio rock online. Escucha en vivo, descubre nuevos talentos y disfruta del mejor rock.">
     @php
         $homeHeadings = $themeAppearance['home_headings'];
         $ui = $themeAppearance['ui_texts'];
@@ -20,7 +20,7 @@
                 @foreach ($featuredTalents as $talent)
                     <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="featured-card">
                         <div class="featured-rank">#{{ $loop->iteration }}</div>
-                        <img src="{{ $talent->logoUrl() ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" alt="{{ $talent->band_name }}">
+                        <img src="{{ $talent->logoUrl() ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" loading="lazy" alt="{{ $talent->band_name }}">
                         <h3>{{ $talent->band_name }}</h3>
                         <div class="featured-stats">
                             <span>❤️ {{ $talent->interactions()->where('type', 'like')->count() }}</span>

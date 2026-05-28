@@ -1,4 +1,4 @@
-<x-layouts.site title="Seven Rock Radio - Events">
+<x-layouts.site title="Seven Rock Radio - Eventos" description="Proximos eventos, conciertos y festivales de rock. Mantente al dia con la agenda musical de Seven Rock Radio.">
     <x-sections.page-heading
         title="Upcoming Shows"
         subtitle="Tour Dates 2026"

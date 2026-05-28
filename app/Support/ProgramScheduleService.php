@@ -55,7 +55,7 @@ class ProgramScheduleService
             'summary' => 'La grilla editorial se muestra aquí cuando existe programación maestro o cuando RadioBOSS devuelve la siguiente emisión.',
             'image' => 'assets/lucille/pedalboard-1511069_1920.jpg',
             'badge' => 'On deck',
-            'button' => ['label' => 'Ver programación', 'url' => route('events')],
+            'button' => ['label' => 'Ver programación', 'url' => route('programs')],
             'upcoming' => [
                 [
                     ...$this->fallbackProgramPayload('PROGRAMACIÓN', 'Seven Rock Radio', 'Próxima emisión', 'assets/lucille/microphone-1206364_1920.jpg'),
@@ -433,7 +433,7 @@ class ProgramScheduleService
             'badge' => $badge,
             'button' => [
                 'label' => 'Ver programación',
-                'url' => route('events'),
+                'url' => route('programs'),
             ],
         ];
     }
@@ -455,7 +455,7 @@ class ProgramScheduleService
             'badge' => 'On deck',
             'button' => [
                 'label' => 'Ver programación',
-                'url' => route('events'),
+                'url' => route('programs'),
             ],
         ];
     }
@@ -545,7 +545,7 @@ class ProgramScheduleService
             'badge' => 'On deck',
             'button' => [
                 'label' => 'Ver programación',
-                'url' => route('events'),
+                'url' => route('programs'),
             ],
             'upcoming' => $this->mapRemoteUpcoming($events, $theme, $limit),
         ];

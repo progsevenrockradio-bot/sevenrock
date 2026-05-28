@@ -38,6 +38,7 @@
         </p>
 
         <textarea name="content_text" class="hidden" x-ref="contentText" x-model="serialized"></textarea>
+        <textarea name="content_blocks" class="hidden" x-ref="contentBlocks" x-model="serializedBlocks"></textarea>
 
         <div class="mb-4 flex flex-wrap gap-2 border border-[#2b2b2b] bg-[rgba(0,0,0,.14)] p-3">
             <button type="button" class="lucille-button" @click="addBlock('paragraph')">Paragraph</button>
@@ -112,7 +113,7 @@
                                         <template x-for="(item, itemIndex) in block.items" :key="item.id">
                                             <div class="grid gap-3 border border-[#2b2b2b] bg-[rgba(0,0,0,.12)] p-3 md:grid-cols-[110px_1fr_auto]">
                                                 <div class="h-[96px] overflow-hidden border border-[#2b2b2b] bg-black">
-                                                    <img :src="item.src" alt="" class="h-full w-full object-cover" x-show="item.src">
+                                                    <img :src="item.src" alt="" class="h-full w-full object-cover" x-show="item.src" loading="lazy">
                                                     <div class="flex h-full items-center justify-center text-xs uppercase tracking-[.18em] text-[#7b7b7b]" x-show="! item.src">No image</div>
                                                 </div>
                                                 <div class="space-y-2">
@@ -140,6 +141,21 @@
                                 <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
                                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Paragraph text</label>
                                     <textarea class="lucille-product-field w-full" rows="8" x-model="block.value" @input="sync()" placeholder="Write text here"></textarea>
+                                    
+                                    <div class="mt-4 border-t border-[#2b2b2b] pt-4">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">🔗 Inline Links</span>
+                                            <button type="button" class="lucille-button text-xs" @click="addLink(block)">+ Add Link</button>
+                                        </div>
+                                        <template x-for="(link, linkIndex) in block.links" :key="linkIndex">
+                                            <div class="mt-3 grid grid-cols-[1fr_1fr_auto] gap-2">
+                                                <input class="lucille-product-field w-full text-xs" type="text" x-model="link.word" @input="sync()" placeholder="Word to link">
+                                                <input class="lucille-product-field w-full text-xs" type="url" x-model="link.url" @input="sync()" placeholder="https://...">
+                                                <button type="button" class="lucille-button-solid text-xs px-2" @click="removeLink(block, linkIndex)">✕</button>
+                                            </div>
+                                        </template>
+                                        <p class="mt-2 text-[10px] text-[#555]" x-show="block.links.length === 0">Select a word from the text and add a link. The first occurrence of the word will be linked.</p>
+                                    </div>
                                 </div>
                             </template>
 
@@ -287,13 +303,43 @@
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Meta description</label>
         <textarea name="meta_description" rows="4" class="lucille-product-field w-full">{{ old('meta_description', $post->meta_description) }}</textarea>
     </div>
-    <label class="flex items-center gap-3 text-sm text-[#dcdcdc] md:col-span-2">
-        <input type="checkbox" name="is_published" value="1" @checked(old('is_published', $post->is_published ?? true))>
-        {{ $admin['published_label'] }}
-    </label>
+    </div>
+
+<div class="mt-6 flex flex-wrap items-center gap-3" x-data="postActionButtons()">
+    <button type="submit" name="_action" value="publish" class="lucille-button-solid">
+        📢 {{ $admin['publish_label'] ?? 'Publish' }}
+    </button>
+    <button type="submit" name="_action" value="draft" class="lucille-button">
+        📝 {{ $admin['draft_label'] ?? 'Save Draft' }}
+    </button>
+    <button type="submit" name="_action" value="schedule" class="lucille-button" x-bind:class="scheduleBtnClass" x-bind:disabled="!canSchedule">
+        ⏳ {{ $admin['schedule_label'] ?? 'Schedule' }}
+    </button>
+    <a href="{{ route('admin.posts.index') }}" class="lucille-button">{{ $admin['back_to_posts'] }}</a>
+    <span class="text-xs text-[#555]" x-show="!canSchedule && publishedAt !== ''">
+        ({{ $admin['schedule_future_only'] ?? 'Select a future date' }})
+    </span>
 </div>
 
-<div class="mt-6 flex flex-wrap gap-3">
-    <button type="submit" class="lucille-button-solid">{{ $isEdit ? $admin['edit_post'] : $admin['new_post'] }}</button>
-    <a href="{{ route('admin.posts.index') }}" class="lucille-button">{{ $admin['back_to_posts'] }}</a>
-</div>
+<script>
+function postActionButtons() {
+    return {
+        publishedAt: document.querySelector('[name="published_at"]')?.value ?? '',
+        get canSchedule() {
+            if (!this.publishedAt) return false;
+            const d = new Date(this.publishedAt);
+            return d > new Date();
+        },
+        get scheduleBtnClass() {
+            return this.canSchedule ? 'lucille-button' : 'lucille-button opacity-40 cursor-not-allowed';
+        },
+        init() {
+            const input = document.querySelector('[name="published_at"]');
+            if (input) {
+                input.addEventListener('change', () => { this.publishedAt = input.value; });
+                input.addEventListener('input', () => { this.publishedAt = input.value; });
+            }
+        }
+    };
+}
+</script>

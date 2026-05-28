@@ -64,7 +64,7 @@
                             <td class="px-4 py-4">
                                 <div class="h-14 w-14 overflow-hidden border border-white/10 bg-[#151515]">
                                     @if ($talent->logoUrl())
-                                        <img src="{{ $talent->logoUrl() }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover">
+                                        <img src="{{ $talent->logoUrl() }}" alt="{{ $talent->band_name }}" loading="lazy" class="h-full w-full object-cover">
                                     @endif
                                 </div>
                             </td>

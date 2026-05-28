@@ -85,7 +85,7 @@
     <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3">
             @if ($brandDisplayMode === 'logo')
-                <img src="{{ $theme->logo_url }}" alt="{{ $theme->site_name }}" class="h-10 w-auto">
+                <img src="{{ $theme->logo_url }}" alt="{{ $theme->site_name }}" loading="lazy" class="h-10 w-auto">
             @else
                 <span class="lucille-brand-mark text-[1.9rem]">{{ $theme->brand_mark ?: $theme->site_name }}</span>
             @endif
@@ -118,6 +118,7 @@
                     <a href="{{ route('admin.events.index') }}" class="lucille-admin-link">{{ $admin['events_heading'] ?? 'Events' }}</a>
                     <a href="{{ route('admin.events.single') }}" class="lucille-admin-link">Single Event</a>
                     <a href="{{ route('admin.audit-logs.index') }}" class="lucille-admin-link">Audit trail</a>
+                    <a href="{{ route('admin.comments.index') }}" class="lucille-admin-link">Comentarios</a>
                 </div>
             </details>
 

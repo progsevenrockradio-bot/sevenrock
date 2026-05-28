@@ -33,7 +33,7 @@ export function registerRadioPlayer(Alpine) {
         panelOpen: false,
         bandWindowOpen: false,
         bandWindowTab: 'lyrics',
-        dockMinimized: false,
+        dockMinimized: true,
         activeTab: 'lyrics',
         playing: false,
         loading: true,
@@ -111,7 +111,7 @@ export function registerRadioPlayer(Alpine) {
             this.panelOpen = this.mode === 'page' ? true : false;
             this.bandWindowOpen = false;
             this.bandWindowTab = 'lyrics';
-            this.dockMinimized = false;
+            this.dockMinimized = true;
             this.activeTab = safeRead('sr-player-tab', 'lyrics');
             this.toast.visible = false;
             this.toast.message = '';
@@ -1241,6 +1241,15 @@ export function registerRadioPlayer(Alpine) {
                     return null;
                 })
                 .filter(Boolean);
+        },
+
+        get resumenBio() {
+            const texto = this.bandPanel.info || this.track.band_info || '';
+            if (!texto) return '';
+            if (texto.length <= 180) return texto;
+            const cortado = texto.substring(0, 177);
+            const ultimoEspacio = cortado.lastIndexOf(' ');
+            return (ultimoEspacio > 0 ? cortado.substring(0, ultimoEspacio) : cortado) + '...';
         },
     }));
 }

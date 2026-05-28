@@ -85,7 +85,7 @@
                             alt="{{ $event['title'] }}"
                             itemprop="image"
                             class="event-single-poster h-auto w-full object-cover"
-                        >
+                         loading="lazy">
                     </div>
 
                     <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-2">

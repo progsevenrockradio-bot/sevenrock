@@ -50,7 +50,7 @@ class Post extends Model
         ];
     }
 
-    public function getContentAttribute(mixed $value): mixed
+    public function getContentAttribute(mixed $value): array
     {
         if (is_array($value)) {
             return $value;
@@ -65,7 +65,7 @@ class Post extends Model
             return [['type' => 'raw', 'value' => $value]];
         }
 
-        return $value;
+        return [];
     }
 
     public function setContentAttribute(mixed $value): void
@@ -76,7 +76,7 @@ class Post extends Model
 
     public function getFeaturedImageAttribute(?string $value): ?string
     {
-        return $value ?: ($this->featured_image_path ?: null);
+        return [] ?: ($this->featured_image_path ?: null);
     }
 
     public function scopePublished(Builder $query): Builder
@@ -154,11 +154,19 @@ class Post extends Model
     private function taxonomyNames(string $type, string $attribute): array
     {
         if (Schema::hasTable('post_taxonomy_post')) {
-            $names = $this->taxonomies()
-                ->where('type', $type)
-                ->orderBy('name')
-                ->pluck('name')
-                ->all();
+            if ($this->relationLoaded('taxonomies')) {
+                $names = $this->taxonomies
+                    ->where('type', $type)
+                    ->sortBy('name')
+                    ->pluck('name')
+                    ->all();
+            } else {
+                $names = $this->taxonomies()
+                    ->where('type', $type)
+                    ->orderBy('name')
+                    ->pluck('name')
+                    ->all();
+            }
 
             if ($names !== []) {
                 return $names;

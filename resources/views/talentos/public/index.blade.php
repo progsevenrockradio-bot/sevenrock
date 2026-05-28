@@ -1,4 +1,4 @@
-<x-layouts.site :title="'Talentos'">
+<x-layouts.site :title="'Seven Rock Radio - Talentos'" description="Descubre nuevos talentos musicales en Seven Rock Radio. Bandas independientes, artistas emergentes y musica original.">
     <section class="mx-auto max-w-7xl px-5 py-16">
         <div class="mb-8 border border-white/10 bg-[#10161b] p-8">
             <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Muro del Rock</div>
@@ -23,7 +23,7 @@
                     <div class="flex items-start gap-4">
                         <div class="h-20 w-20 shrink-0 overflow-hidden border border-white/10 bg-[#151515]">
                             @if ($talent->logoUrl())
-                                <img src="{{ $talent->logoUrl() }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover">
+                                <img src="{{ $talent->logoUrl() }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover" loading="lazy">
                             @else
                                 <div class="flex h-full w-full items-center justify-center text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Sin logo</div>
                             @endif

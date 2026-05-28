@@ -1,4 +1,4 @@
-<x-layouts.site title="Seven Rock Radio - Galería">
+<x-layouts.site title="Seven Rock Radio - Galería" description="Galería de fotos de Seven Rock Radio. Imagenes de conciertos, bandas y eventos rockeros.">
     @php
         $lightboxImages = collect($images)
             ->map(fn ($img) => ['src' => $img->url, 'caption' => ($img->title ?? $img->filename) . ' — ' . ($img->talent->band_name ?? 'Talento')])
@@ -60,7 +60,7 @@
                             <button type="button" class="lucille-lightbox-close" @click="close()" aria-label="Cerrar imagen"></button>
 
                             <div class="lucille-lightbox-frame" @click.stop>
-                                <img :src="current.src" :alt="current.caption" class="lucille-lightbox-image" x-transition.opacity.duration.300ms>
+                                <img :src="current.src" :alt="current.caption" class="lucille-lightbox-image" x-transition.opacity.duration.300ms loading="lazy">
 
                                 <button type="button" class="lucille-lightbox-nav lucille-lightbox-prev" @click="prev()" aria-label="Anterior">
                                     <span class="lucille-lightbox-arrow"></span>

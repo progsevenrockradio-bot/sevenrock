@@ -15,7 +15,7 @@
             <div class="flex flex-col lg:flex-row">
                 <main class="lucille-blog-standard-main">
                     <article>
-                        <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ $post['title'] }}" class="mb-0 w-full">
+                        <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ $post['title'] }}" class="mb-0 w-full" loading="lazy">
 
                         <div class="lucille-single-post-body mt-0 space-y-5">
                             @foreach ($post['content'] as $block)
@@ -69,6 +69,48 @@
                             </div>
                         @endif
 
+
+                        @if ($prevPost || $nextPost)
+                            <nav class="mt-10 flex items-center justify-between border-t border-[#003954] pt-6">
+                                <div>
+                                    @if ($prevPost)
+                                        @php
+                                            $prevUrl = route('posts.single', [
+                                                'year' => $prevPost->published_at?->format('Y') ?? now()->format('Y'),
+                                                'month' => $prevPost->published_at?->format('m') ?? now()->format('m'),
+                                                'day' => $prevPost->published_at?->format('d') ?? now()->format('d'),
+                                                'slug' => $prevPost->slug,
+                                            ]);
+                                        @endphp
+                                        <a href="{{ $prevUrl }}" class="group flex items-center gap-2 text-sm uppercase tracking-[.12em] text-[#7b7b7b] transition hover:text-lucille-accent">
+                                            <span class="text-3xl font-bold text-lucille-accent leading-none">←</span>
+                                            <span class="hidden sm:inline">{{ $prevPost->title }}</span>
+                                            <span class="sm:hidden">Anterior</span>
+                                        </a>
+                                    @endif
+                                </div>
+                                <div class="text-right">
+                                    @if ($nextPost)
+                                        @php
+                                            $nextUrl = route('posts.single', [
+                                                'year' => $nextPost->published_at?->format('Y') ?? now()->format('Y'),
+                                                'month' => $nextPost->published_at?->format('m') ?? now()->format('m'),
+                                                'day' => $nextPost->published_at?->format('d') ?? now()->format('d'),
+                                                'slug' => $nextPost->slug,
+                                            ]);
+                                        @endphp
+                                        <a href="{{ $nextUrl }}" class="group flex items-center gap-2 text-sm uppercase tracking-[.12em] text-[#7b7b7b] transition hover:text-lucille-accent">
+                                            <span class="hidden sm:inline">{{ $nextPost->title }}</span>
+                                            <span class="sm:hidden">Siguiente</span>
+                                            <span class="text-3xl font-bold text-lucille-accent leading-none">→</span>
+                                        </a>
+                                    @endif
+                                </div>
+                            </nav>
+                        @endif
+
+                        <div class="mt-8"></div>
+
                         <div class="lucille-share-row">
                             <span>{{ $ui['share'] }}</span>
                             <a href="#" aria-label="Share on Twitter">T</a>
@@ -79,16 +121,20 @@
                         <div class="mt-8"></div>
 
                         <div id="comments">
+                        @if (session("status"))
+                            <div class="mb-4 rounded-lg bg-green-900/30 px-4 py-3 text-sm text-green-300">{{ session("status") }}</div>
+                        @endif
                             <div id="respond" class="comment-respond">
                                 <h3 class="lucille-comment-title">{{ $ui['leave_a_reply'] }}</h3>
-                                <form class="mt-5 space-y-5">
+                                <form method="POST" action="{{ route('posts.comments.store', $post['id']) }}" class="mt-5 space-y-5">
+                                    @csrf
                                     <div class="lucille-comment-inputs">
-                                        <input type="text" placeholder="{{ $ui['your_name'] }}" class="lucille-comment-input">
-                                        <input type="email" placeholder="{{ $ui['email_address'] }}" class="lucille-comment-input">
-                                        <input type="url" placeholder="{{ $ui['website'] }}" class="lucille-comment-input">
+                                        <input type="text" name="author_name" placeholder="{{ $ui['your_name'] }}" class="lucille-comment-input">
+                                        <input type="email" name="author_email" placeholder="{{ $ui['email_address'] }}" class="lucille-comment-input">
+                                        <input type="url" name="author_website" placeholder="{{ $ui['website'] }}" class="lucille-comment-input">
                                     </div>
-                                    <textarea placeholder="{{ $ui['write_comment'] }}" rows="8" class="lucille-comment-textarea"></textarea>
-                                    <button type="button" class="lucille-button">{{ $ui['post_comment'] }}</button>
+                                    <textarea name="content" placeholder="{{ $ui['write_comment'] }}" rows="8" class="lucille-comment-textarea" required minlength="5"></textarea>
+                                    <button type="submit" class="lucille-button">{{ $ui['post_comment'] }}</button>
                                 </form>
                             </div>
                         </div>

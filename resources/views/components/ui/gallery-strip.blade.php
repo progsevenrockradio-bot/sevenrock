@@ -52,7 +52,7 @@
                 <button type="button" class="lucille-lightbox-close" @click="close()" aria-label="Close image"></button>
 
                 <div class="lucille-lightbox-frame" @click.stop>
-                    <img :src="current.src" :alt="current.caption" class="lucille-lightbox-image" x-transition.opacity.duration.300ms>
+                    <img :src="current.src" :alt="current.caption" class="lucille-lightbox-image" x-transition.opacity.duration.300ms loading="lazy">
 
                     <button type="button" class="lucille-lightbox-nav lucille-lightbox-prev" @click="prev()" aria-label="Previous image">
                         <span class="lucille-lightbox-arrow"></span>

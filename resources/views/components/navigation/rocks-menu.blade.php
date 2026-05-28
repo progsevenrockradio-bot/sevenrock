@@ -19,12 +19,13 @@
             ['label' => 'Evento', 'url' => route('events.single', ['slug' => 'rockness-festival'])],
         ]],
         ['label' => 'Blog', 'route' => 'blog', 'children' => [
-            ['label' => 'Blog', 'route' => 'blog'],
-            ['label' => 'Blog', 'route' => 'blog.standard'],
+            ['label' => 'Ver Blog', 'route' => 'blog'],
             ['label' => 'Entrada', 'url' => route('posts.single', ['year' => '2016', 'month' => '09', 'day' => '06', 'slug' => 'inspiration'])],
         ]],
         ['label' => 'Muro del Rock', 'route' => 'talents.explore'],
         ['label' => 'Tienda', 'route' => 'shop'],
+
+        ["label" => "Programas", "route" => "programs"],
         ['label' => 'Contacto', 'route' => 'contact'],
     ];
     $themeData = is_array($theme ?? null) ? $theme : $themeAppearance;
@@ -42,7 +43,7 @@
     <div class="mx-auto flex h-full max-w-[1180px] items-center justify-between px-5 lg:px-8">
     <a href="{{ route('home') }}" class="flex h-full items-center" aria-label="{{ $brandMark }} home">
             @if ($brandDisplayMode === 'logo' && $logoUrl)
-                <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo">
+                <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo" loading="lazy">
             @else
                 <span class="lucille-brand-mark">{{ $brandMark }}</span>
             @endif

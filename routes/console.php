@@ -379,3 +379,9 @@ Artisan::command('talents:send-renewal-reminders', function () {
 })->purpose('Send talent renewal and expiration reminders');
 
 Schedule::command('talents:send-renewal-reminders')->dailyAt('09:00');
+// Process queue every minute
+
+Schedule::command('queue:work', ['--stop-when-empty', '--timeout=120'])->everyMinute()->withoutOverlapping();
+
+// Publish scheduled posts every minute
+Schedule::command('posts:publish-scheduled')->everyMinute();

@@ -24,7 +24,7 @@ class PostController extends Controller
     public function index(): View
     {
         return view('admin.posts.index', [
-            'posts' => Post::query()->orderByDesc('published_at')->get(),
+            'posts' => Post::query()->orderByDesc('published_at')->paginate(15),
         ]);
     }
 
@@ -168,6 +168,7 @@ class PostController extends Controller
             'author' => ['nullable', 'string', 'max:255'],
             'excerpt' => ['nullable', 'string'],
             'content_text' => ['nullable', 'string'],
+            'content_blocks' => ['nullable', 'string'],
             'content' => ['nullable'],
             'quote' => ['nullable', 'string'],
             'featured_image' => ['nullable', 'string', 'max:2048', 'required_without:featured_image_file'],
@@ -183,7 +184,7 @@ class PostController extends Controller
             'meta_title' => ['nullable', 'string', 'max:120'],
             'meta_description' => ['nullable', 'string'],
             'published_at' => ['nullable', 'date'],
-            'status' => ['nullable', 'string', Rule::in(['draft', 'published'])],
+            'status' => ['nullable', 'string', Rule::in(['draft', 'published', 'scheduled'])],
             'categories_text' => ['nullable', 'string'],
             'tags_text' => ['nullable', 'string'],
             'is_published' => ['nullable', 'boolean'],
@@ -194,13 +195,35 @@ class PostController extends Controller
             : 'admin';
         $validated['published_at'] = ! empty($validated['published_at']) ? Carbon::parse($validated['published_at']) : null;
         $contentSource = $validated['content_text'] ?? $validated['content'] ?? '';
+
+        // If content_blocks JSON is provided (from Alpine editor with links), use it directly
+        if (! empty($validated['content_blocks'])) {
+            $decoded = json_decode($validated['content_blocks'], true);
+            if (is_array($decoded)) {
+                $contentSource = $decoded;
+            }
+        }
+
         $validated['content'] = WordPressContent::toRenderableBlocks($contentSource);
         $validated['categories'] = $this->splitCsv((string) ($validated['categories_text'] ?? ''));
         $validated['tags'] = $this->splitCsv((string) ($validated['tags_text'] ?? ''));
-        $validated['is_published'] = $request->has('is_published')
-            ? $request->boolean('is_published')
-            : ($ignoreId === null ? true : (($validated['status'] ?? null) === 'published'));
-        $validated['status'] = (string) ($validated['status'] ?? ($validated['is_published'] ? 'published' : 'draft'));
+        $action = $request->input('_action', 'publish');
+
+        switch ($action) {
+            case 'schedule':
+                $validated['is_published'] = false;
+                $validated['status'] = 'scheduled';
+                break;
+            case 'draft':
+                $validated['is_published'] = false;
+                $validated['status'] = 'draft';
+                break;
+            case 'publish':
+            default:
+                $validated['is_published'] = true;
+                $validated['status'] = 'published';
+                break;
+        }
 
         unset(
             $validated['content_text'],

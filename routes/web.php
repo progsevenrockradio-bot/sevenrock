@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\ThemeSettingsController as AdminThemeSettingsCont
 use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Admin\PostTaxonomyController as AdminPostTaxonomyController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
+use App\Http\Controllers\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
 use App\Http\Controllers\Admin\TalentAdminController as AdminTalentController;
@@ -58,6 +59,9 @@ Route::get('/player/popup', [PlayerController::class, 'show'])->name('player.pop
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('posts.comments.store');
 
+Route::get("/programas", [SiteController::class, "programs"])->name("programs");
+Route::get("/programas/{identifier}", [SiteController::class, "programDetail"])->name("programs.detail");
+
 // Rutas de restablecimiento de contraseña para el panel de administración
 // Asumiendo que el AuthController maneja la lógica de login para admin.
 // Si se usa un sistema de autenticación diferente para el frontend, estas rutas podrían ir en otro lugar.
@@ -68,7 +72,7 @@ Route::post('/admin/reset-password', [AdminAuthController::class, 'reset'])->nam
 
 Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AdminAuthController::class, 'login'])->name('login.store');
+    Route::post('/login', [AdminAuthController::class, 'login'])->name('login.store')->middleware('throttle:login');
 
     Route::middleware(['admin', 'audit'])->group(function (): void {
         Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
@@ -127,6 +131,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::post('/radio-artists', [AdminBandProfileController::class, 'store'])->name('radio-artists.store');
         Route::get('/radio-artists/{bandProfile}/edit', [AdminBandProfileController::class, 'edit'])->name('radio-artists.edit');
         Route::put('/radio-artists/{bandProfile}', [AdminBandProfileController::class, 'update'])->name('radio-artists.update');
+                Route::post('/radio-artists/{bandProfile}/auto-generate', [AdminBandProfileController::class, 'autoGenerate'])->name('radio-artists.auto-generate');
         Route::delete('/radio-artists/{bandProfile}', [AdminBandProfileController::class, 'destroy'])->name('radio-artists.destroy');
         Route::get('/songs', [AdminSongController::class, 'index'])->name('songs.index');
         Route::get('/songs/create', [AdminSongController::class, 'create'])->name('songs.create');
@@ -141,6 +146,12 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/posts/{post}/edit', [AdminPostController::class, 'edit'])->name('posts.edit');
         Route::put('/posts/{post}', [AdminPostController::class, 'update'])->name('posts.update');
         Route::delete('/posts/{post}', [AdminPostController::class, 'destroy'])->name('posts.destroy');
+        Route::get('/comments', [AdminCommentController::class, 'index'])->name('comments.index');
+        Route::get('/comments/{comment}/edit', [AdminCommentController::class, 'edit'])->name('comments.edit');
+        Route::put('/comments/{comment}', [AdminCommentController::class, 'update'])->name('comments.update');
+        Route::post('/comments/{comment}/approve', [AdminCommentController::class, 'approve'])->name('comments.approve');
+        Route::post('/comments/{comment}/unapprove', [AdminCommentController::class, 'unapprove'])->name('comments.unapprove');
+        Route::delete('/comments/{comment}', [AdminCommentController::class, 'destroy'])->name('comments.destroy');
         Route::get('/talents', [AdminTalentController::class, 'index'])->name('talents.index');
         Route::get('/talents/media', [AdminTalentController::class, 'media'])->name('talents.media');
         Route::get('/talents/{talent}/edit', [AdminTalentController::class, 'edit'])->name('talents.edit');
@@ -162,7 +173,7 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
         Route::get('/register', [TalentAuthController::class, 'showRegisterForm'])->name('register');
         Route::post('/register', [TalentAuthController::class, 'register'])->name('register.store');
         Route::get('/login', [TalentAuthController::class, 'showLoginForm'])->name('login');
-        Route::post('/login', [TalentAuthController::class, 'login'])->name('login.store');
+        Route::post('/login', [TalentAuthController::class, 'login'])->name('login.store')->middleware('throttle:login');
     });
 
     Route::middleware(['talent'])->group(function (): void {

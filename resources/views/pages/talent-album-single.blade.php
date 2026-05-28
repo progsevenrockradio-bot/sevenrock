@@ -1,4 +1,6 @@
-<x-layouts.site :title="'Seven Rock Radio - ' . $album->title">
+<x-layouts.site :title="'Seven Rock Radio - ' . $album->title"
+    :description="$album->description ?? 'Album de ' . $talent->band_name . ' en Seven Rock Radio'"
+    :og-image="$album->coverUrl() ?? asset('assets/lucille/logo.png')">
     <x-sections.page-heading
         :title="$album->title"
         :subtitle="$talent->band_name ?? 'Talento'"
@@ -78,7 +80,7 @@
         <div class="lucille-content-box">
             <div class="grid gap-8 lg:grid-cols-[40%_60%]">
                 <aside class="lg:pr-[15px]">
-                    <img src="{{ $album->coverUrl() ?? asset('assets/lucille/man-597179_1920.jpg') }}" alt="{{ $album->title }}" class="w-full max-w-[500px]">
+                    <img src="{{ $album->coverUrl() ?? asset('assets/lucille/man-597179_1920.jpg') }}" alt="{{ $album->title }}" loading="lazy" class="w-full max-w-[500px]">
 
                     <div class="mt-[15px] space-y-[10px] text-[#7b7b7b]">
                         <p><span class="mr-2 text-[#dcdcdc]">Talento:</span>{{ $talent->band_name ?? 'Sin nombre' }}</p>
@@ -88,9 +90,27 @@
                         <p><span class="mr-2 text-[#dcdcdc]">Canciones:</span>{{ count($album->tracks ?? []) }}</p>
                     </div>
 
-                    <div class="mt-6">
+                    <div class="mt-6 flex flex-wrap gap-2">
                         <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="lucille-button min-h-[32px] px-[13px] text-[10px] tracking-[2px]">
-                            Ver perfil de {{ $talent->band_name }}
+                            🎵 Ver Perfil
+                        </a>
+                        @if($hasProducts ?? false)
+                            <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="lucille-button min-h-[32px] px-[13px] text-[10px] tracking-[2px]">
+                                🛒 Tienda
+                            </a>
+                        @endif
+                        @if($talent->website_url)
+                            <a href="{{ $talent->website_url }}" target="_blank" rel="noreferrer" class="lucille-button min-h-[32px] px-[13px] text-[10px] tracking-[2px]">
+                                🌐 Sitio Web
+                            </a>
+                        @endif
+                        @foreach($paymentLinks ?? [] as $label => $url)
+                            <a href="{{ $url }}" target="_blank" rel="nofollow noopener" class="lucille-button min-h-[32px] px-[13px] text-[10px] tracking-[2px]">
+                                💳 {{ ucfirst($label) }}
+                            </a>
+                        @endforeach
+                        <a href="{{ route('talents.explore') }}" class="lucille-button min-h-[32px] px-[13px] text-[10px] tracking-[2px]">
+                            👥 Más Artistas
                         </a>
                     </div>
 

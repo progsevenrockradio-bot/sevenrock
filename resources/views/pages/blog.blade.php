@@ -1,4 +1,4 @@
-<x-layouts.site title="Seven Rock Radio - Blog">
+<x-layouts.site title="Seven Rock Radio - Blog" description="Blog de Seven Rock Radio. Noticias, entrevistas, lanzamientos y todo sobre el mundo del rock y el metal.">
     <x-sections.page-heading title="Blog" />
 
     <section>
@@ -16,7 +16,7 @@
                     @endphp
                     <article class="lucille-masonry-card group relative overflow-hidden bg-[#1d1d1d] {{ $span }}">
                         @if ($image)
-                            <img src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}" alt="{{ $title }}" class="lucille-card-bg absolute inset-0 h-full w-full object-cover opacity-55 transition duration-500 ease-out">
+                            <img src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}" alt="{{ $title }}" class="lucille-card-bg absolute inset-0 h-full w-full object-cover opacity-55 transition duration-500 ease-out" loading="lazy">
                             <span class="absolute inset-0 bg-black/20"></span>
                         @else
                             <span class="absolute inset-0 bg-[rgba(7,16,33,.4)]"></span>

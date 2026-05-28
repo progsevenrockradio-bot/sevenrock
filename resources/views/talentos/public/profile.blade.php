@@ -1,8 +1,10 @@
-<x-layouts.site :title="$talent->band_name">
+<x-layouts.site :title="$talent->band_name . ' - Seven Rock Radio'"
+    :description="$talent->bio ? Str::limit($talent->bio, 160) : 'Perfil de ' . $talent->band_name . ' en Seven Rock Radio'"
+    :og-image="$talent->logoUrl() ?? asset('assets/lucille/logo.png')">
     <section class="mx-auto max-w-7xl px-5 py-16">
         <div class="talent-cover">
             <div class="talent-avatar">
-                <img src="{{ $talent->logoUrl() ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" alt="{{ $talent->band_name }}">
+                <img src="{{ $talent->logoUrl() ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" alt="{{ $talent->band_name }}" loading="lazy">
             </div>
             <h1 class="talent-name">{{ $talent->band_name }}</h1>
             <div class="talent-plan-badge">
@@ -52,7 +54,7 @@
                             @foreach ($media as $item)
                                 <article class="media-card" data-type="{{ $item->type }}">
                                     @if ($item->type === 'photo')
-                                        <img src="{{ $item->url }}" alt="{{ $item->title }}" class="w-full object-cover">
+                                        <img src="{{ $item->url }}" alt="{{ $item->title }}" class="w-full object-cover" loading="lazy">
                                     @elseif ($item->type === 'mp3')
                                         <div class="audio-player">
                                             <p class="text-white">{{ $item->title }}</p>
@@ -80,7 +82,7 @@
                             @foreach ($products as $product)
                                 <div class="store-card">
                                     @if ($product->image_url)
-                                        <img src="{{ $product->image_url }}" alt="{{ $product->title }}">
+                                        <img src="{{ $product->image_url }}" alt="{{ $product->title }}" loading="lazy">
                                     @endif
                                     <h4>{{ $product->title }}</h4>
                                     <p class="price">{{ number_format((float) $product->price, 2) }} €</p>

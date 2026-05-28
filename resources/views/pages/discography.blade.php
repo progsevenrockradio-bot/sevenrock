@@ -1,4 +1,4 @@
-<x-layouts.site title="Seven Rock Radio - Discografía">
+<x-layouts.site title="Seven Rock Radio - Discografía" description="Explora la discografía completa de Seven Rock Radio. Albumes, canciones y previews de 30 segundos de nuestros talentos y bandas favoritas.">
     <x-sections.page-heading
         title="Discografía"
         subtitle="Álbumes de nuestros talentos"
@@ -15,16 +15,19 @@
             @else
                 <div class="lucille-albums-grid md:grid-cols-2 lg:grid-cols-3">
                     @foreach ($albums as $album)
-                        <a href="{{ route('talents.album.show', ['id' => $album->id, 'slug' => $album->slug]) }}" class="lucille-album-card group">
-                            <img src="{{ $album->coverUrl() ?? asset('assets/lucille/man-597179_1920.jpg') }}" alt="{{ $album->title }}">
+                        @php
+                            $detailUrl = $album['type'] === 'admin'
+                                ? route('albums.single', ['slug' => $album['slug']])
+                                : route('talents.album.show', ['id' => $album['id'], 'slug' => $album['slug']]);
+                        @endphp
+                        <a href="{{ $detailUrl }}" class="lucille-album-card group">
+                            <img src="{{ $album['cover'] }}" alt="{{ $album['title'] }}" loading="lazy">
                             <span class="lucille-album-overlay"></span>
-                            <h3 class="lucille-album-title">{{ $album->title }}</h3>
-                            <h3 class="lucille-album-artist">{{ $album->talent->band_name ?? 'Artista' }}</h3>
-                            @if ($album->talent)
-                                <span class="absolute bottom-4 right-4 z-10 text-[10px] uppercase tracking-[.15em] text-white/60 group-hover:text-lucille-accent">
-                                    Escuchar preview →
-                                </span>
-                            @endif
+                            <h3 class="lucille-album-title">{{ $album['title'] }}</h3>
+                            <h3 class="lucille-album-artist">{{ $album['artist'] }}</h3>
+                            <span class="absolute bottom-4 right-4 z-10 text-[10px] uppercase tracking-[.15em] text-white/60 group-hover:text-lucille-accent">
+                                Escuchar preview →
+                            </span>
                         </a>
                     @endforeach
                 </div>

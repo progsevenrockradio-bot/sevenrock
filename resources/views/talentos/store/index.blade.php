@@ -37,7 +37,7 @@
                         <tr class="text-[#d8d8d8]">
                             <td class="px-4 py-4">
                                 <div class="flex items-center gap-3">
-                                    <img src="{{ $product->image_url }}" alt="{{ $product->title }}" class="h-14 w-14 border border-white/10 object-cover">
+                                    <img src="{{ $product->image_url }}" alt="{{ $product->title }}" loading="lazy" class="h-14 w-14 border border-white/10 object-cover">
                                     <div>
                                         <div class="font-semibold text-white">{{ $product->title }}</div>
                                         <div class="text-xs text-[#8b8b8b]">{{ $product->external_payment_label ?: 'Comprar' }}</div>

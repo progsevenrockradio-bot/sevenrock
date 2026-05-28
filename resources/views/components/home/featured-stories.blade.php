@@ -23,7 +23,7 @@
         @foreach ($stories['stories'] as $story)
             <article class="home-story-row group flex-col md:flex-row">
                 <div class="home-story-row-media">
-                    <img src="{{ asset($story['image']) }}" alt="{{ $story['title'] }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]">
+                    <img src="{{ asset($story['image']) }}" alt="{{ $story['title'] }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" loading="lazy">
                 </div>
                 <div class="min-w-0 flex-1 px-5 py-5">
                     <div class="text-xs uppercase tracking-[.22em] text-[#7b7b7b]">{{ $story['type'] }}</div>

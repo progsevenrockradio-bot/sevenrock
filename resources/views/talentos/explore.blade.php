@@ -11,7 +11,7 @@
                     <div class="flex items-start gap-4">
                         <div class="h-16 w-16 shrink-0 overflow-hidden border border-[#2b2b2b] bg-[#151515]">
                             @if ($talent->logoUrl())
-                                <img src="{{ $talent->logoUrl() }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover">
+                                <img src="{{ $talent->logoUrl() }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover" loading="lazy">
                             @endif
                         </div>
                         <div class="min-w-0">

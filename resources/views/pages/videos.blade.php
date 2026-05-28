@@ -1,4 +1,4 @@
-<x-layouts.site title="Seven Rock Radio - Videos">
+<x-layouts.site title="Seven Rock Radio - Videos" description="Videos musicales y contenido audiovisual de Seven Rock Radio. Los mejores videos de rock y metal.">
     <x-sections.page-heading
         title="Videos"
         subtitle="Videos de nuestros talentos"

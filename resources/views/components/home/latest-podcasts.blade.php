@@ -396,7 +396,7 @@
                 <img
                     :src="activeEpisode.image"
                     :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
-                    class="block h-[220px] w-full bg-[#111] object-contain p-3 sm:h-[250px] md:h-[300px]"
+                    class="block h-[220px] w-full bg-[#111] object-contain p-3 object-center sm:h-[250px] md:h-[300px]"
                 >
             </div>
 

@@ -1,7 +1,7 @@
 <x-mail::message>
 # {{ $deliveryStatus === 'verified' ? 'Entrega completa' : ($deliveryStatus === 'partial' ? 'Entrega parcial' : 'Error en la entrega') }}
 
-El episodio {{ $episode->live_title ?: $episode->titulo_programa }} del programa {{ $episode->titulo_programa }} ha terminado su pipeline de entrega.
+El episodio {{ $episode->live_title ?: $episode->titulo_programa }} del programa {{ $episode->titulo_programa }} ha completado su distribución al Cloud.
 
 <x-mail::panel>
 **Programa:** {{ $episode->titulo_programa }}
@@ -14,7 +14,7 @@ El episodio {{ $episode->live_title ?: $episode->titulo_programa }} del programa
 
 **Archivo MP3:** {{ basename((string) $localPath) }}
 
-**Ruta RadioBOSS:** {{ $remotePath }}
+**Ruta en el Cloud:** {{ $remotePath }}
 </x-mail::panel>
 
 <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse: collapse; margin: 16px 0;">
@@ -24,14 +24,10 @@ El episodio {{ $episode->live_title ?: $episode->titulo_programa }} del programa
 <th align="left" style="border-bottom: 1px solid #e5e7eb; padding: 8px 0;">Detalle</th>
 </tr>
 <tr>
-<td style="padding: 8px 0;">RadioBOSS</td>
-<td align="center" style="padding: 8px 0;">{{ $radiobossVerified ? '✅' : '❌' }}</td>
-<td style="padding: 8px 0;">{{ $radiobossVerified ? 'Subido y verificado' : 'Con incidencias o no disponible' }}</td>
-</tr>
-<tr>
-<td style="padding: 8px 0;">Archive.org</td>
-<td align="center" style="padding: 8px 0;">{{ $archiveVerified ? '✅' : '❌' }}</td>
-<td style="padding: 8px 0;">@if($archiveVerified && !empty($archiveItemUrl))<a href="{{ $archiveItemUrl }}">Ver item</a>@else{{ $archiveVerified ? 'Subido y verificado' : 'Con incidencias o no disponible' }}@endif</td>
+<td style="padding: 8px 0;">Cloud de la Radio</td>
+<td align="center" style="padding: 8px 0;">{{ $radiobossVerified || $archiveVerified ? '✅' : '❌' }}</td>
+<td style="padding: 8px 0;">@if($radiobossVerified || $archiveVerified)Distribuido correctamente@elseCon incidencias@endif
+@if($archiveVerified && !empty($archiveItemUrl))<br><small><a href="{{ $archiveItemUrl }}">Ver en Archive.org</a></small>@endif</td>
 </tr>
 <tr>
 <td style="padding: 8px 0;">Estado general</td>

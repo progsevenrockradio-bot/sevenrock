@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Album;
 use App\Models\Event;
 use App\Models\GalleryImage;
+use App\Models\MasterProgram;
 use App\Models\Product;
 use App\Models\Post;
 use App\Models\PostTaxonomy;
@@ -65,14 +66,39 @@ class SiteController extends Controller
 
     public function discography(): View
     {
-        $albums = \App\Models\TalentAlbum::query()
+        $talentAlbums = \App\Models\TalentAlbum::query()
             ->where('is_published', true)
             ->with('talent')
             ->orderByDesc('release_date')
-            ->get();
+            ->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'title' => $a->title,
+                'slug' => $a->slug,
+                'artist' => $a->talent->band_name ?? 'Artista',
+                'cover' => $a->coverUrl() ?? asset('assets/lucille/man-597179_1920.jpg'),
+                'date' => $a->release_date?->format('F j, Y') ?? '',
+                'type' => 'talent',
+            ]);
+
+        $adminAlbums = \App\Models\Album::query()
+            ->whereNotNull('title')
+            ->orderByDesc('released_at')
+            ->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'title' => $a->title,
+                'slug' => $a->slug,
+                'artist' => $a->artist ?? 'Artista',
+                'cover' => $a->cover_image_url,
+                'date' => $a->released_at?->format('F j, Y') ?? '',
+                'type' => 'admin',
+            ]);
+
+        $allAlbums = $talentAlbums->concat($adminAlbums)->sortByDesc('date')->values();
 
         return view('pages.discography', [
-            'albums' => $albums,
+            'albums' => $allAlbums,
         ]);
     }
 
@@ -159,6 +185,198 @@ class SiteController extends Controller
         ]);
     }
 
+    public function programs(ArchiveOrgService $archiveOrgService): View
+    {
+        $programsByDay = [];
+        $latestEpisodes = [];
+        try {
+            $masterPrograms = MasterProgram::query()
+                ->where('activo', true)
+                ->orderBy('nombre')
+                ->get();
+
+            $dayOrder = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+            $dayLabels = [
+                'LUNES' => 'Lunes',
+                'MARTES' => 'Martes',
+                'MIERCOLES' => 'Miércoles',
+                'JUEVES' => 'Jueves',
+                'VIERNES' => 'Viernes',
+                'SABADO' => 'Sábado',
+                'DOMINGO' => 'Domingo',
+            ];
+
+            $grouped = [];
+            foreach ($masterPrograms as $program) {
+                $day = strtoupper(trim((string) $program->dia_transmision));
+                if (!isset($grouped[$day])) {
+                    $grouped[$day] = [];
+                }
+                $grouped[$day][] = [
+                    'id' => $program->id,
+                    'title' => $program->nombre,
+                    'name' => $program->nombre,
+                    'cover' => $program->cover_url,
+                    'host' => $program->host,
+                    'conductor' => $program->conductor,
+                    'schedule' => $program->schedule,
+                    'description' => $program->description,
+                    'genre' => $program->genero,
+                    'hora' => $program->hora_transmision,
+                    'archive_identifier' => $program->archive_identifier,
+                    'slug' => $program->publicSlug(),
+                ];
+            }
+
+            foreach ($dayOrder as $day) {
+                if (!empty($grouped[$day])) {
+                    usort($grouped[$day], fn($a, $b) => ($a['hora'] ?? '99:99') <=> ($b['hora'] ?? '99:99'));
+                    $programsByDay[] = [
+                        'day' => $day,
+                        'label' => $dayLabels[$day] ?? $day,
+                        'programs' => $grouped[$day],
+                    ];
+                }
+            }
+
+            $payload = $archiveOrgService->homePodcastPayload(20);
+            $latestEpisodes = $payload['episodes'] ?? [];
+            if (!empty($payload['featured']['src'] ?? '')) {
+                array_unshift($latestEpisodes, $payload['featured']);
+            }
+
+            // Group episodes by program name, newest first, deduplicated
+            $groupedEpisodes = [];
+            foreach ($latestEpisodes as $ep) {
+                $progName = trim((string) ($ep['program'] ?? $ep['title'] ?? 'Sin programa'));
+                if (!isset($groupedEpisodes[$progName])) {
+                    $groupedEpisodes[$progName] = [];
+                }
+                // Deduplicate by src
+                $src = $ep['src'] ?? '';
+                $exists = false;
+                foreach ($groupedEpisodes[$progName] as $existing) {
+                    if (($existing['src'] ?? '') === $src) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                if (!$exists) {
+                    $groupedEpisodes[$progName][] = $ep;
+                }
+            }
+            foreach ($groupedEpisodes as $name => &$eps) {
+                usort($eps, function($a, $b) {
+                    $da = $a['date'] ?? '';
+                    $db = $b['date'] ?? '';
+                    $tsA = $da ? (\DateTimeImmutable::createFromFormat('d/m/Y', $da)?->getTimestamp() ?? 0) : 0;
+                    $tsB = $db ? (\DateTimeImmutable::createFromFormat('d/m/Y', $db)?->getTimestamp() ?? 0) : 0;
+                    return $tsB - $tsA;
+                });
+            }
+            unset($eps);
+
+            // Sort programs by their most recent episode (newest first)
+            uasort($groupedEpisodes, function($a, $b) {
+                $dateA = $a[0]['date'] ?? '';
+                $dateB = $b[0]['date'] ?? '';
+                $tsA = $dateA ? (\DateTimeImmutable::createFromFormat('d/m/Y', $dateA)?->getTimestamp() ?? 0) : 0;
+                $tsB = $dateB ? (\DateTimeImmutable::createFromFormat('d/m/Y', $dateB)?->getTimestamp() ?? 0) : 0;
+                return $tsB - $tsA;
+            });
+        } catch (Throwable) {
+        }
+        return view('pages.programs', [
+            'programsByDay' => $programsByDay,
+            'latestEpisodes' => $latestEpisodes,
+            'groupedEpisodes' => $groupedEpisodes,
+        ]);
+    }
+
+    public function programDetail(string $identifier, ArchiveOrgService $archiveOrgService): View
+    {
+        $program = null;
+        $episodes = [];
+        try {
+            $masterProgram = MasterProgram::query()
+                ->where('archive_identifier', $identifier)
+                ->first();
+
+            // Intentar obtener episodios desde archive.org via HTTP directo
+            try {
+                $json = @file_get_contents('https://archive.org/details/' . rawurlencode($identifier) . '?output=json', false, stream_context_create([
+                    'http' => ['timeout' => 8, 'method' => 'GET'],
+                    'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
+                ]));
+                if ($json !== false) {
+                    $data = json_decode($json, true);
+                    if (is_array($data) && !empty($data['files'])) {
+                        $files = $data['files'];
+                        $metadata = $data['metadata'] ?? [];
+                        $parsedEpisodes = [];
+                        foreach ($files as $key => $file) {
+                            $name = $file['name'] ?? ltrim($key, '/');
+                            $format = strtolower($file['format'] ?? '');
+                            if (str_ends_with($name, '.mp3') || str_contains($format, 'mp3')) {
+                                $parsedEpisodes[] = [
+                                    'id' => $name,
+                                    'title' => trim($file['title'] ?? $name),
+                                    'src' => 'https://archive.org/download/' . rawurlencode($identifier) . '/' . implode('/', array_map('rawurlencode', explode('/', ltrim($name, '/')))),
+                                    'published_at' => $file['mtime'] ?? 0,
+                                    'views' => $file['downloads'] ?? null,
+                                    'duration' => trim($file['length'] ?? ''),
+                                    'size' => $file['size'] ?? null,
+                                ];
+                            }
+                        }
+                        usort($parsedEpisodes, fn($a, $b) => ($b['published_at'] ?? 0) <=> ($a['published_at'] ?? 0));
+                        $episodes = $parsedEpisodes;
+                        
+                        $desc = $metadata['description'] ?? '';
+                        if (is_array($desc)) $desc = $desc[0] ?? '';
+                        
+                        $program = [
+                            'id' => $identifier,
+                            'title' => $masterProgram?->nombre ?? ($metadata['title'][0] ?? $metadata['title'] ?? 'Programa'),
+                            'name' => $masterProgram?->nombre ?? ($metadata['title'][0] ?? $metadata['title'] ?? 'Programa'),
+                            'cover' => $masterProgram?->cover_url ?: asset('assets/lucille/logo.png'),
+                            'host' => $masterProgram?->host ?? ($metadata['creator'][0] ?? $metadata['creator'] ?? ''),
+                            'conductor' => $masterProgram?->conductor ?? '',
+                            'schedule' => $masterProgram?->schedule ?? '',
+                            'description' => $masterProgram?->description ?: trim(strip_tags(is_string($desc) ? $desc : '')),
+                        ];
+                    }
+                }
+            } catch (Throwable) {
+                // Fallback silencioso
+            }
+
+            // Si fallo la API, usar datos locales
+            if (!$program) {
+                $program = [
+                    'id' => $identifier,
+                    'title' => $masterProgram?->nombre ?? 'Programa',
+                    'name' => $masterProgram?->nombre ?? 'Programa',
+                    'cover' => $masterProgram?->cover_url ?: asset('assets/lucille/logo.png'),
+                    'host' => $masterProgram?->host ?? '',
+                    'conductor' => $masterProgram?->conductor ?? '',
+                    'schedule' => $masterProgram?->schedule ?? '',
+                    'description' => $masterProgram?->description ?? '',
+                ];
+            }
+        } catch (Throwable) {
+        }
+
+        if (!$program) {
+            abort(404);
+        }
+
+        return view('pages.program-detail', [
+            'program' => $program,
+            'episodes' => $episodes,
+        ]);
+    }
+
         public function talentAlbumSingle(string $id, string $slug): View
     {
         $album = \App\Models\TalentAlbum::query()
@@ -181,6 +399,8 @@ class SiteController extends Controller
             'album' => $album,
             'talent' => $album->talent,
             'talentMp3s' => $talentMp3s,
+            'hasProducts' => $album->talent?->products()->published()->exists() ?? false,
+            'paymentLinks' => $album->talent?->paymentLinkMap() ?? [],
         ]);
     }
 
@@ -199,21 +419,34 @@ class SiteController extends Controller
 
     public function blog(): View
     {
-        return view('pages.blog', [
-            'posts' => $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->get(), collect()),
+        $posts = $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->paginate(20), collect());
+
+        return view('pages.blog-standard', [
+            'posts' => $posts,
+            'recentPosts' => $posts->take(5),
+            'categories' => $this->mergeTaxonomyValues(
+                [],
+                PostTaxonomy::TYPE_CATEGORY,
+                ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']
+            ),
+            'tags' => $this->mergeTaxonomyValues(
+                [],
+                PostTaxonomy::TYPE_TAG,
+                ['articles', 'concerts', 'live', 'music', 'news', 'on stage']
+            ),
         ]);
     }
 
     public function blogStandard(): View
     {
-        $posts = $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->get(), collect());
+        $posts = $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->paginate(20), collect());
         $categories = $this->mergeTaxonomyValues(
-            $posts->flatMap(fn (Post $post) => $post->categoryNames())->all(),
+            [],
             PostTaxonomy::TYPE_CATEGORY,
             ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']
         );
         $tags = $this->mergeTaxonomyValues(
-            $posts->flatMap(fn (Post $post) => $post->tagNames())->all(),
+            [],
             PostTaxonomy::TYPE_TAG,
             ['articles', 'concerts', 'live', 'music', 'news', 'on stage']
         );
@@ -241,10 +474,10 @@ class SiteController extends Controller
         }
 
         if ($post) {
-            $allPosts = $this->safeValue(fn () => Post::query()->published()->latest('published_at')->get(), collect());
-
+            $recentPosts = $this->safeValue(fn () => Post::query()->published()->latest('published_at')->limit(5)->get(), collect());
             return view('pages.single-post', [
                 'post' => [
+                    'id' => $post->id,
                     'title' => $post->title,
                     'date' => $post->published_at?->format('F j, Y') ?? trim("{$year}-{$month}-{$day}"),
                     'author' => $post->author,
@@ -260,12 +493,34 @@ class SiteController extends Controller
                     'source_url' => $post->source_url,
                     'meta_title' => $post->meta_title,
                     'meta_description' => $post->meta_description,
-                    'content' => WordPressContent::toRenderableBlocks($post->content ?? []),
+                    'content' => WordPressContent::toRenderableBlocks($post->content),
                     'quote' => $post->quote ?: '',
                 ],
-                'recentPosts' => $allPosts->take(5),
+                'prevPost' => $this->safeValue(fn () => Post::query()->published()
+                    ->where(function ($q) use ($post) {
+                        $q->where('published_at', '<', $post->published_at)
+                          ->orWhere(function ($q) use ($post) {
+                              $q->where('published_at', '=', $post->published_at)
+                                ->where('id', '<', $post->id);
+                          });
+                    })
+                    ->orderByDesc('published_at')
+                    ->orderByDesc('id')
+                    ->first(['title', 'slug', 'published_at']), null),
+                'nextPost' => $this->safeValue(fn () => Post::query()->published()
+                    ->where(function ($q) use ($post) {
+                        $q->where('published_at', '>', $post->published_at)
+                          ->orWhere(function ($q) use ($post) {
+                              $q->where('published_at', '=', $post->published_at)
+                                ->where('id', '>', $post->id);
+                          });
+                    })
+                    ->orderBy('published_at')
+                    ->orderBy('id')
+                    ->first(['title', 'slug', 'published_at']), null),
+                'recentPosts' => $recentPosts,
                 'categories' => $this->mergeTaxonomyValues(
-                    $allPosts->flatMap(fn (Post $item) => $item->categoryNames())->all(),
+                    [],
                     PostTaxonomy::TYPE_CATEGORY,
                     ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']
                 ),
@@ -277,6 +532,8 @@ class SiteController extends Controller
         return view('pages.single-post', [
             'post' => $this->inspirationPost(),
             'recentPosts' => [],
+            'prevPost' => null,
+            'nextPost' => null,
             'categories' => $this->mergeTaxonomyValues([], PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
             'archives' => ['November 2016', 'October 2016', 'September 2016', 'August 2016'],
             'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
@@ -524,12 +781,12 @@ class SiteController extends Controller
             'discs' => '1',
             'categories' => ['new album', 'official release'],
             'tracks' => [
-                ['title' => 'Key To The Highway', 'audio' => '#'],
-                ['title' => 'Paint It Black', 'audio' => '#'],
+                ['title' => 'Key To The Highway', 'audio' => asset('assets/lucille/preview_key_to_the_highway.mp3')],
+                ['title' => 'Paint It Black', 'audio' => asset('assets/lucille/preview_paint_it_black.mp3')],
             ],
             'buttons' => [
-                ['label' => 'Buy It From Amazon', 'url' => 'https://www.amazon.com'],
-                ['label' => 'Buy It From iTunes', 'url' => 'https://itunes.apple.com'],
+                ['label' => 'Ver Artistas', 'url' => '/talentos'],
+                ['label' => 'Buscar en Tienda', 'url' => '/shop'],
             ],
             'content' => [
                 'Nightride is the second studio album released by American singer Tinashe, released on November 4, 2016. The first single from the album, Company, was released on September 16, 2016.',
@@ -559,8 +816,8 @@ class SiteController extends Controller
                 'ticket_label' => $event->ticket_label ?: 'Tickets',
                 'facebook_url' => $event->facebook_url ?: '',
                 'poster' => PublicMediaUrl::normalizePublicUrl($event->poster) ?: 'assets/lucille/ozzfest_poster.jpg',
-                'embed' => $event->embed_url ?: 'https://www.youtube.com/embed/2Ob5y1YqWYg?autoplay=0&enablejsapi=1&wmode=transparent&rel=0&showinfo=0',
-                'map' => $event->map_url ?: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d17236.51886266146!2d-4.402682717825224!3d57.31528684031594!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x488f16c34da23729%3A0xd4d749cbf4fe912f!2sLoch+Ness%2C+Highland%2C+UK!5e0!3m2!1sen!2sro!4v1429172565870',
+                'embed' => $event->embed_url ?: '',
+                'map' => $event->map_url ?: '',
                 'content' => array_values(array_filter(array_map('strval', $event->content ?? []))),
             ];
         }
@@ -571,14 +828,14 @@ class SiteController extends Controller
                 'categories' => ['Guest Appearance', 'Music Festivals'],
                 'date' => 'March 21, 2026',
                 'time' => '8:00 pm',
-                'location' => 'Loch Ness, uk',
+                'location' => null,
                 'venue' => 'Rockness Festival',
                 'venue_url' => 'http://www.rockness.co.uk/',
                 'ticket_url' => 'http://www.ticketmaster.co.uk/',
                 'facebook_url' => 'https://www.facebook.com/OfficialRockNess',
                 'poster' => 'assets/lucille/ozzfest_poster.jpg',
-                'embed' => 'https://www.youtube.com/embed/2Ob5y1YqWYg?autoplay=0&enablejsapi=1&wmode=transparent&rel=0&showinfo=0',
-                'map' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d17236.51886266146!2d-4.402682717825224!3d57.31528684031594!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x488f16c34da23729%3A0xd4d749cbf4fe912f!2sLoch+Ness%2C+Highland%2C+UK!5e0!3m2!1sen!2sro!4v1429172565870',
+                'embed' => '',
+                'map' => '',
                 'content' => [
                     'Cloudhouses, Yurts and Squrts are back again with their ever popular unique festival accommodation options. Cosy, and watertight structures to sleep 2 to 8 people with lovely staff at hand to help make guests feel at home and offering an authentic, bohemian experience.',
                     'Please note that customers wishing to use these facilities must purchase a standard or VIP weekend camping ticket. Booking the boutique camping alone will not permit you entry to the festival.',

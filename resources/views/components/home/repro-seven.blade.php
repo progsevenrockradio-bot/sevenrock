@@ -32,11 +32,13 @@
                 </button>
             </div>
 
-            <div class="mejs-time mejs-currenttime-container flex items-center gap-2 text-[10px] font-display uppercase tracking-[.18em] text-[#dcdcdc]">
+            <div class="mejs-time mejs-currenttime-container flex items-center gap-1 text-[10px] font-display uppercase tracking-[.18em] text-[#dcdcdc]">
                 <span x-text="formatTime(elapsed)"></span>
+                <span class="mx-0.5 text-[#595959]">/</span>
+                <span x-text="formatTime(duration)"></span>
             </div>
 
-            <div class="mejs-time-rail min-w-[180px] flex-1">
+            <div class="mejs-time-rail min-w-[80px] flex-1 sm:min-w-[120px]">
                 <input
                     type="range"
                     min="0"
@@ -47,10 +49,6 @@
                     class="mejs-time-slider h-2 w-full cursor-pointer appearance-none rounded-full bg-[#595959] accent-white"
                     aria-label="Time Slider"
                 >
-            </div>
-
-            <div class="mejs-time mejs-duration-container flex items-center gap-2 text-[10px] font-display uppercase tracking-[.18em] text-[#dcdcdc]">
-                <span x-text="formatTime(duration)"></span>
             </div>
 
             <div class="mejs-button mejs-volume-button mejs-mute">
@@ -67,7 +65,8 @@
                 </button>
             </div>
 
-            <div class="mejs-horizontal-volume-slider flex min-w-[120px] flex-1 items-center gap-3">
+            <div class="mejs-horizontal-volume-slider flex min-w-[60px] flex-1 sm:min-w-[80px] items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 border-t sm:border-t-0 border-[#2b2b2b] pt-3 sm:pt-0">
+                <span class="text-[9px] font-display uppercase tracking-[.16em] text-[#7b7b7b] whitespace-nowrap sm:hidden">Vol</span>
                 <input
                     type="range"
                     min="0"
@@ -78,6 +77,7 @@
                     class="h-2 w-full cursor-pointer appearance-none rounded-full bg-[#595959] accent-[#f5f5f5]"
                     aria-label="Volume Slider"
                 >
+                <span class="text-[9px] font-display text-[#7b7b7b] w-6 text-right sm:hidden" x-text="volume + '%'"></span>
             </div>
         </div>
     </div>

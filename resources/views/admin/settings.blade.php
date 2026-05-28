@@ -89,7 +89,7 @@
                         <div class="mt-4 space-y-4">
                             <div class="flex h-28 items-center justify-center border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] px-4">
                                 <template x-if="brandDisplayMode === 'logo'">
-                                    <img src="{{ $settings->logo_url }}" alt="{{ $settings->site_name }}" class="max-h-20 w-auto object-contain">
+                                    <img src="{{ $settings->logo_url }}" alt="{{ $settings->site_name }}" loading="lazy" class="max-h-20 w-auto object-contain">
                                 </template>
                                 <template x-if="brandDisplayMode !== 'logo'">
                                     <span class="lucille-brand-mark text-[2rem]" :style="`font-family: '${brandMarkFont}', cursive; color: var(--color-lucille-accent);`" x-text="brandMark"></span>

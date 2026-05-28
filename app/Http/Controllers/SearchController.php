@@ -35,7 +35,7 @@ final class SearchController extends Controller
             $videos = Video::query()->where('title', 'like', "%{$query}%")->get();
             $results = $results->merge($videos->map(fn ($item) => ['type' => 'Video', 'data' => $item]));
 
-            $products = Product::query()->where('name', 'like', "%{$query}%")->get();
+            $products = Product::query()->where('title', 'like', "%{$query}%")->get();
             $results = $results->merge($products->map(fn ($item) => ['type' => 'Product', 'data' => $item]));
         }
 

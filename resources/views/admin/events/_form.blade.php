@@ -118,7 +118,7 @@
                             <span class="text-[10px] uppercase tracking-[.18em] text-[#7b7b7b]">Live</span>
                         </div>
                         @if (! empty($posterPreview))
-                            <img src="{{ $posterPreview }}" alt="Event poster preview" class="w-full border border-[#2b2b2b] object-cover">
+                            <img src="{{ $posterPreview }}" alt="Event poster preview" class="w-full border border-[#2b2b2b] object-cover" loading="lazy">
                         @else
                             <div class="flex min-h-[240px] items-center justify-center border border-dashed border-[#2b2b2b] text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
                                 No poster yet

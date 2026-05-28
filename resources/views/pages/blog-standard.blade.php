@@ -1,4 +1,4 @@
-<x-layouts.site title="Seven Rock Radio - Blog">
+<x-layouts.site title="Seven Rock Radio - Blog" description="Blog de Seven Rock Radio. Noticias, entrevistas, lanzamientos y articulos sobre rock y metal.">
     <x-sections.page-heading title="Blog" />
     @php $ui = $themeAppearance['ui_texts']; @endphp
 
@@ -25,7 +25,7 @@
                         <article class="lucille-standard-post">
                             @if ($image)
                                 <a href="{{ $url }}" class="mb-0 block">
-                                    <img src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}" alt="{{ $title }}">
+                                    <img src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}" alt="{{ $title }}" loading="lazy">
                                 </a>
                             @endif
 
@@ -52,6 +52,24 @@
                         </article>
                     @endforeach
                 </main>
+
+                        @if ($posts instanceof Illuminate\Pagination\LengthAwarePaginator && $posts->hasPages())
+                            <div class="mt-10 flex items-center justify-center gap-4">
+                                @if ($posts->previousPageUrl())
+                                    <a href="{{ $posts->previousPageUrl() }}" class="flex items-center gap-2 rounded-lg px-5 py-3 text-sm uppercase tracking-[.12em] text-[#7b7b7b] transition hover:bg-white/5 hover:text-lucille-accent">
+                                        <span class="text-3xl font-bold text-lucille-accent leading-none">←</span>
+                                        <span>Anterior</span>
+                                    </a>
+                                @endif
+                                @if ($posts->nextPageUrl())
+                                    <a href="{{ $posts->nextPageUrl() }}" class="flex items-center gap-2 rounded-lg px-5 py-3 text-sm uppercase tracking-[.12em] text-[#7b7b7b] transition hover:bg-white/5 hover:text-lucille-accent">
+                                        <span>Siguiente</span>
+                                        <span class="text-3xl font-bold text-lucille-accent leading-none">→</span>
+                                    </a>
+                                @endif
+                            </div>
+                        @endif
+
 
                 <aside class="lucille-blog-sidebar lucille-sidebar">
                     <div class="lucille-sidebar-widget">

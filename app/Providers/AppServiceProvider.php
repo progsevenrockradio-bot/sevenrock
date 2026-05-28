@@ -12,6 +12,9 @@ use App\Observers\RadioProgramObserver;
 use App\Support\ThemeAppearance;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -35,6 +38,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+
+        RateLimiter::for('login', function (Request $request) {
+            return Limit::perMinute(20)->by($request->input('email') ?: $request->ip());
+        });
+
         if (is_file(app_path('helpers.php'))) {
             require_once app_path('helpers.php');
         }

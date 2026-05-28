@@ -4,7 +4,7 @@
     @php $albumCover = $coverImage ?? $album->cover_image_url; @endphp
     <div class="mt-[60px] grid gap-10 lg:grid-cols-[minmax(320px,470px)_1fr] lg:gap-[30px]">
         <a href="{{ route('discography') }}" class="group block overflow-hidden bg-[#1d1d1d]">
-            <img src="{{ $albumCover }}" alt="{{ $album->title }}" class="w-full transition duration-500 ease-out group-hover:scale-[1.025] group-hover:opacity-90">
+            <img src="{{ $albumCover }}" alt="{{ $album->title }}" loading="lazy" class="w-full transition duration-500 ease-out group-hover:scale-[1.025] group-hover:opacity-90">
         </a>
 
         <div>

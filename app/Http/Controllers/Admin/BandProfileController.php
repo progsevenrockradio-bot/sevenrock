@@ -98,7 +98,61 @@ class BandProfileController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function validated(Request $request, ?int $ignoreId = null): array
+
+    public function autoGenerate(Request $request, RadioArtist $bandProfile): JsonResponse
+    {
+        $artist = trim((string) $bandProfile->name);
+        if ($artist === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'El artista no tiene nombre.',
+            ]);
+        }
+
+        try {
+            $aggregator = app(\App\Support\BandInfoAggregator::class);
+            $data = $aggregator->aggregate($artist);
+
+            if (empty($data['summary']) && empty($data['thumbnail'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró información para ' . $artist . ' en ninguna fuente.',
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'summary' => $data['summary'] ?? '',
+                    'biography' => $data['summary'] ?? '',
+                    'thumbnail' => $data['thumbnail'] ?? '',
+                    'country' => $data['country'] ?? '',
+                    'genre' => $data['genre'] ?? '',
+                    'members_count' => $data['members_count'],
+                    'status' => $data['status'] ?? '',
+                    'labels' => $data['labels'] ?? '',
+                    'formed_year' => $data['formed_year'],
+                    'formed_label' => $data['formed_label'] ?? '',
+                    'facts' => $data['facts'] ?? [],
+                    'social_links' => $data['social_links'] ?? [],
+                    'source' => 'Seven Rock Radio',
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Auto-generate failed', [
+                'artist' => $artist,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al generar información: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+
+        private function validated(Request $request, ?int $ignoreId = null): array
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('radio_artists', 'name')->ignore($ignoreId)],

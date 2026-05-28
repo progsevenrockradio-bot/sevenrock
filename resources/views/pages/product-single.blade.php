@@ -5,7 +5,7 @@
             <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start">
                 <div class="lucille-product-gallery">
                     <div class="border border-[#2b2b2b] bg-[#1b1b1b] p-4">
-                        <img src="{{ $product['image'] }}" alt="{{ $product['title'] }}" class="block w-full">
+                        <img src="{{ $product['image'] }}" alt="{{ $product['title'] }}" class="block w-full" loading="lazy">
                     </div>
                 </div>
 
@@ -77,7 +77,7 @@
                                     @if (! empty($related['sale']))
                                         <span class="lucille-shop-sale-badge">¡Oferta!</span>
                                     @endif
-                                    <img src="{{ $related['image'] }}" alt="{{ $related['title'] }}" class="mx-auto w-full transition duration-500 ease-out group-hover:scale-[1.025] group-hover:opacity-90">
+                                    <img src="{{ $related['image'] }}" alt="{{ $related['title'] }}" class="mx-auto w-full transition duration-500 ease-out group-hover:scale-[1.025] group-hover:opacity-90" loading="lazy">
                                 </a>
                                 <h3 class="mt-4 font-display text-sm font-light text-[#dcdcdc] transition duration-300 group-hover:text-lucille-accent">{{ $related['title'] }}</h3>
                                 <p class="mt-2 text-base text-lucille-accent">

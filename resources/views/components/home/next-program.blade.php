@@ -58,7 +58,7 @@
                     :src="activeProgram.image"
                     :alt="activeProgram.title || 'Próximo programa'"
                     class="block h-[220px] w-full bg-[#111] object-contain p-3 sm:h-[250px] md:h-[300px]"
-                >
+                 loading="lazy">
             </div>
 
             <div class="mt-4 flex items-center gap-3">
@@ -79,7 +79,7 @@
                                 <div class="flex flex-wrap gap-2">
                                     <a
                                         class="inline-flex h-7 items-center justify-center border border-[#d42426] bg-[#d42426] px-2.5 py-0 text-[9px] font-display uppercase tracking-[.14em] text-white transition-colors hover:bg-[#ba1f22]"
-                                        :href="activeProgram.button?.url || '{{ route('events') }}'"
+                                        :href="activeProgram.button?.url || '{{ route('programs') }}'"
                                         x-text="activeProgram.button?.label || 'Ver programación'"
                                     ></a>
                                     <button
@@ -116,7 +116,7 @@
                     @click="selectProgram(@js($slot))"
                 >
                     <div class="h-16 w-16 shrink-0 overflow-hidden border border-[#2b2b2b] bg-[#111] md:h-18 md:w-18">
-                        <img src="{{ $slot['image'] }}" alt="{{ $slot['title'] }}" class="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.02]">
+                        <img src="{{ $slot['image'] }}" alt="{{ $slot['title'] }}" class="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.02]" loading="lazy">
                     </div>
 
                     <div class="min-w-0 flex-1">
@@ -166,7 +166,7 @@
                 <div class="flex flex-wrap gap-3">
                     <a
                         class="lucille-button-solid"
-                        :href="activeProgram.button?.url || '{{ route('events') }}'"
+                        :href="activeProgram.button?.url || '{{ route('programs') }}'"
                         x-text="activeProgram.button?.label || 'Ver programación'"
                     ></a>
                     <button

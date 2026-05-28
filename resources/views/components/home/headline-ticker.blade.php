@@ -44,7 +44,7 @@
                         @if ($url)
                             <a href="{{ $url }}" class="group flex min-w-[190px] items-center gap-1.5 border px-2 py-1 transition hover:border-lucille-accent hover:bg-[rgba(195,39,32,.10)] {{ $toneClass }}">
                                 @if ($image !== '')
-                                    <img src="{{ $image }}" alt="" class="h-7 w-7 shrink-0 object-cover">
+                                    <img src="{{ $image }}" alt="" class="h-7 w-7 shrink-0 object-cover" loading="lazy">
                                 @endif
                                 <span class="inline-flex h-4 shrink-0 items-center border border-lucille-accent/35 px-1 text-[7px] font-semibold uppercase tracking-[.22em] text-lucille-accent">
                                     {{ $label }}
@@ -63,7 +63,7 @@
                         @else
                             <div class="flex min-w-[190px] items-center gap-1.5 border px-2 py-1 {{ $toneClass }}">
                                 @if ($image !== '')
-                                    <img src="{{ $image }}" alt="" class="h-7 w-7 shrink-0 object-cover">
+                                    <img src="{{ $image }}" alt="" class="h-7 w-7 shrink-0 object-cover" loading="lazy">
                                 @endif
                                 <span class="inline-flex h-4 shrink-0 items-center border border-lucille-accent/35 px-1 text-[7px] font-semibold uppercase tracking-[.22em] text-lucille-accent">
                                     {{ $label }}

@@ -143,7 +143,7 @@ final class MasterProgramController extends Controller
         $validated['default_news_ids'] = $this->parseIdList((string) ($validated['default_news_ids_text'] ?? ''));
         $validated['live_news_ids'] = $this->parseIdList((string) ($validated['live_news_ids_text'] ?? ''));
         $validated['preview_news_ids'] = $this->parseIdList((string) ($validated['preview_news_ids_text'] ?? ''));
-        $validated['activo'] = $request->boolean('activo', true);
+        $validated['activo'] = $request->boolean('activo');
         $validated['caratula_url'] = trim((string) ($validated['caratula_url'] ?? '')) ?: null;
         $validated['descripcion'] = trim((string) ($validated['descripcion'] ?? '')) ?: null;
         $validated['live_title'] = trim((string) ($validated['live_title'] ?? '')) ?: null;

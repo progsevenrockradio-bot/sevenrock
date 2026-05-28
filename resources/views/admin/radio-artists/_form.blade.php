@@ -17,7 +17,7 @@
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Logo URL</label>
         <input name="logo_path" value="{{ old('logo_path', $bandProfile->logo_path) }}" class="lucille-product-field w-full" placeholder="https://example.com/logo.png">
         @if($bandProfile->logo_path)
-            <div class="mt-2"><img src="{{ $bandProfile->logo_path }}" class="h-16 w-auto object-contain" alt="{{ $bandProfile->name }} logo"></div>
+            <div class="mt-2"><img src="{{ $bandProfile->logo_path }}" loading="lazy" class="h-16 w-auto object-contain" alt="{{ $bandProfile->name }} logo"></div>
         @endif
     </div>
     <div>
@@ -70,6 +70,13 @@
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Labels</label>
         <textarea name="labels" rows="3" class="lucille-product-field w-full" placeholder="One label per line">{{ old('labels', $labelsText ?? $bandProfile->labels) }}</textarea>
     </div>
+</div>
+
+<div class="mt-4 flex items-center gap-3 p-4 border border-dashed border-[#b7ad9f]/30 rounded-lg bg-[#1a1a1e]">
+    <button type="button" id="autoGenerateBtn" data-url="{{ route('admin.radio-artists.auto-generate', $bandProfile) }}" class="lucille-button-solid" style="background:linear-gradient(135deg,#7c3aed,#a855f7);">
+        ✨ Auto-generar desde fuentes
+    </button>
+    <span class="text-xs text-[#8f877d]">Busca en Discogs + Wikipedia + Last.fm y combina la información automáticamente</span>
 </div>
 
 <div class="mt-6 flex flex-wrap gap-3">

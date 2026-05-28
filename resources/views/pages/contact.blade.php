@@ -1,4 +1,4 @@
-<x-layouts.site title="Seven Rock Radio - Contacto">
+<x-layouts.site title="Seven Rock Radio - Contacto" description="Contacta con Seven Rock Radio. Envianos tus mensajes, sugerencias o colaboraciones. Somos tu radio rock online.">
     @php
         $contact = $themeAppearance['contact'];
         $ui = $themeAppearance['ui_texts'];

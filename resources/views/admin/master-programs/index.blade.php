@@ -72,6 +72,7 @@
                                                 @if ($masterProgram->cover_url)
                                                     <img
                                                         src="{{ $masterProgram->cover_url }}"
+                                                        loading="lazy"
                                                         alt="{{ $masterProgram->name }}"
                                                         class="h-20 w-20 border border-[#2b2b2b] object-cover"
                                                     >
