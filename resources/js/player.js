@@ -38,6 +38,7 @@ export function registerRadioPlayer(Alpine) {
         playing: false,
         loading: true,
         bandInfoLoading: false,
+        isMobile: window.innerWidth < 640,
         muted: safeRead('sr-player-muted', '0') === '1',
         volume: Number(safeRead('sr-player-volume', '0.8')) || 0.8,
         favorites: (() => {
@@ -107,6 +108,7 @@ export function registerRadioPlayer(Alpine) {
         toastHandle: null,
         statusInFlight: false,
         statusSyncHandle: null,
+        viewportResizeHandle: null,
 
         init() {
             this.panelOpen = this.mode === 'page' ? true : false;
@@ -114,11 +116,16 @@ export function registerRadioPlayer(Alpine) {
             this.bandWindowTab = 'lyrics';
             this.dockMinimized = true;
             this.activeTab = safeRead('sr-player-tab', 'lyrics');
+            this.isMobile = window.innerWidth < 640;
             this.toast.visible = false;
             this.toast.message = '';
             this.applyAudioPreferences();
             this.bindAudioEvents();
             this.bindNavigationGuards();
+            this.viewportResizeHandle = () => {
+                this.isMobile = window.innerWidth < 640;
+            };
+            window.addEventListener('resize', this.viewportResizeHandle);
             this.watchNowPlayingWidget();
             this.queueStatusRefresh(0);
 
@@ -162,6 +169,9 @@ export function registerRadioPlayer(Alpine) {
             }
             if (this.beforeUnloadGuard) {
                 window.removeEventListener('beforeunload', this.beforeUnloadGuard);
+            }
+            if (this.viewportResizeHandle) {
+                window.removeEventListener('resize', this.viewportResizeHandle);
             }
         },
 

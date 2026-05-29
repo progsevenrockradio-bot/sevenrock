@@ -270,27 +270,28 @@
                     </div>
                 </div>
 
-                <div x-show="!bandInfoLoading">
-                    <div style="display:flex; gap:22px; align-items:flex-start;">
+                <div x-cloak x-show="!bandInfoLoading">
+                    <div class="sr-band-header" style="display:flex; gap:22px; align-items:flex-start;">
                         <div style="flex-shrink:0;">
-                            <img data-player-band-cover-image
+                            <img class="sr-band-cover"
+                                data-player-band-cover-image
                                 :src="bandPanel.cover || track.band_thumbnail || track.cover || fallbackCover"
                                 alt=""
-                                onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;"
-                                style="width:200px; height:200px; min-width:200px; object-fit:cover; border-radius:16px; border:1px solid rgba(184,175,162,.20); box-shadow:0 12px 32px rgba(0,0,0,.40);"
+                                onerror="this.onerror=null; this.src='{{ $fallbackCover }}'; this.style.width=''; this.style.height=''; this.style.minWidth='';"
+                                style="width:200px; height:200px; min-width:200px; object-fit:cover; border-radius:16px; border:1px solid rgba(184,175,162,.20); box-shadow:0 12px 32px rgba(0,0,0,.40); background:rgba(255,255,255,.04);"
                                 loading="lazy">
                         </div>
 
                         <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;">
                             <h3 data-player-band-title style="margin:0; color:#fff; font-family:var(--font-display); text-transform:uppercase; font-size:20px;" x-text="bandPanel.title || track.title || ''"></h3>
                             <p data-player-band-artist style="margin:0; color:#b9b1a5; font-size:14px;" x-text="bandPanel.artist || track.artist || ''"></p>
-                            <p x-show="bandPanel.foundedLabel || track.band_founded_label" style="margin:0; color:#b7ad9f; font-size:12px; letter-spacing:.08em; text-transform:uppercase;" x-text="bandPanel.foundedLabel || track.band_founded_label"></p>
+                            <p x-show="(bandPanel.foundedLabel || track.band_founded_label)" style="margin:0; color:#b7ad9f; font-size:12px; letter-spacing:.08em; text-transform:uppercase;" x-text="bandPanel.foundedLabel || track.band_founded_label"></p>
 
-                            <div x-show="bandPanel.country || bandPanel.genre || bandPanel.membersCount || bandPanel.status" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
-                                <span x-show="bandPanel.country" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🌍 ' + bandPanel.country"></span>
-                                <span x-show="bandPanel.genre" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🎵 ' + bandPanel.genre"></span>
-                                <span x-show="bandPanel.membersCount" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'👥 ' + bandPanel.membersCount + ' miembros'"></span>
-                                <span x-show="bandPanel.status" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="bandPanel.status === 'active' ? '✅ Activo' : (bandPanel.status === 'on_hold' ? '⏸ En pausa' : (bandPanel.status === 'disbanded' ? '❌ Disuelto' : bandPanel.status))"></span>
+                            <div x-show="bandPanel.country || track.band_country || bandPanel.genre || track.band_genre || bandPanel.membersCount || track.band_members_count || bandPanel.status || track.band_status" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+                                <span x-show="bandPanel.country || track.band_country" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🌍 ' + (bandPanel.country || track.band_country || '')"></span>
+                                <span x-show="bandPanel.genre || track.band_genre" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🎵 ' + (bandPanel.genre || track.band_genre || '')"></span>
+                                <span x-show="bandPanel.membersCount || track.band_members_count" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'👥 ' + ((bandPanel.membersCount ?? track.band_members_count) || 0) + ' miembros'"></span>
+                                <span x-show="bandPanel.status || track.band_status" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="(() => { const status = bandPanel.status || track.band_status || ''; return status === 'active' ? '✅ Activo' : (status === 'on_hold' ? '⏸ En pausa' : (status === 'disbanded' ? '❌ Disuelto' : status)); })()"></span>
                             </div>
 
                             <div x-show="bandLinks().length" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
@@ -307,30 +308,45 @@
                                 </button>
                             </div>
 
-                            <div x-show="bandPanel.logo" style="margin-top:6px;">
-                                <img :src="bandPanel.logo" alt="" style="max-height:36px; width:auto; object-fit:contain; opacity:0.8;" onerror="this.style.display='none'" loading="lazy">
+                            <div x-show="bandPanel.logo || track.band_logo" style="margin-top:6px;">
+                                <img :src="bandPanel.logo || track.band_logo" alt="" style="max-height:36px; width:auto; object-fit:contain; opacity:0.8;" onerror="this.style.display='none'" loading="lazy">
                             </div>
                         </div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px; min-height:260px;">
-                        <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; min-height:260px;">
+                    <div x-show="isMobile" class="sr-band-tabs" x-cloak style="display:none; gap:8px; margin-top:14px;">
+                        <button type="button" :class="{ 'is-active': activeTab === 'lyrics' }" @click="setTab('lyrics')" style="flex:1 1 0; min-height:38px; border:1px solid rgba(184,175,162,.16); background:rgba(255,255,255,.02); color:#dcd7ca; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase; border-radius:12px;">Letra</button>
+                        <button type="button" :class="{ 'is-active': activeTab === 'band' }" @click="setTab('band')" style="flex:1 1 0; min-height:38px; border:1px solid rgba(184,175,162,.16); background:rgba(255,255,255,.02); color:#dcd7ca; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase; border-radius:12px;">Información</button>
+                    </div>
+
+                    <div class="sr-band-columns" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px; min-height:260px;">
+                        <section
+                            class="sr-band-lyrics-col"
+                            x-cloak
+                            x-show="!isMobile || activeTab === 'lyrics'"
+                            style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; min-height:260px;"
+                        >
                             <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Letra</h4>
-                            <div style="flex:1; overflow-y:auto; max-height:400px;">
+                            <div class="sr-band-text-scroll" style="flex:1; overflow-y:auto; max-height:400px;">
                                 <p style="color:#e7e1d6; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="track.lyrics || 'Letra no disponible para este tema.'"></p>
                             </div>
                         </section>
 
-                        <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; min-height:260px;">
+                        <section
+                            class="sr-band-info-col"
+                            x-cloak
+                            x-show="!isMobile || activeTab === 'band'"
+                            style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; min-height:260px;"
+                        >
                             <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Información</h4>
-                            <div style="flex:1; overflow-y:auto; max-height:400px;">
+                            <div class="sr-band-text-scroll" style="flex:1; overflow-y:auto; max-height:400px;">
                                 <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="bandPanel.info || track.band_info || 'Buscando información de banda...'"></p>
 
-                                <div x-show="bandPanel.country || bandPanel.genre || bandPanel.membersCount || bandPanel.status" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:12px;">
-                                    <span x-show="bandPanel.country" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🌍 ' + bandPanel.country"></span>
-                                    <span x-show="bandPanel.genre" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🎵 ' + bandPanel.genre"></span>
-                                    <span x-show="bandPanel.membersCount" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'👥 ' + bandPanel.membersCount + ' miembros'"></span>
-                                    <span x-show="bandPanel.status" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="bandPanel.status === 'active' ? '✅ Activo' : (bandPanel.status === 'on_hold' ? '⏸ En pausa' : (bandPanel.status === 'disbanded' ? '❌ Disuelto' : bandPanel.status))"></span>
+                                <div x-show="bandPanel.country || track.band_country || bandPanel.genre || track.band_genre || bandPanel.membersCount || track.band_members_count || bandPanel.status || track.band_status" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:12px;">
+                                    <span x-show="bandPanel.country || track.band_country" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🌍 ' + (bandPanel.country || track.band_country || '')"></span>
+                                    <span x-show="bandPanel.genre || track.band_genre" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🎵 ' + (bandPanel.genre || track.band_genre || '')"></span>
+                                    <span x-show="bandPanel.membersCount || track.band_members_count" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'👥 ' + ((bandPanel.membersCount ?? track.band_members_count) || 0) + ' miembros'"></span>
+                                    <span x-show="bandPanel.status || track.band_status" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="(() => { const status = bandPanel.status || track.band_status || ''; return status === 'active' ? '✅ Activo' : (status === 'on_hold' ? '⏸ En pausa' : (status === 'disbanded' ? '❌ Disuelto' : status)); })()"></span>
                                 </div>
 
                                 <template x-if="Array.isArray(bandPanel.facts) && bandPanel.facts.length">
@@ -623,21 +639,26 @@
     min-width:38px !important; width:38px !important; padding:0 !important; justify-content:center !important;
   }
 }
-/* Modal banda responsive */
-@media (max-width: 768px) {
-  section.radio-player-band-window > div > div { grid-template-columns: minmax(0,1fr) !important; }
-  section.radio-player-band-window > div { padding:14px !important; max-height:min(94vh, 700px) !important; }
-  section.radio-player-band-window > div > div > aside {
-    display:grid !important; grid-template-columns: 1fr 1fr !important; gap:10px !important;
-  }
-  section.radio-player-band-window > div > div > aside > div:first-child { grid-column:1 / -1; }
-  section.radio-player-band-window > div > div > aside > div:first-child img {
-    max-width:200px !important; margin:0 auto !important; transform:none !important; border-radius:12px !important;
-  }
+@keyframes srpulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
-@media (max-width: 480px) {
-  section.radio-player-band-window > div > div > aside { grid-template-columns:1fr !important; }
-  section.radio-player-band-window > div { padding:10px !important; border-radius:18px !important; }
+
+@media (min-width: 640px) {
+  .sr-band-tabs { display: none !important; }
+  .sr-band-columns { grid-template-columns: 1fr 1fr !important; }
+  .sr-band-lyrics-col,
+  .sr-band-info-col { display: flex !important; }
+  .sr-band-header { flex-direction: row !important; align-items: flex-start !important; }
+  .sr-band-cover { width: 200px !important; height: 200px !important; min-width: 200px !important; }
+}
+
+@media (max-width: 639px) {
+  .sr-band-tabs { display: flex !important; }
+  .sr-band-columns { grid-template-columns: 1fr !important; }
+  .sr-band-header { flex-direction: column !important; align-items: center !important; }
+  .sr-band-cover { width: 150px !important; height: 150px !important; min-width: 150px !important; }
+  .sr-band-text-scroll { max-height: 280px !important; }
 }
 
 /* Mobile: minimized/expanded states */
