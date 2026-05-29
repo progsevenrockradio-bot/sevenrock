@@ -25,6 +25,7 @@ export function registerRadioPlayer(Alpine) {
         playlistPls: options.playlistPls || '',
         popupUrl: options.popupUrl || '/player/popup',
         bandInfoUrl: options.bandInfoUrl || '/api/player/band-info',
+        programInfoUrl: options.programInfoUrl || '/api/player/program-info',
         fallbackCover: options.fallbackCover || '',
         pollInterval: Number(options.pollInterval || 5),
         historyLimit: Number(options.historyLimit || 10),
@@ -32,12 +33,15 @@ export function registerRadioPlayer(Alpine) {
         defaultTitle: options.defaultTitle || '',
         panelOpen: false,
         bandWindowOpen: false,
+        programWindowOpen: false,
         bandWindowTab: 'lyrics',
         dockMinimized: true,
         activeTab: 'lyrics',
         playing: false,
         loading: true,
         bandInfoLoading: false,
+        programInfoLoading: false,
+        programInfo: null,
         isMobile: window.innerWidth < 640,
         muted: safeRead('sr-player-muted', '0') === '1',
         volume: Number(safeRead('sr-player-volume', '0.8')) || 0.8,
@@ -219,7 +223,8 @@ export function registerRadioPlayer(Alpine) {
         },
 
         closeTransientOverlays() {
-            this.bandWindowOpen = false;
+            this.closeBandWindow();
+            this.closeProgramWindow();
             if (this.mode !== 'page') {
                 this.panelOpen = false;
             }
@@ -400,11 +405,33 @@ export function registerRadioPlayer(Alpine) {
                 return;
             }
 
+            if (this.bandWindowOpen || this.programWindowOpen) {
+                this.closeBandWindow();
+                this.closeProgramWindow();
+                return;
+            }
+
+            this.openBandWindow();
+        },
+
+        toggleInfoWindow() {
+            if (this.track.is_live && this.track.program_name) {
+                if (this.programWindowOpen) {
+                    this.closeProgramWindow();
+                    return;
+                }
+
+                this.closeBandWindow();
+                this.openProgramWindow(this.track.program_id);
+                return;
+            }
+
             if (this.bandWindowOpen) {
                 this.closeBandWindow();
                 return;
             }
 
+            this.closeProgramWindow();
             this.openBandWindow();
         },
 
@@ -434,6 +461,40 @@ export function registerRadioPlayer(Alpine) {
         closeBandWindow() {
             this.bandWindowOpen = false;
             this.bandInfoLoading = false;
+        },
+
+        async openProgramWindow(programId = null) {
+            this.programInfoLoading = true;
+            this.programInfo = null;
+            this.programWindowOpen = true;
+
+            try {
+                const id = Number(programId || this.track.program_id || this.program?.id || 0);
+                const url = id > 0
+                    ? `${this.programInfoUrl}?program_id=${encodeURIComponent(id)}`
+                    : this.programInfoUrl;
+
+                const response = await fetch(url, {
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                });
+                const payload = await response.json();
+
+                if (payload?.success && payload?.data) {
+                    this.programInfo = payload.data;
+                }
+            } catch (error) {
+                // ignore program info lookup failures
+            } finally {
+                this.programInfoLoading = false;
+            }
+        },
+
+        closeProgramWindow() {
+            this.programWindowOpen = false;
+            this.programInfoLoading = false;
+            this.programInfo = null;
         },
 
         setBandWindowTab(tab) {
