@@ -7,7 +7,6 @@ use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\GalleryImageController as AdminGalleryImageController;
 use App\Http\Controllers\Admin\MasterProgramController as AdminMasterProgramController;
-use App\Http\Controllers\Admin\BandProfileController as AdminBandProfileController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\VideoController as AdminVideoController;
 use App\Http\Controllers\Admin\ThemeSettingsController as AdminThemeSettingsController;
@@ -17,18 +16,8 @@ use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
-use App\Http\Controllers\Admin\OutreachController as AdminOutreachController;
 use App\Http\Controllers\Admin\ProgramCodeController as AdminProgramCodeController;
-use App\Http\Controllers\Admin\TalentAdminController as AdminTalentController;
 use App\Http\Controllers\LegacyWordPressUploadController;
-use App\Http\Controllers\Talent\DashboardController as TalentDashboardController;
-use App\Http\Controllers\Talent\AuthController as TalentAuthController;
-use App\Http\Controllers\Talent\MediaController as TalentMediaController;
-use App\Http\Controllers\Talent\ProductController as TalentProductController;
-use App\Http\Controllers\Talent\ProfileController as TalentProfileController;
-use App\Http\Controllers\Talent\NotificationController as TalentNotificationController;
-use App\Http\Controllers\Talent\SubscriptionController as TalentSubscriptionController;
-use App\Http\Controllers\Talent\PublicProfileController as TalentPublicProfileController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SearchController;
@@ -46,7 +35,6 @@ Route::get('/js_videos/{slug}', [SiteController::class, 'videoSingle'])->name('v
 Route::get('/gallery', [SiteController::class, 'gallery'])->name('gallery');
 Route::redirect('/galeria', '/gallery');
 Route::get('/js_photo_albums/5', [SiteController::class, 'photoAlbum'])->name('gallery.green-day');
-Route::get('/discografia/{id}-{slug}', [SiteController::class, 'talentAlbumSingle'])->name('talents.album.show');
 Route::get('/blog', [SiteController::class, 'blog'])->name('blog');
 Route::get('/blog-standard', [SiteController::class, 'blogStandard'])->name('blog.standard');
 Route::get('/legacy-wp-uploads/{path}', [LegacyWordPressUploadController::class, 'show'])
@@ -136,14 +124,6 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::post('/podcast-uploads/{radioProgram}/retry', [AdminPodcastUploadController::class, 'retry'])->name('podcast-uploads.retry');
         Route::get('/podcast-uploads/{radioProgram}/download', [AdminPodcastUploadController::class, 'download'])->name('podcast-uploads.download');
         Route::delete('/podcast-uploads/{id}', [AdminPodcastUploadController::class, 'destroy'])->name('podcast-uploads.destroy');
-        Route::get('/radio-artists', [AdminBandProfileController::class, 'index'])->name('radio-artists.index');
-        Route::get('/radio-artists/create', [AdminBandProfileController::class, 'create'])->name('radio-artists.create');
-        Route::get('/radio-artists/search', [AdminBandProfileController::class, 'search'])->name('radio-artists.search');
-        Route::post('/radio-artists', [AdminBandProfileController::class, 'store'])->name('radio-artists.store');
-        Route::get('/radio-artists/{bandProfile}/edit', [AdminBandProfileController::class, 'edit'])->name('radio-artists.edit');
-        Route::put('/radio-artists/{bandProfile}', [AdminBandProfileController::class, 'update'])->name('radio-artists.update');
-                Route::post('/radio-artists/{bandProfile}/auto-generate', [AdminBandProfileController::class, 'autoGenerate'])->name('radio-artists.auto-generate');
-        Route::delete('/radio-artists/{bandProfile}', [AdminBandProfileController::class, 'destroy'])->name('radio-artists.destroy');
         Route::get('/songs', [AdminSongController::class, 'index'])->name('songs.index');
         Route::get('/songs/create', [AdminSongController::class, 'create'])->name('songs.create');
         Route::post('/songs', [AdminSongController::class, 'store'])->name('songs.store');
@@ -163,90 +143,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::post('/comments/{comment}/approve', [AdminCommentController::class, 'approve'])->name('comments.approve');
         Route::post('/comments/{comment}/unapprove', [AdminCommentController::class, 'unapprove'])->name('comments.unapprove');
         Route::delete('/comments/{comment}', [AdminCommentController::class, 'destroy'])->name('comments.destroy');
-        Route::prefix('outreach')->name('outreach.')->group(function (): void {
-            Route::get('/', [AdminOutreachController::class, 'index'])->name('index');
-
-            Route::get('/templates', [AdminOutreachController::class, 'templates'])->name('templates.index');
-            Route::get('/templates/create', [AdminOutreachController::class, 'templatesCreate'])->name('templates.create');
-            Route::post('/templates', [AdminOutreachController::class, 'templatesStore'])->name('templates.store');
-            Route::get('/templates/{template}/edit', [AdminOutreachController::class, 'templatesEdit'])->name('templates.edit');
-            Route::put('/templates/{template}', [AdminOutreachController::class, 'templatesUpdate'])->name('templates.update');
-            Route::delete('/templates/{template}', [AdminOutreachController::class, 'templatesDestroy'])->name('templates.destroy');
-            Route::post('/templates/preview', [AdminOutreachController::class, 'templatePreview'])->name('templates.preview');
-
-            Route::get('/contacts', [AdminOutreachController::class, 'contacts'])->name('contacts.index');
-            Route::get('/contacts/create', [AdminOutreachController::class, 'contactsCreate'])->name('contacts.create');
-            Route::post('/contacts/import', [AdminOutreachController::class, 'contactsImport'])->name('contacts.import');
-            Route::post('/contacts', [AdminOutreachController::class, 'contactsStore'])->name('contacts.store');
-            Route::get('/contacts/{contact}/edit', [AdminOutreachController::class, 'contactsEdit'])->name('contacts.edit');
-            Route::put('/contacts/{contact}', [AdminOutreachController::class, 'contactsUpdate'])->name('contacts.update');
-
-            Route::get('/campaigns', [AdminOutreachController::class, 'campaigns'])->name('campaigns.index');
-            Route::get('/campaigns/create', [AdminOutreachController::class, 'campaignsCreate'])->name('campaigns.create');
-            Route::post('/campaigns', [AdminOutreachController::class, 'campaignsStore'])->name('campaigns.store');
-            Route::get('/campaigns/{campaign}', [AdminOutreachController::class, 'campaignsShow'])->name('campaigns.show');
-
-            Route::post('/send-test', [AdminOutreachController::class, 'sendTest'])->name('send-test');
-            Route::get('/contacts/{contact}', [AdminOutreachController::class, 'contactsShow'])->name('contacts.show');
-        });
-        Route::get('/talents', [AdminTalentController::class, 'index'])->name('talents.index');
-        Route::get('/talents/media', [AdminTalentController::class, 'media'])->name('talents.media');
-        Route::get('/talents/{talent}/edit', [AdminTalentController::class, 'edit'])->name('talents.edit');
-        Route::post('/talents/{talent}', [AdminTalentController::class, 'update'])->name('talents.update');
-        Route::patch('/talents/{talent}/featured', [AdminTalentController::class, 'toggleFeatured'])->name('talents.toggle-featured');
-        Route::post('/talents/{talent}/suspend', [AdminTalentController::class, 'suspend'])->name('talents.suspend');
-        Route::post('/talents/{talent}/activate', [AdminTalentController::class, 'activate'])->name('talents.activate');
-        Route::delete('/talents/media/{media}', [AdminTalentController::class, 'deleteMedia'])->name('talents.media.delete');
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
     });
 });
 
-Route::prefix('talentos')->name('talents.')->group(function (): void {
-    Route::get('/', [TalentPublicProfileController::class, 'index'])->name('explore');
-
-    Route::post('/webhook/{gateway}', [TalentSubscriptionController::class, 'webhook'])->name('payment.webhook');
-
-    Route::middleware('guest:talent')->group(function (): void {
-        Route::get('/register', [TalentAuthController::class, 'showRegisterForm'])->name('register');
-        Route::post('/register', [TalentAuthController::class, 'register'])->name('register.store');
-        Route::get('/login', [TalentAuthController::class, 'showLoginForm'])->name('login');
-        Route::post('/login', [TalentAuthController::class, 'login'])->name('login.store')->middleware('throttle:login');
-    });
-
-    Route::middleware(['talent'])->group(function (): void {
-        Route::get('/dashboard', [TalentDashboardController::class, 'index'])->name('dashboard');
-        Route::prefix('store')->name('store.')->group(function (): void {
-            Route::get('/', [TalentProductController::class, 'index'])->name('index');
-            Route::get('/create', [TalentProductController::class, 'create'])->name('create');
-            Route::post('/', [TalentProductController::class, 'store'])->name('store');
-            Route::get('/{id}/edit', [TalentProductController::class, 'edit'])->name('edit');
-            Route::post('/{id}', [TalentProductController::class, 'update'])->name('update');
-            Route::delete('/{id}', [TalentProductController::class, 'destroy'])->name('destroy');
-        });
-        Route::get('/subscriptions/plans', [TalentSubscriptionController::class, 'selectPlan'])->name('subscriptions.plans');
-        Route::post('/subscriptions/checkout', [TalentSubscriptionController::class, 'checkout'])->name('subscriptions.checkout');
-        Route::get('/subscriptions/success', [TalentSubscriptionController::class, 'success'])->name('payment.success');
-        Route::get('/subscriptions/cancel', [TalentSubscriptionController::class, 'cancel'])->name('payment.cancel');
-        Route::get('/profile', [TalentProfileController::class, 'edit'])->name('profile');
-        Route::put('/profile', [TalentProfileController::class, 'update'])->name('profile.update');
-        Route::get('/notifications', [TalentNotificationController::class, 'edit'])->name('notifications.edit');
-        Route::put('/notifications', [TalentNotificationController::class, 'update'])->name('notifications.update');
-        Route::get('/media', [TalentMediaController::class, 'index'])->name('media.index');
-        Route::post('/media/upload', [TalentMediaController::class, 'upload'])->name('media.upload');
-        Route::post('/media', [TalentMediaController::class, 'store'])->name('media.store');
-        Route::delete('/media/{id}', [TalentMediaController::class, 'destroy'])->name('media.destroy');
-        Route::prefix('albums')->name('albums.')->group(function (): void {
-            Route::get('/', [\App\Http\Controllers\Talent\AlbumController::class, 'index'])->name('index');
-            Route::get('/create', [\App\Http\Controllers\Talent\AlbumController::class, 'create'])->name('create');
-            Route::post('/', [\App\Http\Controllers\Talent\AlbumController::class, 'store'])->name('store');
-            Route::get('/{id}/edit', [\App\Http\Controllers\Talent\AlbumController::class, 'edit'])->name('edit');
-            Route::post('/{id}', [\App\Http\Controllers\Talent\AlbumController::class, 'update'])->name('update');
-            Route::delete('/{id}', [\App\Http\Controllers\Talent\AlbumController::class, 'destroy'])->name('destroy');
-        });
-        Route::post('/logout', [TalentAuthController::class, 'logout'])->name('logout');
-    });
-
-    Route::get('/{bandName}', [TalentPublicProfileController::class, 'show'])->name('show');
-    Route::post('/{bandName}/like', [TalentPublicProfileController::class, 'like'])->name('like');
-    Route::post('/{bandName}/comment', [TalentPublicProfileController::class, 'comment'])->name('comment');
-});

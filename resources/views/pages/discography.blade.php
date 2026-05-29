@@ -18,7 +18,7 @@
                         @php
                             $detailUrl = $album['type'] === 'admin'
                                 ? route('albums.single', ['slug' => $album['slug']])
-                                : route('talents.album.show', ['id' => $album['id'], 'slug' => $album['slug']]);
+                                : '#' /* talent albums disabled */
                         @endphp
                         <a href="{{ $detailUrl }}" class="lucille-album-card group">
                             <img src="{{ $album['cover'] }}" alt="{{ $album['title'] }}" loading="lazy">

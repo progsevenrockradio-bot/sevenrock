@@ -64,10 +64,9 @@
                 <div class="mt-4 flex flex-wrap gap-3">
                     <a href="{{ route('admin.settings.edit') }}" class="lucille-button-solid">{{ $admin['theme_settings'] }}</a>
                     <a href="{{ route('admin.master-programs.index') }}" class="lucille-button">Master programs</a>
-                    <a href="{{ route('admin.radio-artists.index') }}" class="lucille-button">Radio artists</a>
+                    {{-- Radio artists disabled --}}
                     <a href="{{ route('admin.songs.index') }}" class="lucille-button">Songs</a>
                     <a href="{{ route('admin.podcast-uploads.index') }}" class="lucille-button">Podcast uploads</a>
-                    <a href="{{ route('admin.outreach.index') }}" class="lucille-button">Outreach</a>
                     <a href="{{ route('admin.programs.index') }}" class="lucille-button">Programs codes</a>
                     <a href="{{ route('admin.posts.index') }}" class="lucille-button">{{ $admin['posts_heading'] }}</a>
                     <a href="#taxonomias" class="lucille-button">Taxonomías</a>
@@ -149,8 +148,8 @@
                 </p>
             </div>
             <div class="text-sm text-[#7b7b7b]">
-                <span class="text-[#dcdcdc]">Responded:</span> {{ $stats['outreach_responded'] }} ·
-                <span class="text-[#dcdcdc]">Registered:</span> {{ $stats['outreach_registered'] }}
+                
+                
             </div>
         </div>
 
@@ -158,7 +157,6 @@
             <div class="border border-[#2b2b2b] bg-[#151515] p-5">
                 <div class="flex items-center justify-between gap-4">
                     <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Campañas recientes</h3>
-                    <a href="{{ route('admin.outreach.campaigns.index') }}" class="lucille-button">Ver campañas</a>
                 </div>
                 <div class="mt-4 space-y-3">
                     @forelse (\App\Models\OutreachCampaign::query()->with('template')->latest()->limit(5)->get() as $campaign)
@@ -182,7 +180,6 @@
             <div class="border border-[#2b2b2b] bg-[#151515] p-5">
                 <div class="flex items-center justify-between gap-4">
                     <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Contactos recientes</h3>
-                    <a href="{{ route('admin.outreach.contacts.index') }}" class="lucille-button">Ver contactos</a>
                 </div>
                 <div class="mt-4 space-y-3">
                     @forelse ($recentContacts as $contact)

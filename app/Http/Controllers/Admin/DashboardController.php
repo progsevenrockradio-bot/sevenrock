@@ -43,7 +43,20 @@ class DashboardController extends Controller
                 'categories' => $this->taxonomiesFor(PostTaxonomy::TYPE_CATEGORY),
                 'tags' => $this->taxonomiesFor(PostTaxonomy::TYPE_TAG),
             ],
+            'recentContacts' => $this->getRecentContacts(),
         ]);
+    }
+
+    private function getRecentContacts(): Collection
+    {
+        if (! Schema::hasTable('band_contacts')) {
+            return collect();
+        }
+
+        return BandContact::query()
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
     }
 
     private function countTaxonomies(string $type): int

@@ -26,7 +26,7 @@
                                 {{ $media->title ?? $media->filename }}
                             </h3>
                             @if ($talent)
-                                <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="text-xs uppercase tracking-[.15em] text-[#7b7b7b] transition hover:text-lucille-accent">
+                                <a href="{{ "#" }}" class="text-xs uppercase tracking-[.15em] text-[#7b7b7b] transition hover:text-lucille-accent">
                                     {{ $talent->band_name }}
                                 </a>
                             @endif

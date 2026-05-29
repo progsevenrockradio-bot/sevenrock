@@ -106,6 +106,20 @@ class ProcessMp3Job implements ShouldQueue
                 return;
             }
 
+            // Escribir metadata ANTES de subir para que el archivo subido tenga los tags
+            $rutaAbsoluta = $sourceDisk === 'backblaze'
+                ? $sourceAbsolutePath
+                : \Illuminate\Support\Facades\Storage::disk('public')->path(ltrim($nuevaRuta, '/'));
+            try {
+                $this->escribirMetadata($rutaAbsoluta, $master, $this->radioProgram, $nombreProg, $invitado, $fecha, $fechaTitulo, $anio);
+            } catch (Throwable $metadataException) {
+                Log::warning('ProcessMp3Job: no se pudo escribir o verificar la metadata del MP3; se continúa con el pipeline.', [
+                    'program_id' => $this->radioProgram->id,
+                    'localPath' => $this->localPath,
+                    'message' => $metadataException->getMessage(),
+                ]);
+            }
+
             if (! $this->isProcessedLocalBackup($this->localPath) || $sourceDisk !== 'public') {
                 $sourceContents = file_get_contents($sourceAbsolutePath);
                 if (! is_string($sourceContents)) {
@@ -134,19 +148,7 @@ class ProcessMp3Job implements ShouldQueue
                 ]));
             }
 
-            $rutaAbsoluta = $sourceDisk === 'backblaze'
-                ? $sourceAbsolutePath
-                : \Illuminate\Support\Facades\Storage::disk('public')->path(ltrim($nuevaRuta, '/'));
-            try {
-                $this->escribirMetadata($rutaAbsoluta, $master, $this->radioProgram, $nombreProg, $invitado, $fecha, $fechaTitulo, $anio);
-            } catch (Throwable $metadataException) {
-                Log::warning('ProcessMp3Job: no se pudo escribir o verificar la metadata del MP3; se continúa con el pipeline.', [
-                    'program_id' => $this->radioProgram->id,
-                    'localPath' => $this->localPath,
-                    'message' => $metadataException->getMessage(),
-                ]);
-            }
-
+            // Metadata ya fue escrita antes de la subida
             $fileName = basename($nuevaRuta);
             $auditTrailService->recordSystem('upload.metadata_verified', 'Metadata del MP3 verificada', [
                 'actor' => $actor,

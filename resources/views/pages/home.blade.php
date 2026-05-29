@@ -14,28 +14,7 @@
     <x-sections.background-band class="home-section-texture home-section-gray" style="margin-top: 100px; margin-bottom: 100px;">
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['featured_stories']['title']" :subtitle="$homeHeadings['featured_stories']['subtitle']" />
-            @php($featuredTalents = app(\App\Services\FeaturedTalentService::class)->getFeatured())
-            @if ($featuredTalents->isNotEmpty())
-            <div class="featured-carousel mt-10">
-                @foreach ($featuredTalents as $talent)
-                    <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="featured-card">
-                        <div class="featured-rank">#{{ $loop->iteration }}</div>
-                        <img src="{{ $talent->logoUrl() ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" loading="lazy" alt="{{ $talent->band_name }}">
-                        <h3>{{ $talent->band_name }}</h3>
-                        <div class="featured-stats">
-                            <span>❤️ {{ $talent->interactions()->where('type', 'like')->count() }}</span>
-                            <span>👁️ {{ $talent->interactions()->where('type', 'view')->count() }}</span>
-                        </div>
-                        @if ($talent->plan === 'premium')
-                            <span class="premium-badge">PREMIUM</span>
-                        @endif
-                    </a>
-                @endforeach
-            </div>
-            <div class="featured-cta text-center mt-10">
-                <a href="{{ route('talents.explore') }}" class="btn btn-outline">Ver todos los talentos →</a>
-            </div>
-            @endif
+            {{-- Featured talents section disabled for .com (band section excluded) --}}
         </div>
     </x-sections.background-band>
 

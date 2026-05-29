@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendProducerInvitationJob;
 use App\Models\MasterProgram;
-use App\Models\OutreachTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -29,7 +28,7 @@ class ProgramCodeController extends Controller
 
         return view('admin.programs.index', [
             'programs' => $query->paginate(20)->withQueryString(),
-            'templates' => OutreachTemplate::query()->active()->orderBy('name')->get(),
+            'templates' => collect(), // OutreachTemplate model removed — templates disabled
             'search' => (string) $request->input('search', ''),
         ]);
     }
@@ -44,22 +43,16 @@ class ProgramCodeController extends Controller
         return back()->with('status', 'Código regenerado.');
     }
 
-    public function sendInvitation(Request $request, MasterProgram $program): RedirectResponse
+    public function sendInvitation(): RedirectResponse
     {
-        $data = $request->validate([
-            'template_id' => ['required', 'integer', 'exists:outreach_templates,id'],
-        ]);
-
-        SendProducerInvitationJob::dispatch($program->id, (int) $data['template_id']);
-
-        return back()->with('status', 'Invitación encolada para el productor.');
+        return back()->with('error', 'La funcionalidad de invitaciones está deshabilitada en este dominio.');
     }
 
     public function invitations(): View
     {
         return view('admin.programs.invitations', [
             'programs' => MasterProgram::query()->orderBy('nombre')->get(),
-            'templates' => OutreachTemplate::query()->active()->orderBy('name')->get(),
+            'templates' => collect(), // OutreachTemplate model removed — templates disabled
         ]);
     }
 }

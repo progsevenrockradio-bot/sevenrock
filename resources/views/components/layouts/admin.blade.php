@@ -140,7 +140,7 @@
                     <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
                 </summary>
                 <div class="lucille-admin-dropdown-panel">
-                    <a href="{{ route('admin.radio-artists.index') }}" class="lucille-admin-link">{{ $admin['bands_heading'] ?? 'Radio Artists' }}</a>
+                    {{-- Radio Artists disabled for .com --}}
                     <a href="{{ route('admin.albums.index') }}" class="lucille-admin-link">{{ $admin['albums_heading'] ?? 'Albums' }}</a>
                     <a href="{{ route('admin.videos.index') }}" class="lucille-admin-link">{{ $admin['videos_heading'] ?? 'Videos' }}</a>
                     <a href="{{ route('admin.gallery.index') }}" class="lucille-admin-link">{{ $admin['gallery_heading'] ?? 'Gallery' }}</a>
@@ -153,10 +153,6 @@
                     <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
                 </summary>
                 <div class="lucille-admin-dropdown-panel">
-                    <a href="{{ route('admin.talents.index') }}" class="lucille-admin-link">Dashboard</a>
-                    <a href="{{ route('admin.talents.index') }}" class="lucille-admin-link">Lista de talentos</a>
-                    <a href="{{ route('admin.talents.media') }}" class="lucille-admin-link">Contenido subido</a>
-                    <a href="{{ route('admin.talents.index') }}" class="lucille-admin-link">Suscripciones</a>
                     <a href="#" class="lucille-admin-link">Reportes</a>
                 </div>
             </details>
@@ -167,10 +163,6 @@
                     <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
                 </summary>
                 <div class="lucille-admin-dropdown-panel">
-                    <a href="{{ route('admin.outreach.index') }}" class="lucille-admin-link">📊 Dashboard</a>
-                    <a href="{{ route('admin.outreach.templates.index') }}" class="lucille-admin-link">📝 Plantillas</a>
-                    <a href="{{ route('admin.outreach.contacts.index') }}" class="lucille-admin-link">👥 Contactos</a>
-                    <a href="{{ route('admin.outreach.campaigns.index') }}" class="lucille-admin-link">📨 Campañas</a>
                     <a href="{{ route('admin.programs.index') }}" class="lucille-admin-link">🎙️ Programas</a>
                 </div>
             </details>

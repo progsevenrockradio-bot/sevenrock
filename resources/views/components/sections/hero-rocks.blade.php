@@ -25,8 +25,8 @@
 
     <div class="relative z-10 mx-auto flex min-h-[720px] max-w-[1240px] items-center justify-end px-6 pt-[90px] text-right md:min-h-[960px] lg:px-10 xl:min-h-[868px]">
         <h1 class="max-w-[760px] font-sans text-[40px] font-bold uppercase leading-none text-white md:text-[55px] lg:text-[65px]">
-            A Music Theme<br>
-            That <span class="text-lucille-accent">Rocks</span>
+            todas la <span class="text-lucille-accent">épocas del rock</span>,<br>
+            están <span class="text-lucille-accent">aquí!</span>
         </h1>
     </div>
 

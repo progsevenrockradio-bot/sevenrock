@@ -26,8 +26,12 @@ El episodio {{ $episode->live_title ?: $episode->titulo_programa }} del programa
 <tr>
 <td style="padding: 8px 0;">Cloud de la Radio</td>
 <td align="center" style="padding: 8px 0;">{{ $radiobossVerified || $archiveVerified ? '✅' : '❌' }}</td>
-<td style="padding: 8px 0;">@if($radiobossVerified || $archiveVerified)Distribuido correctamente@elseCon incidencias@endif
-@if($archiveVerified && !empty($archiveItemUrl))<br><small><a href="{{ $archiveItemUrl }}">Ver en Archive.org</a></small>@endif</td>
+<td style="padding: 8px 0;">
+{{ $radiobossVerified || $archiveVerified ? 'Distribuido correctamente' : 'Con incidencias' }}
+@if($archiveVerified && !empty($archiveItemUrl))
+<br><small><a href="{{ $archiveItemUrl }}">Ver en Archive.org</a></small>
+@endif
+</td>
 </tr>
 <tr>
 <td style="padding: 8px 0;">Estado general</td>
