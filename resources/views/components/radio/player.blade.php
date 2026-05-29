@@ -243,7 +243,6 @@
             class="radio-player-band-window"
 x-show="bandWindowOpen"
             x-transition.opacity
-            x-cloak
             style="display:flex; position:fixed; inset:0; z-index:120; align-items:center; justify-content:center; padding:18px; background:rgba(0,0,0,.72); backdrop-filter:blur(8px);"
             @click.self="closeBandWindow()"
             @keydown.escape.window="closeBandWindow()"
