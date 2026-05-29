@@ -201,18 +201,18 @@
                 <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11096"></script>
 
                 <span class="radio-player-actions" style="display:flex; flex:0 0 auto; align-items:center; justify-content:center; gap:8px; white-space:nowrap; margin-left:auto; padding-right:4px;">
-                    <button type="button" class="radio-player-icon" data-player-action="details" @click.stop="toggleInfoWindow()" title="Detalles" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.15); color:#dcd7cc; border-radius:50%; cursor:pointer; font-size:10px; font-weight:600; line-height:1; position:relative; z-index:10;' : 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.22); color:#dcd7cc; border-radius:50%; cursor:pointer; font-size:13px; font-weight:600; line-height:1; position:relative; z-index:10;'">i</button>
-                    <button type="button" class="radio-player-primary" data-player-action="play" @click.stop="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'" title="Play / Pause" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:2px solid rgba(184,175,162,.4); background:rgba(184,175,162,.08); color:#eee; border-radius:50%; cursor:pointer; font-size:14px; line-height:1; transition:all .15s ease;' : 'display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border:2px solid rgba(184,175,162,.5); background:rgba(184,175,162,.12); color:#eee; border-radius:50%; cursor:pointer; font-size:16px; line-height:1; transition:all .15s ease;'">
+                    <button type="button" class="radio-player-icon" data-player-action="details" @click.stop="toggleInfoWindow()" title="Detalles" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.15); color:#dcd7cc; border-radius:50%; cursor:pointer; font-size:10px; font-weight:600; line-height:1; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.22); color:#dcd7cc; border-radius:50%; cursor:pointer; font-size:13px; font-weight:600; line-height:1; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;'">i</button>
+                    <button type="button" class="radio-player-primary" data-player-action="play" @click.stop="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'" title="Play / Pause" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:2px solid rgba(184,175,162,.4); background:rgba(184,175,162,.08); color:#eee; border-radius:50%; cursor:pointer; font-size:14px; line-height:1; transition:all .15s ease; flex-shrink:0; padding:0; margin:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border:2px solid rgba(184,175,162,.5); background:rgba(184,175,162,.12); color:#eee; border-radius:50%; cursor:pointer; font-size:16px; line-height:1; transition:all .15s ease; flex-shrink:0; padding:0; margin:0;'">
                         <span x-text="playing ? '❚❚' : '▶'">▶</span>
                     </button>
-                    <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" x-bind:style="dockMinimized ? (isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; border-radius:50%; cursor:pointer; font-size:10px;' : 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.1); color:#dcd7cb; border-radius:50%; cursor:pointer; font-size:10px;') : (isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; width:36px; height:36px; font-size:12px; cursor:pointer; box-shadow:0 0 0 1px rgba(195,39,32,.14) inset; border-radius:50%;' : 'display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; width:36px; height:36px; border-radius:50%; cursor:pointer;')">
+                    <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" x-bind:style="dockMinimized ? (isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; border-radius:50%; cursor:pointer; font-size:10px; flex-shrink:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.1); color:#dcd7cb; border-radius:50%; cursor:pointer; font-size:10px; flex-shrink:0;') : (isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; border-radius:50%; cursor:pointer; flex-shrink:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; border-radius:50%; cursor:pointer; flex-shrink:0;')">
                         <span data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
                     </button>
-                    <button type="button" data-player-action="expand" @click.stop="dockMinimized = false" aria-label="Expandir" title="Expandir" x-show="dockMinimized" style="display:none; flex-shrink:0; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.15); color:#dcd7cc; cursor:pointer; border-radius:50%; position:relative; z-index:10;" class="radio-player-expand-btn">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    <button type="button" data-player-action="expand" @click.stop="dockMinimized = false" aria-label="Expandir" title="Expandir" x-show="dockMinimized" style="display:none; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.15); color:#dcd7cc; cursor:pointer; border-radius:50%; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;" class="radio-player-expand-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:auto;"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </button>
-                    <button type="button" data-player-action="minimize" @click.stop="dockMinimized = true" aria-label="Minimizar" title="Minimizar" x-show="!dockMinimized" style="display:none; flex-shrink:0; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.22); color:#dcd7cc; cursor:pointer; border-radius:50%; position:relative; z-index:10;" class="radio-player-minimize-btn">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                    <button type="button" data-player-action="minimize" @click.stop="dockMinimized = true" aria-label="Minimizar" title="Minimizar" x-show="!dockMinimized" style="display:none; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.22); color:#dcd7cc; cursor:pointer; border-radius:50%; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;" class="radio-player-minimize-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:auto;"><polyline points="18 15 12 9 6 15"></polyline></svg>
                     </button>
                 </span>
 
@@ -795,14 +795,15 @@
     min-height:72px !important;
   }
 
-  /* EXPANDED: two rows - top: cover+info+chips, bottom: controls+volume */
+  /* EXPANDED: single row — cover | meta | play/actions | volume */
   .radio-player-dock:not(.is-minimized) {
-    grid-template-columns: 1fr !important;
-    grid-template-rows: auto auto !important;
+    grid-template-columns: 64px minmax(0,1fr) auto minmax(120px,160px) !important;
+    grid-template-rows: auto !important;
     gap:8px !important;
-    padding:10px 12px 8px !important;
+    padding:8px 10px !important;
     width:calc(100vw - 16px) !important;
     min-height:auto !important;
+    align-items:center !important;
   }
 
   /* Row 1: cover + meta + chips */
@@ -815,8 +816,12 @@
   }
 
   .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying button img {
-    width:64px !important;
-    height:64px !important;
+    width:56px !important;
+    height:56px !important;
+  }
+  
+  .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying + div {
+    grid-column: 2;
   }
 
   .radio-player-dock:not(.is-minimized) .radio-player-meta strong {
@@ -826,16 +831,15 @@
     font-size:12px !important;
   }
 
-  /* Row 2: controls row — single horizontal line */
   .radio-player-dock:not(.is-minimized) .radio-player-actions {
-    grid-row: 2;
+    grid-column: 3;
     display:flex !important;
     flex-wrap:nowrap !important;
     justify-content:center !important;
     align-items:center !important;
-    gap:8px !important;
-    padding:4px 0 !important;
-    width:100% !important;
+    gap:6px !important;
+    padding:0 !important;
+    width:auto !important;
     transform:none !important;
     margin:0 !important;
   }
@@ -999,14 +1003,17 @@
     min-height:auto !important;
   }
 
-  /* Row 1: cover + meta (side by side) */
   .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying {
-    grid-row: 1;
+    grid-column: 1;
   }
 
   .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying button img {
-    width:64px !important;
-    height:64px !important;
+    width:56px !important;
+    height:56px !important;
+  }
+  
+  .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying + div {
+    grid-column: 2;
   }
 
   .radio-player-dock:not(.is-minimized) .radio-player-meta strong {
