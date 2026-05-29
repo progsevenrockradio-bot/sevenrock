@@ -247,10 +247,10 @@
             @click.self="closeBandWindow()"
             @keydown.escape.window="closeBandWindow()"
         >
-            <div style="position:relative; width:min(1100px, calc(100vw - 24px)); min-height:520px; max-height:min(82vh, 820px); border:1px solid rgba(184,175,162,.22); border-radius:28px; background:linear-gradient(180deg, rgba(16,16,18,.92), rgba(10,10,11,.96)); backdrop-filter:blur(12px); box-shadow:0 28px 72px rgba(0,0,0,.58); padding:22px; overflow-y:auto; overscroll-behavior:contain; margin:auto;">
+            <div class="sr-band-modal-container" style="position:relative; width:min(1100px, calc(100vw - 24px)); height:min(75vh, 720px); border:1px solid rgba(184,175,162,.22); border-radius:28px; background:linear-gradient(180deg, rgba(16,16,18,.92), rgba(10,10,11,.96)); backdrop-filter:blur(12px); box-shadow:0 28px 72px rgba(0,0,0,.58); padding:22px; overflow:hidden; overscroll-behavior:contain; margin:auto; display:flex; flex-direction:column;">
                 <button type="button" data-player-band-close @click.stop="closeBandWindow()" aria-label="Cerrar" style="position:absolute; right:16px; top:14px; z-index:10; appearance:none; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.22); color:#dcd7cb; width:44px; height:44px; display:grid; place-items:center; cursor:pointer; font-size:22px;">×</button>
 
-                <div x-cloak x-show="bandInfoLoading" style="display:flex; flex-direction:column; gap:18px;">
+                <div x-cloak x-show="bandInfoLoading" style="display:flex; flex-direction:column; gap:18px; flex:1; min-height:0; overflow:hidden;">
                     <div style="display:flex; gap:22px; align-items:flex-start;">
                         <div style="width:200px; height:200px; border-radius:16px; background:rgba(255,255,255,.06); animation:srpulse 1.5s infinite;"></div>
                         <div style="flex:1; display:flex; flex-direction:column; gap:10px;">
@@ -264,14 +264,14 @@
                             </div>
                         </div>
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px;">
-                        <div style="min-height:260px; border-radius:18px; background:rgba(255,255,255,.04); animation:srpulse 1.5s infinite .7s;"></div>
-                        <div style="min-height:260px; border-radius:18px; background:rgba(255,255,255,.04); animation:srpulse 1.5s infinite .8s;"></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px; flex:1; min-height:0; align-items:stretch;">
+                        <div style="height:100%; min-height:0; border-radius:18px; background:rgba(255,255,255,.04); animation:srpulse 1.5s infinite .7s;"></div>
+                        <div style="height:100%; min-height:0; border-radius:18px; background:rgba(255,255,255,.04); animation:srpulse 1.5s infinite .8s;"></div>
                     </div>
                 </div>
 
-                <div x-cloak x-show="!bandInfoLoading">
-                    <div class="sr-band-header" style="display:flex; gap:22px; align-items:flex-start;">
+                <div x-cloak x-show="!bandInfoLoading" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; gap:14px;">
+                    <div class="sr-band-header" style="display:flex; gap:22px; align-items:flex-start; flex:0 0 auto;">
                         <div style="flex-shrink:0;">
                             <img class="sr-band-cover"
                                 data-player-band-cover-image
@@ -314,20 +314,20 @@
                         </div>
                     </div>
 
-                    <div x-show="isMobile" class="sr-band-tabs" x-cloak style="display:none; gap:8px; margin-top:14px;">
+                    <div x-show="isMobile" class="sr-band-tabs" x-cloak style="display:none; gap:8px; margin-top:0; flex:0 0 auto;">
                         <button type="button" :class="{ 'is-active': activeTab === 'lyrics' }" @click="setTab('lyrics')" style="flex:1 1 0; min-height:38px; border:1px solid rgba(184,175,162,.16); background:rgba(255,255,255,.02); color:#dcd7ca; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase; border-radius:12px;">Letra</button>
                         <button type="button" :class="{ 'is-active': activeTab === 'band' }" @click="setTab('band')" style="flex:1 1 0; min-height:38px; border:1px solid rgba(184,175,162,.16); background:rgba(255,255,255,.02); color:#dcd7ca; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase; border-radius:12px;">Información</button>
                     </div>
 
-                    <div class="sr-band-columns" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px; min-height:260px;">
+                    <div class="sr-band-columns" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:4px; flex:1; min-height:0; overflow:hidden;">
                         <section
                             class="sr-band-lyrics-col"
                             x-cloak
                             x-show="!isMobile || activeTab === 'lyrics'"
-                            style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; min-height:260px;"
+                            style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; min-height:0; overflow:hidden;"
                         >
                             <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Letra</h4>
-                            <div class="sr-band-text-scroll" style="flex:1; overflow-y:auto; max-height:400px;">
+                            <div class="sr-band-text-scroll" style="flex:1; min-height:0; overflow-y:auto; max-height:400px;">
                                 <p style="color:#e7e1d6; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="track.lyrics || 'Letra no disponible para este tema.'"></p>
                             </div>
                         </section>
@@ -336,10 +336,10 @@
                             class="sr-band-info-col"
                             x-cloak
                             x-show="!isMobile || activeTab === 'band'"
-                            style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; min-height:260px;"
+                            style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; min-height:0; overflow:hidden;"
                         >
                             <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Información</h4>
-                            <div class="sr-band-text-scroll" style="flex:1; overflow-y:auto; max-height:400px;">
+                            <div class="sr-band-text-scroll" style="flex:1; min-height:0; overflow-y:auto; max-height:400px;">
                                 <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="bandPanel.info || track.band_info || 'Buscando información de banda...'"></p>
 
                                 <div x-show="bandPanel.country || track.band_country || bandPanel.genre || track.band_genre || bandPanel.membersCount || track.band_members_count || bandPanel.status || track.band_status" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:12px;">
@@ -360,7 +360,7 @@
                         </section>
                     </div>
 
-                    <div x-show="Array.isArray(track.band_members) && track.band_members.length > 0" style="margin-top:14px; display:grid; gap:8px; padding:14px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
+                    <div x-show="Array.isArray(track.band_members) && track.band_members.length > 0" style="margin-top:0; display:grid; gap:8px; padding:14px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; flex:0 0 auto;">
                         <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Alineación</h4>
                         <div style="display:flex; flex-wrap:wrap; gap:8px;">
                             <template x-for="member in (Array.isArray(track.band_members) ? track.band_members : [])" :key="typeof member === 'string' ? member : (member.name || member.member || member.title || JSON.stringify(member))">
@@ -654,11 +654,20 @@
 }
 
 @media (max-width: 639px) {
+  .sr-band-modal-container {
+    height: min(85vh, 600px) !important;
+  }
   .sr-band-tabs { display: flex !important; }
   .sr-band-columns { grid-template-columns: 1fr !important; }
   .sr-band-header { flex-direction: column !important; align-items: center !important; }
   .sr-band-cover { width: 150px !important; height: 150px !important; min-width: 150px !important; }
   .sr-band-text-scroll { max-height: 280px !important; }
+}
+
+@media (min-width: 640px) {
+  .sr-band-modal-container {
+    height: min(75vh, 720px) !important;
+  }
 }
 
 /* Mobile: minimized/expanded states */
