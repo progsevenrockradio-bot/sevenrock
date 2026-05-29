@@ -216,7 +216,7 @@
                     </button>
                 </span>
 
-                <div class="sr-dock-volume" style="display:flex; align-items:center; gap:10px; min-width:180px; max-width:280px; justify-self:end;">
+                <div class="sr-dock-volume" style="display:flex; align-items:center; gap:10px; min-width:180px; max-width:280px; justify-self:end; overflow:visible;">
                     <button type="button" data-player-action="mute" @click.stop="toggleMute()" aria-label="Silenciar" title="Silenciar" style="display:inline-flex; width:36px; height:36px; align-items:center; justify-content:center; border:1px solid rgba(184,175,162,.3); background:transparent; color:#b7ad9f; border-radius:4px; cursor:pointer; flex-shrink:0;">
                         <span data-player-mute-muted-icon x-show="muted" aria-hidden="true" style="display:inline-flex; width:20px; height:20px; align-items:center; justify-content:center;">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
@@ -246,8 +246,8 @@
             @click.self="closeBandWindow()"
             @keydown.escape.window="closeBandWindow()"
         >
-            <div class="sr-band-modal-container" style="position:relative; width:min(1100px, calc(100vw - 24px)); height:min(75vh, 720px); border:1px solid rgba(184,175,162,.22); border-radius:28px; background:linear-gradient(180deg, rgba(16,16,18,.92), rgba(10,10,11,.96)); backdrop-filter:blur(12px); box-shadow:0 28px 72px rgba(0,0,0,.58); padding:22px; overflow:hidden; overscroll-behavior:contain; margin:auto; display:flex; flex-direction:column;">
-                <button type="button" data-player-band-close @click.stop="closeBandWindow()" aria-label="Cerrar" style="position:absolute; right:16px; top:14px; z-index:10; appearance:none; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.22); color:#dcd7cb; width:44px; height:44px; display:grid; place-items:center; cursor:pointer; font-size:22px;">×</button>
+            <div class="sr-band-modal-container" style="position:relative; width:min(1100px, calc(100vw - 24px)); height:min(75vh, 720px); border:1px solid rgba(184,175,162,.22); border-radius:28px; background:linear-gradient(180deg, rgba(16,16,18,.92), rgba(10,10,11,.96)); backdrop-filter:blur(12px); box-shadow:0 28px 72px rgba(0,0,0,.58); padding:22px; overflow:visible; overscroll-behavior:contain; margin:auto; display:flex; flex-direction:column;">
+                <button type="button" data-player-band-close @click.stop="closeBandWindow()" aria-label="Cerrar" style="position:absolute; right:16px; top:14px; z-index:9999; pointer-events:auto; appearance:none; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.22); color:#dcd7cb; width:44px; height:44px; display:grid; place-items:center; cursor:pointer; font-size:22px;">×</button>
 
                 <div class="sr-band-stage" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; gap:14px;">
                     <template x-if="bandInfoLoading">
@@ -389,7 +389,7 @@
             @click.self="closeProgramWindow()"
         >
             <div class="sr-program-modal" style="position:relative; width:min(680px, calc(100vw - 32px)); height:min(75vh, 720px); display:flex; flex-direction:column; background:linear-gradient(180deg, #161413 0%, #0c0b0a 100%); border:1px solid rgba(184,175,162,.22); border-radius:12px; box-shadow:0 24px 64px rgba(0,0,0,.5); overflow:hidden;" @click.stop>
-                <button type="button" @click="closeProgramWindow()" aria-label="Cerrar" style="position:absolute; top:12px; right:12px; z-index:10; display:flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.45); color:#b7ad9f; border-radius:50%; cursor:pointer; transition:all .15s ease;">×</button>
+                <button type="button" @click="closeProgramWindow()" aria-label="Cerrar" style="position:absolute; top:12px; right:12px; z-index:9999; pointer-events:auto; display:flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.45); color:#b7ad9f; border-radius:50%; cursor:pointer; transition:all .15s ease;">×</button>
 
                 <template x-if="programInfoLoading && !programInfo">
                     <div style="display:flex; flex-direction:column; flex:1; min-height:0; padding:24px; gap:16px;">
@@ -795,16 +795,17 @@
     min-height:72px !important;
   }
 
-  /* EXPANDED: two rows - top: cover+info, bottom: controls */
+  /* EXPANDED: two rows - top: cover+info+chips, bottom: controls+volume */
   .radio-player-dock:not(.is-minimized) {
     grid-template-columns: 1fr !important;
     grid-template-rows: auto auto !important;
-    gap:6px !important;
+    gap:8px !important;
     padding:10px 12px 8px !important;
     width:calc(100vw - 16px) !important;
     min-height:auto !important;
   }
 
+  /* Row 1: cover + meta + chips */
   .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying {
     grid-row: 1;
     display:flex !important;
@@ -814,74 +815,66 @@
   }
 
   .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying button img {
-    width:76px !important;
-    height:76px !important;
+    width:64px !important;
+    height:64px !important;
   }
 
   .radio-player-dock:not(.is-minimized) .radio-player-meta strong {
-    font-size:15px !important;
+    font-size:14px !important;
   }
   .radio-player-dock:not(.is-minimized) .radio-player-meta span {
-    font-size:13px !important;
+    font-size:12px !important;
   }
 
-  /* Second row: controls row */
+  /* Row 2: controls row — single horizontal line */
   .radio-player-dock:not(.is-minimized) .radio-player-actions {
     grid-row: 2;
     display:flex !important;
-    flex-wrap:wrap !important;
+    flex-wrap:nowrap !important;
     justify-content:center !important;
-    gap:6px !important;
+    align-items:center !important;
+    gap:8px !important;
     padding:4px 0 !important;
     width:100% !important;
     transform:none !important;
     margin:0 !important;
   }
 
-  /* Volume bar visible when expanded */
+  /* No wrapping divs for volume inside actions on mobile expanded */
   .radio-player-dock:not(.is-minimized) .radio-player-actions > div {
-    display:flex !important;
-    flex:1 1 100% !important;
-    max-width:100% !important;
-    min-width:0 !important;
-    order:-1 !important;
-    margin-bottom:4px !important;
-  }
-  /* Fix inner volume grid on mobile */
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > div > div {
-    width:100% !important;
-    grid-template-columns: auto minmax(80px,1fr) auto !important;
-    gap:8px !important;
-    padding:6px 8px !important;
-  }
-  /* Ensure range input is tappable on mobile */
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > div input[type="range"] {
-    min-height:28px !important;
-    width:100% !important;
-  }
-
-  /* All buttons same small size in expanded mobile */
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="play"],
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="details"],
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="mute"],
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="favorite"],
-  .radio-player-dock:not(.is-minimized) .radio-player-minimize-btn {
-    min-width:44px !important;
-    width:auto !important;
-    min-height:44px !important;
-    padding:0 10px !important;
-    flex:1 1 auto !important;
-    justify-content:center !important;
-  }
-
-  /* Hide text labels on buttons in expanded mobile, show only icons */
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="play"] span:last-child,
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="details"] span:last-child,
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="favorite"] span:last-child {
     display:none !important;
   }
 
-  /* Timer hidden on mobile always */
+  /* Compact buttons on mobile expanded */
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="play"] {
+    min-width:48px !important;
+    width:48px !important;
+    height:48px !important;
+    padding:0 !important;
+    justify-content:center !important;
+    border-width:2px !important;
+    font-size:16px !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="details"],
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="mute"],
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="favorite"] {
+    min-width:40px !important;
+    width:40px !important;
+    height:40px !important;
+    padding:0 !important;
+    justify-content:center !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-minimize-btn {
+    min-width:40px !important;
+    width:40px !important;
+    height:40px !important;
+    padding:0 !important;
+    justify-content:center !important;
+  }
+
+  /* Timer visible on mobile */
   .radio-player-dock .rbcloud_tracktimer { display: flex !important; }
 }
 
@@ -935,68 +928,167 @@
     padding: 0 16px 16px !important;
   }
 
-  .radio-player-dock {
-    grid-template-columns: 56px minmax(0,1fr) auto auto !important;
-    gap:8px !important;
-    padding:8px 10px !important;
-    width:calc(100vw - 16px) !important;
-    min-height:72px !important;
-  }
-
-  .radio-player-dock.is-minimized,
-  .radio-player-dock:not(.is-minimized) {
+  /* ====== MINIMIZED mobile dock ====== */
+  .radio-player-dock.is-minimized {
     grid-template-columns: 56px minmax(0,1fr) auto auto !important;
     grid-template-rows: auto !important;
-    gap:8px !important;
+    gap:6px !important;
     padding:8px 10px !important;
     width:calc(100vw - 16px) !important;
-    min-height:72px !important;
+    min-height:68px !important;
   }
 
-  .radio-player-dock .rbcloud_nowplaying button img {
+  .radio-player-dock.is-minimized .rbcloud_nowplaying button img {
     width:56px !important;
     height:56px !important;
   }
 
-  .radio-player-dock .radio-player-meta strong {
+  .radio-player-dock.is-minimized .radio-player-meta strong {
     font-size:12px !important;
   }
 
-  .radio-player-dock .radio-player-meta span,
-  .radio-player-dock .radio-player-meta small {
+  .radio-player-dock.is-minimized .radio-player-meta span,
+  .radio-player-dock.is-minimized .radio-player-meta small {
     font-size:10px !important;
   }
 
-  .radio-player-dock .radio-player-actions {
-    gap:6px !important;
+  .radio-player-dock.is-minimized .radio-player-actions {
+    gap:4px !important;
   }
 
-  .radio-player-dock .radio-player-actions > button[data-player-action="play"],
-  .radio-player-dock .radio-player-actions > button[data-player-action="details"],
-  .radio-player-dock .radio-player-actions > button[data-player-action="favorite"],
-  .radio-player-dock .radio-player-actions > button[data-player-action="expand"],
-  .radio-player-dock .radio-player-actions > button[data-player-action="minimize"] {
+  .radio-player-dock.is-minimized .radio-player-actions > button[data-player-action="play"] {
     width:36px !important;
     height:36px !important;
     min-width:36px !important;
     padding:0 !important;
+    font-size:14px !important;
   }
 
-  .radio-player-dock .radio-player-actions > button[data-player-action="share"],
-  .radio-player-dock .radio-player-actions > button[data-player-action="popout"] {
+  .radio-player-dock.is-minimized .radio-player-actions > button[data-player-action="details"],
+  .radio-player-dock.is-minimized .radio-player-actions > button[data-player-action="favorite"],
+  .radio-player-dock.is-minimized .radio-player-actions > button[data-player-action="expand"] {
+    width:32px !important;
+    height:32px !important;
+    min-width:32px !important;
+    padding:0 !important;
+  }
+
+  .radio-player-dock.is-minimized .radio-player-actions > button[data-player-action="share"],
+  .radio-player-dock.is-minimized .radio-player-actions > button[data-player-action="popout"] {
     display:none !important;
   }
 
-  .radio-player-dock .sr-dock-volume {
+  .radio-player-dock.is-minimized .sr-dock-volume {
     min-width:36px !important;
     max-width:36px !important;
     gap:0 !important;
   }
 
-  .radio-player-dock .sr-dock-volume input[type="range"],
-  .radio-player-dock .sr-dock-volume span[data-player-volume-output] {
+  .radio-player-dock.is-minimized .sr-dock-volume input[type="range"],
+  .radio-player-dock.is-minimized .sr-dock-volume span[data-player-volume-output] {
     display:none !important;
   }
+
+  /* ====== EXPANDED mobile dock ====== */
+  .radio-player-dock:not(.is-minimized) {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto !important;
+    gap:8px !important;
+    padding:10px 12px 8px !important;
+    width:calc(100vw - 16px) !important;
+    min-height:auto !important;
+  }
+
+  /* Row 1: cover + meta (side by side) */
+  .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying {
+    grid-row: 1;
+  }
+
+  .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying button img {
+    width:64px !important;
+    height:64px !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-meta strong {
+    font-size:14px !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-meta span {
+    font-size:12px !important;
+  }
+
+  /* Row 2: controls inline */
+  .radio-player-dock:not(.is-minimized) .radio-player-actions {
+    grid-row: 2;
+    display:flex !important;
+    flex-wrap:nowrap !important;
+    justify-content:center !important;
+    align-items:center !important;
+    gap:8px !important;
+    padding:0 !important;
+    width:auto !important;
+    transform:none !important;
+    margin:0 !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > div {
+    display:none !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="play"] {
+    min-width:44px !important;
+    width:44px !important;
+    height:44px !important;
+    padding:0 !important;
+    justify-content:center !important;
+    font-size:16px !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="details"],
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="favorite"] {
+    min-width:36px !important;
+    width:36px !important;
+    height:36px !important;
+    padding:0 !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-minimize-btn {
+    min-width:36px !important;
+    width:36px !important;
+    height:36px !important;
+    padding:0 !important;
+  }
+
+  /* Row 3: volume slider full width */
+  .radio-player-dock:not(.is-minimized) .sr-dock-volume {
+    display:flex !important;
+    grid-row: 3;
+    min-width:100% !important;
+    max-width:100% !important;
+    gap:8px !important;
+    padding:2px 0 0 !important;
+    align-items:center !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .sr-dock-volume input[type="range"] {
+    display:block !important;
+    flex:1 !important;
+    min-height:28px !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .sr-dock-volume span[data-player-volume-output] {
+    display:inline !important;
+    min-width:28px !important;
+  }
+
+  /* General mobile adjustments */
+  .radio-player-dock .radio-player-chip {
+    font-size:9px !important;
+    padding:0 6px !important;
+    min-height:22px !important;
+  }
+
+  .radio-player-dock .rbcloud_tracktimer { display: flex !important; }
 }
 </style>
 </div>
