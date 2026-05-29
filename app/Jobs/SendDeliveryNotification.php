@@ -73,8 +73,18 @@ class SendDeliveryNotification implements ShouldQueue
                 : null;
 
             $recipients = $this->resolveNotificationRecipients($radioProgram->masterProgram);
-            $to = $recipients[0] ?? $this->resolveGlobalNotificationPrimaryRecipient();
-            $cc = $recipients[1] ?? $this->resolveGlobalNotificationCopyRecipient();
+            if ($deliveryStatus === 'failed') {
+                $to = $this->resolveGlobalNotificationPrimaryRecipient();
+                $cc = null;
+
+                Log::warning('SendDeliveryNotification: entrega fallida — notificando solo al admin', [
+                    'program_id' => $radioProgram->id,
+                    'admin_email' => $to,
+                ]);
+            } else {
+                $to = $recipients[0] ?? $this->resolveGlobalNotificationPrimaryRecipient();
+                $cc = $recipients[1] ?? $this->resolveGlobalNotificationCopyRecipient();
+            }
             $mailer = $this->resolveNotificationMailer();
 
             try {
