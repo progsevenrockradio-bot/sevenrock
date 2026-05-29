@@ -247,18 +247,18 @@ x-show="bandWindowOpen"
             @click.self="closeBandWindow()"
             @keydown.escape.window="closeBandWindow()"
         >
-            <div style="position:relative; width:min(1320px, calc(100vw - 24px)); max-height:min(86vh, 900px); border:1px solid rgba(184,175,162,.22); border-radius:28px; background:linear-gradient(180deg, rgba(16,16,18,.92), rgba(10,10,11,.96)); backdrop-filter:blur(12px); box-shadow:0 28px 72px rgba(0,0,0,.58); padding:22px; overflow:auto; margin:auto;">
+            <div style="position:relative; width:min(1100px, calc(100vw - 24px)); max-height:min(82vh, 820px); border:1px solid rgba(184,175,162,.22); border-radius:28px; background:linear-gradient(180deg, rgba(16,16,18,.92), rgba(10,10,11,.96)); backdrop-filter:blur(12px); box-shadow:0 28px 72px rgba(0,0,0,.58); padding:22px; overflow-y:auto; margin:auto;">
                 <button type="button" data-player-band-close @click.stop="closeBandWindow()" aria-label="Cerrar" style="position:absolute; right:16px; top:14px; z-index:10; appearance:none; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.22); color:#dcd7cb; width:44px; height:44px; display:grid; place-items:center; cursor:pointer; font-size:22px;">×</button>
-                <div x-show="bandInfoLoading" x-transition.opacity class="band-loading-state" style="display:flex; align-items:center; justify-content:center; min-height:240px; gap:8px; color:#b7ad9f;">
+                <div x-cloak x-show="bandInfoLoading" class="band-loading-state" style="display:flex; align-items:center; justify-content:center; min-height:420px; gap:8px; color:#b7ad9f;">
                     <svg class="animate-spin" style="width:20px; height:20px;" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="60" stroke-linecap="round"></circle>
                     </svg>
                     <span style="font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Cargando...</span>
                 </div>
-                <div x-show="!bandInfoLoading" x-transition.opacity style="display:grid; grid-template-columns:minmax(320px,360px) minmax(0,1fr); gap:22px; align-items:start;">
+                <div x-show="!bandInfoLoading" style="display:grid; grid-template-columns:200px minmax(0,1fr); gap:22px; align-items:start; min-height:420px;">
                     <aside style="display:flex; flex-direction:column; gap:14px; min-width:0;">
-                        <div style="position:relative;">
-                            <img data-player-band-cover-image :src="activeTab === 'band' ? (bandPanel.cover || track.band_thumbnail || track.cover || fallbackCover) : (track.cover || fallbackCover)" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:100%; aspect-ratio:1/1; object-fit:cover; border:1px solid rgba(184,175,162,.20); box-shadow:0 24px 56px rgba(0,0,0,.50); transform:translateY(-14px) scale(1.01); border-radius:20px;" loading="lazy">
+                        <div>
+                            <img data-player-band-cover-image :src="activeTab === 'band' ? (bandPanel.cover || track.band_thumbnail || track.cover || fallbackCover) : (track.cover || fallbackCover)" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:180px; height:180px; min-width:180px; object-fit:cover; border-radius:16px; border:1px solid rgba(184,175,162,.20); box-shadow:0 12px 32px rgba(0,0,0,.40);" loading="lazy">
                         </div>
                         <div style="display:flex; align-items:center; gap:8px; justify-content:flex-start;">
                             <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'LIVE' : 'PLAYBACK'"></span>
@@ -268,7 +268,7 @@ x-show="bandWindowOpen"
                             </button>
                         </div>
 
-                        <div x-show="resumenBio" style="padding:12px 14px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; margin:2px 0;">
+                        <div x-show="resumenBio && resumenBio.trim() !== ''" style="padding:12px 14px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; margin:2px 0;">
                             <p style="color:#d8d3ca; line-height:1.7; margin:0; font-size:13px; white-space:pre-line; overflow-wrap:anywhere;" x-text="resumenBio"></p>
                         </div>
 
@@ -282,7 +282,7 @@ x-show="bandWindowOpen"
                             </div>
                         </div>
 
-                        <div style="display:grid; gap:8px; padding:14px 14px 12px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
+                        <div x-show="Array.isArray(track.band_members) && track.band_members.length > 0" style="display:grid; gap:8px; padding:14px 14px 12px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
                             <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Alineación</h4>
                             <div style="display:grid; gap:8px;">
                                 <template x-for="member in (Array.isArray(track.band_members) ? track.band_members : [])" :key="typeof member === 'string' ? member : (member.name || member.member || member.title || JSON.stringify(member))">
@@ -291,7 +291,6 @@ x-show="bandWindowOpen"
                                         <span x-show="typeof member === 'object' && member && (member.role || member.instrument || member.position)" style="color:#a7a093; font-size:11px; letter-spacing:.06em; text-transform:uppercase;" x-text="member.role || member.instrument || member.position"></span>
                                     </div>
                                 </template>
-                                <p x-show="!Array.isArray(track.band_members) || !track.band_members.length" style="margin:0; color:#8f877d; font-size:12px;">Sin datos de alineación.</p>
                             </div>
                         </div>
                     </aside>
@@ -307,13 +306,13 @@ x-show="bandWindowOpen"
                             <button type="button" :class="{ 'is-active': activeTab === 'band' }" @click="setTab('band')" style="flex:1 1 0; min-height:38px; border:1px solid rgba(184,175,162,.16); background:rgba(255,255,255,.02); color:#dcd7ca; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Información</button>
                         </div>
 
-                        <div style="display:grid; gap:14px; min-width:0; min-height:0;">
-                            <section x-show="activeTab === 'lyrics'" style="display:grid; gap:8px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
+                        <div style="display:grid; gap:14px; min-width:0; min-height:240px;">
+                            <section x-show="activeTab === 'lyrics'" style="display:grid; gap:8px; min-height:200px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
                                 <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Letra</h4>
                                 <p style="color:#e7e1d6; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:15px;" x-text="track.lyrics || 'Letra no disponible para este tema.'"></p>
                             </section>
 
-                            <section x-show="activeTab === 'band'" style="display:grid; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
+                            <section x-show="activeTab === 'band'" style="display:grid; gap:10px; min-height:200px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
                                 <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Info de banda</h4>
                                 <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="bandPanel.info || track.band_info || 'Buscando información de banda...'"></p>
                                 <div x-show="bandPanel.country || bandPanel.genre || bandPanel.membersCount || bandPanel.status" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
