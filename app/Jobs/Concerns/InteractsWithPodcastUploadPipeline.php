@@ -301,7 +301,10 @@ trait InteractsWithPodcastUploadPipeline
         ];
 
         foreach (['title', 'artist', 'album'] as $key) {
-            if (trim((string) ($expected[$key] ?? '')) !== '' && ! hash_equals(trim((string) $expected[$key]), $normalized[$key])) {
+            $normalizedExpected = $this->normalizeTaggedMetadataValue((string) ($expected[$key] ?? ''));
+            $normalizedActual = $this->normalizeTaggedMetadataValue((string) ($normalized[$key] ?? ''));
+
+            if ($normalizedExpected !== '' && ! hash_equals($normalizedExpected, $normalizedActual)) {
                 return [
                     'verified' => false,
                     'message' => sprintf('La metadata de %s no coincide tras escribirla.', $key),
@@ -315,6 +318,15 @@ trait InteractsWithPodcastUploadPipeline
             'message' => null,
             'tags' => $normalized,
         ];
+    }
+
+    private function normalizeTaggedMetadataValue(string $value): string
+    {
+        $value = trim($value);
+        $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $value = preg_replace('/\s+/u', ' ', $value) ?: $value;
+
+        return trim($value);
     }
 
     /**
@@ -457,6 +469,14 @@ trait InteractsWithPodcastUploadPipeline
     private function uploadToRadioboss(string $folder, string $remotePath, string $absolutePath, string $localPath): void
     {
         $radioBossService = app(\App\Services\RadioBossService::class);
+        Log::info('Podcast upload: sending file to RadioBOSS', [
+            'folder' => $folder,
+            'remote_path' => $remotePath,
+            'absolute_path' => $absolutePath,
+            'local_path' => $localPath,
+            'local_size' => $this->fileSizeInBytes($absolutePath),
+        ]);
+
         $radioBossService->upload(
             $folder,
             $remotePath,
@@ -572,6 +592,7 @@ trait InteractsWithPodcastUploadPipeline
                     'remote_path' => $remotePath,
                     'exception_class' => get_class($exception),
                     'exception' => $exception->getMessage(),
+                    'will_retry' => $attempt < $attempts,
                 ]);
 
                 if ($attempt < $attempts) {

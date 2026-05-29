@@ -89,6 +89,10 @@ class UploadRadiobossJob implements ShouldQueue
             if ($uploadOk) {
                 $radiobossVerification = $this->verifyRadiobossUpload($remotePath, $absolutePath, $this->localPath);
                 $uploadOk = (bool) ($radiobossVerification['verified'] ?? false);
+
+                if (! $uploadOk && $this->radiobossError === null) {
+                    $this->radiobossError = (string) ($radiobossVerification['message'] ?? 'No se pudo verificar la subida a RadioBOSS.');
+                }
             }
 
             RadioProgram::withoutEvents(fn (): bool => (bool) $radioProgram->update([
@@ -112,6 +116,9 @@ class UploadRadiobossJob implements ShouldQueue
                 Log::warning('UploadRadiobossJob: fallo la subida a RadioBOSS.', [
                     'program_id' => $radioProgram->id,
                     'remote_path' => $remotePath,
+                    'local_path' => $this->localPath,
+                    'local_exists' => is_string($absolutePath) && $absolutePath !== '' && is_file($absolutePath),
+                    'verification' => $radiobossVerification,
                     'error' => $this->radiobossError,
                 ]);
             }
@@ -140,6 +147,10 @@ class UploadRadiobossJob implements ShouldQueue
                 'program_id' => $radioProgram->id,
                 'localPath' => $this->localPath,
                 'remotePath' => $remotePath,
+                'local_exists' => is_string($absolutePath) && $absolutePath !== '' && is_file($absolutePath),
+                'exception_class' => get_class($exception),
+                'exception_message' => $exception->getMessage(),
+                'exception_trace' => $exception->getTraceAsString(),
                 'exception' => $exception,
             ]);
 

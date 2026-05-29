@@ -27,8 +27,22 @@ class RadioBossService
         }
 
         if (! is_file($localPath) || ! is_readable($localPath)) {
+            Log::warning('RadioBossService: local file missing or unreadable before upload.', [
+                'folder' => $folder,
+                'remote_path' => $remotePath,
+                'local_path' => $localPath,
+            ]);
             throw new RuntimeException("No se pudo leer el archivo local para RadioBOSS: {$localPath}");
         }
+
+        $localSize = $this->fileSize($localPath);
+        Log::info('RadioBossService: iniciando subida FTP.', [
+            'folder' => $folder,
+            'remote_path' => $remotePath,
+            'local_path' => $localPath,
+            'local_size' => $localSize,
+            'clear_before_upload' => $clearBeforeUpload,
+        ]);
 
         $connection = $this->connect();
 
@@ -37,7 +51,14 @@ class RadioBossService
 
             $this->clearRemoteMp3Files($connection, $folder);
 
-            $this->uploadStream($connection, $remotePath, $localPath);
+            $this->uploadStream($connection, $remotePath, $localPath, $localSize);
+
+            Log::info('RadioBossService: subida FTP completada.', [
+                'folder' => $folder,
+                'remote_path' => $remotePath,
+                'local_path' => $localPath,
+                'local_size' => $localSize,
+            ]);
         } finally {
             ftp_close($connection);
         }
@@ -213,7 +234,7 @@ class RadioBossService
         }
     }
 
-    private function uploadStream($connection, string $remotePath, string $localPath): void
+    private function uploadStream($connection, string $remotePath, string $localPath, ?int $localSize = null): void
     {
         // Set a high timeout for the FTP data transfer (large MP3 files)
         @ftp_set_option($connection, FTP_TIMEOUT_SEC, 600);
@@ -226,11 +247,11 @@ class RadioBossService
             if (! @ftp_fput($connection, $remotePath, $stream, FTP_BINARY)) {
                 $error = error_get_last();
                 $ftpMessage = $error["message"] ?? "sin mensaje de error";
-                Log::error("RadioBossService: ftp_fput falló", [
-                    "remote_path" => $remotePath,
-                    "local_path" => $localPath,
-                    "local_size" => filesize($localPath),
-                    "error" => $ftpMessage,
+                Log::error('RadioBossService: ftp_fput falló', [
+                    'remote_path' => $remotePath,
+                    'local_path' => $localPath,
+                    'local_size' => $localSize ?? $this->fileSize($localPath),
+                    'error' => $ftpMessage,
                 ]);
                 throw new RuntimeException("La subida FTP a RadioBOSS falló para {$remotePath}: {$ftpMessage}");
             }
@@ -339,5 +360,10 @@ class RadioBossService
         $path = preg_replace('#/+#', '/', $path) ?: $path;
 
         return trim($path, '/');
+    }
+
+    private function fileSize(string $path): int
+    {
+        return is_file($path) ? (int) filesize($path) : 0;
     }
 }
