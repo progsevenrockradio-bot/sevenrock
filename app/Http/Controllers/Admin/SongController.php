@@ -26,8 +26,6 @@ class SongController extends Controller
 
     public function create(Request $request): View
     {
-        $selectedBandProfile = $this->selectedBandProfile($request);
-
         return view('admin.songs.create', [
             'song' => new Song([
                 'published_at' => now(),
@@ -35,8 +33,8 @@ class SongController extends Controller
                 'social_links' => [],
                 'is_live' => false,
             ]),
-            'selectedBandProfile' => $selectedBandProfile,
             'programs' => Program::query()->active()->latestEditorial()->get(),
+            'radioArtists' => RadioArtist::query()->orderBy('name')->get(),
             'bandMembersText' => '',
             'socialLinksText' => '',
         ]);
@@ -51,12 +49,10 @@ class SongController extends Controller
 
     public function edit(Request $request, Song $song): View
     {
-        $selectedBandProfile = $this->selectedBandProfile($request, $song);
-
         return view('admin.songs.edit', [
             'song' => $song->load(['program', 'bandProfile']),
-            'selectedBandProfile' => $selectedBandProfile,
             'programs' => Program::query()->active()->latestEditorial()->get(),
+            'radioArtists' => RadioArtist::query()->orderBy('name')->get(),
             'bandMembersText' => implode("\n", array_map('strval', $song->band_members ?? [])),
             'socialLinksText' => $this->linksToText($song->social_links ?? []),
         ]);
@@ -150,20 +146,6 @@ class SongController extends Controller
         }
 
         return $links;
-    }
-
-    private function selectedBandProfile(Request $request, ?Song $song = null): ?RadioArtist
-    {
-        $selectedId = $request->old('band_profile_id');
-        if (is_numeric($selectedId)) {
-            return RadioArtist::query()->find((int) $selectedId);
-        }
-
-        if ($song?->band_profile_id) {
-            return $song->bandProfile;
-        }
-
-        return null;
     }
 
     /**

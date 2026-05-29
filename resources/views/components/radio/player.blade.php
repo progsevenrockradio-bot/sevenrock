@@ -250,7 +250,13 @@ x-show="bandWindowOpen"
         >
             <div style="position:relative; width:min(1320px, calc(100vw - 24px)); max-height:min(86vh, 900px); border:1px solid rgba(184,175,162,.22); border-radius:28px; background:linear-gradient(180deg, rgba(16,16,18,.92), rgba(10,10,11,.96)); backdrop-filter:blur(12px); box-shadow:0 28px 72px rgba(0,0,0,.58); padding:22px; overflow:auto; margin:auto;">
                 <button type="button" data-player-band-close @click.stop="closeBandWindow()" aria-label="Cerrar" style="position:absolute; right:16px; top:14px; z-index:10; appearance:none; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.22); color:#dcd7cb; width:44px; height:44px; display:grid; place-items:center; cursor:pointer; font-size:22px;">×</button>
-                <div style="display:grid; grid-template-columns:minmax(320px,360px) minmax(0,1fr); gap:22px; align-items:start;">
+                <div x-show="bandInfoLoading" x-transition.opacity class="band-loading-state" style="display:flex; align-items:center; justify-content:center; min-height:240px; gap:8px; color:#b7ad9f;">
+                    <svg class="animate-spin" style="width:20px; height:20px;" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="60" stroke-linecap="round"></circle>
+                    </svg>
+                    <span style="font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Cargando...</span>
+                </div>
+                <div x-show="!bandInfoLoading" x-transition.opacity style="display:grid; grid-template-columns:minmax(320px,360px) minmax(0,1fr); gap:22px; align-items:start;">
                     <aside style="display:flex; flex-direction:column; gap:14px; min-width:0;">
                         <div style="position:relative;">
                             <img data-player-band-cover-image :src="activeTab === 'band' ? (bandPanel.cover || track.band_thumbnail || track.cover || fallbackCover) : (track.cover || fallbackCover)" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:100%; aspect-ratio:1/1; object-fit:cover; border:1px solid rgba(184,175,162,.20); box-shadow:0 24px 56px rgba(0,0,0,.50); transform:translateY(-14px) scale(1.01); border-radius:20px;" loading="lazy">

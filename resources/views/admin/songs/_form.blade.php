@@ -19,82 +19,12 @@
     </div>
     <div>
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Radio Artist</label>
-        <div
-            x-data="bandProfilePicker({
-                searchUrl: @js(route('admin.radio-artists.search')),
-                selectedId: @js(old('band_profile_id', $song->band_profile_id)),
-                selectedLabel: @js(optional($selectedBandProfile)->name ?? ''),
-                minLength: 3,
-            })"
-            class="relative"
-        >
-            <input type="hidden" name="band_profile_id" :value="selectedId">
-            <div class="flex gap-2">
-                <input
-                    type="search"
-                    x-model="query"
-                    @input="onInput()"
-                    @focus="focus()"
-                    @keydown.arrow-down.prevent="move(1)"
-                    @keydown.arrow-up.prevent="move(-1)"
-                    @keydown.enter="handleEnter($event)"
-                    @keydown.escape.prevent="open = false"
-                    @blur="closeSoon()"
-                    placeholder="Search radio artist"
-                    autocomplete="off"
-                    aria-autocomplete="list"
-                    aria-controls="band-profile-picker-results"
-                    :aria-expanded="open ? 'true' : 'false'"
-                    :aria-activedescendant="activeIndex >= 0 ? `band-profile-picker-result-${results[activeIndex]?.id}` : null"
-                    class="lucille-product-field w-full"
-                >
-                <button
-                    type="button"
-                    class="lucille-button whitespace-nowrap"
-                    @click="clear()"
-                    :disabled="! selectedId && ! query"
-                >
-                    Clear
-                </button>
-            </div>
-            <p class="mt-2 text-xs uppercase tracking-[.18em] text-[#7b7b7b]" x-show="selectedId && selectedLabel" x-cloak>
-                Selected: <span x-text="selectedLabel"></span>
-            </p>
-            <div
-                x-cloak
-                x-show="open"
-                @mousedown.prevent
-                class="absolute left-0 right-0 z-20 mt-2 max-h-80 overflow-hidden border border-[#2b2b2b] bg-[rgba(12,12,14,.98)] shadow-[0_18px_36px_rgba(0,0,0,.35)]"
-                id="band-profile-picker-results"
-                role="listbox"
-            >
-                <div class="flex items-center justify-between border-b border-[#202020] px-4 py-2 text-[11px] uppercase tracking-[.18em] text-[#9d9d9d]">
-                    <span x-text="loading ? 'Searching' : (results.length ? results.length + ' matches' : 'No matches')"></span>
-                    <span x-show="loading" x-cloak>Loading</span>
-                </div>
-                <div class="max-h-72 overflow-auto">
-                    <template x-if="! loading && results.length === 0">
-                        <div class="px-4 py-5 text-sm text-[#7b7b7b]">
-                            No radio artist matches this search.
-                        </div>
-                    </template>
-                    <template x-for="(result, index) in results" :key="result.id">
-                    <button
-                        type="button"
-                        :id="`band-profile-picker-result-${result.id}`"
-                        class="flex w-full flex-col gap-1 border-b border-[#202020] px-4 py-3 text-left transition-colors hover:bg-[rgba(229,15,79,.08)]"
-                        :class="activeIndex === index ? 'bg-[rgba(229,15,79,.12)]' : ''"
-                        @click="choose(result)"
-                        role="option"
-                        :aria-selected="activeIndex === index ? 'true' : 'false'"
-                    >
-                        <span class="font-display text-sm uppercase tracking-[.12em] text-white" x-text="result.text"></span>
-                        <span class="text-xs text-[#9d9d9d]" x-text="result.summary || 'Radio artist'"></span>
-                    </button>
-                    </template>
-                </div>
-            </div>
-        </div>
+        <select name="band_profile_id" class="lucille-product-field w-full">
+            <option value="">-- none --</option>
+            @foreach ($radioArtists as $artist)
+                <option value="{{ $artist->id }}" @selected((string) old('band_profile_id', $song->band_profile_id) === (string) $artist->id)>{{ $artist->name }}</option>
+            @endforeach
+        </select>
     </div>
     <div>
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Album</label>
