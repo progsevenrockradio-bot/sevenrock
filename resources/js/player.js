@@ -71,6 +71,7 @@ export function registerRadioPlayer(Alpine) {
             is_live: true,
             signature: '',
             program_name: '',
+            program_description: '',
             program_host: '',
             program_schedule: '',
             program_id: null,
@@ -462,26 +463,30 @@ export function registerRadioPlayer(Alpine) {
         },
 
         async openBandWindow() {
-            this.bandInfoLoading = true;
-            this.bandPanel = {
+            const snapshot = {
                 title: this.track.title || '',
                 artist: this.track.artist || '',
-                info: '',
+                info: this.track.band_info || this.track.comment || '',
                 cover: this.track.band_thumbnail || this.track.cover || this.fallbackCover,
-                foundedLabel: '',
+                foundedLabel: this.track.band_founded_label || '',
                 facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : [],
+                logo: this.track.band_logo || '',
+                country: this.track.band_country || '',
+                genre: this.track.band_genre || '',
+                membersCount: this.track.band_members_count ?? null,
+                status: this.track.band_status || '',
+                labels: this.track.band_labels || '',
             };
+
+            this.bandInfoLoading = true;
+            this.bandPanel = snapshot;
             this.bandWindowOpen = true;
             this.bandWindowTab = 'lyrics';
-
-            try {
-                await Promise.all([
-                    this.refreshStatus(true, true),
-                    this.ensureBandInfo(true),
-                ]);
-            } finally {
-                this.bandInfoLoading = false;
-            }
+            this.bandInfoLoading = false;
+            this.queueStatusRefresh(0);
+            this.ensureBandInfo(true, snapshot).catch(() => {
+                // ignore band info lookup failures
+            });
         },
 
         closeBandWindow() {
@@ -491,8 +496,18 @@ export function registerRadioPlayer(Alpine) {
 
         async openProgramWindow(programId = null) {
             this.programInfoLoading = true;
-            this.programInfo = null;
             this.programWindowOpen = true;
+            this.programInfo = {
+                id: this.track.program_id || null,
+                name: this.track.program_name || '',
+                description: this.track.program_description || '',
+                host: this.track.program_host || '',
+                schedule: this.track.program_schedule || '',
+                cover: this.track.cover || this.fallbackCover,
+                genre: '',
+                social_links: {},
+                episode: null,
+            };
 
             try {
                 const id = Number(programId || this.track.program_id || this.program?.id || 0);
@@ -669,14 +684,24 @@ export function registerRadioPlayer(Alpine) {
                     this.progress.duration = 0;
                 }
                 this.bandLookupArtist = '';
-                this.bandPanel = {
-                    title: this.track.title || '',
-                    artist: this.track.artist || '',
-                    info: this.track.band_info || this.track.comment || '',
-                    cover: this.track.cover || this.fallbackCover,
-                    foundedLabel: this.track.band_founded_label || '',
-                    facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : [],
-                };
+                this.bandPanel = this.bandWindowOpen
+                    ? {
+                        ...this.bandPanel,
+                        title: this.track.title || this.bandPanel.title || '',
+                        artist: this.track.artist || this.bandPanel.artist || '',
+                        info: this.track.band_info || this.track.comment || this.bandPanel.info || '',
+                        cover: this.track.band_thumbnail || this.track.cover || this.bandPanel.cover || this.fallbackCover,
+                        foundedLabel: this.track.band_founded_label || this.bandPanel.foundedLabel || '',
+                        facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : (this.bandPanel.facts || []),
+                    }
+                    : {
+                        title: this.track.title || '',
+                        artist: this.track.artist || '',
+                        info: this.track.band_info || this.track.comment || '',
+                        cover: this.track.cover || this.fallbackCover,
+                        foundedLabel: this.track.band_founded_label || '',
+                        facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : [],
+                    };
             }
 
             this.syncProgress();
@@ -689,9 +714,10 @@ export function registerRadioPlayer(Alpine) {
             return true;
         },
 
-        async ensureBandInfo(forceRefresh = false) {
-            const artist = this.normalizeBandArtist(this.track.artist || '');
-            const title = this.normalizeTrackTitle(this.track.title || '');
+        async ensureBandInfo(forceRefresh = false, sourceTrack = null) {
+            const track = sourceTrack || this.track;
+            const artist = this.normalizeBandArtist(track.artist || '');
+            const title = this.normalizeTrackTitle(track.title || '');
 
             if (!artist && !title) {
                 return;
@@ -728,8 +754,8 @@ export function registerRadioPlayer(Alpine) {
                 };
                 this.bandLookupArtist = lookupKey;
                 this.bandPanel = {
-                    title: this.bandPanel.title || this.track.title || '',
-                    artist: this.bandPanel.artist || this.track.artist || '',
+                    title: this.bandPanel.title || track.title || this.track.title || '',
+                    artist: this.bandPanel.artist || track.artist || this.track.artist || '',
                     info: this.track.band_info || this.bandPanel.info || '',
                     cover: this.track.band_thumbnail || this.track.cover || this.bandPanel.cover || this.fallbackCover,
                     foundedLabel: this.track.band_founded_label || this.bandPanel.foundedLabel || '',
@@ -840,6 +866,7 @@ export function registerRadioPlayer(Alpine) {
                 audio_url: track.audio_url || this.track.audio_url || '',
                 is_live: track.is_live ?? true,
                 program_name: track.program_name || '',
+                program_description: track.program_description || data.program?.description || this.track.program_description || '',
                 program_host: track.program_host || '',
                 program_schedule: track.program_schedule || '',
                 program_id: track.program_id || null,
@@ -847,14 +874,24 @@ export function registerRadioPlayer(Alpine) {
 
             if (trackChanged) {
                 this.bandLookupArtist = '';
-                this.bandPanel = {
-                    title: '',
-                    artist: '',
-                    info: '',
-                    cover: this.track.cover || this.fallbackCover,
-                    foundedLabel: '',
-                    facts: [],
-                };
+                this.bandPanel = this.bandWindowOpen
+                    ? {
+                        ...this.bandPanel,
+                        title: this.track.title || this.bandPanel.title || '',
+                        artist: this.track.artist || this.bandPanel.artist || '',
+                        info: this.track.band_info || this.track.comment || this.bandPanel.info || '',
+                        cover: this.track.band_thumbnail || this.track.cover || this.bandPanel.cover || this.fallbackCover,
+                        foundedLabel: this.track.band_founded_label || this.bandPanel.foundedLabel || '',
+                        facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : (this.bandPanel.facts || []),
+                    }
+                    : {
+                        title: '',
+                        artist: '',
+                        info: '',
+                        cover: this.track.cover || this.fallbackCover,
+                        foundedLabel: '',
+                        facts: [],
+                    };
             }
 
             this.queueWidgetSync(trackChanged ? 0 : 200);

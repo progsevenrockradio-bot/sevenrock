@@ -437,6 +437,7 @@
 
         <section
             class="radio-player-band-window"
+            x-cloak
             x-show="bandWindowOpen"
             x-transition.opacity
             style="display:none; position:fixed; inset:0; z-index:120; align-items:center; justify-content:center; padding:18px; background:rgba(0,0,0,.72); backdrop-filter:blur(8px);"
@@ -578,6 +579,7 @@
         <!-- ========== MODAL DE PROGRAMA ========== -->
         <section
             class="sr-program-window"
+            x-cloak
             :class="{ 'is-open': programWindowOpen }"
             x-show="programWindowOpen"
             x-transition.opacity
@@ -617,7 +619,7 @@
                                     EN VIVO
                                 </span>
                                 <span x-text="programInfo.genre || ''" style="color:#b7ad9f; font-family:var(--font-display); font-size:10px; letter-spacing:.18em; text-transform:uppercase;"></span>
-                                <h2 x-text="programInfo.name || ''" style="color:#ddd7cb; font-size:18px; font-weight:700; line-height:1.2; margin:0;"></h2>
+                                <h2 x-text="track.program_name || programInfo.name || ''" style="color:#ddd7cb; font-size:18px; font-weight:700; line-height:1.2; margin:0;"></h2>
                                 <p x-text="programInfo.host ? 'Conduce: ' + programInfo.host : ''" style="color:#b7ad9f; font-size:13px; margin:0;"></p>
                                 <p x-text="programInfo.schedule || ''" style="color:#8a8378; font-size:12px; margin:0; font-family:var(--font-display); letter-spacing:.06em; text-transform:uppercase;"></p>
                                 <div x-show="programInfo.social_links && (programInfo.social_links.facebook || programInfo.social_links.instagram)" style="display:flex; gap:10px; margin-top:6px;">
@@ -644,7 +646,7 @@
                             <template x-if="!(programInfo.episode && (programInfo.episode.guest_bio || programInfo.episode.guest_image))">
                                 <div>
                                     <h3 style="color:#ddd7cb; font-size:15px; font-weight:600; margin:0 0 8px 0;">Acerca del programa</h3>
-                                    <p x-text="programInfo.description || 'Información del programa no disponible.'" style="color:#a7a093; font-size:13px; line-height:1.6; margin:0; white-space:pre-line;"></p>
+                                    <p x-text="track.program_description || programInfo.description || 'Información del programa no disponible.'" style="color:#a7a093; font-size:13px; line-height:1.6; margin:0; white-space:pre-line;"></p>
                                 </div>
                             </template>
                         </div>
