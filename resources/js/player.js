@@ -62,6 +62,7 @@ export function registerRadioPlayer(Alpine) {
             artist: '',
             cover: '',
             lyrics: '',
+            band_biography: '',
             band_info: '',
             band_thumbnail: '',
             comment: '',
@@ -88,6 +89,7 @@ export function registerRadioPlayer(Alpine) {
             title: '',
             artist: '',
             info: '',
+            biography: '',
             lyrics: '',
             cover: '',
             foundedLabel: '',
@@ -469,6 +471,7 @@ export function registerRadioPlayer(Alpine) {
                 title: this.track.title || '',
                 artist: this.track.artist || '',
                 info: this.track.band_info || this.track.comment || '',
+                biography: this.track.band_biography || this.track.band_info || '',
                 lyrics: this.track.lyrics || '',
                 cover: this.track.band_thumbnail || this.track.cover || this.fallbackCover,
                 foundedLabel: this.track.band_founded_label || '',
@@ -748,19 +751,20 @@ export function registerRadioPlayer(Alpine) {
                 this.track = {
                     ...this.track,
                     band_info: this.formatBandText(data.summary || this.track.band_info || this.track.comment || ''),
+                    band_biography: this.formatBandText(data.biography || this.track.band_biography || this.track.band_info || ''),
                     band_thumbnail: data.thumbnail || this.track.band_thumbnail || this.track.cover || this.fallbackCover,
                     lyrics: data.lyrics || this.track.lyrics || '',
                     social_links: Array.isArray(data.social_links) ? data.social_links : this.track.social_links,
                     band_founded_year: data.formed_year ?? this.track.band_founded_year ?? null,
                     band_founded_label: data.formed_label || this.track.band_founded_label || '',
                     band_facts: Array.isArray(data.facts) ? data.facts : (this.track.band_facts || []),
-                    lyrics: data.lyrics || this.track.lyrics || this.bandPanel.lyrics || '',
                 };
                 this.bandLookupArtist = lookupKey;
                 this.bandPanel = {
                     title: this.bandPanel.title || track.title || this.track.title || '',
                     artist: this.bandPanel.artist || track.artist || this.track.artist || '',
                     info: this.track.band_info || this.bandPanel.info || '',
+                    biography: this.track.band_biography || this.bandPanel.biography || this.track.band_info || '',
                     lyrics: this.track.lyrics || this.bandPanel.lyrics || '',
                     cover: this.track.band_thumbnail || this.track.cover || this.bandPanel.cover || this.fallbackCover,
                     foundedLabel: this.track.band_founded_label || this.bandPanel.foundedLabel || '',
@@ -861,6 +865,7 @@ export function registerRadioPlayer(Alpine) {
                 cover: widgetCover || track.cover || this.track.cover || this.fallbackCover,
                 lyrics: trackChanged ? nextLyrics : (nextLyrics || this.track.lyrics || ''),
                 band_info: trackChanged ? nextBandInfo : (nextBandInfo || this.track.band_info || ''),
+                band_biography: track.band_biography || data.band_biography || this.track.band_biography || '',
                 band_thumbnail: trackChanged ? nextThumbnail : (nextThumbnail || this.track.band_thumbnail || ''),
                 band_founded_year: track.band_founded_year ?? this.track.band_founded_year ?? null,
                 band_founded_label: track.band_founded_label || this.track.band_founded_label || '',
@@ -886,6 +891,7 @@ export function registerRadioPlayer(Alpine) {
                         title: this.track.title || this.bandPanel.title || '',
                         artist: this.track.artist || this.bandPanel.artist || '',
                         info: this.track.band_info || this.track.comment || this.bandPanel.info || '',
+                        biography: this.track.band_biography || this.bandPanel.biography || this.track.band_info || '',
                         lyrics: this.track.lyrics || this.bandPanel.lyrics || '',
                         cover: this.track.band_thumbnail || this.track.cover || this.bandPanel.cover || this.fallbackCover,
                         foundedLabel: this.track.band_founded_label || this.bandPanel.foundedLabel || '',
@@ -895,6 +901,7 @@ export function registerRadioPlayer(Alpine) {
                         title: '',
                         artist: '',
                         info: '',
+                        biography: '',
                         lyrics: '',
                         cover: this.track.cover || this.fallbackCover,
                         foundedLabel: '',
@@ -1422,6 +1429,10 @@ export function registerRadioPlayer(Alpine) {
             const cortado = texto.substring(0, 177);
             const ultimoEspacio = cortado.lastIndexOf(' ');
             return (ultimoEspacio > 0 ? cortado.substring(0, ultimoEspacio) : cortado) + '...';
+        },
+
+        bandBioCompleta() {
+            return this.bandPanel.biography || this.track.band_biography || this.track.band_info || '';
         },
     }));
 }

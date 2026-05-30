@@ -524,14 +524,22 @@
                                     style="display:flex; flex-direction:column; gap:14px; height:100%; min-height:0; overflow-y:auto; padding-right:6px; overscroll-behavior:contain;"
                                 >
                                     <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
-                                        <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Biografía / información</h4>
+                                        <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Extracto</h4>
                                         <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="resumenBio || 'Buscando información de banda...'"></p>
+                                    </section>
 
+                                    <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
+                                        <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Enlaces / redes</h4>
                                         <div x-show="bandPanel.logo || track.band_logo || bandLinks().length" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
                                             <template x-for="link in bandLinks()" :key="link.url">
                                                 <a :href="link.url" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; justify-content:center; min-height:28px; padding:0 10px; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.2); color:#dcd7cb; text-decoration:none; font-family:var(--font-display); font-size:10px; letter-spacing:.14em; text-transform:uppercase; border-radius:14px;" x-text="link.label"></a>
                                             </template>
                                         </div>
+                                    </section>
+
+                                    <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
+                                        <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Biografía completa</h4>
+                                        <p style="color:#e7e1d6; line-height:1.9; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="bandBioCompleta() || 'Buscando información de banda...'"></p>
                                     </section>
 
                                     <section x-show="Array.isArray(track.band_members) && track.band_members.length > 0" style="display:grid; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">

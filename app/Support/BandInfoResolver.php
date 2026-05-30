@@ -12,6 +12,7 @@ class BandInfoResolver
     /**
      * @return array{
      *     summary:string,
+     *     biography:string,
      *     thumbnail:string,
      *     social_links:array<int,array{label:string,url:string}>,
      *     formed_year:int|null,
@@ -40,6 +41,7 @@ class BandInfoResolver
     /**
      * @return array{
      *     summary:string,
+     *     biography:string,
      *     thumbnail:string,
      *     social_links:array<int,array{label:string,url:string}>,
      *     formed_year:int|null,
@@ -72,6 +74,7 @@ class BandInfoResolver
     private function buildProfilePayload(RadioArtist $profile): ?array
     {
         $summary = $this->formatSummaryText((string) ($profile->editorial_summary ?: $profile->biography ?: ''));
+        $biography = $this->formatSummaryText((string) ($profile->biography ?: $profile->editorial_summary ?: ''));
         $thumbnail = (string) ($profile->normalizedImageUrl() ?? '');
         $socialLinks = $this->normalizeLocalLinks((array) ($profile->official_links ?? []));
         $facts = $this->normalizeFacts((array) ($profile->featured_facts ?? []));
@@ -89,6 +92,7 @@ class BandInfoResolver
 
         return [
             'summary' => $summary,
+            'biography' => $biography,
             'thumbnail' => $thumbnail,
             'logo_path' => (string) ($profile->logo_path ?? ''),
             'country' => (string) ($profile->country ?? ''),
@@ -235,7 +239,7 @@ class BandInfoResolver
     }
 
     /**
-     * @return array{summary:string,thumbnail:string,social_links:array<int,array{label:string,url:string}>,formed_year:int|null,formed_label:string,facts:array<int,string>}
+     * @return array{summary:string,biography:string,thumbnail:string,social_links:array<int,array{label:string,url:string}>,formed_year:int|null,formed_label:string,facts:array<int,string>}
      */
     private function emptyPayload(string $artist = ''): array
     {
@@ -246,6 +250,7 @@ class BandInfoResolver
                     $artist
                 )
                 : 'No hay información ampliada disponible en este momento.',
+            'biography' => '',
             'thumbnail' => '',
             'logo_path' => '',
             'country' => '',
