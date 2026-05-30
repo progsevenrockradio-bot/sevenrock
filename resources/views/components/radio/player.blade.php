@@ -333,7 +333,8 @@
                 </section>
             </div>
         </div>
-    @else        <div
+    @else
+        <div
             class="radio-player-dock"
             aria-label="Reproductor"
             :class="{ 'is-minimized': dockMinimized }"
