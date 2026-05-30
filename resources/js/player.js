@@ -42,6 +42,7 @@ export function registerRadioPlayer(Alpine) {
         bandInfoLoading: false,
         programInfoLoading: false,
         programInfo: null,
+        coverVisible: true,
         isMobile: window.innerWidth < 640,
         muted: safeRead('sr-player-muted', '0') === '1',
         volume: Number(safeRead('sr-player-volume', '0.8')) || 0.8,
@@ -683,6 +684,7 @@ export function registerRadioPlayer(Alpine) {
             }
 
             if (previousSignature !== nextSignature) {
+                this.triggerCoverTransition();
                 this.progress.elapsed = 0;
                 if (widgetTrack.duration > 0) {
                     this.progress.duration = widgetTrack.duration;
@@ -776,6 +778,7 @@ export function registerRadioPlayer(Alpine) {
                     status: this.track.band_status || this.bandPanel.status || '',
                     labels: this.track.band_labels || this.bandPanel.labels || '',
                 };
+                this.triggerCoverTransition();
             } catch (error) {
                 // ignore band info lookup failures
             }
@@ -1214,6 +1217,15 @@ export function registerRadioPlayer(Alpine) {
         setTab(tab) {
             this.activeTab = tab;
             safeWrite('sr-player-tab', tab);
+        },
+
+        triggerCoverTransition() {
+            this.coverVisible = false;
+            this.$nextTick(() => {
+                requestAnimationFrame(() => {
+                    this.coverVisible = true;
+                });
+            });
         },
 
         programText() {
