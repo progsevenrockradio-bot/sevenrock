@@ -52,9 +52,6 @@ Route::get('/player/popup', [PlayerController::class, 'show'])->name('player.pop
 Route::get('/__debug/player-minimal', function () {
     return view('debug.player-minimal');
 })->name('debug.player-minimal');
-Route::get('/debug/player-minimal', function () {
-    return view('debug.player-minimal');
-})->name('debug.player-minimal.alias');
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('posts.comments.store');
 
