@@ -39,26 +39,24 @@ class BandInfoController extends Controller
                 'success' => true,
                 'data' => [
                     'summary' => 'No hay información ampliada disponible en este momento.',
-                'thumbnail' => '',
-                'logo_path' => '',
-                'country' => '',
-                'genre' => '',
-                'members_count' => null,
-                'status' => '',
-                'labels' => '',
-                'social_links' => [],
-                'formed_year' => null,
-                'formed_label' => '',
-                'facts' => [],
-                'biography' => '',
-                'lyrics' => '',
-            ],
-        ]);
+                    'thumbnail' => '',
+                    'logo_path' => '',
+                    'country' => '',
+                    'genre' => '',
+                    'members_count' => null,
+                    'status' => '',
+                    'labels' => '',
+                    'social_links' => [],
+                    'formed_year' => null,
+                    'formed_label' => '',
+                    'facts' => [],
+                    'lyrics' => '',
+                ],
+            ]);
         }
 
         $payload = $this->resolver->resolve($artist);
         $lyrics = '';
-        $biography = (string) ($payload['biography'] ?? '');
         $bandProfile = null;
 
         try {
@@ -73,18 +71,15 @@ class BandInfoController extends Controller
 
             if ($songMatchesArtist && $songBandProfileMatchesArtist && $song?->band_info && trim((string) $song->band_info) !== '' && ! $this->isFallbackSummary((string) $song->band_info, $artist)) {
                 $payload['summary'] = $this->formatSummaryText((string) $song->band_info);
-                $biography = $this->formatSummaryText((string) $song->band_info);
             } elseif ($songMatchesArtist && $songBandProfileMatchesArtist && $song?->bandProfile) {
                 $bandProfile = $song->bandProfile;
                 $payload['summary'] = $this->formatSummaryText((string) ($song->bandProfile->editorial_summary ?: $song->bandProfile->biography ?: $payload['summary']));
-                $biography = $this->formatSummaryText((string) ($song->bandProfile->biography ?: $song->bandProfile->editorial_summary ?: $payload['summary']));
                 $payload['thumbnail'] = $song->bandProfile->normalizedImageUrl() ?: $payload['thumbnail'];
                 $payload['social_links'] = $song->bandProfile->official_links ?: $payload['social_links'];
             } else {
                 $bandProfile = $this->resolveBandProfile($artist);
                 if ($bandProfile) {
                     $payload['summary'] = $this->formatSummaryText((string) ($bandProfile->editorial_summary ?: $bandProfile->biography ?: $payload['summary']));
-                    $biography = $this->formatSummaryText((string) ($bandProfile->biography ?: $bandProfile->editorial_summary ?: $payload['summary']));
                     $payload['thumbnail'] = $bandProfile->normalizedImageUrl() ?: $payload['thumbnail'];
                     $payload['social_links'] = $bandProfile->official_links ?: $payload['social_links'];
                     $payload['formed_year'] = $payload['formed_year'] ?: $this->yearFromBandProfile($bandProfile);
@@ -104,7 +99,6 @@ class BandInfoController extends Controller
         }
 
         $payload['lyrics'] = $lyrics;
-        $payload['biography'] = $biography !== '' ? $biography : (string) ($payload['summary'] ?? '');
 
         return response()->json([
             'success' => true,

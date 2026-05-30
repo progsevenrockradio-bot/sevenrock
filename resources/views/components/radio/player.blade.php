@@ -8,8 +8,6 @@
         : asset('assets/lucille/album3.jpg');
 @endphp
 
-{{-- Force a fresh compiled view hash during deployment. --}}
-
     <div
         class="radio-player"
         data-radio-player-root
@@ -206,18 +204,13 @@
                     <div class="relative w-full max-w-[380px] flex-none">
                         <div class="mx-auto flex w-full flex-col items-center gap-4 text-center">
                             <div class="relative">
-                                <span class="sr-cover-stack" style="width:240px; height:240px;" x-bind:class="{ 'is-slower': true }">
-                                    <img class="sr-cover-layer sr-cover-back h-[240px] w-[240px] rounded-[28px] object-cover shadow-[0_20px_50px_rgba(0,0,0,.80)] ring-1 ring-white/10 sm:h-[280px] sm:w-[280px]" :src="trackCoverFrame.previous || trackCoverFrame.current" alt="" aria-hidden="true" loading="lazy" x-show="trackCoverFrame.previous">
-                                    <img
-                                        class="sr-cover-layer sr-cover-front h-[240px] w-[240px] rounded-[28px] object-cover shadow-[0_20px_50px_rgba(0,0,0,.80)] ring-1 ring-white/10 sm:h-[280px] sm:w-[280px]"
-                                        :src="trackCoverFrame.current || trackCoverUrl()"
-                                        alt=""
-                                        @load="handleTrackCoverLoad()"
-                                        @error="handleTrackCoverError($event)"
-                                        :class="{ 'is-visible': trackCoverFrame.currentLoaded }"
-                                        loading="lazy"
-                                    >
-                                </span>
+                                <img
+                                    class="h-[240px] w-[240px] rounded-[28px] object-cover shadow-[0_20px_50px_rgba(0,0,0,.80)] ring-1 ring-white/10 sm:h-[280px] sm:w-[280px]"
+                                    :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')"
+                                    alt=""
+                                    onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;"
+                                    loading="lazy"
+                                >
                                 <div class="absolute bottom-3 right-3 flex items-end gap-1 rounded-full bg-black/45 px-2 py-1 backdrop-blur">
                                     <span class="radio-player-popup-wavebar" style="animation-delay:.05s;"></span>
                                     <span class="radio-player-popup-wavebar" style="animation-delay:.20s;height:14px;"></span>
@@ -335,8 +328,7 @@
                 </section>
             </div>
         </div>
-    @else
-        <div
+    @else        <div
             class="radio-player-dock"
             aria-label="Reproductor"
             :class="{ 'is-minimized': dockMinimized }"
@@ -346,10 +338,7 @@
         >
                 <div class="rbcloud_nowplaying" style="display:flex; flex-direction:column; gap:4px; min-width:0; align-items:flex-start; padding-left:0; margin-right:0;">
                     <button type="button" data-player-band-trigger @click="toggleInfoWindow()" aria-label="Abrir información" style="appearance:none; display:inline-flex; border:0; background:transparent; padding:0; cursor:pointer; text-align:left;">
-                        <span class="sr-cover-stack" x-bind:style="dockMinimized ? 'width:48px; height:48px;' : 'width:80px; height:80px;'">
-                            <img class="sr-cover-layer sr-cover-back" :src="trackCoverFrame.previous || trackCoverFrame.current" alt="" aria-hidden="true" loading="lazy" x-show="trackCoverFrame.previous">
-                            <img class="radio-player-cover sr-cover-layer sr-cover-front" data-player-cover-image :src="trackCoverFrame.current || trackCoverUrl()" alt="cover art" @load="handleTrackCoverLoad()" @error="handleTrackCoverError($event)" :class="{ 'is-visible': trackCoverFrame.currentLoaded }" x-bind:style="dockMinimized ? 'width:48px; height:48px; border:1px solid rgba(184,175,162,.14); box-shadow:0 1px 6px rgba(0,0,0,.18); object-fit:cover; border-radius:6px;' : 'width:80px; height:80px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover; border-radius:8px;'" loading="lazy">
-                        </span>
+                        <img class="radio-player-cover" data-player-cover-image :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="cover art" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" x-bind:style="dockMinimized ? 'width:48px; height:48px; border:1px solid rgba(184,175,162,.14); box-shadow:0 1px 6px rgba(0,0,0,.18); object-fit:cover; border-radius:6px;' : 'width:80px; height:80px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover; border-radius:8px;'" loading="lazy">
                     </button>
                 </div>
 
@@ -485,25 +474,13 @@
                         <div style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
                             <div class="sr-band-header" style="display:flex; gap:18px; align-items:flex-start; flex:0 0 auto;">
                                 <div style="flex-shrink:0;">
-                                    <span class="sr-cover-stack" style="width:180px; height:180px; min-width:180px;">
-                                        <img class="sr-cover-layer sr-cover-back sr-band-cover"
-                                            data-player-band-cover-image
-                                            :src="bandCoverFrame.previous || bandCoverFrame.current"
-                                            alt=""
-                                            aria-hidden="true"
-                                            loading="lazy"
-                                            x-show="bandCoverFrame.previous"
-                                            style="width:180px; height:180px; min-width:180px; object-fit:cover; border-radius:16px; border:1px solid rgba(184,175,162,.20); box-shadow:0 12px 32px rgba(0,0,0,.40); background:rgba(255,255,255,.04);"
-                                        >
-                                        <img class="sr-cover-layer sr-cover-front sr-band-cover"
-                                            data-player-band-cover-image
-                                            :src="bandCoverFrame.current || bandCoverUrl()"
-                                            alt=""
-                                            @load="handleBandCoverLoad()"
-                                            @error="handleBandCoverError($event)"
-                                            style="width:180px; height:180px; min-width:180px; object-fit:cover; border-radius:16px; border:1px solid rgba(184,175,162,.20); box-shadow:0 12px 32px rgba(0,0,0,.40); background:rgba(255,255,255,.04);"
-                                            loading="lazy">
-                                    </span>
+                                    <img class="sr-band-cover"
+                                        data-player-band-cover-image
+                                        :src="bandPanel.cover || track.band_thumbnail || track.cover || fallbackCover"
+                                        alt=""
+                                        onerror="this.onerror=null; this.src='{{ $fallbackCover }}'; this.style.width=''; this.style.height=''; this.style.minWidth='';"
+                                        style="width:180px; height:180px; min-width:180px; object-fit:cover; border-radius:16px; border:1px solid rgba(184,175,162,.20); box-shadow:0 12px 32px rgba(0,0,0,.40); background:rgba(255,255,255,.04);"
+                                        loading="lazy">
                                 </div>
 
                                 <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; padding-top:2px;">
@@ -547,22 +524,14 @@
                                     style="display:flex; flex-direction:column; gap:14px; height:100%; min-height:0; overflow-y:auto; padding-right:6px; overscroll-behavior:contain;"
                                 >
                                     <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
-                                        <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Extracto</h4>
+                                        <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Biografía / información</h4>
                                         <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="resumenBio || 'Buscando información de banda...'"></p>
-                                    </section>
 
-                                    <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
-                                        <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Enlaces / redes</h4>
                                         <div x-show="bandPanel.logo || track.band_logo || bandLinks().length" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
                                             <template x-for="link in bandLinks()" :key="link.url">
                                                 <a :href="link.url" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; justify-content:center; min-height:28px; padding:0 10px; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.2); color:#dcd7cb; text-decoration:none; font-family:var(--font-display); font-size:10px; letter-spacing:.14em; text-transform:uppercase; border-radius:14px;" x-text="link.label"></a>
                                             </template>
                                         </div>
-                                    </section>
-
-                                    <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
-                                        <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Biografía completa</h4>
-                                        <p style="color:#e7e1d6; line-height:1.9; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="bandBioCompleta() || 'Buscando información de banda...'"></p>
                                     </section>
 
                                     <section x-show="Array.isArray(track.band_members) && track.band_members.length > 0" style="display:grid; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
@@ -587,7 +556,7 @@
                                         <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Letra</h4>
                                         <p
                                             style="color:#e7e1d6; line-height:1.9; margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px;"
-                                            x-text="((bandPanel.lyrics || track.lyrics || '').trim() ? (bandPanel.lyrics || track.lyrics) : 'No hay letra disponible para esta canción')"
+                                            x-text="track.lyrics && track.lyrics.trim() ? track.lyrics : 'No hay letra disponible para esta canción'"
                                         ></p>
                                     </section>
                                 </div>
@@ -702,10 +671,7 @@
 
             <div class="radio-player-body" style="grid-template-columns:minmax(0,1fr) minmax(280px,.72fr); gap:14px; padding:16px 18px 18px;">
                 <section class="radio-player-now" style="grid-template-columns:128px minmax(0,1fr); gap:14px; align-items:start;">
-                    <span class="sr-cover-stack" style="width:128px; height:128px; min-height:128px;">
-                        <img class="sr-cover-layer sr-cover-back radio-player-cover-large" :src="trackCoverFrame.previous || trackCoverFrame.current" alt="" aria-hidden="true" loading="lazy" x-show="trackCoverFrame.previous">
-                        <img class="sr-cover-layer sr-cover-front radio-player-cover-large" :src="trackCoverFrame.current || trackCoverUrl()" alt="" @load="handleTrackCoverLoad()" @error="handleTrackCoverError($event)" :class="{ 'is-visible': trackCoverFrame.currentLoaded }" style="width:128px; height:128px; min-height:128px;" loading="lazy">
-                    </span>
+                    <img class="radio-player-cover-large" :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:128px; height:128px; min-height:128px;" loading="lazy">
                     <div class="radio-player-now-copy" style="justify-content:flex-start; gap:6px;">
                         <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'LIVE' : 'PLAYBACK'"></span>
                         <h3 x-text="track.title || defaultTitle"></h3>
@@ -1159,20 +1125,6 @@
   animation: srpulse 1.5s infinite;
 }
 
-.sr-cover-fade {
-  opacity: 0;
-  transform: scale(.985);
-  filter: saturate(.96) contrast(.98);
-  transition: opacity .26s ease, transform .26s ease, filter .26s ease;
-  will-change: opacity, transform, filter;
-}
-
-.sr-cover-fade.is-visible {
-  opacity: 1;
-  transform: scale(1);
-  filter: saturate(1) contrast(1);
-}
-
 @media (min-width: 640px) {
   .sr-band-tabs { display: flex !important; }
   .sr-band-columns { grid-template-columns: 1fr 1fr !important; }
@@ -1479,35 +1431,6 @@
 
 .sr-pulse {
   animation: srpulse 1.5s infinite;
-}
-
-.sr-cover-stack {
-  position: relative;
-  display: block;
-  flex: none;
-  overflow: hidden;
-}
-
-.sr-cover-layer {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: opacity .42s ease;
-  will-change: opacity;
-}
-
-.sr-cover-front {
-  opacity: 0;
-}
-
-.sr-cover-front.is-visible {
-  opacity: 1;
-}
-
-.sr-cover-back {
-  opacity: 1;
 }
 
 @media (min-width: 640px) {
