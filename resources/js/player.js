@@ -483,7 +483,6 @@ export function registerRadioPlayer(Alpine) {
             this.bandWindowOpen = true;
             this.bandWindowTab = 'lyrics';
             this.bandInfoLoading = false;
-            this.queueStatusRefresh(0);
             this.ensureBandInfo(true, snapshot).catch(() => {
                 // ignore band info lookup failures
             });

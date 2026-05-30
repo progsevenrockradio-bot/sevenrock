@@ -499,7 +499,7 @@
                             <div class="sr-band-body" style="flex:1; min-height:0; overflow-y:auto; margin-top:16px; padding-right:6px; overscroll-behavior:contain;">
                                 <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
                                     <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Biografía / información</h4>
-                                    <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="bandPanel.info || resumenBio || track.band_info || track.lyrics || 'Buscando información de banda...'"></p>
+                                    <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="resumenBio || track.lyrics || 'Buscando información de banda...'"></p>
 
                                     <div x-show="bandPanel.logo || track.band_logo || bandLinks().length" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
                                         <template x-for="link in bandLinks()" :key="link.url">
