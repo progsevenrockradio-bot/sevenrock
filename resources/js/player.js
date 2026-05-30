@@ -255,6 +255,24 @@ export function registerRadioPlayer(Alpine) {
                     return;
                 }
 
+                const syncFromAudio = () => {
+                    const duration = Number.isFinite(audio.duration) && audio.duration > 0
+                        ? Math.round(audio.duration)
+                        : 0;
+                    const elapsed = Number.isFinite(audio.currentTime) && audio.currentTime >= 0
+                        ? Math.round(audio.currentTime)
+                        : 0;
+
+                    if (duration > 0) {
+                        this.progress.duration = duration;
+                    } else if (this.track.is_live) {
+                        this.progress.duration = 0;
+                    }
+
+                    this.progress.elapsed = elapsed;
+                    this.syncProgress();
+                };
+
                 audio.addEventListener('play', () => {
                     this.playing = true;
                 });
@@ -269,13 +287,19 @@ export function registerRadioPlayer(Alpine) {
 
                 audio.addEventListener('canplay', () => {
                     this.loading = false;
+                    syncFromAudio();
+                });
+
+                audio.addEventListener('loadedmetadata', () => {
+                    syncFromAudio();
+                });
+
+                audio.addEventListener('durationchange', () => {
+                    syncFromAudio();
                 });
 
                 audio.addEventListener('timeupdate', () => {
-                    if (Number.isFinite(audio.currentTime)) {
-                        this.progress.elapsed = Math.min(Math.round(audio.currentTime), this.progress.duration || Math.round(audio.currentTime));
-                        this.syncProgress();
-                    }
+                    syncFromAudio();
                 });
 
                 audio.addEventListener('error', () => {
@@ -846,11 +870,22 @@ export function registerRadioPlayer(Alpine) {
 
             const widgetDuration = Number(widgetTrack?.duration || 0);
             const widgetElapsed = Number(widgetTrack?.elapsed || 0);
-            this.progress.duration = widgetDuration > 0 ? widgetDuration : Number(track.duration_seconds || 0);
-            this.progress.elapsed = widgetElapsed > 0
+            const audio = this.$refs.audio;
+            const audioDuration = audio && Number.isFinite(audio.duration) && audio.duration > 0
+                ? Math.round(audio.duration)
+                : 0;
+            const audioElapsed = audio && Number.isFinite(audio.currentTime) && audio.currentTime >= 0
+                ? Math.round(audio.currentTime)
+                : 0;
+
+            this.progress.duration = this.track.is_live
+                ? 0
+                : (audioDuration || widgetDuration || Number(track.duration_seconds || 0));
+            this.progress.elapsed = audioElapsed || (widgetElapsed > 0
                 ? widgetElapsed
-                : (trackChanged ? 0 : Number(track.elapsed_seconds || 0));
-            if (this.progress.duration > 0 && this.progress.elapsed > this.progress.duration) {
+                : (trackChanged ? 0 : Number(track.elapsed_seconds || 0)));
+
+            if (!this.track.is_live && this.progress.duration > 0 && this.progress.elapsed > this.progress.duration) {
                 this.progress.elapsed = 0;
             }
             this.syncProgress();
@@ -1171,12 +1206,29 @@ export function registerRadioPlayer(Alpine) {
         },
 
         async shareCurrent() {
-            const text = `${this.track.title || this.defaultTitle} - ${this.track.artist || this.defaultArtist}`;
+            const title = this.track.title || this.defaultTitle || 'Seven Rock Radio';
+            const artist = this.track.artist || this.defaultArtist || '';
+            const program = this.track.program_name || '';
+            const cover = this.track.cover || this.fallbackCover || '';
             const url = window.location.href;
+            const textParts = [
+                `Estoy escuchando "${title}"${artist ? ` de ${artist}` : ''} en Seven Rock Radio.`,
+            ];
+
+            if (program) {
+                textParts.push(`Programa: ${program}.`);
+            }
+
+            if (cover) {
+                textParts.push(`Carátula: ${cover}.`);
+            }
+
+            textParts.push(url);
+            const text = textParts.join(' ').replace(/\s{2,}/g, ' ').trim();
 
             if (navigator.share) {
                 try {
-                    await navigator.share({ title: text, text, url });
+                    await navigator.share({ title: 'Seven Rock Radio', text, url });
                     this.toastMessage('Compartido');
                     return;
                 } catch (error) {

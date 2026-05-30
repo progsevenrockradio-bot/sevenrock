@@ -58,114 +58,275 @@
     </div>
 
     @if ($mode === 'popup')
-        <div class="radio-player-popup-shell" style="display:flex; flex-direction:column; min-height:100vh; background:rgba(0,0,0,.18); overflow:hidden;">
-            <div class="radio-player-popup-stage" aria-hidden="true" style="position:relative; flex:1 1 auto; min-height:calc(100vh - 92px); background:linear-gradient(180deg, rgba(0,0,0,.84), rgba(0,0,0,.76));">
-                <span class="radio-player-popup-stage-label">Compartir Pop-out</span>
+        <style>
+            @keyframes srPopupWave {
+                0%, 100% { transform: scaleY(.38); opacity: .55; }
+                50% { transform: scaleY(1); opacity: 1; }
+            }
+
+            .radio-player-popup-shell {
+                position: relative;
+                min-height: 100vh;
+                overflow: hidden;
+                background: #050505;
+                color: #f4f1ea;
+            }
+
+            .radio-player-popup-bg,
+            .radio-player-popup-overlay {
+                position: absolute;
+                inset: 0;
+            }
+
+            .radio-player-popup-bg {
+                background-position: center;
+                background-size: cover;
+                transform: scale(1.08);
+                filter: blur(44px) saturate(1.1);
+                opacity: .38;
+            }
+
+            .radio-player-popup-overlay {
+                background: linear-gradient(180deg, rgba(0,0,0,.40) 0%, rgba(7,7,9,.72) 44%, rgba(6,6,8,.96) 100%);
+            }
+
+            .radio-player-popup-shell button {
+                font-family: var(--font-display);
+            }
+
+            .radio-player-popup-chip,
+            .radio-player-popup-control {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid rgba(184,175,162,.22);
+                background: rgba(0,0,0,.22);
+                color: #ddd7cb;
+                transition: transform .15s ease, border-color .15s ease, background .15s ease;
+            }
+
+            .radio-player-popup-chip:hover,
+            .radio-player-popup-control:hover {
+                transform: translateY(-1px);
+                border-color: rgba(184,175,162,.38);
+                background: rgba(0,0,0,.30);
+            }
+
+            .radio-player-popup-drawer {
+                border-top: 1px solid rgba(184,175,162,.14);
+                background: rgba(10,10,12,.76);
+                backdrop-filter: blur(18px);
+            }
+
+            .radio-player-popup-drawer-grid {
+                display: grid;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                gap: 0;
+                border-bottom: 1px solid rgba(184,175,162,.10);
+            }
+
+            .radio-player-popup-drawer-grid button {
+                min-height: 42px;
+                border: 0;
+                background: transparent;
+                color: #b7ad9f;
+                font-size: 10px;
+                letter-spacing: .18em;
+                text-transform: uppercase;
+                border-right: 1px solid rgba(184,175,162,.08);
+            }
+
+            .radio-player-popup-drawer-grid button.is-active {
+                color: #fff;
+                background: rgba(195,39,32,.12);
+            }
+
+            .radio-player-popup-drawer-body {
+                max-height: 280px;
+                overflow: auto;
+                padding: 18px;
+            }
+
+            .radio-player-popup-action-icon {
+                font-size: 18px;
+                line-height: 1;
+            }
+
+            .radio-player-popup-wavebar {
+                width: 4px;
+                height: 18px;
+                border-radius: 9999px;
+                background: linear-gradient(180deg, #ff5b4c 0%, #c32720 100%);
+                transform-origin: bottom;
+                animation: srPopupWave 1.2s ease-in-out infinite;
+            }
+
+            @media (max-width: 768px) {
+                .radio-player-popup-drawer-grid {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+
+                .radio-player-popup-drawer-grid button:nth-child(odd) {
+                    border-right: 1px solid rgba(184,175,162,.08);
+                }
+
+                .radio-player-popup-drawer-grid button:nth-child(2n) {
+                    border-right: 0;
+                }
+            }
+        </style>
+
+        <div class="radio-player-popup-shell">
+            <div
+                class="radio-player-popup-bg"
+                :style="`background-image:url('${(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')}')`"
+                aria-hidden="true"
+            ></div>
+            <div class="radio-player-popup-overlay" aria-hidden="true"></div>
+
+            <div class="relative z-10 flex min-h-screen flex-col gap-6 px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
+                <header class="flex items-center justify-between gap-4">
+                    <div class="min-w-0">
+                        <span style="display:block; color:#8f887d; font-size:10px; letter-spacing:.34em; text-transform:uppercase;">Seven Rock Radio</span>
+                        <div class="mt-1 flex items-center gap-2 min-w-0">
+                            <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'EN VIVO' : 'POP-UP'"></span>
+                            <span class="truncate text-[11px] text-zinc-300" x-text="track.program_name || (track.artist || defaultArtist)"></span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="radio-player-popup-chip rounded-full px-3 py-2 text-[10px] uppercase tracking-[.16em]" @click="shareCurrent()">Share</button>
+                        <button type="button" class="radio-player-popup-chip rounded-full px-3 py-2 text-[10px] uppercase tracking-[.16em]" @click="window.close()">Cerrar</button>
+                    </div>
+                </header>
+
+                <main class="flex flex-1 min-h-0 flex-col items-center justify-between gap-4 pt-2 pb-1">
+                    <div class="relative w-full max-w-[380px] flex-none">
+                        <div class="mx-auto flex w-full flex-col items-center gap-4 text-center">
+                            <div class="relative">
+                                <img
+                                    class="h-[240px] w-[240px] rounded-[28px] object-cover shadow-[0_20px_50px_rgba(0,0,0,.80)] ring-1 ring-white/10 sm:h-[280px] sm:w-[280px]"
+                                    :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')"
+                                    alt=""
+                                    onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;"
+                                    loading="lazy"
+                                >
+                                <div class="absolute bottom-3 right-3 flex items-end gap-1 rounded-full bg-black/45 px-2 py-1 backdrop-blur">
+                                    <span class="radio-player-popup-wavebar" style="animation-delay:.05s;"></span>
+                                    <span class="radio-player-popup-wavebar" style="animation-delay:.20s;height:14px;"></span>
+                                    <span class="radio-player-popup-wavebar" style="animation-delay:.35s;height:20px;"></span>
+                                    <span class="radio-player-popup-wavebar" style="animation-delay:.15s;height:16px;"></span>
+                                </div>
+                            </div>
+
+                            <div class="max-w-[32rem] mb-4 pb-1">
+                                <span class="radio-player-live-pill mx-auto mb-2" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'EN VIVO' : 'PLAYBACK'"></span>
+                                <h1 class="m-0 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl" x-text="track.title || defaultTitle"></h1>
+                                <p class="mt-1 text-sm font-medium text-zinc-300 sm:text-base" x-text="track.artist || defaultArtist"></p>
+                                <p class="mt-2 text-[11px] uppercase tracking-[.18em] text-zinc-500" x-text="track.is_live ? 'Transmitiendo ahora' : (track.program_name || '')"></p>
+                                <p class="mt-1 text-[11px] uppercase tracking-[.18em] text-zinc-500" x-text="listeners > 0 ? `${listeners} oyentes` : ''"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex w-full flex-none flex-col items-center gap-3 pb-0">
+                        <div class="flex w-full max-w-[560px] items-center gap-3 px-1">
+                            <div class="flex-1 min-w-0">
+                                <span class="block min-w-[64px] text-left text-[16px] font-mono uppercase tracking-[.22em] text-zinc-100" x-text="formatTime(progress.elapsed)"></span>
+                            </div>
+                            <button type="button" class="radio-player-popup-control h-16 w-16 shrink-0 rounded-full border-2 border-white/60 bg-white text-black shadow-[0_20px_40px_rgba(0,0,0,.45)]" @click="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'">
+                                <span class="radio-player-popup-action-icon" x-text="playing ? '❚❚' : '▶'"></span>
+                            </button>
+                            <div class="flex-1 min-w-0 flex justify-end">
+                                <button type="button" class="radio-player-popup-control h-10 w-10 shrink-0 rounded-full text-lg text-zinc-300" @click="toggleFavorite()" :aria-label="isFavoriteCurrent() ? 'Quitar de favoritos' : 'Me gusta'" :aria-pressed="isFavoriteCurrent()">
+                                    <span x-text="isFavoriteCurrent() ? '♥' : '♡'"></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="w-full max-w-[560px]">
+                            <button type="button" class="h-1.5 w-full overflow-hidden rounded-full bg-white/10" @click="seek($event)" aria-label="Progreso">
+                                <span class="block h-full rounded-full bg-red-600" :style="`width:${progress.ratio}%`"></span>
+                            </button>
+                        </div>
+
+                        <div class="flex w-full max-w-[560px] items-center gap-3 rounded-[18px] border border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
+                            <button type="button" class="radio-player-popup-control h-8 w-8 shrink-0 rounded-full border-white/10 bg-white/0 text-zinc-200" @click="toggleMute()" aria-label="Mute">
+                                <span x-text="muted ? '🔇' : '🔊'"></span>
+                            </button>
+                            <input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" class="h-1 w-full cursor-pointer accent-red-600">
+                            <span class="min-w-[34px] text-right text-[11px] font-mono uppercase tracking-[.18em] text-zinc-400" x-text="Math.round(volume * 100) + '%'">80%</span>
+                        </div>
+                    </div>
+                </main>
+
+                <section class="radio-player-popup-drawer overflow-hidden rounded-[22px] border border-white/10" x-show="panelOpen" x-transition.opacity>
+                    <div class="radio-player-popup-drawer-grid">
+                        <button type="button" :class="{ 'is-active': activeTab === 'lyrics' }" @click="setTab('lyrics')">Letra</button>
+                        <button type="button" :class="{ 'is-active': activeTab === 'band' }" @click="setTab('band')">Banda</button>
+                        <button type="button" :class="{ 'is-active': activeTab === 'program' }" @click="setTab('program')">Programa</button>
+                        <button type="button" :class="{ 'is-active': activeTab === 'notices' }" @click="setTab('notices')">Noticias</button>
+                        <button type="button" :class="{ 'is-active': activeTab === 'history' }" @click="setTab('history')">Historial</button>
+                    </div>
+
+                    <div class="radio-player-popup-drawer-body">
+                        <div x-show="activeTab === 'lyrics'">
+                            <h4 class="mb-3 text-[11px] uppercase tracking-[.22em] text-zinc-400">Letra del tema</h4>
+                            <p class="whitespace-pre-line text-sm leading-7 text-zinc-200" x-text="track.lyrics || 'Letra no disponible'"></p>
+                        </div>
+
+                        <div x-show="activeTab === 'band'">
+                            <h4 class="mb-3 text-[11px] uppercase tracking-[.22em] text-zinc-400">Info de banda</h4>
+                            <p class="whitespace-pre-line text-sm leading-7 text-zinc-200" x-text="track.band_info || 'Buscando información de banda...'"></p>
+                        </div>
+
+                        <div x-show="activeTab === 'program'">
+                            <h4 class="mb-3 text-[11px] uppercase tracking-[.22em] text-zinc-400">Programa</h4>
+                            <p class="text-sm leading-7 text-zinc-200" x-text="programText()"></p>
+                            <template x-if="nextProgram">
+                                <div class="mt-4 rounded-[18px] border border-white/10 bg-white/5 p-4">
+                                    <span class="mb-1 block text-[10px] uppercase tracking-[.22em] text-zinc-400">Próximo programa</span>
+                                    <strong class="block text-sm text-white" x-text="nextProgram.name"></strong>
+                                    <small class="block text-[11px] uppercase tracking-[.16em] text-zinc-500" x-text="nextProgram.schedule || ''"></small>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div x-show="activeTab === 'notices'">
+                            <h4 class="mb-3 text-[11px] uppercase tracking-[.22em] text-zinc-400">Noticias</h4>
+                            <template x-if="notices.length">
+                                <div class="space-y-3">
+                                    <template x-for="notice in notices" :key="notice.title">
+                                        <article class="rounded-[18px] border border-white/10 bg-white/5 p-4">
+                                            <strong class="block text-sm text-white" x-text="notice.title"></strong>
+                                            <p class="mt-2 text-sm leading-6 text-zinc-300" x-text="notice.content"></p>
+                                        </article>
+                                    </template>
+                                </div>
+                            </template>
+                            <p x-show="!notices.length" class="text-sm text-zinc-300">Sin avisos activos.</p>
+                        </div>
+
+                        <div x-show="activeTab === 'history'">
+                            <h4 class="mb-3 text-[11px] uppercase tracking-[.22em] text-zinc-400">Historial</h4>
+                            <template x-if="history.length">
+                                <div class="space-y-3">
+                                    <template x-for="item in history" :key="`${item.title}-${item.played_at}`">
+                                        <article class="flex items-center gap-3 rounded-[18px] border border-white/10 bg-white/5 p-3">
+                                            <img :src="item.cover || fallbackCover" alt="" loading="lazy" class="h-12 w-12 rounded-[12px] object-cover">
+                                            <div class="min-w-0">
+                                                <strong class="block truncate text-sm text-white" x-text="item.title"></strong>
+                                                <p class="truncate text-sm text-zinc-300" x-text="item.artist || defaultArtist"></p>
+                                            </div>
+                                        </article>
+                                    </template>
+                                </div>
+                            </template>
+                            <p x-show="!history.length" class="text-sm text-zinc-300">Sin historial todavía.</p>
+                        </div>
+                    </div>
+                </section>
             </div>
-
-            <section class="radio-player-popup-bar" style="position:relative; display:grid; grid-template-columns:minmax(280px,1.1fr) minmax(220px,.8fr) 1fr; gap:14px; align-items:center; min-height:92px; padding:10px 14px 10px 8px; border-top:1px solid rgba(195,39,32,.48); background:linear-gradient(180deg, rgba(16,16,18,.98), rgba(8,8,10,.98));">
-                <div class="radio-player-popup-track" style="display:grid; grid-template-columns:56px minmax(0,1fr); gap:10px; align-items:center;">
-                    <img class="radio-player-popup-cover" :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" style="width:56px; height:56px; object-fit:cover; display:block;" loading="lazy">
-                    <div class="radio-player-popup-meta" style="display:flex; flex-direction:column; gap:2px; min-width:0;">
-                        <span class="radio-player-live-pill is-live" x-show="track.is_live" style="display:inline-flex; align-items:center; justify-content:center; width:max-content; min-height:22px; padding:0 8px; border-radius:9999px; background:#b7ad9f; color:#151515; font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;">LIVE</span>
-                        <strong x-text="track.title || defaultTitle"></strong>
-                        <p x-text="track.artist || defaultArtist"></p>
-                        <small x-text="track.is_live ? '' : (track.program_name || '')"></small>
-                        <small x-text="listeners > 0 ? `${listeners} oyentes` : ''"></small>
-                    </div>
-                </div>
-
-                <div class="radio-player-popup-center" style="display:flex; flex-direction:column; justify-content:center; gap:10px;">
-                    <div class="radio-player-popup-time" style="display:flex; align-items:baseline; justify-content:center; gap:10px; color:#dcdcdc; font-family:var(--font-display); font-size:18px; font-weight:700;">
-                        <span x-text="formatTime(progress.elapsed)"></span>
-                        <strong>/</strong>
-                        <span x-text="formatTime(progress.duration)"></span>
-                    </div>
-                    <div class="radio-player-popup-volume" style="display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; width:min(240px,100%); margin-inline:auto; border:1px solid rgba(184,175,162,.3); background:rgba(0,0,0,.18); padding:7px 10px;">
-                        <span class="radio-player-popup-volume-label" style="color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.18em; text-transform:uppercase;">Vol</span>
-                        <input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" style="width:100%; accent-color:#b7ad9f; min-height:24px; cursor:pointer;">
-                        <span class="radio-player-popup-volume-value" x-text="Math.round(volume * 100) + '%'" style="color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.18em; text-transform:uppercase;"></span>
-                    </div>
-                </div>
-
-                <div class="radio-player-popup-actions" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); display:flex; align-items:center; justify-content:flex-end; gap:8px; z-index:5;">
-                    <button type="button" class="radio-player-popup-action" @click="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'" style="display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-width:62px; min-height:44px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.2); padding:6px 8px 5px; color:#dcdcdc; font-family:var(--font-display); font-size:9px; letter-spacing:.14em; text-transform:uppercase;">
-                        <span class="radio-player-popup-action-icon" x-text="playing ? '❚❚' : '▶'"></span>
-                        <span x-text="playing ? 'Pause' : 'Play'"></span>
-                    </button>
-                    <button type="button" class="radio-player-popup-action" @click="togglePanel()" style="display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-width:62px; min-height:44px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.2); padding:6px 8px 5px; color:#dcdcdc; font-family:var(--font-display); font-size:9px; letter-spacing:.14em; text-transform:uppercase;">
-                        <span class="radio-player-popup-action-icon">i</span>
-                        <span x-text="bandWindowOpen ? 'Cerrar' : 'Detalles'"></span>
-                    </button>
-                    <button type="button" class="radio-player-popup-action" @click="closePanel()" style="display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-width:62px; min-height:44px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.2); padding:6px 8px 5px; color:#dcdcdc; font-family:var(--font-display); font-size:9px; letter-spacing:.14em; text-transform:uppercase;">
-                        <span class="radio-player-popup-action-icon">⌄</span>
-                        <span x-text="dockMinimized ? 'Maximizar' : 'Minimizar'">Minimizar</span>
-                    </button>
-                </div>
-            </section>
-
-            <section class="radio-player-popup-drawer" x-show="panelOpen" x-transition style="border-top:1px solid #2b2b2b; background:rgba(16,16,18,.98);">
-                <div class="radio-player-popup-drawer-grid" style="display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); border-bottom:1px solid #2b2b2b;">
-                    <button type="button" :class="{ 'is-active': activeTab === 'lyrics' }" @click="setTab('lyrics')">Letra</button>
-                    <button type="button" :class="{ 'is-active': activeTab === 'band' }" @click="setTab('band')">Banda</button>
-                    <button type="button" :class="{ 'is-active': activeTab === 'program' }" @click="setTab('program')">Programa</button>
-                    <button type="button" :class="{ 'is-active': activeTab === 'notices' }" @click="setTab('notices')">Noticias</button>
-                    <button type="button" :class="{ 'is-active': activeTab === 'history' }" @click="setTab('history')">Historial</button>
-                </div>
-
-                <div class="radio-player-popup-drawer-body" style="max-height:240px; overflow:auto; padding:18px 18px 10px;">
-                    <div x-show="activeTab === 'lyrics'">
-                        <h4>Letra del tema</h4>
-                        <p style="white-space:pre-line; overflow-wrap:anywhere;" x-text="track.lyrics || 'Letra no disponible'"></p>
-                    </div>
-                    <div x-show="activeTab === 'band'">
-                        <h4>Info de banda</h4>
-                        <p style="white-space:pre-line; overflow-wrap:anywhere;" x-text="track.band_info || 'Buscando información de banda...'"></p>
-                    </div>
-                    <div x-show="activeTab === 'program'">
-                        <h4>Programa</h4>
-                        <p x-text="programText()"></p>
-                        <template x-if="nextProgram">
-                            <div class="radio-player-popup-next">
-                                <span>Próximo programa</span>
-                                <strong x-text="nextProgram.name"></strong>
-                                <small x-text="nextProgram.schedule || ''"></small>
-                            </div>
-                        </template>
-                    </div>
-                    <div x-show="activeTab === 'notices'">
-                        <h4>Noticias</h4>
-                        <template x-if="notices.length">
-                            <div class="space-y-3">
-                                <template x-for="notice in notices" :key="notice.title">
-                                    <article class="radio-player-popup-notice" :data-type="notice.type">
-                                        <strong x-text="notice.title"></strong>
-                                        <p x-text="notice.content"></p>
-                                    </article>
-                                </template>
-                            </div>
-                        </template>
-                        <p x-show="!notices.length">Sin avisos activos.</p>
-                    </div>
-                    <div x-show="activeTab === 'history'">
-                        <h4>Historial</h4>
-                        <template x-if="history.length">
-                            <div class="space-y-3">
-                                <template x-for="item in history" :key="`${item.title}-${item.played_at}`">
-                                    <article class="radio-player-popup-history">
-                                        <img :src="item.cover || fallbackCover" alt="" loading="lazy">
-                                        <div>
-                                            <strong x-text="item.title"></strong>
-                                            <p x-text="item.artist || defaultArtist"></p>
-                                        </div>
-                                    </article>
-                                </template>
-                            </div>
-                        </template>
-                        <p x-show="!history.length">Sin historial todavía.</p>
-                    </div>
-                </div>
-            </section>
         </div>
     @else        <div
             class="radio-player-dock"
@@ -181,7 +342,7 @@
                     </button>
                 </div>
 
-                <div style="display:flex; flex-direction:column; gap:2px; min-width:0; justify-content:center; padding-left:0; margin-left:8px; transform:translateY(0);">
+                <div class="radio-player-meta-column" style="display:flex; flex-direction:column; gap:2px; min-width:0; justify-content:center; padding-left:0; margin-left:8px; transform:translateY(0);">
                     <div class="radio-player-meta" style="min-width:0; gap:4px; align-items:flex-start;">
                         <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'EN VIVO' : 'PLAYBACK'" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:max-content; min-height:16px; padding:0 5px; border-radius:9999px; background:#b7ad9f; color:#151515; font-size:8px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;' : 'display:inline-flex; align-items:center; justify-content:center; width:max-content; min-height:22px; padding:0 8px; border-radius:9999px; background:#b7ad9f; color:#151515; font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;'"></span>
                         <strong data-player-title-text x-bind:style="dockMinimized ? 'font-size:12px; color:#ddd7cb; line-height:1.1; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;' : 'font-size:14px; color:#ddd7cb; line-height:1.08; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'" x-text="track.title || defaultTitle"></strong>
@@ -193,7 +354,11 @@
                         <span id="rbcloud_tracktimer_sep11096" hidden> &frasl; </span>
                         <span id="rbcloud_tracktimer_r11096"></span>
                     </div>
-                    <div x-show="!dockMinimized" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;">
+                    <div class="radio-player-mobile-share-popout radio-player-mobile-share-popout-inline" aria-label="Acciones móviles extra" style="display:none;">
+                        <button type="button" class="radio-player-chip radio-player-mobile-share" @click="shareCurrent()">Share</button>
+                        <button type="button" class="radio-player-chip radio-player-mobile-popout" @click="openPopout()">Pop-out</button>
+                    </div>
+                    <div class="radio-player-share-popout-desktop" x-show="!dockMinimized" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;">
                         <button type="button" class="radio-player-chip" @click="shareCurrent()" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:28px; padding:0 10px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; border-radius:14px;">Share</button>
                         <button type="button" class="radio-player-chip" @click="openPopout()" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:28px; padding:0 10px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; border-radius:14px;">Pop-out</button>
                     </div>
@@ -202,17 +367,20 @@
 
                 <span class="radio-player-actions" style="display:flex; flex:0 0 auto; align-items:center; justify-content:center; gap:8px; white-space:nowrap; margin-left:auto; padding-right:4px;">
                     <button type="button" class="radio-player-icon" data-player-action="details" @click.stop="toggleInfoWindow()" title="Detalles" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.15); color:#dcd7cc; border-radius:50%; cursor:pointer; font-size:10px; font-weight:600; line-height:1; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.22); color:#dcd7cc; border-radius:50%; cursor:pointer; font-size:13px; font-weight:600; line-height:1; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;'">i</button>
-                    <button type="button" class="radio-player-primary" data-player-action="play" @click.stop="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'" title="Play / Pause" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:2px solid rgba(184,175,162,.4); background:rgba(184,175,162,.08); color:#eee; border-radius:50%; cursor:pointer; font-size:14px; line-height:1; transition:all .15s ease; flex-shrink:0; padding:0; margin:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border:2px solid rgba(184,175,162,.5); background:rgba(184,175,162,.12); color:#eee; border-radius:50%; cursor:pointer; font-size:16px; line-height:1; transition:all .15s ease; flex-shrink:0; padding:0; margin:0;'">
-                        <span x-text="playing ? '❚❚' : '▶'">▶</span>
-                    </button>
+                    <div class="radio-player-actions-center" style="display:flex; align-items:center; justify-content:center; gap:8px; min-width:0; flex:1 1 auto;">
+                        <button type="button" data-player-action="expand" @click.stop="dockMinimized = false" aria-label="Expandir" title="Expandir" x-show="dockMinimized" style="display:none; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.15); color:#dcd7cc; cursor:pointer; border-radius:50%; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;" class="radio-player-expand-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:auto;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <button type="button" class="radio-player-primary" data-player-action="play" @click.stop="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'" title="Play / Pause" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:2px solid rgba(184,175,162,.4); background:rgba(184,175,162,.08); color:#eee; border-radius:50%; cursor:pointer; font-size:14px; line-height:1; transition:all .15s ease; flex-shrink:0; padding:0; margin:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border:2px solid rgba(184,175,162,.5); background:rgba(184,175,162,.12); color:#eee; border-radius:50%; cursor:pointer; font-size:16px; line-height:1; transition:all .15s ease; flex-shrink:0; padding:0; margin:0;'">
+                            <span x-text="playing ? '❚❚' : '▶'">▶</span>
+                        </button>
+                        <button type="button" data-player-action="minimize" @click.stop="dockMinimized = true" aria-label="Minimizar" title="Minimizar" x-show="!dockMinimized" style="display:none; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.22); color:#dcd7cc; cursor:pointer; border-radius:50%; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;" class="radio-player-minimize-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:auto;"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        </button>
+                    </div>
+                    <div class="radio-player-actions-spacer" aria-hidden="true" style="flex:1 1 28px;"></div>
                     <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" x-bind:style="dockMinimized ? (isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; border-radius:50%; cursor:pointer; font-size:10px; flex-shrink:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.1); color:#dcd7cb; border-radius:50%; cursor:pointer; font-size:10px; flex-shrink:0;') : (isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; border-radius:50%; cursor:pointer; flex-shrink:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; border-radius:50%; cursor:pointer; flex-shrink:0;')">
                         <span data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
-                    </button>
-                    <button type="button" data-player-action="expand" @click.stop="dockMinimized = false" aria-label="Expandir" title="Expandir" x-show="dockMinimized" style="display:none; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.15); color:#dcd7cc; cursor:pointer; border-radius:50%; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;" class="radio-player-expand-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:auto;"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <button type="button" data-player-action="minimize" @click.stop="dockMinimized = true" aria-label="Minimizar" title="Minimizar" x-show="!dockMinimized" style="display:none; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.22); color:#dcd7cc; cursor:pointer; border-radius:50%; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;" class="radio-player-minimize-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:auto;"><polyline points="18 15 12 9 6 15"></polyline></svg>
                     </button>
                 </span>
 
@@ -235,6 +403,35 @@
                     </button>
                     <input x-show="!dockMinimized" data-player-volume-input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" style="width:100%; accent-color:#b7ad9f; min-height:24px; cursor:pointer;">
                     <span x-show="!dockMinimized" data-player-volume-output x-text="Math.round(volume * 100) + '%'" style="color:#b7ad9f; font-family:var(--font-display); font-size:10px; letter-spacing:.12em; text-transform:uppercase; min-width:32px; text-align:right;">80%</span>
+                </div>
+
+                <div class="radio-player-mobile-share-popout" aria-label="Acciones móviles extra" style="display:none;">
+                    <button type="button" class="radio-player-chip radio-player-mobile-share" @click="shareCurrent()">Share</button>
+                    <button type="button" class="radio-player-chip radio-player-mobile-popout" @click="openPopout()">Pop-out</button>
+                </div>
+
+                <div class="radio-player-mobile-actions" aria-label="Controles móviles" style="display:none;">
+                    <button type="button" class="radio-player-icon radio-player-mobile-details" data-player-action="details" @click.stop="toggleInfoWindow()" title="Detalles" aria-label="Detalles">
+                        <span>i</span>
+                    </button>
+
+                    <div class="radio-player-mobile-actions-center">
+                        <button type="button" class="radio-player-icon radio-player-mobile-toggle radio-player-expand-btn" data-player-action="expand" @click.stop="dockMinimized = false" aria-label="Expandir" title="Expandir" x-show="dockMinimized" style="display:none;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+
+                        <button type="button" class="radio-player-primary radio-player-mobile-play" data-player-action="play" @click.stop="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'" title="Play / Pause">
+                            <span x-text="playing ? '❚❚' : '▶'">▶</span>
+                        </button>
+
+                        <button type="button" class="radio-player-icon radio-player-mobile-toggle radio-player-minimize-btn" data-player-action="minimize" @click.stop="dockMinimized = true" aria-label="Contraer" title="Contraer" x-show="!dockMinimized" style="display:none;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        </button>
+                    </div>
+
+                    <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" class="radio-player-mobile-favorite">
+                        <span data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
+                    </button>
                 </div>
         </div>
 
@@ -693,15 +890,221 @@
 }
 @media (max-width: 480px) {
   .radio-player-dock {
-    grid-template-columns: minmax(50px,.08fr) minmax(0,1fr) auto !important;
-    gap:6px !important; padding:6px 8px !important;
-    width:calc(100vw - 12px) !important; min-height:54px !important;
+    gap:6px !important;
+    padding:6px 8px !important;
+    width:calc(100vw - 12px) !important;
+    min-height:54px !important;
   }
-  .radio-player-dock .rbcloud_nowplaying button img { width:60px !important; height:60px !important; }
+
+  .radio-player-dock:not(.is-minimized) {
+    display:flex !important;
+    flex-direction:column !important;
+    gap:8px !important;
+    align-items:stretch !important;
+  }
+
+  .radio-player-dock .rbcloud_nowplaying button img { width:56px !important; height:56px !important; }
   .radio-player-dock .radio-player-meta strong { font-size:12px !important; }
   .radio-player-dock .radio-player-meta span { font-size:10px !important; }
   .radio-player-dock .rbcloud_tracktimer { display: flex !important; }
-  .radio-player-dock .radio-player-actions > div { display:none !important; }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions {
+    display:flex !important;
+    width:100% !important;
+    justify-content:flex-start !important;
+    gap:8px !important;
+    padding:0 !important;
+    margin:0 !important;
+    transform:none !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions-center {
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:6px !important;
+    flex:0 0 auto !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions-spacer {
+    display:block !important;
+    flex:1 1 12px !important;
+    min-width:12px !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="share"],
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="popout"] {
+    display:none !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button {
+    flex:0 0 auto !important;
+    position:relative !important;
+    transform:none !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="details"] {
+    order:1 !important;
+    width:34px !important;
+    height:34px !important;
+    min-width:34px !important;
+    padding:0 !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="expand"] {
+    order:2 !important;
+    width:30px !important;
+    height:30px !important;
+    min-width:30px !important;
+    padding:0 !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="play"] {
+    order:3 !important;
+    width:52px !important;
+    height:52px !important;
+    min-width:52px !important;
+    padding:0 !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    border-width:2px !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="play"] span {
+    color:#ffffff !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:100% !important;
+    height:100% !important;
+    font-size:18px !important;
+    line-height:1 !important;
+    position:relative !important;
+    z-index:2 !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="minimize"] {
+    order:4 !important;
+    width:34px !important;
+    height:34px !important;
+    min-width:34px !important;
+    padding:0 !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="expand"] svg,
+  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="minimize"] svg {
+    width:16px !important;
+    height:16px !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .sr-dock-volume {
+    display:flex !important;
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    gap:8px !important;
+    overflow:hidden !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .sr-dock-volume input[type="range"] {
+    flex:1 1 auto !important;
+    min-width:0 !important;
+  }
+
+  .radio-player-dock .radio-player-actions {
+    display:none !important;
+  }
+
+  .radio-player-mobile-actions {
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:10px !important;
+    width:100% !important;
+    min-width:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  .radio-player-mobile-details,
+  .radio-player-mobile-play,
+  .radio-player-mobile-toggle {
+    flex:0 0 auto !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    border-radius:50% !important;
+    padding:0 !important;
+    margin:0 !important;
+    position:relative !important;
+    overflow:visible !important;
+  }
+
+  .radio-player-mobile-details {
+    width:34px !important;
+    height:34px !important;
+    min-width:34px !important;
+    border:1px solid rgba(184,175,162,.30) !important;
+    background:rgba(0,0,0,.18) !important;
+    color:#dcd7cc !important;
+    font-size:13px !important;
+    font-weight:600 !important;
+    line-height:1 !important;
+  }
+
+  .radio-player-mobile-actions-center {
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:8px !important;
+    min-width:0 !important;
+    flex:1 1 auto !important;
+  }
+
+  .radio-player-mobile-play {
+    width:52px !important;
+    height:52px !important;
+    min-width:52px !important;
+    border:2px solid rgba(184,175,162,.50) !important;
+    background:rgba(184,175,162,.12) !important;
+    color:#fff !important;
+    z-index:2 !important;
+  }
+
+  .radio-player-mobile-play span {
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:100% !important;
+    height:100% !important;
+    color:#fff !important;
+    font-size:18px !important;
+    line-height:1 !important;
+    position:relative !important;
+    z-index:3 !important;
+  }
+
+  .radio-player-mobile-toggle {
+    width:34px !important;
+    height:34px !important;
+    min-width:34px !important;
+    border:1px solid rgba(184,175,162,.30) !important;
+    background:rgba(0,0,0,.18) !important;
+    color:#dcd7cc !important;
+  }
+
+  .radio-player-mobile-toggle svg {
+    width:16px !important;
+    height:16px !important;
+    display:block !important;
+  }
+
+  .radio-player-mobile-actions-spacer {
+    flex:0 0 34px !important;
+    min-width:34px !important;
+    height:1px !important;
+  }
   .radio-player-dock .radio-player-actions > button[data-player-action=details] span:last-child,
   .radio-player-dock .radio-player-actions > button[data-player-action=play] span:last-child,
   .radio-player-dock .radio-player-actions > button[data-player-action=favorite] span:last-child {
@@ -738,7 +1141,7 @@
   .sr-band-cover { width: 200px !important; height: 200px !important; min-width: 200px !important; }
 }
 
-@media (max-width: 639px) {
+        @media (max-width: 639px) {
   .sr-band-modal-container {
     height: min(85vh, 600px) !important;
   }
@@ -795,87 +1198,227 @@
     min-height:72px !important;
   }
 
-  /* EXPANDED: single row — cover | meta | play/actions | volume */
+  /* EXPANDED: vertical blocks on mobile */
   .radio-player-dock:not(.is-minimized) {
-    grid-template-columns: 64px minmax(0,1fr) auto minmax(120px,160px) !important;
-    grid-template-rows: auto !important;
-    gap:8px !important;
-    padding:8px 10px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:10px !important;
     width:calc(100vw - 16px) !important;
     min-height:auto !important;
-    align-items:center !important;
+    padding:10px 12px 12px !important;
+    align-items:stretch !important;
   }
 
-  /* Row 1: cover + meta + chips */
+  .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying,
+  .radio-player-dock:not(.is-minimized) .radio-player-meta-column,
+  .radio-player-dock:not(.is-minimized) .radio-player-actions,
+  .radio-player-dock:not(.is-minimized) .sr-dock-volume {
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    margin:0 !important;
+  }
+
+  /* FILA 1 */
   .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying {
-    grid-row: 1;
     display:flex !important;
     flex-direction:row !important;
-    gap:12px !important;
     align-items:center !important;
+    gap:12px !important;
   }
 
   .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying button img {
     width:56px !important;
     height:56px !important;
+    border-radius:10px !important;
   }
-  
-  .radio-player-dock:not(.is-minimized) .rbcloud_nowplaying + div {
-    grid-column: 2;
+
+  .radio-player-dock:not(.is-minimized) .radio-player-meta-column {
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) auto !important;
+    gap:4px 8px !important;
+    min-width:0 !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-meta {
+    grid-column:1 / -1 !important;
   }
 
   .radio-player-dock:not(.is-minimized) .radio-player-meta strong {
     font-size:14px !important;
-  }
-  .radio-player-dock:not(.is-minimized) .radio-player-meta span {
-    font-size:12px !important;
+    line-height:1.05 !important;
   }
 
-  .radio-player-dock:not(.is-minimized) .radio-player-actions {
-    grid-column: 3;
+  .radio-player-dock:not(.is-minimized) .radio-player-meta span,
+  .radio-player-dock:not(.is-minimized) .radio-player-meta small {
+    font-size:11px !important;
+    line-height:1.05 !important;
+  }
+
+  /* FILA 2 */
+  .radio-player-dock:not(.is-minimized) .sr-dock-volume {
     display:flex !important;
-    flex-wrap:nowrap !important;
-    justify-content:center !important;
+    flex-direction:row !important;
     align-items:center !important;
-    gap:6px !important;
-    padding:0 !important;
-    width:auto !important;
-    transform:none !important;
-    margin:0 !important;
+    gap:10px !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    overflow:hidden !important;
+    padding:4px 0 0 !important;
   }
 
-  /* No wrapping divs for volume inside actions on mobile expanded */
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > div {
+  .radio-player-dock:not(.is-minimized) .sr-dock-volume button[data-player-action="mute"] {
+    flex:0 0 auto !important;
+    width:32px !important;
+    height:32px !important;
+    padding:0 !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .sr-dock-volume input[type="range"] {
+    flex:1 1 auto !important;
+    width:100% !important;
+    min-width:0 !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .sr-dock-volume span[data-player-volume-output] {
+    flex:0 0 auto !important;
+    min-width:32px !important;
+    text-align:right !important;
+  }
+
+  .radio-player-share-popout-desktop {
     display:none !important;
   }
 
-  /* Compact buttons on mobile expanded */
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="play"] {
-    min-width:48px !important;
-    width:48px !important;
-    height:48px !important;
+  .radio-player-dock:not(.is-minimized) > .radio-player-mobile-share-popout {
+    display:none !important;
+  }
+
+  /* FILA 3 */
+  .radio-player-mobile-actions {
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:10px !important;
+    width:100% !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-actions {
+    display:none !important;
+  }
+
+  .radio-player-mobile-actions-center {
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:16px !important;
+    flex:1 1 auto !important;
+    min-width:0 !important;
+  }
+
+  .radio-player-mobile-share-popout-inline {
+    display:none !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-mobile-share-popout-inline {
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:6px !important;
+    flex:0 0 auto !important;
+    min-width:0 !important;
+    margin-left:auto !important;
+  }
+
+  .radio-player-dock.is-minimized .radio-player-mobile-share-popout-inline {
+    display:none !important;
+  }
+
+  .radio-player-mobile-share-popout-inline .radio-player-chip {
+    min-height:24px !important;
+    padding:0 8px !important;
+    font-size:9px !important;
+    letter-spacing:.12em !important;
+  }
+
+  .radio-player-mobile-actions-center > button {
+    flex:0 0 auto !important;
+    position:relative !important;
+    left:auto !important;
+    right:auto !important;
+    top:auto !important;
+    bottom:auto !important;
+    transform:none !important;
+    z-index:1 !important;
+    overflow:visible !important;
+  }
+
+  .radio-player-mobile-play {
+    width:52px !important;
+    height:52px !important;
+    min-width:52px !important;
     padding:0 !important;
+    margin:0 !important;
+    display:inline-flex !important;
+    align-items:center !important;
     justify-content:center !important;
     border-width:2px !important;
-    font-size:16px !important;
+    background:rgba(184,175,162,.12) !important;
   }
 
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="details"],
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="mute"],
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="favorite"] {
-    min-width:40px !important;
-    width:40px !important;
-    height:40px !important;
-    padding:0 !important;
+  .radio-player-mobile-play span {
+    color:#ffffff !important;
+    display:inline-flex !important;
+    align-items:center !important;
     justify-content:center !important;
+    width:100% !important;
+    height:100% !important;
+    font-size:18px !important;
+    line-height:1 !important;
+    position:relative !important;
+    z-index:2 !important;
   }
 
-  .radio-player-dock:not(.is-minimized) .radio-player-minimize-btn {
-    min-width:40px !important;
-    width:40px !important;
-    height:40px !important;
+  .radio-player-mobile-toggle {
+    width:34px !important;
+    height:34px !important;
+    min-width:34px !important;
     padding:0 !important;
+    margin:0 !important;
+  }
+
+  .radio-player-mobile-favorite {
+    width:34px !important;
+    height:34px !important;
+    min-width:34px !important;
+    display:inline-flex !important;
+    align-items:center !important;
     justify-content:center !important;
+    border:1px solid rgba(184,175,162,.30) !important;
+    background:rgba(0,0,0,.18) !important;
+    color:#dcd7cc !important;
+    border-radius:50% !important;
+    padding:0 !important;
+    margin:0 !important;
+    flex:0 0 auto !important;
+  }
+
+  .radio-player-mobile-favorite span {
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:100% !important;
+    height:100% !important;
+    line-height:1 !important;
+    font-size:14px !important;
+  }
+
+  .radio-player-dock.is-minimized .radio-player-mobile-favorite {
+    display:none !important;
+  }
+
+  .radio-player-dock:not(.is-minimized) .radio-player-mobile-favorite {
+    display:inline-flex !important;
   }
 
   /* Timer visible on mobile */
@@ -1024,46 +1567,8 @@
     font-size:12px !important;
   }
 
-  /* Row 2: controls inline */
-  .radio-player-dock:not(.is-minimized) .radio-player-actions {
-    grid-row: 2;
-    display:flex !important;
-    flex-wrap:nowrap !important;
-    justify-content:center !important;
-    align-items:center !important;
-    gap:8px !important;
-    padding:0 !important;
-    width:auto !important;
-    transform:none !important;
-    margin:0 !important;
-  }
-
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > div {
+  .radio-player-dock .radio-player-actions {
     display:none !important;
-  }
-
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="play"] {
-    min-width:44px !important;
-    width:44px !important;
-    height:44px !important;
-    padding:0 !important;
-    justify-content:center !important;
-    font-size:16px !important;
-  }
-
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="details"],
-  .radio-player-dock:not(.is-minimized) .radio-player-actions > button[data-player-action="favorite"] {
-    min-width:36px !important;
-    width:36px !important;
-    height:36px !important;
-    padding:0 !important;
-  }
-
-  .radio-player-dock:not(.is-minimized) .radio-player-minimize-btn {
-    min-width:36px !important;
-    width:36px !important;
-    height:36px !important;
-    padding:0 !important;
   }
 
   /* Row 3: volume slider full width */
