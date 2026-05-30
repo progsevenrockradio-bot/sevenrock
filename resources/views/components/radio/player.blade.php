@@ -8,6 +8,8 @@
         : asset('assets/lucille/album3.jpg');
 @endphp
 
+{{-- Force a fresh compiled view hash during deployment. --}}
+
     <div
         class="radio-player"
         data-radio-player-root
