@@ -439,7 +439,9 @@ export function registerRadioPlayer(Alpine) {
         },
 
         toggleInfoWindow() {
-            if (this.track.is_live && this.track.program_name) {
+            const esBloqueDePrograma = this.track.is_live && this.track.program_name && !this.track.artist;
+
+            if (esBloqueDePrograma) {
                 if (this.programWindowOpen) {
                     this.closeProgramWindow();
                     return;
