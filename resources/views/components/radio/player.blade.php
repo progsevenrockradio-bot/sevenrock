@@ -496,29 +496,70 @@
                                 </div>
                             </div>
 
-                            <div class="sr-band-body" style="flex:1; min-height:0; overflow-y:auto; margin-top:16px; padding-right:6px; overscroll-behavior:contain;">
-                                <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
-                                    <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Biografía / información</h4>
-                                    <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="resumenBio || track.lyrics || 'Buscando información de banda...'"></p>
+                            <div class="sr-band-tabs" style="display:flex; gap:18px; align-items:flex-end; margin-top:16px; border-bottom:1px solid rgba(184,175,162,.14); flex:0 0 auto;">
+                                <button
+                                    type="button"
+                                    @click="activeTab = 'bio'"
+                                    :aria-pressed="activeTab === 'bio'"
+                                    :class="activeTab === 'bio' ? 'border-b-2 border-white text-white' : 'border-b-2 border-transparent text-[#a7a093] hover:text-white'"
+                                    style="margin-bottom:-1px; padding:10px 2px 12px; background:transparent; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase; transition:color .15s ease, border-color .15s ease;"
+                                >
+                                    Biografía
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="activeTab = 'lyrics'"
+                                    :aria-pressed="activeTab === 'lyrics'"
+                                    :class="activeTab === 'lyrics' ? 'border-b-2 border-white text-white' : 'border-b-2 border-transparent text-[#a7a093] hover:text-white'"
+                                    style="margin-bottom:-1px; padding:10px 2px 12px; background:transparent; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase; transition:color .15s ease, border-color .15s ease;"
+                                >
+                                    Letras
+                                </button>
+                            </div>
 
-                                    <div x-show="bandPanel.logo || track.band_logo || bandLinks().length" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
-                                        <template x-for="link in bandLinks()" :key="link.url">
-                                            <a :href="link.url" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; justify-content:center; min-height:28px; padding:0 10px; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.2); color:#dcd7cb; text-decoration:none; font-family:var(--font-display); font-size:10px; letter-spacing:.14em; text-transform:uppercase; border-radius:14px;" x-text="link.label"></a>
-                                        </template>
-                                    </div>
-                                </section>
+                            <div class="sr-band-body" style="flex:1; min-height:0; overflow:hidden; margin-top:14px;">
+                                <div
+                                    x-show="activeTab === 'bio'"
+                                    x-cloak
+                                    style="display:flex; flex-direction:column; gap:14px; height:100%; min-height:0; overflow-y:auto; padding-right:6px; overscroll-behavior:contain;"
+                                >
+                                    <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
+                                        <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Biografía / información</h4>
+                                        <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="resumenBio || 'Buscando información de banda...'"></p>
 
-                                <section x-show="Array.isArray(track.band_members) && track.band_members.length > 0" style="margin-top:14px; display:grid; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
-                                    <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Integrantes</h4>
-                                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                                        <template x-for="member in (Array.isArray(track.band_members) ? track.band_members : [])" :key="typeof member === 'string' ? member : (member.name || member.member || member.title || JSON.stringify(member))">
-                                            <div style="display:flex; flex-direction:column; gap:2px; padding:8px 12px; border:1px solid rgba(184,175,162,.16); background:rgba(255,255,255,.02); border-radius:12px;">
-                                                <strong style="color:#e6e0d6; font-size:12px;" x-text="typeof member === 'string' ? member : (member.name || member.member || member.title || '')"></strong>
-                                                <span x-show="typeof member === 'object' && member && (member.role || member.instrument || member.position)" style="color:#a7a093; font-size:10px; letter-spacing:.06em; text-transform:uppercase;" x-text="member.role || member.instrument || member.position"></span>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </section>
+                                        <div x-show="bandPanel.logo || track.band_logo || bandLinks().length" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+                                            <template x-for="link in bandLinks()" :key="link.url">
+                                                <a :href="link.url" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; justify-content:center; min-height:28px; padding:0 10px; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.2); color:#dcd7cb; text-decoration:none; font-family:var(--font-display); font-size:10px; letter-spacing:.14em; text-transform:uppercase; border-radius:14px;" x-text="link.label"></a>
+                                            </template>
+                                        </div>
+                                    </section>
+
+                                    <section x-show="Array.isArray(track.band_members) && track.band_members.length > 0" style="display:grid; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
+                                        <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Integrantes</h4>
+                                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                            <template x-for="member in (Array.isArray(track.band_members) ? track.band_members : [])" :key="typeof member === 'string' ? member : (member.name || member.member || member.title || JSON.stringify(member))">
+                                                <div style="display:flex; flex-direction:column; gap:2px; padding:8px 12px; border:1px solid rgba(184,175,162,.16); background:rgba(255,255,255,.02); border-radius:12px;">
+                                                    <strong style="color:#e6e0d6; font-size:12px;" x-text="typeof member === 'string' ? member : (member.name || member.member || member.title || '')"></strong>
+                                                    <span x-show="typeof member === 'object' && member && (member.role || member.instrument || member.position)" style="color:#a7a093; font-size:10px; letter-spacing:.06em; text-transform:uppercase;" x-text="member.role || member.instrument || member.position"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </section>
+                                </div>
+
+                                <div
+                                    x-show="activeTab === 'lyrics'"
+                                    x-cloak
+                                    style="display:flex; flex-direction:column; gap:10px; height:100%; min-height:0; overflow-y:auto; padding-right:6px; overscroll-behavior:contain;"
+                                >
+                                    <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
+                                        <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Letra</h4>
+                                        <p
+                                            style="color:#e7e1d6; line-height:1.9; margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px;"
+                                            x-text="track.lyrics && track.lyrics.trim() ? track.lyrics : 'No hay letra disponible para esta canción'"
+                                        ></p>
+                                    </section>
+                                </div>
                             </div>
                         </div>
                     </template>
@@ -1085,7 +1126,7 @@
 }
 
 @media (min-width: 640px) {
-  .sr-band-tabs { display: none !important; }
+  .sr-band-tabs { display: flex !important; }
   .sr-band-columns { grid-template-columns: 1fr 1fr !important; }
   .sr-band-lyrics-col,
   .sr-band-info-col { display: flex !important; }
