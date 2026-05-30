@@ -444,7 +444,7 @@
             @click.self="closeBandWindow()"
             @keydown.escape.window="closeBandWindow()"
         >
-            <div class="sr-band-modal-container" style="position:relative; width:min(1100px, calc(100vw - 24px)); height:min(75vh, 720px); border:1px solid rgba(184,175,162,.22); border-radius:28px; background:linear-gradient(180deg, rgba(16,16,18,.92), rgba(10,10,11,.96)); backdrop-filter:blur(12px); box-shadow:0 28px 72px rgba(0,0,0,.58); padding:22px; overflow:visible; overscroll-behavior:contain; margin:auto; display:flex; flex-direction:column;">
+            <div class="sr-band-modal-container" style="position:relative; width:min(1100px, calc(100vw - 24px)); height:min(75vh, 720px); border:1px solid rgba(184,175,162,.22); border-radius:28px; background:linear-gradient(180deg, rgba(16,16,18,.92), rgba(10,10,11,.96)); backdrop-filter:blur(12px); box-shadow:0 28px 72px rgba(0,0,0,.58); padding:22px; overflow:hidden; overscroll-behavior:contain; margin:auto; display:flex; flex-direction:column;">
                 <button type="button" data-player-band-close @click.stop="closeBandWindow()" aria-label="Cerrar" style="position:absolute; right:16px; top:14px; z-index:9999; pointer-events:auto; appearance:none; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.22); color:#dcd7cb; width:44px; height:44px; display:grid; place-items:center; cursor:pointer; font-size:22px;">×</button>
 
                 <div class="sr-band-stage" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; gap:14px;">
@@ -471,104 +471,54 @@
                     </template>
 
                     <template x-if="!bandInfoLoading">
-                        <div style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; gap:14px;">
-                            <div class="sr-band-header" style="display:flex; gap:22px; align-items:flex-start; flex:0 0 auto;">
+                        <div style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
+                            <div class="sr-band-header" style="display:flex; gap:18px; align-items:flex-start; flex:0 0 auto;">
                                 <div style="flex-shrink:0;">
                                     <img class="sr-band-cover"
                                         data-player-band-cover-image
                                         :src="bandPanel.cover || track.band_thumbnail || track.cover || fallbackCover"
                                         alt=""
                                         onerror="this.onerror=null; this.src='{{ $fallbackCover }}'; this.style.width=''; this.style.height=''; this.style.minWidth='';"
-                                        style="width:200px; height:200px; min-width:200px; object-fit:cover; border-radius:16px; border:1px solid rgba(184,175,162,.20); box-shadow:0 12px 32px rgba(0,0,0,.40); background:rgba(255,255,255,.04);"
+                                        style="width:180px; height:180px; min-width:180px; object-fit:cover; border-radius:16px; border:1px solid rgba(184,175,162,.20); box-shadow:0 12px 32px rgba(0,0,0,.40); background:rgba(255,255,255,.04);"
                                         loading="lazy">
                                 </div>
 
-                                <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;">
-                                    <h3 data-player-band-title style="margin:0; color:#fff; font-family:var(--font-display); text-transform:uppercase; font-size:20px;" x-text="bandPanel.title || track.title || ''"></h3>
+                                <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; padding-top:2px;">
+                                    <h3 data-player-band-title style="margin:0; color:#fff; font-family:var(--font-display); text-transform:uppercase; font-size:20px; line-height:1.1;" x-text="bandPanel.title || track.title || ''"></h3>
                                     <p data-player-band-artist style="margin:0; color:#b9b1a5; font-size:14px;" x-text="bandPanel.artist || track.artist || ''"></p>
                                     <p x-show="(bandPanel.foundedLabel || track.band_founded_label)" style="margin:0; color:#b7ad9f; font-size:12px; letter-spacing:.08em; text-transform:uppercase;" x-text="bandPanel.foundedLabel || track.band_founded_label"></p>
-
-                                    <div x-show="bandPanel.country || track.band_country || bandPanel.genre || track.band_genre || bandPanel.membersCount || track.band_members_count || bandPanel.status || track.band_status" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+                                    <div x-show="bandPanel.country || track.band_country || bandPanel.genre || track.band_genre || bandPanel.membersCount || track.band_members_count || bandPanel.status || track.band_status" style="display:flex; flex-wrap:wrap; gap:6px;">
                                         <span x-show="bandPanel.country || track.band_country" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🌍 ' + (bandPanel.country || track.band_country || '')"></span>
                                         <span x-show="bandPanel.genre || track.band_genre" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🎵 ' + (bandPanel.genre || track.band_genre || '')"></span>
                                         <span x-show="bandPanel.membersCount || track.band_members_count" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'👥 ' + ((bandPanel.membersCount ?? track.band_members_count) || 0) + ' miembros'"></span>
                                         <span x-show="bandPanel.status || track.band_status" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="(() => { const status = bandPanel.status || track.band_status || ''; return status === 'active' ? '✅ Activo' : (status === 'on_hold' ? '⏸ En pausa' : (status === 'disbanded' ? '❌ Disuelto' : status)); })()"></span>
                                     </div>
+                                </div>
+                            </div>
 
-                                    <div x-show="bandLinks().length" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+                            <div class="sr-band-body" style="flex:1; min-height:0; overflow-y:auto; margin-top:16px; padding-right:6px; overscroll-behavior:contain;">
+                                <section style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
+                                    <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Biografía / información</h4>
+                                    <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="bandPanel.info || resumenBio || track.band_info || track.lyrics || 'Buscando información de banda...'"></p>
+
+                                    <div x-show="bandPanel.logo || track.band_logo || bandLinks().length" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
                                         <template x-for="link in bandLinks()" :key="link.url">
                                             <a :href="link.url" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; justify-content:center; min-height:28px; padding:0 10px; border:1px solid rgba(184,175,162,.28); background:rgba(0,0,0,.2); color:#dcd7cb; text-decoration:none; font-family:var(--font-display); font-size:10px; letter-spacing:.14em; text-transform:uppercase; border-radius:14px;" x-text="link.label"></a>
                                         </template>
                                     </div>
-
-                                    <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
-                                        <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'LIVE' : 'PLAYBACK'"></span>
-                                        <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" :style="isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; min-height:28px; padding:0 10px; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; border-radius:14px;' : 'display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; min-height:28px; padding:0 10px; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; border-radius:14px;'">
-                                            <span data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
-                                            <span data-player-favorite-label>Like</span>
-                                        </button>
-                                    </div>
-
-                                    <div x-show="bandPanel.logo || track.band_logo" style="margin-top:6px;">
-                                        <img :src="bandPanel.logo || track.band_logo" alt="" style="max-height:36px; width:auto; object-fit:contain; opacity:0.8;" onerror="this.style.display='none'" loading="lazy">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div x-show="isMobile" class="sr-band-tabs" x-cloak style="display:none; gap:8px; margin-top:0; flex:0 0 auto;">
-                                <button type="button" :class="{ 'is-active': activeTab === 'lyrics' }" @click="setTab('lyrics')" style="flex:1 1 0; min-height:38px; border:1px solid rgba(184,175,162,.16); background:rgba(255,255,255,.02); color:#dcd7ca; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase; border-radius:12px;">Letra</button>
-                                <button type="button" :class="{ 'is-active': activeTab === 'band' }" @click="setTab('band')" style="flex:1 1 0; min-height:38px; border:1px solid rgba(184,175,162,.16); background:rgba(255,255,255,.02); color:#dcd7ca; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase; border-radius:12px;">Información</button>
-                            </div>
-
-                            <div class="sr-band-columns" style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:4px; flex:1; min-height:0; overflow:hidden;">
-                                <section
-                                    class="sr-band-lyrics-col"
-                                    x-show="!isMobile || activeTab === 'lyrics'"
-                                    style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; min-height:0; overflow:hidden;"
-                                >
-                                    <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Letra</h4>
-                                    <div class="sr-band-text-scroll" style="flex:1; min-height:0; overflow-y:auto; max-height:400px;">
-                                        <p style="color:#e7e1d6; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="track.lyrics || 'Letra no disponible para este tema.'"></p>
-                                    </div>
                                 </section>
 
-                                <section
-                                    class="sr-band-info-col"
-                                    x-show="!isMobile || activeTab === 'band'"
-                                    style="display:flex; flex-direction:column; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; min-height:0; overflow:hidden;"
-                                >
-                                    <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Información</h4>
-                                    <div class="sr-band-text-scroll" style="flex:1; min-height:0; overflow-y:auto; max-height:400px;">
-                                        <p data-player-band-info style="color:#d8d3ca; line-height:1.8; margin:0; white-space:pre-line; overflow-wrap:anywhere; font-size:14px;" x-text="bandPanel.info || track.band_info || 'Buscando información de banda...'"></p>
-
-                                        <div x-show="bandPanel.country || track.band_country || bandPanel.genre || track.band_genre || bandPanel.membersCount || track.band_members_count || bandPanel.status || track.band_status" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:12px;">
-                                            <span x-show="bandPanel.country || track.band_country" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🌍 ' + (bandPanel.country || track.band_country || '')"></span>
-                                            <span x-show="bandPanel.genre || track.band_genre" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'🎵 ' + (bandPanel.genre || track.band_genre || '')"></span>
-                                            <span x-show="bandPanel.membersCount || track.band_members_count" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="'👥 ' + ((bandPanel.membersCount ?? track.band_members_count) || 0) + ' miembros'"></span>
-                                            <span x-show="bandPanel.status || track.band_status" style="display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.12); color:#c4bdb0; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="(() => { const status = bandPanel.status || track.band_status || ''; return status === 'active' ? '✅ Activo' : (status === 'on_hold' ? '⏸ En pausa' : (status === 'disbanded' ? '❌ Disuelto' : status)); })()"></span>
-                                        </div>
-
-                                        <template x-if="Array.isArray(bandPanel.facts) && bandPanel.facts.length">
-                                            <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:6px; border-top:1px solid rgba(184,175,162,.12); padding-top:10px;">
-                                                <template x-for="fact in bandPanel.facts" :key="fact">
-                                                    <span style="display:inline-flex; align-items:center; min-height:22px; padding:0 8px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#d8d3ca; font-size:10px; letter-spacing:.06em; text-transform:uppercase; border-radius:11px;" x-text="fact"></span>
-                                                </template>
+                                <section x-show="Array.isArray(track.band_members) && track.band_members.length > 0" style="margin-top:14px; display:grid; gap:10px; padding:16px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px;">
+                                    <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Integrantes</h4>
+                                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                        <template x-for="member in (Array.isArray(track.band_members) ? track.band_members : [])" :key="typeof member === 'string' ? member : (member.name || member.member || member.title || JSON.stringify(member))">
+                                            <div style="display:flex; flex-direction:column; gap:2px; padding:8px 12px; border:1px solid rgba(184,175,162,.16); background:rgba(255,255,255,.02); border-radius:12px;">
+                                                <strong style="color:#e6e0d6; font-size:12px;" x-text="typeof member === 'string' ? member : (member.name || member.member || member.title || '')"></strong>
+                                                <span x-show="typeof member === 'object' && member && (member.role || member.instrument || member.position)" style="color:#a7a093; font-size:10px; letter-spacing:.06em; text-transform:uppercase;" x-text="member.role || member.instrument || member.position"></span>
                                             </div>
                                         </template>
                                     </div>
                                 </section>
-                            </div>
-
-                            <div x-show="Array.isArray(track.band_members) && track.band_members.length > 0" style="margin-top:0; display:grid; gap:8px; padding:14px; border:1px solid rgba(184,175,162,.14); background:rgba(0,0,0,.16); border-radius:18px; flex:0 0 auto;">
-                                <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Alineación</h4>
-                                <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                                    <template x-for="member in (Array.isArray(track.band_members) ? track.band_members : [])" :key="typeof member === 'string' ? member : (member.name || member.member || member.title || JSON.stringify(member))">
-                                        <div style="display:flex; flex-direction:column; gap:2px; padding:8px 12px; border:1px solid rgba(184,175,162,.16); background:rgba(255,255,255,.02); border-radius:12px;">
-                                            <strong style="color:#e6e0d6; font-size:12px;" x-text="typeof member === 'string' ? member : (member.name || member.member || member.title || '')"></strong>
-                                            <span x-show="typeof member === 'object' && member && (member.role || member.instrument || member.position)" style="color:#a7a093; font-size:10px; letter-spacing:.06em; text-transform:uppercase;" x-text="member.role || member.instrument || member.position"></span>
-                                        </div>
-                                    </template>
-                                </div>
                             </div>
                         </div>
                     </template>
