@@ -556,7 +556,7 @@
                                         <h4 style="margin:0; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;">Letra</h4>
                                         <p
                                             style="color:#e7e1d6; line-height:1.9; margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px;"
-                                            x-text="track.lyrics && track.lyrics.trim() ? track.lyrics : 'No hay letra disponible para esta canción'"
+                                            x-text="((bandPanel.lyrics || track.lyrics || '').trim() ? (bandPanel.lyrics || track.lyrics) : 'No hay letra disponible para esta canción')"
                                         ></p>
                                     </section>
                                 </div>

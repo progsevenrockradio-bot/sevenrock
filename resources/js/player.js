@@ -34,9 +34,9 @@ export function registerRadioPlayer(Alpine) {
         panelOpen: false,
         bandWindowOpen: false,
         programWindowOpen: false,
-        bandWindowTab: 'lyrics',
+        bandWindowTab: 'bio',
         dockMinimized: true,
-        activeTab: 'lyrics',
+        activeTab: 'bio',
         playing: false,
         loading: true,
         bandInfoLoading: false,
@@ -88,6 +88,7 @@ export function registerRadioPlayer(Alpine) {
             title: '',
             artist: '',
             info: '',
+            lyrics: '',
             cover: '',
             foundedLabel: '',
             facts: [],
@@ -119,9 +120,9 @@ export function registerRadioPlayer(Alpine) {
         init() {
             this.panelOpen = this.mode === 'page' ? true : false;
             this.bandWindowOpen = false;
-            this.bandWindowTab = 'lyrics';
+            this.bandWindowTab = 'bio';
             this.dockMinimized = true;
-            this.activeTab = safeRead('sr-player-tab', 'lyrics');
+            this.activeTab = safeRead('sr-player-tab', 'bio');
             this.isMobile = window.innerWidth < 640;
             this.toast.visible = false;
             this.toast.message = '';
@@ -468,6 +469,7 @@ export function registerRadioPlayer(Alpine) {
                 title: this.track.title || '',
                 artist: this.track.artist || '',
                 info: this.track.band_info || this.track.comment || '',
+                lyrics: this.track.lyrics || '',
                 cover: this.track.band_thumbnail || this.track.cover || this.fallbackCover,
                 foundedLabel: this.track.band_founded_label || '',
                 facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : [],
@@ -482,7 +484,8 @@ export function registerRadioPlayer(Alpine) {
             this.bandInfoLoading = true;
             this.bandPanel = snapshot;
             this.bandWindowOpen = true;
-            this.bandWindowTab = 'lyrics';
+            this.activeTab = 'bio';
+            this.bandWindowTab = 'bio';
             this.bandInfoLoading = false;
             this.ensureBandInfo(true, snapshot).catch(() => {
                 // ignore band info lookup failures
@@ -751,12 +754,14 @@ export function registerRadioPlayer(Alpine) {
                     band_founded_year: data.formed_year ?? this.track.band_founded_year ?? null,
                     band_founded_label: data.formed_label || this.track.band_founded_label || '',
                     band_facts: Array.isArray(data.facts) ? data.facts : (this.track.band_facts || []),
+                    lyrics: data.lyrics || this.track.lyrics || this.bandPanel.lyrics || '',
                 };
                 this.bandLookupArtist = lookupKey;
                 this.bandPanel = {
                     title: this.bandPanel.title || track.title || this.track.title || '',
                     artist: this.bandPanel.artist || track.artist || this.track.artist || '',
                     info: this.track.band_info || this.bandPanel.info || '',
+                    lyrics: this.track.lyrics || this.bandPanel.lyrics || '',
                     cover: this.track.band_thumbnail || this.track.cover || this.bandPanel.cover || this.fallbackCover,
                     foundedLabel: this.track.band_founded_label || this.bandPanel.foundedLabel || '',
                     facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : (this.bandPanel.facts || []),
@@ -881,6 +886,7 @@ export function registerRadioPlayer(Alpine) {
                         title: this.track.title || this.bandPanel.title || '',
                         artist: this.track.artist || this.bandPanel.artist || '',
                         info: this.track.band_info || this.track.comment || this.bandPanel.info || '',
+                        lyrics: this.track.lyrics || this.bandPanel.lyrics || '',
                         cover: this.track.band_thumbnail || this.track.cover || this.bandPanel.cover || this.fallbackCover,
                         foundedLabel: this.track.band_founded_label || this.bandPanel.foundedLabel || '',
                         facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : (this.bandPanel.facts || []),
@@ -889,6 +895,7 @@ export function registerRadioPlayer(Alpine) {
                         title: '',
                         artist: '',
                         info: '',
+                        lyrics: '',
                         cover: this.track.cover || this.fallbackCover,
                         foundedLabel: '',
                         facts: [],
