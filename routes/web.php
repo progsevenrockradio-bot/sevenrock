@@ -49,9 +49,6 @@ Route::get('/contact', [SiteController::class, 'contact'])->name('contact');
 Route::post('/contact', [SiteController::class, 'contactSend'])->name('contact.send');
 Route::post('/home-contact', [SiteController::class, 'homeContactSend'])->name('home.contact.send');
 Route::get('/player/popup', [PlayerController::class, 'show'])->name('player.popup');
-Route::get('/__debug/player-minimal', function () {
-    return view('debug.player-minimal');
-})->name('debug.player-minimal');
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('posts.comments.store');
 
@@ -149,3 +146,4 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
     });
 });
+
