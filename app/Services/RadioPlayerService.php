@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Notice;
 use App\Models\PlayHistory;
+use App\Models\MasterProgram;
 use App\Models\Program;
+use App\Models\RadioProgram;
 use App\Models\Song;
 use App\Support\BandProfileMatcher;
 use App\Support\BandInfoResolver;
@@ -95,8 +97,6 @@ class RadioPlayerService
         $lookupState['cover'] = $rawCover;
 
         $song = $this->resolveSong($lookupState);
-        $bandProfile = $song?->bandProfile
-            ?? $this->resolveBandProfile($state, $song);
         $trackTitle = $this->firstFilledString([
             $song?->title,
             $rawTitle,
@@ -119,10 +119,10 @@ class RadioPlayerService
                     ?? $defaults['cover']
             )
         );
-        $bandProfilePayload = [];  // Band enrichment via band-info API endpoint only
         $lyrics = $song?->lyrics ?? '';  // From band-info API only
+        $scheduleContext = $this->resolveActiveProgramContext();
         $programs = $this->loadPrograms();
-        $currentProgram = $this->resolveCurrentProgram($state, $song, $programs);
+        $currentProgram = $scheduleContext['program'] ?? $this->resolveCurrentProgram($state, $song, $programs);
         $nextProgram = $this->resolveNextProgram(
             $currentProgram,
             $programs,
@@ -178,10 +178,12 @@ class RadioPlayerService
                 ? $song->social_links
                 : (Arr::get($state, 'social_links', []) ?: []),
             'audio_url' => $song?->audio_url ?: Arr::get($state, 'audio_url'),
-            'program_id' => $currentProgram?->id ?? Arr::get($state, 'program_id'),
-            'program_name' => $currentProgram?->name,
+            'program_id' => $scheduleContext['program_id'] ?? ($currentProgram?->id ?? Arr::get($state, 'program_id')),
+            'program_name' => $scheduleContext['program_name'] ?? $currentProgram?->name,
+            'program_description' => $scheduleContext['program_description'] ?? $currentProgram?->description,
             'program_host' => $currentProgram?->host,
             'program_schedule' => $currentProgram?->schedule,
+            'es_bloque_programa' => (bool) ($scheduleContext['es_bloque_programa'] ?? false),
             'is_live' => (bool) Arr::get($state, 'is_live', $song?->is_live ?? true),
             'signature' => $trackSignature,
             'started_at' => Arr::get($state, 'started_at'),
@@ -196,6 +198,10 @@ class RadioPlayerService
             'playlist_m3u' => config('player.streams.m3u'),
             'playlist_pls' => config('player.streams.pls'),
             'listeners' => (int) Arr::get($state, 'listeners', 0),
+            'es_bloque_programa' => (bool) ($scheduleContext['es_bloque_programa'] ?? false),
+            'program_id' => $scheduleContext['program_id'] ?? null,
+            'program_name' => $scheduleContext['program_name'] ?? null,
+            'program_description' => $scheduleContext['program_description'] ?? null,
             'track' => $track,
             'program' => $this->programPayload($currentProgram),
             'next_program' => $this->programPayload($nextProgram),
@@ -290,6 +296,223 @@ class RadioPlayerService
         }
 
         return $programs->first();
+    }
+
+    /**
+     * @return array{es_bloque_programa:bool,program_id:int|null,program_name:string|null,program_description:string|null,program:?Program}
+     */
+    private function resolveActiveProgramContext(): array
+    {
+        $empty = [
+            'es_bloque_programa' => false,
+            'program_id' => null,
+            'program_name' => null,
+            'program_description' => null,
+            'program' => null,
+        ];
+
+        if (! $this->hasTable('master_programs') || ! $this->hasTable('radio_programs')) {
+            return $empty;
+        }
+
+        $now = Carbon::now(config('app.timezone'));
+        $episodes = RadioProgram::query()
+            ->with('masterProgram')
+            ->orderByDesc('fecha_emision')
+            ->orderByDesc('id')
+            ->get();
+
+        foreach ($episodes as $episode) {
+            $master = $episode->masterProgram;
+            if (! $master || ! $master->activo) {
+                continue;
+            }
+
+            if (! $this->isEpisodeOnAir($episode, $master, $now)) {
+                continue;
+            }
+
+            $program = Program::query()->find($episode->getKey());
+
+            return [
+                'es_bloque_programa' => true,
+                'program_id' => (int) $episode->getKey(),
+                'program_name' => $this->firstFilledString([
+                    $episode->titulo_programa,
+                    $episode->live_title,
+                    $master->name,
+                    $master->nombre,
+                ]),
+                'program_description' => $this->firstFilledString([
+                    $episode->informacion_fija_programa,
+                    $episode->live_description,
+                    $episode->resena,
+                    $episode->comentario_episodio,
+                    $master->description,
+                    $master->live_description,
+                    $master->comentario_predeterminado,
+                ]),
+                'program' => $program,
+            ];
+        }
+
+        foreach (MasterProgram::query()->where('activo', true)->orderBy('dia_transmision')->orderBy('hora_transmision')->get() as $master) {
+            if (! $this->isMasterOnAir($master, $now)) {
+                continue;
+            }
+
+            $episode = $episodes->firstWhere('master_program_id', (int) $master->getKey());
+            $program = $episode ? Program::query()->find($episode->getKey()) : null;
+
+            return [
+                'es_bloque_programa' => true,
+                'program_id' => $episode ? (int) $episode->getKey() : (int) $master->getKey(),
+                'program_name' => $this->firstFilledString([
+                    $episode?->titulo_programa,
+                    $episode?->live_title,
+                    $master->name,
+                    $master->nombre,
+                ]),
+                'program_description' => $this->firstFilledString([
+                    $episode?->informacion_fija_programa,
+                    $episode?->live_description,
+                    $episode?->resena,
+                    $episode?->comentario_episodio,
+                    $master->description,
+                    $master->live_description,
+                    $master->comentario_predeterminado,
+                ]),
+                'program' => $program,
+            ];
+        }
+
+        return $empty;
+    }
+
+    private function isMasterOnAir(MasterProgram $master, Carbon $now): bool
+    {
+        if (! $master->activo) {
+            return false;
+        }
+
+        $timezone = $this->normalizeTimezone((string) ($master->timezone ?: config('app.timezone')));
+        $localNow = $now->copy()->setTimezone($timezone);
+
+        if ($master->live_starts_at && $master->live_ends_at) {
+            $start = Carbon::parse((string) $master->live_starts_at, $timezone);
+            $end = Carbon::parse((string) $master->live_ends_at, $timezone);
+
+            if ($end->lessThan($start)) {
+                return $localNow->greaterThanOrEqualTo($start) || $localNow->lessThanOrEqualTo($end);
+            }
+
+            return $localNow->betweenIncluded($start, $end);
+        }
+
+        if (strtoupper(trim((string) $master->dia_transmision)) !== $this->currentDayKey($localNow)) {
+            return false;
+        }
+
+        return $this->isTimeWithinWindow(
+            $localNow,
+            (string) $master->hora_transmision,
+            '',
+            (int) $master->duracion_minutos
+        );
+    }
+
+    private function isEpisodeOnAir(RadioProgram $episode, MasterProgram $master, Carbon $now): bool
+    {
+        $timezone = $this->normalizeTimezone((string) ($master->timezone ?: config('app.timezone')));
+        $localNow = $now->copy()->setTimezone($timezone);
+
+        if ($episode->fecha_emision) {
+            $episodeDate = Carbon::parse((string) $episode->fecha_emision, $timezone)->toDateString();
+            if ($episodeDate !== $localNow->toDateString()) {
+                return false;
+            }
+        } else {
+            $daySource = strtoupper(trim((string) ($episode->dia_transmision ?: $master->dia_transmision)));
+            if ($daySource !== '' && $daySource !== $this->currentDayKey($localNow)) {
+                return false;
+            }
+        }
+
+        if ($master->live_starts_at && $master->live_ends_at) {
+            $start = Carbon::parse((string) $master->live_starts_at, $timezone);
+            $end = Carbon::parse((string) $master->live_ends_at, $timezone);
+
+            if ($end->lessThan($start)) {
+                return $localNow->greaterThanOrEqualTo($start) || $localNow->lessThanOrEqualTo($end);
+            }
+
+            return $localNow->betweenIncluded($start, $end);
+        }
+
+        $startTime = (string) ($episode->hora_inicio ?: $master->hora_transmision ?: '');
+        $endTime = (string) ($episode->hora_fin ?: '');
+
+        return $this->isTimeWithinWindow($localNow, $startTime, $endTime, (int) $master->duracion_minutos);
+    }
+
+    private function isTimeWithinWindow(Carbon $moment, string $startTime, string $endTime, int $durationMinutes): bool
+    {
+        $start = $this->parseTimeToSeconds($startTime);
+        if ($start === null) {
+            return false;
+        }
+
+        $end = $this->parseTimeToSeconds($endTime);
+        if ($end === null) {
+            $end = $durationMinutes > 0 ? $start + ($durationMinutes * 60) : $start;
+        }
+
+        $current = ((int) $moment->format('H')) * 3600 + ((int) $moment->format('i')) * 60 + (int) $moment->format('s');
+
+        if ($end < $start) {
+            return $current >= $start || $current <= $end;
+        }
+
+        return $current >= $start && $current <= $end;
+    }
+
+    private function parseTimeToSeconds(string $value): ?int
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', $value, $matches) !== 1) {
+            return null;
+        }
+
+        $hours = (int) $matches[1];
+        $minutes = (int) $matches[2];
+        $seconds = (int) ($matches[3] ?? 0);
+
+        return ($hours * 3600) + ($minutes * 60) + $seconds;
+    }
+
+    private function currentDayKey(Carbon $moment): string
+    {
+        return match ($moment->dayOfWeekIso) {
+            1 => 'LUNES',
+            2 => 'MARTES',
+            3 => 'MIERCOLES',
+            4 => 'JUEVES',
+            5 => 'VIERNES',
+            6 => 'SABADO',
+            7 => 'DOMINGO',
+            default => 'LUNES',
+        };
+    }
+
+    private function normalizeTimezone(string $timezone): string
+    {
+        $timezone = trim($timezone);
+
+        return $timezone !== '' ? $timezone : config('app.timezone');
     }
 
     private function resolveNextProgram(?Program $currentProgram, $programs, array $remoteUpcomingPrograms = []): ?Program

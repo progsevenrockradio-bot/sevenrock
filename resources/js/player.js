@@ -75,6 +75,7 @@ export function registerRadioPlayer(Alpine) {
             program_host: '',
             program_schedule: '',
             program_id: null,
+            es_bloque_programa: false,
         },
         program: null,
         nextProgram: null,
@@ -440,7 +441,7 @@ export function registerRadioPlayer(Alpine) {
         },
 
         toggleInfoWindow() {
-            const esBloqueDePrograma = this.track.is_live && this.track.program_name && !this.track.artist;
+            const esBloqueDePrograma = Boolean(this.track.es_bloque_programa);
 
             if (esBloqueDePrograma) {
                 if (this.programWindowOpen) {
@@ -864,11 +865,12 @@ export function registerRadioPlayer(Alpine) {
                 social_links: nextLinks.length ? nextLinks : [],
                 audio_url: track.audio_url || this.track.audio_url || '',
                 is_live: track.is_live ?? true,
-                program_name: track.program_name || '',
-                program_description: track.program_description || data.program?.description || this.track.program_description || '',
+                program_name: track.program_name || data.program_name || this.track.program_name || '',
+                program_description: track.program_description || data.program_description || data.program?.description || this.track.program_description || '',
                 program_host: track.program_host || '',
                 program_schedule: track.program_schedule || '',
-                program_id: track.program_id || null,
+                program_id: track.program_id || data.program_id || null,
+                es_bloque_programa: track.es_bloque_programa ?? data.es_bloque_programa ?? false,
             };
 
             if (trackChanged) {
