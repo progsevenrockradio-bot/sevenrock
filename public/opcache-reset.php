@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 header('Content-Type: text/plain; charset=UTF-8');
 
-// Cambia esta clave antes de subirlo a producción.
-$expectedKey = 'CHANGE_THIS_OPCACHE_KEY';
+// Clave temporal para resetear OPcache una sola vez.
+$expectedKey = '7f4c1d9a2e8b4c0d9f7a1e3c5b6d8f0a';
 $providedKey = $_GET['key'] ?? '';
 
 if (!is_string($providedKey) || $providedKey === '' || !hash_equals($expectedKey, $providedKey)) {
