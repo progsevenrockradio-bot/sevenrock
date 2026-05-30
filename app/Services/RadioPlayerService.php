@@ -275,6 +275,13 @@ class RadioPlayerService
 
     private function resolveCurrentProgram(array $state, ?Song $song, $programs): ?Program
     {
+        // Strategy 1: Schedule-based lookup from master_programs (most reliable)
+        $scheduleProgram = $this->findProgramBySchedule();
+        if ($scheduleProgram) {
+            return $scheduleProgram;
+        }
+
+        // Strategy 2: By program_id from RadioBoss/API state
         if ($programId = Arr::get($state, 'program_id')) {
             $program = $programs->firstWhere('id', (int) $programId);
             if ($program) {
@@ -282,6 +289,19 @@ class RadioPlayerService
             }
         }
 
+        // Strategy 3: By program_name from RadioBoss metadata
+        $programName = trim((string) Arr::get($state, 'program_name', ''));
+        if ($programName !== '') {
+            $program = $programs->first(function (Program $p) use ($programName): bool {
+                return stripos($p->titulo_programa ?? '', $programName) !== false
+                    || stripos($p->name ?? '', $programName) !== false;
+            });
+            if ($program) {
+                return $program;
+            }
+        }
+
+        // Strategy 4: From song's program_id
         if ($song?->program_id) {
             $program = $programs->firstWhere('id', (int) $song->program_id);
             if ($program) {
@@ -290,6 +310,82 @@ class RadioPlayerService
         }
 
         return $programs->first();
+    }
+
+    private function findProgramBySchedule(): ?Program
+    {
+        $now = \Illuminate\Support\Carbon::now('America/Caracas');
+        $currentDay = strtoupper($now->locale('es')->dayName);
+
+        $dayMap = [
+            'LUNES' => 'LUNES',
+            'MARTES' => 'MARTES',
+            'MIÉRCOLES' => 'MIERCOLES',
+            'JUEVES' => 'JUEVES',
+            'VIERNES' => 'VIERNES',
+            'SÁBADO' => 'SABADO',
+            'DOMINGO' => 'DOMINGO',
+        ];
+
+        $dia = $dayMap[$currentDay] ?? $currentDay;
+
+        $masters = \Illuminate\Support\Facades\DB::table('master_programs')
+            ->where('dia_transmision', $dia)
+            ->where('activo', 1)
+            ->orderBy('hora_transmision')
+            ->get();
+
+        if ($masters->isEmpty()) {
+            return null;
+        }
+
+        foreach ($masters as $master) {
+            $startTime = substr((string) ($master->hora_transmision ?? ''), 0, 5);
+            $durationMinutes = (int) ($master->duracion_minutos ?? 120);
+
+            if (empty($startTime) || $startTime === '00:00') {
+                continue;
+            }
+
+            $startCarbon = \Illuminate\Support\Carbon::createFromFormat('H:i', $startTime, 'America/Caracas');
+            $endCarbon = $startCarbon->copy()->addMinutes($durationMinutes);
+
+            $onAir = false;
+            if ($now->between($startCarbon, $endCarbon)) {
+                $onAir = true;
+            }
+            if ($endCarbon->lt($startCarbon) && ($now->gte($startCarbon) || $now->lte($endCarbon))) {
+                $onAir = true;
+            }
+
+            if ($onAir) {
+                $program = Program::query()
+                    ->where('titulo_programa', $master->nombre)
+                    ->orWhere('master_program_id', $master->id)
+                    ->first();
+
+                if ($program) {
+                    return $program;
+                }
+
+                // Not in radio_programs — create synthetic Program from master data
+                $program = new Program();
+                $program->id = $master->id;
+                $program->titulo_programa = $master->nombre;
+                $program->conductor = $master->conductor ?? '';
+                $program->dia_transmision = $master->dia_transmision;
+                $program->hora_inicio = $master->hora_transmision;
+                $program->genero_musical = $master->genero ?? '';
+                $program->caratula_programa = $master->caratula_url ?? '';
+                $program->informacion_fija_programa = $master->descripcion ?? '';
+                $program->master_program_id = $master->id;
+                $program->exists = false;
+
+                return $program;
+            }
+        }
+
+        return null;
     }
 
     private function resolveNextProgram(?Program $currentProgram, $programs, array $remoteUpcomingPrograms = []): ?Program

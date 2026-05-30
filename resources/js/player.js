@@ -470,8 +470,14 @@ export function registerRadioPlayer(Alpine) {
 
             try {
                 const id = Number(programId || this.track.program_id || this.program?.id || 0);
-                const url = id > 0
-                    ? `${this.programInfoUrl}?program_id=${encodeURIComponent(id)}`
+                const programName = (this.track.program_name || this.program?.name || '').trim();
+                const isLive = !!(this.track.is_live);
+                const params = new URLSearchParams();
+                if (id > 0) params.set('program_id', id);
+                if (programName) params.set('program_name', programName);
+                params.set('is_live', isLive ? '1' : '0');
+                const url = params.toString()
+                    ? `${this.programInfoUrl}?${params.toString()}`
                     : this.programInfoUrl;
 
                 const response = await fetch(url, {
