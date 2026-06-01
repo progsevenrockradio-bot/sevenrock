@@ -137,7 +137,21 @@ final class PodcastUploadController extends Controller
     {
         $data = $request->validate([
             'master_program_id' => ['required', 'integer', 'exists:master_programs,id'],
-            'numero_episodio' => ['nullable', 'integer', 'min:1'],
+            'numero_episodio' => [
+                'nullable',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value === null || $value === '' || $value === []) {
+                        return;
+                    }
+                    $clean = trim((string) $value);
+                    if ($clean === '') {
+                        return;
+                    }
+                    if (! preg_match('/^\\d+$/', $clean)) {
+                        $fail('El n' . chr(250) . 'mero de episodio debe ser un n' . chr(250) . 'mero entero.');
+                    }
+                },
+            ],
             'live_title' => ['required', 'string', 'max:255'],
             'fecha_emision' => ['required', 'date'],
             'biografia_invitado' => ['nullable', 'string', 'max:255'],

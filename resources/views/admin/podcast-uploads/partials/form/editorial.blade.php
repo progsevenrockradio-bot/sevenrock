@@ -85,8 +85,9 @@
             <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] p-5">
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Capítulo / episodio</label>
                 <input
-                    type="number"
-                    min="1"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
                     name="numero_episodio"
                     value="{{ old('numero_episodio', $suggestedEpisodeNumber ?? '') }}"
                     class="lucille-product-field w-full"
