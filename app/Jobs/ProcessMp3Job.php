@@ -221,13 +221,54 @@ class ProcessMp3Job implements ShouldQueue
             'TRACKNUMBER' => [$tags['tracknumber']],
         ];
 
+        $txxxFrames = array_values(array_filter([
+            $tags['subject'] !== '' ? ['description' => 'subject', 'data' => $tags['subject']] : null,
+            $tags['description'] !== '' ? ['description' => 'description', 'data' => $tags['description']] : null,
+            $tags['date'] !== '' ? ['description' => 'date', 'data' => $tags['date']] : null,
+        ]));
+        if ($txxxFrames !== []) {
+            $tagWriter->tag_data['TXXX'] = $txxxFrames;
+        }
+
         $attachedPicture = $this->resolveAttachedPictureTagData($radioProgram, $master);
         if ($attachedPicture !== null) {
             $tagWriter->tag_data['ATTACHED_PICTURE'] = [$attachedPicture];
         }
 
         if (! $tagWriter->WriteTags()) {
-            throw new \RuntimeException(trim(implode(' | ', array_merge($tagWriter->errors, $tagWriter->warnings))) ?: 'getID3 no pudo escribir las etiquetas del MP3.');
+            if ($txxxFrames !== []) {
+                Log::warning('ProcessMp3Job: TXXX frames failed, retrying without extended fields.', [
+                    'program_id' => $radioProgram->id,
+                    'errors' => $tagWriter->errors,
+                    'warnings' => $tagWriter->warnings,
+                ]);
+
+                $tagWriter = new GetId3TagWriter();
+                $tagWriter->filename = $absolutePath;
+                $tagWriter->tagformats = ['id3v2.3', 'id3v1'];
+                $tagWriter->overwrite_tags = true;
+                $tagWriter->remove_other_tags = true;
+                $tagWriter->tag_encoding = 'UTF-8';
+                $tagWriter->tag_data = [
+                    'TITLE' => [$tags['title']],
+                    'ARTIST' => [$tags['artist']],
+                    'ALBUM' => [$tags['album']],
+                    'YEAR' => [$tags['year']],
+                    'GENRE' => [$tags['genre']],
+                    'COMMENT' => [$tags['comment']],
+                    'TRACKNUMBER' => [$tags['tracknumber']],
+                ];
+
+                if ($attachedPicture !== null) {
+                    $tagWriter->tag_data['ATTACHED_PICTURE'] = [$attachedPicture];
+                }
+
+                if (! $tagWriter->WriteTags()) {
+                    throw new \RuntimeException(trim(implode(' | ', array_merge($tagWriter->errors, $tagWriter->warnings))) ?: 'getID3 no pudo escribir las etiquetas del MP3.');
+                }
+            } else {
+                throw new \RuntimeException(trim(implode(' | ', array_merge($tagWriter->errors, $tagWriter->warnings))) ?: 'getID3 no pudo escribir las etiquetas del MP3.');
+            }
         }
 
         $verification = $this->verifyTaggedMetadata($absolutePath, $tags);
@@ -251,7 +292,10 @@ class ProcessMp3Job implements ShouldQueue
      *     year: string,
      *     genre: string,
      *     comment: string,
-     *     tracknumber: string
+     *     tracknumber: string,
+     *     subject: string,
+     *     description: string,
+     *     date: string
      * }
      */
     private function buildMetadataTags(?MasterProgram $master, RadioProgram $radioProgram, string $programa, string $invitado, string $fecha, string $fechaTitulo, string $anio): array
@@ -261,9 +305,19 @@ class ProcessMp3Job implements ShouldQueue
         $artist = trim((string) ($radioProgram->conductor ?? $master?->conductor ?? 'Seven Rock Radio'));
         $album = trim($programa);
         $genre = trim((string) ($radioProgram->genero_musical ?? 'Rock'));
+        $subject = collect(array_filter([
+            $programa !== '' ? $programa : null,
+            'episode ' . $episodeNumber,
+            trim((string) ($radioProgram->genero_musical ?? $master?->genero ?? '')),
+        ]))->implode(', ');
+        $description = trim(strip_tags((string) ($radioProgram->live_description ?? $radioProgram->comentario_episodio ?? $radioProgram->resena ?? '')));
+        $dateForComment = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('Y-m-d') : now()->format('Y-m-d');
         $comment = collect(array_filter([
             'Emision: ' . $fecha,
             $invitado !== '' ? 'Invitado: ' . $invitado : null,
+            $subject !== '' ? 'Tematica: ' . $subject : null,
+            $description !== '' ? 'Descripcion: ' . $description : null,
+            'Fecha: ' . $dateForComment,
         ]))->implode(' | ');
 
         return [
@@ -274,6 +328,9 @@ class ProcessMp3Job implements ShouldQueue
             'genre' => $genre !== '' ? $genre : 'Rock',
             'comment' => $comment,
             'tracknumber' => (string) $episodeNumber,
+            'subject' => $subject,
+            'description' => $description,
+            'date' => $dateForComment,
         ];
     }
 
@@ -285,7 +342,10 @@ class ProcessMp3Job implements ShouldQueue
      *     year: string,
      *     genre: string,
      *     comment: string,
-     *     tracknumber: string
+     *     tracknumber: string,
+     *     subject: string,
+     *     description: string,
+     *     date: string
      * } $expected
      * @return array{verified: bool, message: string|null, tags: array<string, string>}
      */

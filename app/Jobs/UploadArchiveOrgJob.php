@@ -26,7 +26,7 @@ class UploadArchiveOrgJob implements ShouldQueue
     public int $tries = 3;
 
     /** @var array<int, int> */
-    public array $backoff = [30, 60];
+    public array $backoff = [60, 300];
 
     public function __construct(
         public int $radioProgramId,

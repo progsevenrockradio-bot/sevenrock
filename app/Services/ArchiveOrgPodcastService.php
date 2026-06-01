@@ -83,11 +83,10 @@ final class ArchiveOrgPodcastService
         ])->saveQuietly();
 
         if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
-            throw new RuntimeException(
-                "Archive.org: uploaded file not reachable after waiting. " .
-                "Cannot patch metadata for a file that does not exist. " .
-                "Identifier: {$identifier}, Remote path: {$remotePath}"
-            );
+            Log::warning('ArchiveOrgPodcastService: file not reachable after waiting, continuing with metadata patch anyway.', [
+                'identifier' => $identifier,
+                'remote_path' => $remotePath,
+            ]);
         }
 
         $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
@@ -170,10 +169,10 @@ final class ArchiveOrgPodcastService
         $fileMetadata = $this->buildEpisodeFileMetadata($episode, $master);
 
         if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
-            throw new RuntimeException(
-                "Archive.org: file not found. Cannot patch metadata. " .
-                "Identifier: {$identifier}, Remote path: {$remotePath}"
-            );
+            Log::warning('ArchiveOrgPodcastService: file not reachable before metadata PATCH, continuing anyway.', [
+                'identifier' => $identifier,
+                'remote_path' => $remotePath,
+            ]);
         }
 
         $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
@@ -587,7 +586,7 @@ final class ArchiveOrgPodcastService
 
     private function waitForRemoteFileOnArchiveOrg(string $identifier, string $remotePath): bool
     {
-        $delays = [5, 10, 15];
+        $delays = [30, 60, 120];
 
         foreach ($delays as $delaySeconds) {
             sleep($delaySeconds);
@@ -642,19 +641,27 @@ final class ArchiveOrgPodcastService
             return;
         }
 
-        $this->retry(function () use ($identifier, $remotePath, $patches): void {
-            $this->client->request('POST', $this->apiEndpoint() . '/metadata/' . rawurlencode($identifier), [
-                'headers' => [
-                    'Content-Type' => 'application/x-www-form-urlencoded',
-                ],
-                'form_params' => [
-                    '-target' => 'files/' . $this->encodePath($remotePath),
-                    '-patch' => json_encode($patches, JSON_THROW_ON_ERROR),
-                    'access' => trim((string) config('services.archive_org.access_key', '')),
-                    'secret' => trim((string) config('services.archive_org.secret_key', '')),
-                ],
+        try {
+            $this->retry(function () use ($identifier, $remotePath, $patches): void {
+                $this->client->request('POST', $this->apiEndpoint() . '/metadata/' . rawurlencode($identifier), [
+                    'headers' => [
+                        'Content-Type' => 'application/x-www-form-urlencoded',
+                    ],
+                    'form_params' => [
+                        '-target' => 'files/' . $this->encodePath($remotePath),
+                        '-patch' => json_encode($patches, JSON_THROW_ON_ERROR),
+                        'access' => trim((string) config('services.archive_org.access_key', '')),
+                        'secret' => trim((string) config('services.archive_org.secret_key', '')),
+                    ],
+                ]);
+            });
+        } catch (Throwable $exception) {
+            Log::warning('ArchiveOrgPodcastService: metadata PATCH failed (non-fatal, ID3 tags carry essential metadata).', [
+                'identifier' => $identifier,
+                'remote_path' => $remotePath,
+                'error' => $exception->getMessage(),
             ]);
-        });
+        }
     }
 
     /**
