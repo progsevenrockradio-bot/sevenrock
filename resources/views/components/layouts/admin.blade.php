@@ -4,6 +4,7 @@
     $theme = $themeSettings ?? \App\Models\ThemeSetting::current();
     $themeAppearance = $themeAppearance ?? \App\Support\ThemeAppearance::resolved();
     $admin = $themeAppearance['admin_texts'] ?? [];
+    $adminHomeUrl = auth()->check() ? route('admin.dashboard') : route('admin.login');
 @endphp
 
 <!DOCTYPE html>
@@ -31,7 +32,7 @@
         --lucille-brand-font: '{{ $theme->brand_mark_font }}';
         --lucille-bg-image: url('{{ $theme->background_url }}');
     "
->
+    >
     <div class="lucille-fixed-bg" aria-hidden="true"></div>
 
     <div id="admin-confirm-modal" class="fixed inset-0 z-[200] hidden" aria-hidden="true">
@@ -83,7 +84,7 @@
     @endphp
 
     <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3">
+        <a href="{{ $adminHomeUrl }}" class="flex items-center gap-3">
             @if ($brandDisplayMode === 'logo')
                 <img src="{{ $theme->logo_url }}" alt="{{ $theme->site_name }}" loading="lazy" class="h-10 w-auto">
             @else
@@ -105,69 +106,73 @@
         </div>
     </header>
 
-    <div class="mx-auto max-w-6xl px-6 pb-4">
-        <nav class="lucille-admin-dropdowns" aria-label="Admin sections">
-            <details class="lucille-admin-dropdown">
-                <summary class="lucille-admin-dropdown-summary">
-                    <span>Site</span>
-                    <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
-                </summary>
-                <div class="lucille-admin-dropdown-panel">
-                    <a href="{{ route('admin.dashboard') }}" class="lucille-admin-link">{{ $admin['dashboard_heading'] ?? 'Dashboard' }}</a>
-                    <a href="{{ route('admin.posts.index') }}" class="lucille-admin-link">{{ $admin['posts_heading'] ?? 'Posts' }}</a>
-                    <a href="{{ route('admin.events.index') }}" class="lucille-admin-link">{{ $admin['events_heading'] ?? 'Events' }}</a>
-                    <a href="{{ route('admin.events.single') }}" class="lucille-admin-link">Single Event</a>
-                    <a href="{{ route('admin.audit-logs.index') }}" class="lucille-admin-link">Audit trail</a>
-                    <a href="{{ route('admin.comments.index') }}" class="lucille-admin-link">Comentarios</a>
-                </div>
-            </details>
+    @auth
+        <div class="mx-auto max-w-6xl px-6 pb-4">
+            <nav class="lucille-admin-dropdowns" aria-label="Admin sections">
+                <details class="lucille-admin-dropdown">
+                    <summary class="lucille-admin-dropdown-summary">
+                        <span>Site</span>
+                        <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
+                    </summary>
+                    <div class="lucille-admin-dropdown-panel">
+                        <a href="{{ route('admin.dashboard') }}" class="lucille-admin-link">{{ $admin['dashboard_heading'] ?? 'Dashboard' }}</a>
+                        <a href="{{ route('admin.posts.index') }}" class="lucille-admin-link">{{ $admin['posts_heading'] ?? 'Posts' }}</a>
+                        <a href="{{ route('admin.events.index') }}" class="lucille-admin-link">{{ $admin['events_heading'] ?? 'Events' }}</a>
+                        <a href="{{ route('admin.events.single') }}" class="lucille-admin-link">Single Event</a>
+                        <a href="{{ route('admin.audit-logs.index') }}" class="lucille-admin-link">Audit trail</a>
+                        <a href="{{ route('admin.comments.index') }}" class="lucille-admin-link">Comentarios</a>
+                    </div>
+                </details>
 
-            <details class="lucille-admin-dropdown">
-                <summary class="lucille-admin-dropdown-summary">
-                    <span>Programas</span>
-                    <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
-                </summary>
-                <div class="lucille-admin-dropdown-panel">
-                    <a href="{{ route('admin.master-programs.index') }}" class="lucille-admin-link">{{ $admin['master_programs_heading'] ?? 'Master Programs' }}</a>
-                    <a href="{{ route('admin.podcast-uploads.index') }}" class="lucille-admin-link">{{ $admin['podcast_uploads_heading'] ?? 'Podcast Uploads' }}</a>
-                    <a href="{{ route('admin.songs.index') }}" class="lucille-admin-link">{{ $admin['songs_heading'] ?? 'Songs' }}</a>
-                </div>
-            </details>
+                <details class="lucille-admin-dropdown">
+                    <summary class="lucille-admin-dropdown-summary">
+                        <span>Programas</span>
+                        <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
+                    </summary>
+                    <div class="lucille-admin-dropdown-panel">
+                        <a href="{{ route('admin.master-programs.index') }}" class="lucille-admin-link">{{ $admin['master_programs_heading'] ?? 'Master Programs' }}</a>
+                        <a href="{{ route('admin.podcast-uploads.index') }}" class="lucille-admin-link">{{ $admin['podcast_uploads_heading'] ?? 'Podcast Uploads' }}</a>
+                        <a href="{{ route('admin.songs.index') }}" class="lucille-admin-link">{{ $admin['songs_heading'] ?? 'Songs' }}</a>
+                    </div>
+                </details>
 
-            <details class="lucille-admin-dropdown">
-                <summary class="lucille-admin-dropdown-summary">
-                    <span>Bandas</span>
-                    <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
-                </summary>
-                <div class="lucille-admin-dropdown-panel">
-                    {{-- Radio Artists disabled for .com --}}
-                    <a href="{{ route('admin.albums.index') }}" class="lucille-admin-link">{{ $admin['albums_heading'] ?? 'Albums' }}</a>
-                    <a href="{{ route('admin.videos.index') }}" class="lucille-admin-link">{{ $admin['videos_heading'] ?? 'Videos' }}</a>
-                    <a href="{{ route('admin.gallery.index') }}" class="lucille-admin-link">{{ $admin['gallery_heading'] ?? 'Gallery' }}</a>
-                </div>
-            </details>
+                <details class="lucille-admin-dropdown">
+                    <summary class="lucille-admin-dropdown-summary">
+                        <span>Bandas</span>
+                        <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
+                    </summary>
+                    <div class="lucille-admin-dropdown-panel">
+                        <a href="{{ route('admin.albums.index') }}" class="lucille-admin-link">{{ $admin['albums_heading'] ?? 'Albums' }}</a>
+                        <a href="{{ route('admin.videos.index') }}" class="lucille-admin-link">{{ $admin['videos_heading'] ?? 'Videos' }}</a>
+                        <a href="{{ route('admin.gallery.index') }}" class="lucille-admin-link">{{ $admin['gallery_heading'] ?? 'Gallery' }}</a>
+                        <a href="{{ route('admin.radio-artists.index') }}" class="lucille-admin-link">Radio Artists</a>
+                    </div>
+                </details>
 
-            <details class="lucille-admin-dropdown">
-                <summary class="lucille-admin-dropdown-summary">
-                    <span>Talents</span>
-                    <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
-                </summary>
-                <div class="lucille-admin-dropdown-panel">
-                    <a href="#" class="lucille-admin-link">Reportes</a>
-                </div>
-            </details>
+                <details class="lucille-admin-dropdown">
+                    <summary class="lucille-admin-dropdown-summary">
+                        <span>Talents</span>
+                        <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
+                    </summary>
+                    <div class="lucille-admin-dropdown-panel">
+                        <a href="{{ route('admin.talents.index') }}" class="lucille-admin-link">Talents</a>
+                        <a href="{{ route('admin.talents.media') }}" class="lucille-admin-link">Media</a>
+                    </div>
+                </details>
 
-            <details class="lucille-admin-dropdown">
-                <summary class="lucille-admin-dropdown-summary">
-                    <span>Convocatoria</span>
-                    <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
-                </summary>
-                <div class="lucille-admin-dropdown-panel">
-                    <a href="{{ route('admin.programs.index') }}" class="lucille-admin-link">🎙️ Programas</a>
-                </div>
-            </details>
-        </nav>
-    </div>
+                <details class="lucille-admin-dropdown">
+                    <summary class="lucille-admin-dropdown-summary">
+                        <span>Convocatoria</span>
+                        <span class="lucille-admin-dropdown-caret" aria-hidden="true">▾</span>
+                    </summary>
+                    <div class="lucille-admin-dropdown-panel">
+                        <a href="{{ route('admin.programs.index') }}" class="lucille-admin-link">🎙️ Programas</a>
+                        <a href="{{ route('admin.outreach.index') }}" class="lucille-admin-link">Outreach</a>
+                    </div>
+                </details>
+            </nav>
+        </div>
+    @endauth
 
     <main class="mx-auto max-w-6xl px-6 pb-16">
         {{ $slot }}

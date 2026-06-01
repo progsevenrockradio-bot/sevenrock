@@ -90,8 +90,9 @@ final class ArchiveOrgPodcastService
         }
 
         $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
+        $pendingIndexing = (bool) ($verification['pending_indexing'] ?? false);
 
-        if (! ($verification['verified'] ?? false)) {
+        if (! ($verification['verified'] ?? false) && ! $pendingIndexing) {
             throw new RuntimeException((string) ($verification['message'] ?? 'No se pudo verificar la subida en Archive.org.'));
         }
 
@@ -100,18 +101,21 @@ final class ArchiveOrgPodcastService
         }
 
         $episode->forceFill([
-            'archive_org_status' => 'synced',
+            'archive_org_status' => $pendingIndexing ? 'pending' : 'synced',
             'archive_org_remote_path' => $remotePath,
             'archive_org_uploaded_at' => now(),
-            'archive_org_verified_at' => now(),
+            'archive_org_verified_at' => $pendingIndexing ? null : now(),
             'archive_org_last_error' => null,
             'archive_org_metadata' => array_merge($snapshot, [
-                'status' => 'synced',
-                'synced_at' => now()->toIso8601String(),
+                'status' => $pendingIndexing ? 'pending' : 'synced',
+                'synced_at' => $pendingIndexing ? null : now()->toIso8601String(),
                 'remote_path' => $remotePath,
                 'verification' => $verification,
+                'pending_indexing' => $pendingIndexing,
             ]),
-            'status_message' => 'Archive.org sincronizado correctamente.',
+            'status_message' => $pendingIndexing
+                ? 'Archive.org subido, en espera de indexación.'
+                : 'Archive.org sincronizado correctamente.',
         ])->saveQuietly();
 
         $this->cleanupLocalPath($absolutePath, (string) $episode->archivo_mp3_disk);
@@ -123,6 +127,8 @@ final class ArchiveOrgPodcastService
             'remote_path' => $remotePath,
             'item_exists_before' => $itemExistsBefore,
             'verification' => $verification,
+            'status' => $pendingIndexing ? 'pending' : 'synced',
+            'pending_indexing' => $pendingIndexing,
         ];
     }
 
@@ -162,7 +168,9 @@ final class ArchiveOrgPodcastService
         $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
         $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
 
-        if (! ($verification['verified'] ?? false)) {
+        $pendingIndexing = (bool) ($verification['pending_indexing'] ?? false);
+
+        if (! ($verification['verified'] ?? false) && ! $pendingIndexing) {
             throw new RuntimeException((string) ($verification['message'] ?? 'No se pudo verificar la metadata de Archive.org.'));
         }
 
@@ -178,10 +186,10 @@ final class ArchiveOrgPodcastService
         ]);
 
         $episode->forceFill([
-            'archive_org_status' => 'synced',
+            'archive_org_status' => $pendingIndexing ? 'pending' : 'synced',
             'archive_org_remote_path' => $remotePath,
             'archive_org_uploaded_at' => $episode->archive_org_uploaded_at ?? now(),
-            'archive_org_verified_at' => now(),
+            'archive_org_verified_at' => $pendingIndexing ? null : now(),
             'archive_org_last_error' => null,
             'archive_org_metadata' => $snapshot,
         ])->saveQuietly();
@@ -226,11 +234,12 @@ final class ArchiveOrgPodcastService
                 if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 400) {
                     return [
                         'verified' => false,
+                        'pending_indexing' => true,
                         'identifier' => $identifier,
                         'remote_path' => $remotePath,
                         'local_size' => $localSize,
                         'remote_size' => null,
-                        'message' => 'Archive.org no confirmó el archivo remoto mediante HEAD.',
+                        'message' => 'Archive.org todavía está indexando el archivo; HEAD no está disponible todavía.',
                     ];
                 }
 
@@ -259,11 +268,12 @@ final class ArchiveOrgPodcastService
             } catch (Throwable) {
                 return [
                     'verified' => false,
+                    'pending_indexing' => true,
                     'identifier' => $identifier,
                     'remote_path' => $remotePath,
                     'local_size' => $localSize,
                     'remote_size' => null,
-                    'message' => 'Archive.org no pudo verificarse mediante HEAD.',
+                    'message' => 'Archive.org todavía está indexando el archivo; HEAD no está disponible todavía.',
                 ];
             }
         }
@@ -273,11 +283,12 @@ final class ArchiveOrgPodcastService
         if (! is_resource($remoteStream)) {
             return [
                 'verified' => false,
+                'pending_indexing' => true,
                 'identifier' => $identifier,
                 'remote_path' => $remotePath,
                 'local_size' => $localSize,
                 'remote_size' => null,
-                'message' => 'Archive.org no devolvió el archivo remoto esperado tras la subida.',
+                'message' => 'Archive.org todavía está indexando el archivo; el remoto aún no está disponible.',
             ];
         }
 
@@ -535,6 +546,7 @@ final class ArchiveOrgPodcastService
             'Authorization' => 'LOW ' . trim((string) config('services.archive_org.access_key', '')) . ':' . trim((string) config('services.archive_org.secret_key', '')),
             'x-archive-auto-make-bucket' => '1',
             'x-archive-interactive-priority' => '1',
+            // Evita la negociación "100-continue" de Guzzle en archivos grandes.
             'Expect' => '',
             'User-Agent' => config('app.name', 'Laravel') . ' ArchiveOrgPodcastService',
         ];

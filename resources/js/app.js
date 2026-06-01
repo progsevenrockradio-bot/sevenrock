@@ -213,6 +213,7 @@ Alpine.data('bandProfilePicker', (options = {}) => ({
 
 Alpine.data('podcastUploadForm', (options = {}) => ({
     activeDay: options.initialDay ?? 'LUNES',
+    activeTab: options.initialTab ?? 'multimedia',
     uploading: false,
     progress: 0,
     progressLabel: '0%',
@@ -228,9 +229,63 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         master_program_id: 'Programa maestro',
         live_title: 'Título del episodio',
         fecha_emision: 'Fecha de emisión',
+        numero_episodio: 'Capítulo / episodio',
         archivo_mp3: 'Archivo MP3',
         imagen_episodio_url: 'URL de imagen',
         imagen_episodio_file: 'Archivo de imagen',
+        biografia_invitado: 'Invitado',
+        resena: 'Descripción / resumen',
+    },
+    tabForField(field) {
+        if (['archivo_mp3', 'imagen_episodio_url', 'imagen_episodio_file'].includes(field)) {
+            return 'multimedia';
+        }
+
+        if (['sync_archive_org', 'download_processed_mp3'].includes(field)) {
+            return 'distribution';
+        }
+
+        return 'editorial';
+    },
+    focusField(form, field) {
+        if (! field) {
+            return;
+        }
+
+        this.activeTab = this.tabForField(field);
+
+        window.setTimeout(() => {
+            const selector = `[name="${CSS.escape(field)}"]`;
+            const element = form.querySelector(selector);
+            if (element?.scrollIntoView) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            if (element?.focus) {
+                element.focus({ preventScroll: true });
+            }
+        }, 50);
+    },
+    showValidationIssues(form, validationErrors = {}) {
+        const messages = this.formatValidationErrors(validationErrors);
+        const firstField = Object.keys(validationErrors ?? {})[0] ?? '';
+
+        this.uploading = false;
+        this.progress = 0;
+        this.progressLabel = '0%';
+        this.phaseLabel = 'Validando';
+        this.phaseDetailLabel = this.phaseDetailText();
+        this.statusMessage = 'Faltan campos obligatorios. Revisa el formulario.';
+        this.errorMessages = messages.length > 0 ? messages : ['Revisa los campos marcados.'];
+        this.uploadEtaLabel = '';
+
+        this.focusField(form, firstField);
+
+        if (! firstField) {
+            window.setTimeout(() => {
+                form?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+            }, 50);
+        }
     },
     phaseClass() {
         const label = String(this.phaseLabel ?? '').toLowerCase();
@@ -366,14 +421,12 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         }
 
         if (errors.length > 0) {
-            this.uploading = false;
-            this.progress = 0;
-            this.progressLabel = '0%';
-            this.phaseLabel = 'Validando';
-            this.phaseDetailLabel = this.phaseDetailText();
-            this.uploadEtaLabel = '';
-            this.statusMessage = 'Faltan campos obligatorios. Revisa el formulario.';
-            this.errorMessages = errors;
+            this.showValidationIssues(form, {
+                master_program_id: !masterProgram?.value ? ['Debes seleccionar un programa maestro.'] : [],
+                live_title: !String(title?.value ?? '').trim() ? ['El título del episodio es obligatorio.'] : [],
+                fecha_emision: !String(date?.value ?? '').trim() ? ['La fecha de emisión es obligatoria.'] : [],
+                archivo_mp3: !audioFile ? ['Debes seleccionar un archivo MP3.'] : [],
+            });
 
             return null;
         }
@@ -415,10 +468,21 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         }
 
         event.preventDefault();
+        const submitter = event?.submitter ?? null;
+        const action = String(submitter?.value ?? 'process').toLowerCase();
+        const pipelineAction = action === 'save' ? 'save' : 'process';
+
         this.phaseLabel = 'Validando';
         const audioFile = this.validateBeforeSubmit(form);
         if (!audioFile) {
             return;
+        }
+
+        const pipelineInput = form.querySelector('input[name="pipeline_action"]');
+        if (pipelineInput) {
+            pipelineInput.value = pipelineAction;
+        } else {
+            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="pipeline_action" value="${pipelineAction}" data-pipeline-action-field="1">`);
         }
 
         this.uploading = true;
@@ -476,13 +540,26 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
             if (xhr.status >= 200 && xhr.status < 300) {
                 this.progress = 100;
                 this.progressLabel = '100%';
-                this.phaseLabel = payload?.download_url
-                    ? 'Preparando descarga'
-                    : (form.querySelector('[name="sync_archive_org"]')?.checked ? 'Sincronizando Archive.org' : 'Procesando RadioBOSS');
-                this.phaseDetailLabel = this.phaseDetailText();
                 this.statusMessage = payload?.status ?? 'Episodio procesado correctamente.';
                 this.errorMessages = [];
                 this.uploadEtaLabel = 'Transferencia completada.';
+
+                if (payload?.pipeline_action === 'save') {
+                    this.phaseLabel = 'Guardado';
+                    this.phaseDetailLabel = 'Episodio creado sin iniciar el pipeline.';
+                } else {
+                    this.phaseLabel = payload?.download_url
+                        ? 'Preparando descarga'
+                        : (form.querySelector('[name="sync_archive_org"]')?.checked ? 'Sincronizando Archive.org' : 'Procesando RadioBOSS');
+                    this.phaseDetailLabel = this.phaseDetailText();
+                }
+
+                window.dispatchEvent(new CustomEvent('podcast-upload-complete', {
+                    detail: {
+                        status: payload?.status ?? 'Episodio procesado correctamente.',
+                        redirectUrl: payload?.redirect_url ?? null,
+                    },
+                }));
 
                 if (payload?.download_url) {
                     this.downloading = true;
@@ -506,11 +583,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
 
             const validationErrors = payload?.errors ?? {};
             if (xhr.status === 422 || Object.keys(validationErrors).length > 0) {
-                this.phaseLabel = 'Validando';
-                this.phaseDetailLabel = this.phaseDetailText();
-                this.statusMessage = 'Faltan campos obligatorios. Revisa el formulario.';
-                this.errorMessages = this.formatValidationErrors(validationErrors);
-                this.uploadEtaLabel = '';
+                this.showValidationIssues(form, validationErrors);
                 return;
             }
 
@@ -530,6 +603,115 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         };
 
         xhr.send(new FormData(form));
+    },
+}));
+
+Alpine.data('podcastUploadsDashboard', (options = {}) => ({
+    recentUrl: options.recentUrl ?? '',
+    refreshInterval: Number.isFinite(Number(options.refreshInterval)) ? Math.max(5000, Number(options.refreshInterval)) : 15000,
+    isRefreshing: false,
+    lastUpdatedLabel: '',
+    timer: null,
+    requestToken: 0,
+    init() {
+        if (! this.recentUrl) {
+            return;
+        }
+
+        this.refresh(false);
+        this.startTimer();
+    },
+    destroy() {
+        this.stopTimer();
+    },
+    handleUploadSuccess() {
+        this.startPolling();
+        this.refresh(true);
+    },
+    startPolling() {
+        this.startTimer();
+    },
+    startTimer() {
+        if (this.timer) {
+            return;
+        }
+
+        this.timer = window.setInterval(() => {
+            this.refresh(true);
+        }, this.refreshInterval);
+    },
+    stopTimer() {
+        if (! this.timer) {
+            return;
+        }
+
+        window.clearInterval(this.timer);
+        this.timer = null;
+    },
+    hasActiveEntries(root = document) {
+        const nodes = root.querySelectorAll?.('[data-podcast-refresh-active="1"]') ?? [];
+        return nodes.length > 0;
+    },
+    parseHtml(html) {
+        const template = document.createElement('template');
+        template.innerHTML = html;
+        return template.content;
+    },
+    renderHtml(html) {
+        if (this.$refs.recentUploads) {
+            this.$refs.recentUploads.innerHTML = html;
+        }
+    },
+    async refresh(silent = false) {
+        if (! this.recentUrl) {
+            return;
+        }
+
+        if (this.isRefreshing) {
+            return;
+        }
+
+        const token = ++this.requestToken;
+        this.isRefreshing = true;
+
+        try {
+            const url = new URL(this.recentUrl, window.location.origin);
+            const response = await fetch(url.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    Accept: 'text/html',
+                },
+                credentials: 'same-origin',
+            });
+
+            if (! response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const html = await response.text();
+            if (token !== this.requestToken) {
+                return;
+            }
+
+            const fragment = this.parseHtml(html);
+            const hasActiveEntries = this.hasActiveEntries(fragment);
+            this.renderHtml(html);
+
+            const now = new Date();
+            this.lastUpdatedLabel = `Actualizado: ${now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+
+            if (! hasActiveEntries) {
+                this.stopTimer();
+            } else {
+                this.startTimer();
+            }
+        } catch (error) {
+            console.warn('podcastUploadsDashboard: no se pudo actualizar la lista de episodios.', error);
+        } finally {
+            if (token === this.requestToken) {
+                this.isRefreshing = false;
+            }
+        }
     },
 }));
 

@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "dompdf/dompdf": "^3.1",
         "james-heinrich/getid3": "2.0.0-beta6",
         "laravel/framework": "^13.7",
         "laravel/tinker": "^3.0",
@@ -90,7 +91,7 @@
             "php-http/discovery": true
         },
         "platform": {
-            "php": "8.3.99"
+            "php": "8.4.20"
         }
     },
     "minimum-stability": "stable",

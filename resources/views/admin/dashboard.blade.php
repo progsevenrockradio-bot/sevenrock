@@ -159,7 +159,7 @@
                     <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Campañas recientes</h3>
                 </div>
                 <div class="mt-4 space-y-3">
-                    @forelse (\App\Models\OutreachCampaign::query()->with('template')->latest()->limit(5)->get() as $campaign)
+                    @forelse ($recentCampaigns as $campaign)
                         <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
                             <div class="flex items-center justify-between gap-4">
                                 <div>

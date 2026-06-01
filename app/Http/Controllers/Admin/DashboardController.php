@@ -43,8 +43,22 @@ class DashboardController extends Controller
                 'categories' => $this->taxonomiesFor(PostTaxonomy::TYPE_CATEGORY),
                 'tags' => $this->taxonomiesFor(PostTaxonomy::TYPE_TAG),
             ],
+            'recentCampaigns' => $this->getRecentCampaigns(),
             'recentContacts' => $this->getRecentContacts(),
         ]);
+    }
+
+    private function getRecentCampaigns(): Collection
+    {
+        if (! Schema::hasTable('outreach_campaigns')) {
+            return collect();
+        }
+
+        return OutreachCampaign::query()
+            ->with('template')
+            ->latest()
+            ->limit(5)
+            ->get();
     }
 
     private function getRecentContacts(): Collection

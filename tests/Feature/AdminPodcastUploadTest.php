@@ -31,7 +31,7 @@ class AdminPodcastUploadTest extends TestCase
             'is_admin' => true,
         ]);
 
-        $master = MasterProgram::query()->create([
+        $master = MasterProgram::factory()->create([
             'nombre' => 'Metal Adicto',
             'conductor' => 'John Doe',
             'dia_transmision' => 'LUNES',
@@ -85,7 +85,7 @@ class AdminPodcastUploadTest extends TestCase
             'is_admin' => true,
         ]);
 
-        $master = MasterProgram::query()->create([
+        $master = MasterProgram::factory()->create([
             'nombre' => 'Metal Adicto',
             'conductor' => 'John Doe',
             'dia_transmision' => 'LUNES',
@@ -139,7 +139,7 @@ class AdminPodcastUploadTest extends TestCase
             'is_admin' => true,
         ]);
 
-        $master = MasterProgram::query()->create([
+        $master = MasterProgram::factory()->create([
             'nombre' => 'Metal Adicto',
             'conductor' => 'John Doe',
             'dia_transmision' => 'LUNES',
@@ -183,7 +183,7 @@ class AdminPodcastUploadTest extends TestCase
                 'is_admin' => true,
             ]);
 
-            MasterProgram::query()->create([
+            MasterProgram::factory()->create([
                 'nombre' => 'Lunes Show',
                 'conductor' => 'DJ Monday',
                 'dia_transmision' => 'LUNES',
@@ -193,7 +193,7 @@ class AdminPodcastUploadTest extends TestCase
                 'activo' => true,
             ]);
 
-            MasterProgram::query()->create([
+            MasterProgram::factory()->create([
                 'nombre' => 'Martes Show',
                 'conductor' => 'DJ Tuesday',
                 'dia_transmision' => 'MARTES',
@@ -213,6 +213,53 @@ class AdminPodcastUploadTest extends TestCase
         } finally {
             Carbon::setTestNow();
         }
+    }
+
+    public function test_smoke_upload_pipeline_renders_recent_fragment_with_status_attributes(): void
+    {
+        Mail::fake();
+        $this->configureRadiobossDisk();
+        $this->fakeRadioBossService();
+        config(['services.archive_org.access_key' => '', 'services.archive_org.secret_key' => '']);
+
+        $admin = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'Smoke Test Show',
+            'conductor' => 'Smoke DJ',
+            'dia_transmision' => 'LUNES',
+            'hora_transmision' => '20:00:00',
+            'genero' => 'Rock',
+            'ruta_ftp' => 'Programas',
+            'email_notificacion' => 'press@example.test',
+            'email_copia_notificacion' => null,
+            'activo' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->post(route('admin.podcast-uploads.store'), [
+                'master_program_id' => $master->id,
+                'live_title' => 'Smoke episode',
+                'fecha_emision' => '2026-05-19',
+                'resena' => 'Smoke description',
+                'sync_archive_org' => true,
+                'archivo_mp3' => UploadedFile::fake()->create('smoke.mp3', 1024, 'audio/mpeg'),
+            ]);
+
+        $response->assertStatus(302);
+
+        $episode = RadioProgram::query()->latest('id')->first();
+        $this->assertNotNull($episode, 'No se creó el episodio de smoke test.');
+        $this->assertSame('verified', $episode->radioboss_status, 'RadioBOSS no quedó verificado en el smoke test.');
+
+        $fragment = $this->actingAs($admin)->get(route('admin.podcast-uploads.recent'));
+        $fragment->assertOk();
+        $fragment->assertSee('data-status="partial"', false);
+        $fragment->assertSee('data-podcast-refresh-active="0"', false);
+        $fragment->assertSee('Smoke episode', false);
     }
 
     private function fakeRadioBossService(): void

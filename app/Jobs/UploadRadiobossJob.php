@@ -4,26 +4,24 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Jobs\Concerns\InteractsWithPodcastUploadPipeline;
 use App\Models\RadioProgram;
-use App\Services\FileUploadService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class UploadRadiobossJob implements ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
-    use InteractsWithPodcastUploadPipeline;
     use Queueable;
     use SerializesModels;
 
-    public int $timeout = 300;
+    public int $timeout = 600;
 
     public int $tries = 3;
 
@@ -32,135 +30,142 @@ class UploadRadiobossJob implements ShouldQueue
 
     public function __construct(
         public int $radioProgramId,
-        public string $localPath,
-        public string $remoteFolder,
     ) {
     }
 
     public function handle(): void
     {
-        $radioProgram = RadioProgram::query()->with('masterProgram')->findOrFail($this->radioProgramId);
-        $remotePath = trim($this->remoteFolder, '/\\') . '/' . basename(str_replace('\\', '/', $this->localPath));
+        $radioProgram = RadioProgram::query()->with('masterProgram')->find($this->radioProgramId);
+        if (! $radioProgram instanceof RadioProgram) {
+            return;
+        }
+
+        $sourcePath = trim((string) $radioProgram->archivo_mp3);
+        if ($sourcePath === '') {
+            $this->markFailure($radioProgram, 'No se pudo determinar el archivo procesado para RadioBOSS.');
+
+            return;
+        }
+
+        $absolutePath = Storage::disk('public')->path($sourcePath);
+        if (! is_file($absolutePath) || ! is_readable($absolutePath)) {
+            $this->markFailure($radioProgram, "No se pudo leer el MP3 procesado: {$sourcePath}");
+
+            return;
+        }
+
+        $ftpDisk = Storage::disk('radioboss');
+        $folder = $this->resolveRemoteFolder($radioProgram);
+        $remotePath = trim($folder, '/\\') . '/' . basename(str_replace('\\', '/', $sourcePath));
         $remotePath = trim(str_replace(['//', '\\'], ['/', '/'], $remotePath), '/');
-        $fileUploadService = app(FileUploadService::class);
-        $absolutePath = $fileUploadService->localPath($this->localPath, (string) $radioProgram->archivo_mp3_disk);
 
         try {
-            if (! is_string($absolutePath) || $absolutePath === '' || ! is_file($absolutePath)) {
-                throw new \RuntimeException("No se pudo leer el MP3 local: {$this->localPath}");
-            }
+            $ftpDisk->makeDirectory($folder);
+            $this->clearRemoteFilesOnly($ftpDisk, $folder);
 
-            if (! app(\App\Services\RadioBossService::class)->canSync()) {
-                RadioProgram::withoutEvents(fn (): bool => (bool) $radioProgram->update([
-                    'enviado_radioboss' => false,
-                    'radioboss_status' => 'skipped',
-                    'radioboss_verified_at' => null,
-                    'radioboss_last_error' => null,
-                    'radioboss_metadata' => array_merge((array) ($radioProgram->radioboss_metadata ?? []), [
-                        'status' => 'skipped',
-                        'remote_path' => $remotePath,
-                        'local_path' => $this->localPath,
-                        'reason' => 'RadioBOSS no está configurado.',
-                    ]),
-                ]));
-
-                $this->dispatchDeliveryNotification($radioProgram->id);
-
-                if (str_starts_with($absolutePath, storage_path('app/tmp/backblaze')) && is_file($absolutePath)) {
-                    @unlink($absolutePath);
-                }
+            $stream = fopen($absolutePath, 'rb');
+            if (! is_resource($stream)) {
+                $this->markFailure($radioProgram, "No se pudo abrir el MP3 para RadioBOSS: {$absolutePath}");
 
                 return;
             }
 
-            $uploadOk = $this->uploadToRadiobossWithRetries($this->remoteFolder, $remotePath, $absolutePath, $this->localPath);
+            stream_set_chunk_size($stream, 5 * 1024 * 1024);
 
-            $radiobossVerification = [
-                'verified' => false,
-                'remote_path' => $remotePath,
-                'local_path' => $this->localPath,
-                'local_size' => null,
-                'remote_size' => null,
-                'local_checksum_sha256' => null,
-                'remote_checksum_sha256' => null,
-                'message' => null,
-            ];
+            $uploaded = false;
 
-            if ($uploadOk) {
-                $radiobossVerification = $this->verifyRadiobossUpload($remotePath, $absolutePath, $this->localPath);
-                $uploadOk = (bool) ($radiobossVerification['verified'] ?? false);
+            try {
+                $uploaded = (bool) $ftpDisk->writeStream($remotePath, $stream);
 
-                if (! $uploadOk && $this->radiobossError === null) {
-                    $this->radiobossError = (string) ($radiobossVerification['message'] ?? 'No se pudo verificar la subida a RadioBOSS.');
+                if (! $uploaded) {
+                    rewind($stream);
+                    $uploaded = (bool) $ftpDisk->put($remotePath, stream_get_contents($stream) ?: '');
+                }
+            } finally {
+                if (is_resource($stream)) {
+                    fclose($stream);
                 }
             }
 
-            RadioProgram::withoutEvents(fn (): bool => (bool) $radioProgram->update([
-                'enviado_radioboss' => $uploadOk,
-                'radioboss_status' => $uploadOk ? 'verified' : 'error',
-                'radioboss_verified_at' => $uploadOk ? now() : null,
-                'radioboss_last_error' => $uploadOk ? null : (string) ($radiobossVerification['message'] ?? $this->radiobossError ?? 'No se pudo verificar la subida a RadioBOSS.'),
-                'radioboss_metadata' => array_merge((array) ($radioProgram->radioboss_metadata ?? []), [
-                    'status' => $uploadOk ? 'verified' : 'error',
-                    'verified_at' => $uploadOk ? now()->toIso8601String() : null,
-                    'remote_path' => $remotePath,
-                    'local_path' => $this->localPath,
-                    'verification' => $radiobossVerification,
-                ]),
-                'status_message' => $uploadOk
-                    ? 'RadioBOSS verificado.'
-                    : 'RadioBOSS no respondió correctamente.',
-            ]));
+            if (! $uploaded) {
+                $this->markFailure($radioProgram, 'La subida FTP a RadioBOSS devolvió un resultado inválido.');
 
-            if (! $uploadOk) {
-                Log::warning('UploadRadiobossJob: fallo la subida a RadioBOSS.', [
-                    'program_id' => $radioProgram->id,
-                    'remote_path' => $remotePath,
-                    'local_path' => $this->localPath,
-                    'local_exists' => is_string($absolutePath) && $absolutePath !== '' && is_file($absolutePath),
-                    'verification' => $radiobossVerification,
-                    'error' => $this->radiobossError,
-                ]);
+                return;
             }
 
-            $this->dispatchDeliveryNotification($radioProgram->id);
+            RadioProgram::withoutEvents(function () use ($radioProgram, $remotePath): void {
+                $radioProgram->forceFill([
+                    'enviado_radioboss' => true,
+                    'radioboss_status' => 'verified',
+                    'radioboss_verified_at' => now(),
+                    'radioboss_last_error' => null,
+                    'radioboss_metadata' => array_merge((array) ($radioProgram->radioboss_metadata ?? []), [
+                        'status' => 'verified',
+                        'remote_path' => $remotePath,
+                        'local_path' => (string) $radioProgram->archivo_mp3,
+                        'transfer_method' => 'writeStream_or_put',
+                        'verified_at' => now()->toIso8601String(),
+                    ]),
+                    'status_message' => 'RadioBOSS verificado.',
+                ])->saveQuietly();
+            });
         } catch (Throwable $exception) {
-            if (is_string($absolutePath) && $absolutePath !== '' && str_starts_with($absolutePath, storage_path('app/tmp/backblaze')) && is_file($absolutePath)) {
-                @unlink($absolutePath);
-            }
+            $this->markFailure($radioProgram, $exception->getMessage(), $remotePath ?? null);
+        }
+    }
 
-            RadioProgram::withoutEvents(fn (): bool => (bool) $radioProgram->update([
+    private function resolveRemoteFolder(RadioProgram $radioProgram): string
+    {
+        $folder = trim((string) ($radioProgram->ruta_ftp_radioboss ?: $radioProgram->masterProgram?->ruta_ftp ?: 'Programas'));
+        $folder = str_replace(['..', '\\'], '', $folder);
+
+        return trim($folder, '/\\') !== '' ? trim($folder, '/\\') : 'Programas';
+    }
+
+    /**
+     * Borra solo archivos del folder remoto, sin eliminar la carpeta.
+     */
+    private function clearRemoteFilesOnly($disk, string $folder): void
+    {
+        try {
+            foreach ((array) $disk->files($folder) as $remoteFile) {
+                $remoteFile = trim((string) $remoteFile);
+                if ($remoteFile === '') {
+                    continue;
+                }
+
+                $disk->delete($remoteFile);
+            }
+        } catch (Throwable $exception) {
+            Log::warning('UploadRadiobossJob: no se pudieron limpiar archivos remotos antiguos.', [
+                'folder' => $folder,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function markFailure(RadioProgram $radioProgram, string $message, ?string $remotePath = null): void
+    {
+        Log::warning('UploadRadiobossJob: fallo la subida a RadioBOSS.', [
+            'program_id' => $radioProgram->id,
+            'remote_path' => $remotePath,
+            'message' => $message,
+        ]);
+
+        RadioProgram::withoutEvents(function () use ($radioProgram, $message, $remotePath): void {
+            $radioProgram->forceFill([
                 'enviado_radioboss' => false,
                 'radioboss_status' => 'error',
                 'radioboss_verified_at' => null,
-                'radioboss_last_error' => $exception->getMessage(),
+                'radioboss_last_error' => $message,
                 'radioboss_metadata' => array_merge((array) ($radioProgram->radioboss_metadata ?? []), [
                     'status' => 'error',
                     'remote_path' => $remotePath,
-                    'local_path' => $this->localPath,
-                    'verification' => null,
+                    'local_path' => (string) $radioProgram->archivo_mp3,
+                    'last_error' => $message,
                 ]),
                 'status_message' => 'RadioBOSS no pudo completarse.',
-            ]));
-
-            Log::error('Error en UploadRadiobossJob', [
-                'program_id' => $radioProgram->id,
-                'localPath' => $this->localPath,
-                'remotePath' => $remotePath,
-                'local_exists' => is_string($absolutePath) && $absolutePath !== '' && is_file($absolutePath),
-                'exception_class' => get_class($exception),
-                'exception_message' => $exception->getMessage(),
-                'exception_trace' => $exception->getTraceAsString(),
-                'exception' => $exception,
-            ]);
-
-            $this->dispatchDeliveryNotification($radioProgram->id);
-
-            throw $exception;
-        }
-
-        if (is_string($absolutePath) && $absolutePath !== '' && str_starts_with($absolutePath, storage_path('app/tmp/backblaze')) && is_file($absolutePath)) {
-            @unlink($absolutePath);
-        }
+            ])->saveQuietly();
+        });
     }
 }

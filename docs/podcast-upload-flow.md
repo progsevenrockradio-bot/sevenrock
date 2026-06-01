@@ -259,6 +259,54 @@ public function resolveIdentifier(RadioProgram $episode, ?MasterProgram $master 
 ],
 ```
 
+## 7. Verificación local y smoke test
+
+El flujo cuenta con una batería de pruebas funcionales en:
+
+- [tests/Feature/AdminPodcastUploadTest.php](../tests/Feature/AdminPodcastUploadTest.php)
+
+### Qué cubre
+
+- subida de podcast desde el panel admin
+- asignación manual y automática del episodio
+- preservación de copia local cuando se solicita descarga
+- renderizado de la vista principal por día
+- renderizado del fragmento de últimos episodios
+- atributos de estado usados por el polling inteligente
+
+### Smoke test relevante
+
+El caso `test_smoke_upload_pipeline_renders_recent_fragment_with_status_attributes()` valida el camino completo mínimo:
+
+1. crea un programa maestro
+2. sube un MP3 como administrador
+3. verifica que el episodio exista
+4. consulta `admin.podcast-uploads.recent`
+5. comprueba que el fragmento expone:
+   - `data-status="partial"`
+   - `data-podcast-refresh-active="0"`
+   - el título del episodio
+
+### Comando local
+
+```bash
+C:\laragon\bin\php\php-8.4.20-Win32-vs17-x64\php.exe artisan test --filter=AdminPodcastUploadTest
+```
+
+### Resultado esperado
+
+- todos los tests del flujo pasan
+- el fragmento HTML refleja el estado real de los episodios
+- el polling inteligente puede decidir si sigue activo o se detiene
+
+## 8. Notas de operación
+
+Para que el pipeline funcione en entornos de desarrollo y producción:
+
+- debe existir un worker de colas activo
+- el navegador solo muestra el estado y refresca el fragmento
+- la ejecución real ocurre en background mediante jobs
+
 ## 7. Tests
 
 Archivo: `tests/Feature/AdminPodcastUploadTest.php`
@@ -288,4 +336,3 @@ Archivo: `tests/Feature/AdminPodcastUploadTest.php`
 ## 9. Nota operativa
 
 La carga al navegador es una cosa y el procesamiento posterior es otra. La barra y la ETA reflejan la transferencia del archivo al servidor. RadioBOSS y Archive.org quedan en la fase de procesamiento.
-

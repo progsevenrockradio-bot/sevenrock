@@ -5,10 +5,14 @@ use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\AlbumController as AdminAlbumController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\BandProfileController as AdminBandProfileController;
 use App\Http\Controllers\Admin\GalleryImageController as AdminGalleryImageController;
 use App\Http\Controllers\Admin\MasterProgramController as AdminMasterProgramController;
+use App\Http\Controllers\Admin\OutreachController as AdminOutreachController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\VideoController as AdminVideoController;
+use App\Http\Controllers\Admin\TalentController as AdminTalentController;
+use App\Http\Controllers\Admin\TalentAdminController as AdminTalentAdminController;
 use App\Http\Controllers\Admin\ThemeSettingsController as AdminThemeSettingsController;
 use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Admin\PostTaxonomyController as AdminPostTaxonomyController;
@@ -55,95 +59,180 @@ Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name
 Route::get("/programas", [SiteController::class, "programs"])->name("programs");
 Route::get("/programas/{identifier}", [SiteController::class, "programDetail"])->name("programs.detail");
 
-// Rutas de restablecimiento de contraseña para el panel de administración
-// Asumiendo que el AuthController maneja la lógica de login para admin.
-// Si se usa un sistema de autenticación diferente para el frontend, estas rutas podrían ir en otro lugar.
+// Rutas de restablecimiento de contraseña para el panel de administración.
+// Se conservan por compatibilidad con enlaces existentes.
 Route::get('/admin/forgot-password', [AdminAuthController::class, 'showLinkRequestForm'])->name('admin.password.request');
 Route::post('/admin/forgot-password', [AdminAuthController::class, 'sendResetLinkEmail'])->name('admin.password.email');
 Route::get('/admin/reset-password/{token}', [AdminAuthController::class, 'showResetForm'])->name('admin.password.reset');
 Route::post('/admin/reset-password', [AdminAuthController::class, 'reset'])->name('admin.password.update');
 
-Route::prefix('admin')->name('admin.')->group(function (): void {
+Route::prefix('admin')->name('admin.')->middleware('guest')->group(function (): void {
     Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AdminAuthController::class, 'login'])->name('login.store')->middleware('throttle:login');
-
-    Route::middleware(['admin', 'audit'])->group(function (): void {
-        Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
-        Route::get('/albums', [AdminAlbumController::class, 'index'])->name('albums.index');
-        Route::get('/albums/create', [AdminAlbumController::class, 'create'])->name('albums.create');
-        Route::post('/albums', [AdminAlbumController::class, 'store'])->name('albums.store');
-        Route::get('/albums/{album}/edit', [AdminAlbumController::class, 'edit'])->name('albums.edit');
-        Route::put('/albums/{album}', [AdminAlbumController::class, 'update'])->name('albums.update');
-        Route::delete('/albums/{album}', [AdminAlbumController::class, 'destroy'])->name('albums.destroy');
-        Route::get('/videos', [AdminVideoController::class, 'index'])->name('videos.index');
-        Route::get('/videos/create', [AdminVideoController::class, 'create'])->name('videos.create');
-        Route::post('/videos', [AdminVideoController::class, 'store'])->name('videos.store');
-        Route::get('/videos/{video}/edit', [AdminVideoController::class, 'edit'])->name('videos.edit');
-        Route::put('/videos/{video}', [AdminVideoController::class, 'update'])->name('videos.update');
-        Route::delete('/videos/{video}', [AdminVideoController::class, 'destroy'])->name('videos.destroy');
-        Route::get('/gallery-images', [AdminGalleryImageController::class, 'index'])->name('gallery.index');
-        Route::get('/gallery-images/create', [AdminGalleryImageController::class, 'create'])->name('gallery.create');
-        Route::post('/gallery-images', [AdminGalleryImageController::class, 'store'])->name('gallery.store');
-        Route::get('/gallery-images/{galleryImage}/edit', [AdminGalleryImageController::class, 'edit'])->name('gallery.edit');
-        Route::put('/gallery-images/{galleryImage}', [AdminGalleryImageController::class, 'update'])->name('gallery.update');
-        Route::delete('/gallery-images/{galleryImage}', [AdminGalleryImageController::class, 'destroy'])->name('gallery.destroy');
-        Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
-        Route::get('/products/create', [AdminProductController::class, 'create'])->name('products.create');
-        Route::post('/products', [AdminProductController::class, 'store'])->name('products.store');
-        Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
-        Route::put('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
-        Route::delete('/products/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
-        Route::get('/events', [AdminEventController::class, 'index'])->name('events.index');
-        Route::get('/events/single', [AdminEventController::class, 'preview'])->name('events.single');
-        Route::get('/events/create', [AdminEventController::class, 'create'])->name('events.create');
-        Route::post('/events', [AdminEventController::class, 'store'])->name('events.store');
-        Route::get('/events/{event}/edit', [AdminEventController::class, 'edit'])->name('events.edit');
-        Route::put('/events/{event}', [AdminEventController::class, 'update'])->name('events.update');
-        Route::delete('/events/{event}', [AdminEventController::class, 'destroy'])->name('events.destroy');
-        Route::get('/settings', [AdminThemeSettingsController::class, 'edit'])->name('settings.edit');
-        Route::put('/settings', [AdminThemeSettingsController::class, 'update'])->name('settings.update');
-        Route::get('/audit-logs', [AdminAuditLogController::class, 'index'])->name('audit-logs.index');
-        Route::get('/taxonomies/{taxonomy}/edit', [AdminPostTaxonomyController::class, 'edit'])->name('taxonomies.edit');
-        Route::post('/taxonomies', [AdminPostTaxonomyController::class, 'store'])->name('taxonomies.store');
-        Route::put('/taxonomies/{taxonomy}', [AdminPostTaxonomyController::class, 'update'])->name('taxonomies.update');
-        Route::delete('/taxonomies/{taxonomy}', [AdminPostTaxonomyController::class, 'destroy'])->name('taxonomies.destroy');
-        Route::get('/master-programs', [AdminMasterProgramController::class, 'index'])->name('master-programs.index');
-        Route::get('/master-programs/create', [AdminMasterProgramController::class, 'create'])->name('master-programs.create');
-        Route::post('/master-programs', [AdminMasterProgramController::class, 'store'])->name('master-programs.store');
-        Route::get('/master-programs/{masterProgram}/edit', [AdminMasterProgramController::class, 'edit'])->name('master-programs.edit');
-        Route::put('/master-programs/{masterProgram}', [AdminMasterProgramController::class, 'update'])->name('master-programs.update');
-        Route::delete('/master-programs/{masterProgram}', [AdminMasterProgramController::class, 'destroy'])->name('master-programs.destroy');
-        Route::prefix('programs')->name('programs.')->group(function (): void {
-            Route::get('/', [AdminProgramCodeController::class, 'index'])->name('index');
-            Route::get('/invitations', [AdminProgramCodeController::class, 'invitations'])->name('invitations');
-            Route::post('/{program}/generate-code', [AdminProgramCodeController::class, 'generateCode'])->name('generate-code');
-            Route::post('/{program}/send-invitation', [AdminProgramCodeController::class, 'sendInvitation'])->name('send-invitation');
-        });
-        Route::get('/podcast-uploads', [AdminPodcastUploadController::class, 'index'])->name('podcast-uploads.index');
-        Route::post('/podcast-uploads', [AdminPodcastUploadController::class, 'store'])->name('podcast-uploads.store');
-        Route::post('/podcast-uploads/{radioProgram}/retry', [AdminPodcastUploadController::class, 'retry'])->name('podcast-uploads.retry');
-        Route::get('/podcast-uploads/{radioProgram}/download', [AdminPodcastUploadController::class, 'download'])->name('podcast-uploads.download');
-        Route::delete('/podcast-uploads/{id}', [AdminPodcastUploadController::class, 'destroy'])->name('podcast-uploads.destroy');
-        Route::get('/songs', [AdminSongController::class, 'index'])->name('songs.index');
-        Route::get('/songs/create', [AdminSongController::class, 'create'])->name('songs.create');
-        Route::post('/songs', [AdminSongController::class, 'store'])->name('songs.store');
-        Route::get('/songs/{song}/edit', [AdminSongController::class, 'edit'])->name('songs.edit');
-        Route::put('/songs/{song}', [AdminSongController::class, 'update'])->name('songs.update');
-        Route::delete('/songs/{song}', [AdminSongController::class, 'destroy'])->name('songs.destroy');
-        Route::get('/posts', [AdminPostController::class, 'index'])->name('posts.index');
-        Route::get('/posts/create', [AdminPostController::class, 'create'])->name('posts.create');
-        Route::post('/posts/media', [AdminPostController::class, 'uploadMedia'])->name('posts.media.store');
-        Route::post('/posts', [AdminPostController::class, 'store'])->name('posts.store');
-        Route::get('/posts/{post}/edit', [AdminPostController::class, 'edit'])->name('posts.edit');
-        Route::put('/posts/{post}', [AdminPostController::class, 'update'])->name('posts.update');
-        Route::delete('/posts/{post}', [AdminPostController::class, 'destroy'])->name('posts.destroy');
-        Route::get('/comments', [AdminCommentController::class, 'index'])->name('comments.index');
-        Route::get('/comments/{comment}/edit', [AdminCommentController::class, 'edit'])->name('comments.edit');
-        Route::put('/comments/{comment}', [AdminCommentController::class, 'update'])->name('comments.update');
-        Route::post('/comments/{comment}/approve', [AdminCommentController::class, 'approve'])->name('comments.approve');
-        Route::post('/comments/{comment}/unapprove', [AdminCommentController::class, 'unapprove'])->name('comments.unapprove');
-        Route::delete('/comments/{comment}', [AdminCommentController::class, 'destroy'])->name('comments.destroy');
-        Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
-    });
+    Route::post('/login', [AdminAuthController::class, 'login'])->middleware('throttle:5,1')->name('login.store');
 });
 
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit'])->group(function (): void {
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::controller(AdminPostController::class)->prefix('posts')->name('posts.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/media', 'uploadMedia')->name('media.store');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{post}/edit', 'edit')->name('edit');
+        Route::put('/{post}', 'update')->name('update');
+        Route::delete('/{post}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminCommentController::class)->prefix('comments')->name('comments.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{comment}/edit', 'edit')->name('edit');
+        Route::put('/{comment}', 'update')->name('update');
+        Route::post('/{comment}/approve', 'approve')->name('approve');
+        Route::post('/{comment}/unapprove', 'unapprove')->name('unapprove');
+        Route::delete('/{comment}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminEventController::class)->prefix('events')->name('events.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/single', 'preview')->name('single');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{event}/edit', 'edit')->name('edit');
+        Route::put('/{event}', 'update')->name('update');
+        Route::delete('/{event}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminThemeSettingsController::class)->prefix('settings')->name('settings.')->group(function (): void {
+        Route::get('/', 'edit')->name('edit');
+        Route::get('/manual', 'manual')->name('manual');
+        Route::get('/manual/pdf', 'manualPdf')->name('manual.pdf');
+        Route::put('/', 'update')->name('update');
+    });
+
+    Route::controller(AdminAuditLogController::class)->prefix('audit-logs')->name('audit-logs.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+    });
+
+    Route::controller(AdminPostTaxonomyController::class)->prefix('taxonomies')->name('taxonomies.')->group(function (): void {
+        Route::get('/{taxonomy}/edit', 'edit')->name('edit');
+        Route::post('/', 'store')->name('store');
+        Route::put('/{taxonomy}', 'update')->name('update');
+        Route::delete('/{taxonomy}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminMasterProgramController::class)->prefix('master-programs')->name('master-programs.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{masterProgram}/edit', 'edit')->name('edit');
+        Route::put('/{masterProgram}', 'update')->name('update');
+        Route::delete('/{masterProgram}', 'destroy')->name('destroy');
+    });
+
+    Route::prefix('programs')->name('programs.')->controller(AdminProgramCodeController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/invitations', 'invitations')->name('invitations');
+        Route::post('/{program}/generate-code', 'generateCode')->name('generate-code');
+        Route::post('/{program}/send-invitation', 'sendInvitation')->name('send-invitation');
+    });
+
+    Route::controller(AdminPodcastUploadController::class)->prefix('podcast-uploads')->name('podcast-uploads.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/manual', 'manual')->name('manual');
+        Route::get('/manual/pdf', 'manualPdf')->name('manual.pdf');
+        Route::get('/publicados', 'published')->name('published');
+        Route::get('/publicados/imprimir', 'publishedPrint')->name('published.print');
+        Route::get('/recent', 'recentUploadsFragment')->name('recent');
+        Route::post('/', 'store')->name('store');
+        Route::post('/{radioProgram}/retry', 'retry')->name('retry');
+        Route::get('/{radioProgram}/download', 'download')->name('download');
+        Route::delete('/{id}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminSongController::class)->prefix('songs')->name('songs.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{song}/edit', 'edit')->name('edit');
+        Route::put('/{song}', 'update')->name('update');
+        Route::delete('/{song}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminAlbumController::class)->prefix('albums')->name('albums.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{album}/edit', 'edit')->name('edit');
+        Route::put('/{album}', 'update')->name('update');
+        Route::delete('/{album}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminVideoController::class)->prefix('videos')->name('videos.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{video}/edit', 'edit')->name('edit');
+        Route::put('/{video}', 'update')->name('update');
+        Route::delete('/{video}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminGalleryImageController::class)->prefix('gallery')->name('gallery.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{galleryImage}/edit', 'edit')->name('edit');
+        Route::put('/{galleryImage}', 'update')->name('update');
+        Route::delete('/{galleryImage}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminBandProfileController::class)->prefix('radio-artists')->name('radio-artists.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/search', 'search')->name('search');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::post('/{bandProfile}/auto-generate', 'autoGenerate')->name('auto-generate');
+        Route::get('/{bandProfile}/edit', 'edit')->name('edit');
+        Route::put('/{bandProfile}', 'update')->name('update');
+        Route::delete('/{bandProfile}', 'destroy')->name('destroy');
+    });
+
+    Route::prefix('talents')->name('talents.')->group(function (): void {
+        Route::get('/', [AdminTalentController::class, 'index'])->name('index');
+        Route::post('/{talent}/toggle-featured', [AdminTalentController::class, 'toggleFeatured'])->name('toggle-featured');
+        Route::get('/media', [AdminTalentAdminController::class, 'media'])->name('media');
+        Route::delete('/media/{media}', [AdminTalentAdminController::class, 'deleteMedia'])->name('media.destroy');
+        Route::get('/{talent}/edit', [AdminTalentAdminController::class, 'edit'])->name('edit');
+        Route::put('/{talent}', [AdminTalentAdminController::class, 'update'])->name('update');
+        Route::post('/{talent}/suspend', [AdminTalentAdminController::class, 'suspend'])->name('suspend');
+        Route::post('/{talent}/activate', [AdminTalentAdminController::class, 'activate'])->name('activate');
+    });
+
+    Route::controller(AdminOutreachController::class)->prefix('outreach')->name('outreach.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+
+        Route::get('/templates', 'templates')->name('templates.index');
+        Route::get('/templates/create', 'templatesCreate')->name('templates.create');
+        Route::post('/templates', 'templatesStore')->name('templates.store');
+        Route::post('/templates/preview', 'templatePreview')->name('templates.preview');
+        Route::get('/templates/{template}/edit', 'templatesEdit')->name('templates.edit');
+        Route::put('/templates/{template}', 'templatesUpdate')->name('templates.update');
+        Route::delete('/templates/{template}', 'templatesDestroy')->name('templates.destroy');
+        Route::post('/send-test', 'sendTest')->name('send-test');
+
+        Route::get('/contacts', 'contacts')->name('contacts.index');
+        Route::get('/contacts/create', 'contactsCreate')->name('contacts.create');
+        Route::post('/contacts/import', 'contactsImport')->name('contacts.import');
+        Route::post('/contacts', 'contactsStore')->name('contacts.store');
+        Route::get('/contacts/{contact}', 'contactsShow')->name('contacts.show');
+        Route::get('/contacts/{contact}/edit', 'contactsEdit')->name('contacts.edit');
+        Route::put('/contacts/{contact}', 'contactsUpdate')->name('contacts.update');
+
+        Route::get('/campaigns', 'campaigns')->name('campaigns.index');
+        Route::get('/campaigns/create', 'campaignsCreate')->name('campaigns.create');
+        Route::post('/campaigns', 'campaignsStore')->name('campaigns.store');
+        Route::get('/campaigns/{campaign}', 'campaignsShow')->name('campaigns.show');
+    });
+
+    Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+});

@@ -5,15 +5,26 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\NotifyPodcastReadyJob;
 use App\Jobs\ProcessMp3Job;
+use App\Jobs\UploadArchiveOrgJob;
+use App\Jobs\UploadRadiobossJob;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
+use App\Models\ThemeSetting;
 use App\Services\FileUploadService;
 use Carbon\Carbon;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,6 +32,28 @@ use Throwable;
 
 final class PodcastUploadController extends Controller
 {
+    public function manual(): View
+    {
+        return view('admin.podcast-uploads-manual', $this->manualViewData());
+    }
+
+    public function manualPdf(): Response
+    {
+        $options = new Options();
+        $options->setIsRemoteEnabled(true);
+        $options->set('isHtml5ParserEnabled', true);
+
+        $pdf = new Dompdf($options);
+        $pdf->loadHtml(view('admin.podcast-uploads-manual-pdf', $this->manualViewData())->render());
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->render();
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="seven-rock-radio-podcast-uploads-manual.pdf"',
+        ]);
+    }
+
     public function index(): View
     {
         $masterPrograms = MasterProgram::adminListing();
@@ -40,10 +73,62 @@ final class PodcastUploadController extends Controller
                 $day => $masterPrograms->where('dia_transmision', $day)->values(),
             ]);
 
+        $suggestedEpisodeNumber = max(
+            1,
+            ((int) RadioProgram::query()->max('numero_episodio')) + 1
+        );
+
         return view('admin.podcast-uploads.index', [
             'dayTabs' => $dayTabs,
             'programsByDay' => $programsByDay,
             'activeDay' => $this->currentDayKey(),
+            'suggestedEpisodeNumber' => $suggestedEpisodeNumber,
+            'recentUploads' => $this->recentUploads(),
+            'recentPublishedUploads' => $this->recentPublishedUploads(),
+        ]);
+    }
+
+    public function published(): View
+    {
+        return view('admin.podcast-uploads-published', [
+            'recentPublishedUploads' => $this->recentPublishedUploads(),
+        ]);
+    }
+
+    public function publishedPrint(): View
+    {
+        return view('admin.podcast-uploads-published-print', [
+            'recentPublishedUploads' => $this->recentPublishedUploads(),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function manualViewData(): array
+    {
+        $themeSettings = ThemeSetting::current();
+
+        return [
+            'themeSettings' => $themeSettings,
+            'themeAppearance' => [
+                'admin_texts' => $themeSettings->adminTexts(),
+            ],
+            'dayTabs' => [
+                'LUNES' => 'Lunes',
+                'MARTES' => 'Martes',
+                'MIERCOLES' => 'Miércoles',
+                'JUEVES' => 'Jueves',
+                'VIERNES' => 'Viernes',
+                'SABADO' => 'Sábado',
+                'DOMINGO' => 'Domingo',
+            ],
+        ];
+    }
+
+    public function recentUploadsFragment(): View
+    {
+        return view('admin.podcast-uploads.partials.recent-uploads', [
             'recentUploads' => $this->recentUploads(),
         ]);
     }
@@ -61,12 +146,13 @@ final class PodcastUploadController extends Controller
             'imagen_episodio_file' => ['nullable', 'file', 'image', 'max:10240'],
             'sync_archive_org' => ['nullable', 'boolean'],
             'download_processed_mp3' => ['nullable', 'boolean'],
+            'pipeline_action' => ['nullable', Rule::in(['save', 'process'])],
             'archivo_mp3' => [
                 'required',
                 'file',
                 'max:512000',
                 function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (! $value instanceof \Illuminate\Http\UploadedFile) {
+                    if (! $value instanceof UploadedFile) {
                         $fail('El archivo MP3 no es válido.');
 
                         return;
@@ -97,35 +183,33 @@ final class PodcastUploadController extends Controller
         ]);
 
         $master = MasterProgram::query()->findOrFail((int) $data['master_program_id']);
-        $inboxFolder = $this->buildInboxFolder($master);
-        $fileName = $this->buildInboxFileName($request, $master, $data);
-        $imagePath = $this->resolveEpisodeImageValue($request, $master, $data, $inboxFolder);
+        $rawFileName = $this->buildRawFileName($data);
+        $rawPath = $this->storeRawMp3(
+            $request->file('archivo_mp3'),
+            $rawFileName,
+        );
+
+        if ($rawPath === '') {
+            return back()->withInput()->withErrors(['archivo_mp3' => 'No se pudo guardar el archivo localmente.']);
+        }
+
+        $imagePath = $this->resolveEpisodeImageValue($request, $master, $data);
         $manualEpisodeNumber = isset($data['numero_episodio']) && $data['numero_episodio'] !== ''
             ? max(1, (int) $data['numero_episodio'])
             : null;
         $syncArchiveOrg = $request->boolean('sync_archive_org', true);
         $downloadProcessedMp3 = $request->boolean('download_processed_mp3', false);
+        $pipelineAction = strtolower(trim((string) $request->input('pipeline_action', 'process')));
+        $shouldProcessPipeline = $pipelineAction !== 'save';
 
-        $mp3File = $request->file('archivo_mp3');
-        $storedPath = $fileName;
-        $storedDisk = 'public';
-        $storedOk = false;
-        if ($mp3File !== null) {
-            $storedContents = file_get_contents((string) $mp3File->getRealPath());
-            if (! is_string($storedContents) || $storedContents === '') {
-                $storedContents = 'ID3';
-            }
+        $radioProgram = RadioProgram::withoutEvents(function () use ($master, $data, $rawPath, $syncArchiveOrg, $imagePath, $manualEpisodeNumber, $downloadProcessedMp3, $shouldProcessPipeline): RadioProgram {
+            $radioBossaStatus = $shouldProcessPipeline ? 'pending' : 'skipped';
+            $archiveStatus = $shouldProcessPipeline ? 'pending' : 'skipped';
+            $deliveryStatus = $shouldProcessPipeline ? 'pending' : 'skipped';
+            $statusMessage = $shouldProcessPipeline
+                ? 'Episodio recibido. Procesamiento en segundo plano.'
+                : 'Episodio guardado como borrador. Pendiente de procesar.';
 
-            $upload = app(FileUploadService::class)->uploadRaw($storedContents, $storedPath);
-            $storedPath = $upload['key'];
-            $storedDisk = $upload['disk'];
-            $storedOk = $storedPath !== '';
-        }
-        if (! $storedOk || $storedPath === '') {
-            return back()->withInput()->withErrors(['archivo_mp3' => 'No se pudo guardar el archivo localmente.']);
-        }
-
-        $radioProgram = RadioProgram::withoutEvents(function () use ($master, $data, $storedPath, $storedDisk, $syncArchiveOrg, $imagePath, $manualEpisodeNumber): RadioProgram {
             return RadioProgram::query()->create([
                 'master_program_id' => $master->id,
                 'titulo_programa' => (string) $master->nombre,
@@ -137,49 +221,53 @@ final class PodcastUploadController extends Controller
                 'live_title' => (string) $data['live_title'],
                 'live_description' => trim((string) ($data['resena'] ?? '')) ?: null,
                 'comentario_episodio' => trim((string) ($data['resena'] ?? '')) ?: null,
-                'archivo_mp3' => $storedPath,
-                'archivo_mp3_disk' => $storedDisk,
+                'archivo_mp3' => $rawPath,
+                'archivo_mp3_disk' => 'public',
                 'enviado_radioboss' => false,
+                'radioboss_status' => $radioBossaStatus,
                 'sync_archive_org' => $syncArchiveOrg,
-                'status_message' => 'Episodio guardado. Pendiente de procesamiento.',
+                'archive_org_status' => $archiveStatus,
+                'delivery_status' => $deliveryStatus,
+                'status_message' => $statusMessage,
                 'imagen_episodio' => $imagePath,
                 'caratula_programa' => (string) $master->caratula_url,
                 'ruta_ftp_radioboss' => (string) $master->ruta_ftp,
                 'dia_transmision' => (string) $master->dia_transmision,
                 'genero_musical' => (string) $master->genero,
                 'email_notificacion' => (string) ($master->email_notificacion ?? ''),
+                'delivery_metadata' => [
+                    'preserve_local_copy' => $downloadProcessedMp3,
+                    'pipeline' => $shouldProcessPipeline ? 'chain' : 'save-only',
+                    'source' => 'admin-podcast-uploads',
+                ],
             ]);
         });
 
-        try {
-        ProcessMp3Job::dispatchAfterResponse(
-                $radioProgram->fresh(['masterProgram']) ?? $radioProgram,
-                (string) $radioProgram->archivo_mp3,
-                $downloadProcessedMp3,
-                Auth::id(),
-                Auth::user()?->name,
-                Auth::user()?->email,
+        $message = 'Episodio guardado correctamente.';
+        if ($shouldProcessPipeline) {
+            $this->dispatchPodcastPipeline(
+                radioProgram: $radioProgram->fresh(['masterProgram']) ?? $radioProgram,
+                sourcePath: $rawPath,
+                preserveLocalCopy: $downloadProcessedMp3,
+                dispatchNextJobs: false,
             );
-        } catch (Throwable $exception) {
-            return redirect()
-                ->route('admin.podcast-uploads.index')
-                ->with('status', 'El episodio quedó guardado, pero no se pudo encolar el procesamiento: ' . $exception->getMessage());
+
+            $message = $downloadProcessedMp3
+                ? 'Episodio recibido. Se conservará una copia local cuando termine el procesamiento.'
+                : 'Episodio recibido. El procesamiento continúa en segundo plano.';
+        } else {
+            $message = 'Episodio guardado como borrador. El pipeline no se ha iniciado.';
         }
 
         if ($request->expectsJson()) {
             return response()->json([
-                'status' => $downloadProcessedMp3
-                    ? 'Episodio recibido. Se conservará una copia local cuando termine el procesamiento.'
-                    : 'Episodio recibido. El procesamiento continúa en segundo plano.',
+                'status' => $message,
                 'redirect_url' => route('admin.podcast-uploads.index'),
-            ], 202);
+                'pipeline_action' => $shouldProcessPipeline ? 'process' : 'save',
+            ], $shouldProcessPipeline ? 202 : 201);
         }
 
-        return redirect()
-            ->route('admin.podcast-uploads.index')
-            ->with('status', $downloadProcessedMp3
-                ? 'Episodio recibido. Se conservará una copia local cuando termine el procesamiento.'
-                : 'Episodio recibido. El procesamiento continúa en segundo plano.');
+        return back()->with('status', $message);
     }
 
     public function retry(RadioProgram $radioProgram): RedirectResponse
@@ -189,20 +277,38 @@ final class PodcastUploadController extends Controller
         }
 
         try {
-            $radioProgram->forceFill(['status_message' => 'Reproceso solicitado desde el panel.'])->saveQuietly();
-            ProcessMp3Job::dispatch(
-                $radioProgram->fresh(['masterProgram']) ?? $radioProgram,
-                (string) $radioProgram->archivo_mp3,
-                false,
-                Auth::id(),
-                Auth::user()?->name,
-                Auth::user()?->email,
-            );
+            $retryPlan = $this->buildSelectiveRetryPlan($radioProgram);
+
+            if ($retryPlan['jobs'] === []) {
+                return back()->with('status', 'No hay errores pendientes que reprocesar.');
+            }
+
+            $radioProgram->forceFill([
+                'status_message' => 'Reintento selectivo solicitado desde el panel.',
+            ])->saveQuietly();
+
+            Bus::chain($retryPlan['jobs'])
+                ->catch(function (Throwable $exception) use ($radioProgram): void {
+                    Log::error('PodcastUploadController: fallo el reintento selectivo del podcast.', [
+                        'program_id' => $radioProgram->id,
+                        'message' => $exception->getMessage(),
+                        'exception_class' => get_class($exception),
+                    ]);
+
+                    RadioProgram::withoutEvents(function () use ($radioProgram, $exception): void {
+                        $radioProgram->forceFill([
+                            'status_message' => 'El reintento selectivo del podcast falló.',
+                            'delivery_last_error' => $exception->getMessage(),
+                            'delivery_status' => 'failed',
+                        ])->saveQuietly();
+                    });
+                })
+                ->dispatch();
         } catch (Throwable $exception) {
             return back()->with('status', 'El reintento falló: ' . $exception->getMessage());
         }
 
-        return back()->with('status', 'Episodio reenviado correctamente.');
+        return back()->with('status', $retryPlan['message']);
     }
 
     public function download(RadioProgram $radioProgram): Response|RedirectResponse
@@ -216,11 +322,11 @@ final class PodcastUploadController extends Controller
         $disk = app(FileUploadService::class)->detectDisk($path, (string) $radioProgram->archivo_mp3_disk);
 
         if ($disk === 'public') {
-            if (! \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            if (! Storage::disk('public')->exists($path)) {
                 return back()->with('status', 'No existe un MP3 local listo para descargar.');
             }
 
-            return \Illuminate\Support\Facades\Storage::disk('public')->download($path, $downloadName);
+            return Storage::disk('public')->download($path, $downloadName);
         }
 
         $localPath = app(FileUploadService::class)->localPath($path, $disk);
@@ -255,33 +361,116 @@ final class PodcastUploadController extends Controller
             ->with('status', 'Episodio eliminado correctamente.');
     }
 
-    private function buildInboxFolder(MasterProgram $master): string
-    {
-        $folder = Str::slug((string) ($master->ruta_ftp ?: $master->nombre), '-');
+    /**
+     * Dispara la cadena de micro-tareas del podcast.
+     */
+    private function dispatchPodcastPipeline(
+        RadioProgram $radioProgram,
+        string $sourcePath,
+        bool $preserveLocalCopy,
+        bool $dispatchNextJobs,
+    ): void {
+        $audioSource = $radioProgram->fresh(['masterProgram']) ?? $radioProgram;
 
-        return trim('podcast-inbox/' . ($folder !== '' ? $folder : 'programa-' . $master->id), '/');
+        Bus::chain([
+            new ProcessMp3Job(
+                $audioSource,
+                $sourcePath,
+                $preserveLocalCopy,
+                Auth::id(),
+                Auth::user()?->name,
+                Auth::user()?->email,
+                $dispatchNextJobs,
+            ),
+            new UploadRadiobossJob($radioProgram->id),
+            new UploadArchiveOrgJob($radioProgram->id),
+            new NotifyPodcastReadyJob($radioProgram->id),
+        ])
+            ->catch(function (Throwable $exception) use ($radioProgram): void {
+                Log::error('PodcastUploadController: fallo la cadena de subida del podcast.', [
+                    'program_id' => $radioProgram->id,
+                    'message' => $exception->getMessage(),
+                    'exception_class' => get_class($exception),
+                ]);
+
+                RadioProgram::withoutEvents(function () use ($radioProgram, $exception): void {
+                    $radioProgram->forceFill([
+                        'status_message' => 'La cadena de procesamiento del podcast falló.',
+                        'delivery_last_error' => $exception->getMessage(),
+                        'delivery_status' => 'failed',
+                    ])->saveQuietly();
+                });
+            })
+            ->dispatch();
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array{jobs: array<int, object>, message: string}
      */
-    private function buildInboxFileName(Request $request, MasterProgram $master, array $data): string
+    private function buildSelectiveRetryPlan(RadioProgram $radioProgram): array
     {
-        $date = Carbon::parse($data['fecha_emision'])->format('Y-m-d');
-        $slug = Str::slug((string) $data['live_title'], '-');
-        if ($slug === '') {
-            $slug = Str::slug((string) $master->nombre, '-');
+        $jobs = [];
+        $labels = [];
+
+        $radiobossStatus = trim((string) ($radioProgram->radioboss_status ?? ''));
+        $archiveStatus = trim((string) ($radioProgram->archive_org_status ?? ''));
+        $deliveryStatus = trim((string) ($radioProgram->delivery_status ?? ''));
+
+        $retryRadioboss = ! $radioProgram->enviado_radioboss || in_array($radiobossStatus, ['error', 'failed'], true);
+        $retryArchive = in_array($archiveStatus, ['error', 'failed', 'pending'], true);
+        $retryDelivery = in_array($deliveryStatus, ['failed', 'partial'], true);
+
+        if ($retryRadioboss) {
+            $jobs[] = new UploadRadiobossJob($radioProgram->id);
+            $labels[] = 'RadioBOSS';
         }
 
-        $name = trim($date . '-' . $slug, '-');
+        if ($retryArchive) {
+            $jobs[] = new UploadArchiveOrgJob($radioProgram->id);
+            $labels[] = 'Archive.org';
+        }
 
-        return ($name !== '' ? $name : 'episode') . '.mp3';
+        if ($retryRadioboss || $retryArchive || $retryDelivery) {
+            $jobs[] = new NotifyPodcastReadyJob($radioProgram->id);
+            $labels[] = 'notificación';
+        }
+
+        $message = $labels !== []
+            ? 'Reintento selectivo enviado para ' . implode(', ', $labels) . '.'
+            : 'No hay errores pendientes que reprocesar.';
+
+        return [
+            'jobs' => $jobs,
+            'message' => $message,
+        ];
+    }
+
+    private function buildRawFileName(array $data): string
+    {
+        $date = Carbon::parse((string) $data['fecha_emision'])->format('Y-m-d');
+        $slug = Str::slug((string) $data['live_title'], '-');
+        if ($slug === '') {
+            $slug = 'episode';
+        }
+
+        return trim(sprintf('%s-%s-%s.mp3', $date, $slug, Str::lower(Str::uuid()->toString())), '-');
+    }
+
+    private function storeRawMp3(?UploadedFile $file, string $fileName): string
+    {
+        if ($file === null || ! $file->isValid()) {
+            return '';
+        }
+
+        $stored = Storage::disk('public')->putFileAs('podcast-inbox', $file, $fileName);
+
+        return is_string($stored) ? trim($stored, '/') : '';
     }
 
     /**
      * @param array<string, mixed> $data
      */
-    private function resolveEpisodeImageValue(Request $request, MasterProgram $master, array $data, string $inboxFolder): ?string
+    private function resolveEpisodeImageValue(Request $request, MasterProgram $master, array $data): ?string
     {
         if ($request->hasFile('imagen_episodio_file')) {
             $file = $request->file('imagen_episodio_file');
@@ -293,19 +482,11 @@ final class PodcastUploadController extends Controller
                 }
 
                 $extension = strtolower((string) ($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg'));
-                $imageName = trim($date . '-' . $slug . '-cover', '-');
-                $imageName = ($imageName !== '' ? $imageName : 'cover') . '.' . $extension;
-                $storedImagePath = $imageName;
-                $imageContents = file_get_contents((string) $file->getRealPath());
-                if (! is_string($imageContents) || $imageContents === '') {
-                    $imageContents = 'IMAGE';
-                }
+                $imageName = trim(sprintf('%s-%s-cover-%s.%s', $date, $slug !== '' ? $slug : 'cover', Str::lower(Str::uuid()->toString()), $extension), '-');
+                $stored = Storage::disk('public')->putFileAs('podcast-inbox/covers', $file, $imageName);
 
-                $storedImage = app(FileUploadService::class)->uploadRaw($imageContents, $storedImagePath);
-                $storedImagePath = $storedImage['key'];
-                $storedImageOk = $storedImagePath !== '';
-                if ($storedImageOk && $storedImagePath !== '') {
-                    return $storedImagePath;
+                if (is_string($stored) && $stored !== '') {
+                    return trim($stored, '/');
                 }
             }
         }
@@ -353,7 +534,42 @@ final class PodcastUploadController extends Controller
      */
     private function recentUploads()
     {
-        $uploads = RadioProgram::query()->latest('id')->limit(20)->get();
+        $uploads = RadioProgram::query()
+            ->orderByRaw(
+                "CASE
+                    WHEN COALESCE(radioboss_status, '') = 'skipped'
+                     AND COALESCE(archive_org_status, '') = 'skipped'
+                     AND COALESCE(delivery_status, '') = 'skipped'
+                    THEN 0
+                    ELSE 1
+                 END"
+            )
+            ->latest('id')
+            ->limit(20)
+            ->get();
+
+        if (Schema::hasTable('master_programs')) {
+            $uploads->load('masterProgram');
+
+            return $uploads;
+        }
+
+        return $uploads->each(static function (RadioProgram $upload): void {
+            $upload->setRelation('masterProgram', null);
+        });
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, RadioProgram>
+     */
+    private function recentPublishedUploads()
+    {
+        $uploads = RadioProgram::query()
+            ->where('delivery_status', 'verified')
+            ->orderByDesc('delivery_verified_at')
+            ->orderByDesc('id')
+            ->limit(6)
+            ->get();
 
         if (Schema::hasTable('master_programs')) {
             $uploads->load('masterProgram');

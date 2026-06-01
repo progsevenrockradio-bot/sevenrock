@@ -36,18 +36,22 @@ class AuthController extends Controller
         }
 
         if (! Auth::user()?->hasAdminAccess()) {
+            // Un usuario autenticado sin privilegios de admin no debe conservar la sesión.
             $auditTrailService->recordSystem('admin.login.denied', 'Usuario autenticado sin acceso de admin', [
                 'email' => $credentials['email'],
                 'ip' => $request->ip(),
             ], 'warning');
 
             Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
 
             return back()->withErrors([
                 'email' => 'Invalid credentials.',
             ])->onlyInput('email');
         }
 
+        // Regenera el ID de sesión inmediatamente después de un login válido para evitar session fixation.
         $request->session()->regenerate();
 
         $auditTrailService->recordSystem('admin.login.success', 'Acceso al panel admin', [

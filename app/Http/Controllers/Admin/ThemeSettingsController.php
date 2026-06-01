@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ThemeSetting;
 use App\Services\FileUploadService;
 use App\Support\ThemeAppearance;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -14,6 +16,27 @@ use Illuminate\View\View;
 
 class ThemeSettingsController extends Controller
 {
+    public function manual(): View
+    {
+        return view('admin.settings-manual', $this->manualViewData());
+    }
+
+    public function manualPdf(): \Symfony\Component\HttpFoundation\Response
+    {
+        $options = new Options();
+        $options->setIsRemoteEnabled(true);
+
+        $pdf = new Dompdf($options);
+        $pdf->loadHtml(view('admin.settings-manual-pdf', $this->manualViewData())->render());
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->render();
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="seven-rock-radio-admin-settings-manual.pdf"',
+        ]);
+    }
+
     public function edit(): View
     {
         $settings = ThemeSetting::current();
@@ -171,6 +194,19 @@ class ThemeSettingsController extends Controller
         }
 
         app(FileUploadService::class)->delete($path);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function manualViewData(): array
+    {
+        $settings = ThemeSetting::current();
+
+        return [
+            'themeSettings' => $settings,
+            'themeAppearance' => ThemeAppearance::resolved(),
+        ];
     }
 
     /**
