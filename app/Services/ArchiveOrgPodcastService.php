@@ -78,16 +78,8 @@ final class ArchiveOrgPodcastService
 
         $this->uploadFile($identifier, $remotePath, $absolutePath, $itemMetadata);
 
-        // Apply metadata if possible (non-blocking - archive.org may still be indexing)
-        try {
-            $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
-        } catch (Throwable $metadataException) {
-            Log::warning('ArchiveOrgPodcastService: metadata apply skipped (archive.org still indexing)', [
-                'identifier' => $identifier,
-                'remote_path' => $remotePath,
-                'error' => $metadataException->getMessage(),
-            ]);
-        }
+        // Apply file metadata explicitly and fail the job if Archive.org rejects it.
+        $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
 
         $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
         $pendingIndexing = (bool) ($verification['pending_indexing'] ?? false);
@@ -587,7 +579,7 @@ final class ArchiveOrgPodcastService
             }
 
             $patches[] = [
-                'op' => 'replace',
+                'op' => 'add',
                 'path' => '/' . $key,
                 'value' => $value,
             ];
