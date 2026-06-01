@@ -182,10 +182,14 @@ class ProcessMp3Job implements ShouldQueue
 
         $verification = $this->verifyTaggedMetadata($absolutePath, $tags);
         if (! ($verification['verified'] ?? false)) {
-            Log::warning('ProcessMp3Job: metadata verification mismatch.', [
+            Log::error('ProcessMp3Job: metadata verification mismatch.', [
                 'program_id' => $radioProgram->id,
                 'message' => $verification['message'] ?? 'La metadata no pudo verificarse.',
+                'expected' => $tags,
+                'verified_tags' => $verification['tags'] ?? [],
             ]);
+
+            throw new \RuntimeException((string) ($verification['message'] ?? 'La metadata del MP3 no pudo verificarse después de escribirla.'));
         }
     }
 

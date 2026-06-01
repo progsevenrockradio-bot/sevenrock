@@ -50,6 +50,7 @@ final class PodcastUploadedMail extends Mailable
     public function content(): Content
     {
         $identifier = (string) data_get($this->episode->archive_org_metadata, 'identifier', '');
+        $archivePendingIndexing = (bool) data_get($this->episode->archive_org_metadata, 'pending_indexing', false);
 
         return new Content(
             markdown: 'emails.podcast-uploaded',
@@ -63,6 +64,7 @@ final class PodcastUploadedMail extends Mailable
                 'archiveItemUrl' => $this->archiveVerified && $identifier !== ''
                     ? 'https://archive.org/details/' . rawurlencode($identifier)
                     : null,
+                'archivePendingIndexing' => $archivePendingIndexing,
             ],
         );
     }
