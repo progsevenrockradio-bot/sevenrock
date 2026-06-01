@@ -24,6 +24,23 @@ class FileUploadService
      */
     public function upload(UploadedFile $file, string $path, ?string $disk = null): array
     {
+        $fileSize = (int) ($file->getSize() ?? 0);
+
+        if ($fileSize > self::BACKBLAZE_LARGE_FILE_THRESHOLD_BYTES && $this->isB2Configured()) {
+            Log::info('FileUploadService: Large file detected, using stream-based upload', [
+                'path' => $path,
+                'size' => $fileSize,
+                'threshold' => self::BACKBLAZE_LARGE_FILE_THRESHOLD_BYTES,
+            ]);
+
+            $result = $this->uploadLargeToBackblazeFromFile($file, $path);
+            if ($result !== null) {
+                return $result;
+            }
+
+            throw new RuntimeException('No se pudo subir el archivo grande.');
+        }
+
         $contents = @file_get_contents((string) $file->getRealPath());
         if (! is_string($contents) || $contents === '') {
             $contents = null;
@@ -247,14 +264,13 @@ class FileUploadService
         foreach ($disks as $candidate) {
             try {
                 if ($candidate === 'backblaze' && $this->isB2Configured()) {
-                    $fileSize = $file instanceof UploadedFile ? $this->uploadedFileSize($file) : null;
-                    $largeUploadSize = $fileSize ?? $contentSize ?? 0;
+                    $fileSize = $file instanceof UploadedFile ? (int) ($file->getSize() ?? 0) : ($contentSize ?? 0);
 
-                    if ($largeUploadSize > self::BACKBLAZE_LARGE_FILE_THRESHOLD_BYTES) {
+                    if ($fileSize > self::BACKBLAZE_LARGE_FILE_THRESHOLD_BYTES) {
                         Log::info('FileUploadService: Large file upload to B2', [
                             'path' => $path,
                             'disk' => $candidate,
-                            'size' => $largeUploadSize,
+                            'size' => $fileSize,
                         ]);
 
                         $result = $file instanceof UploadedFile
@@ -264,7 +280,7 @@ class FileUploadService
                         Log::info('FileUploadService: Large file upload to B2 completed', [
                             'path' => $path,
                             'disk' => $candidate,
-                            'size' => $largeUploadSize,
+                            'size' => $fileSize,
                             'key' => $result['key'],
                         ]);
 

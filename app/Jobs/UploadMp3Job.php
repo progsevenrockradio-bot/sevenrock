@@ -9,4 +9,5 @@ namespace App\Jobs;
  */
 class UploadMp3Job extends ProcessMp3Job
 {
+    public int $timeout = 900;
 }
