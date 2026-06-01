@@ -68,7 +68,7 @@ Route::post('/admin/reset-password', [AdminAuthController::class, 'reset'])->nam
 
 Route::prefix('admin')->name('admin.')->middleware('guest')->group(function (): void {
     Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AdminAuthController::class, 'login'])->middleware('throttle:5,1')->name('login.store');
+    Route::post('/login', [AdminAuthController::class, 'login'])->middleware('throttle:login')->name('login.store');
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit'])->group(function (): void {
