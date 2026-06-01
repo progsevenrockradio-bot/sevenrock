@@ -12,6 +12,7 @@ use App\Support\PublicMediaUrl;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Support\Facades\File;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
@@ -68,7 +69,9 @@ class ProcessMp3Job implements ShouldQueue
 
         $sourcePath = $this->rawPath;
         $finalPath = $this->buildProcessedPath($sourcePath);
-        $rawExistsOnPublicDisk = $sourceDisk === 'public' && Storage::disk('public')->exists($sourcePath);
+        $workingPath = $this->buildWorkingPath($sourcePath);
+
+        $this->prepareWorkingCopy($sourceAbsolutePath, $workingPath);
 
         RadioProgram::withoutEvents(function () use ($radioProgram): void {
             $radioProgram->forceFill([
@@ -83,45 +86,32 @@ class ProcessMp3Job implements ShouldQueue
         $anio = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('Y') : now()->format('Y');
         $invitado = trim(strip_tags((string) $radioProgram->biografia_invitado));
 
-        $this->writeMetadata($sourceAbsolutePath, $master, $radioProgram, $programName, $invitado, $fecha, $fechaTitulo, $anio);
+        try {
+            $this->writeMetadata($workingPath, $master, $radioProgram, $programName, $invitado, $fecha, $fechaTitulo, $anio);
 
-        if ($finalPath !== $sourcePath) {
-            if ($rawExistsOnPublicDisk) {
-                if (! Storage::disk('public')->copy($sourcePath, $finalPath)) {
-                    throw new \RuntimeException("No se pudo copiar el archivo procesado a {$finalPath}");
-                }
-            } else {
-                $copyContents = @file_get_contents($sourceAbsolutePath);
-                if (! is_string($copyContents) || $copyContents === '') {
-                    throw new \RuntimeException("No se pudo preparar el contenido procesado para {$finalPath}");
-                }
+            $this->publishWorkingCopy($workingPath, $finalPath);
 
-                if (! Storage::disk('public')->put($finalPath, $copyContents)) {
-                    throw new \RuntimeException("No se pudo guardar el archivo procesado en {$finalPath}");
-                }
+            if ($finalPath !== $sourcePath) {
+                $this->cleanupSourceCopy($sourceAbsolutePath, $sourcePath, $finalPath, $sourceDisk, $this->preserveLocalCopy);
             }
-        }
 
-        if ($finalPath !== $sourcePath && $rawExistsOnPublicDisk && Storage::disk('public')->exists($sourcePath)) {
-            Storage::disk('public')->delete($sourcePath);
-        } elseif ($finalPath !== $sourcePath && $sourceDisk !== 'public' && is_file($sourceAbsolutePath)) {
-            @unlink($sourceAbsolutePath);
-        }
+            RadioProgram::withoutEvents(function () use ($radioProgram, $finalPath): void {
+                $radioProgram->forceFill([
+                    'archivo_mp3' => $finalPath,
+                    'archivo_mp3_disk' => 'public',
+                    'status_message' => 'MP3 procesado localmente. Preparando entregas.',
+                ])->saveQuietly();
+            });
 
-        RadioProgram::withoutEvents(function () use ($radioProgram, $finalPath): void {
-            $radioProgram->forceFill([
-                'archivo_mp3' => $finalPath,
-                'archivo_mp3_disk' => 'public',
-                'status_message' => 'MP3 procesado localmente. Preparando entregas.',
-            ])->saveQuietly();
-        });
-
-        if ($this->dispatchNextJobs) {
-            Bus::chain([
-                new UploadRadiobossJob($radioProgram->id),
-                new UploadArchiveOrgJob($radioProgram->id),
-                new NotifyPodcastReadyJob($radioProgram->id),
-            ])->dispatch();
+            if ($this->dispatchNextJobs) {
+                Bus::chain([
+                    new UploadRadiobossJob($radioProgram->id),
+                    new UploadArchiveOrgJob($radioProgram->id),
+                    new NotifyPodcastReadyJob($radioProgram->id),
+                ])->dispatch();
+            }
+        } finally {
+            $this->cleanupWorkingCopy($workingPath);
         }
     }
 
@@ -137,6 +127,66 @@ class ProcessMp3Job implements ShouldQueue
         }
 
         return 'programas_procesados/' . basename($sourcePath);
+    }
+
+    private function buildWorkingPath(string $sourcePath): string
+    {
+        $sourcePath = ltrim(str_replace('\\', '/', trim($sourcePath)), '/');
+        $fileName = basename($sourcePath);
+        $workingDirectory = storage_path('app/tmp/podcast-processing');
+
+        File::ensureDirectoryExists($workingDirectory);
+
+        return $workingDirectory . DIRECTORY_SEPARATOR . Str::uuid()->toString() . '-' . ($fileName !== '' ? $fileName : 'episode.mp3');
+    }
+
+    private function prepareWorkingCopy(string $sourceAbsolutePath, string $workingPath): void
+    {
+        if (! is_file($sourceAbsolutePath) || ! is_readable($sourceAbsolutePath)) {
+            throw new \RuntimeException("No se pudo preparar el archivo de trabajo desde {$sourceAbsolutePath}");
+        }
+
+        if (! copy($sourceAbsolutePath, $workingPath)) {
+            throw new \RuntimeException("No se pudo crear la copia de trabajo en {$workingPath}");
+        }
+    }
+
+    private function publishWorkingCopy(string $workingPath, string $finalPath): void
+    {
+        $copyContents = @file_get_contents($workingPath);
+        if (! is_string($copyContents) || $copyContents === '') {
+            throw new \RuntimeException("No se pudo leer la copia de trabajo para {$finalPath}");
+        }
+
+        if (! Storage::disk('public')->put($finalPath, $copyContents)) {
+            throw new \RuntimeException("No se pudo guardar el archivo procesado en {$finalPath}");
+        }
+    }
+
+    private function cleanupSourceCopy(string $sourceAbsolutePath, string $sourcePath, string $finalPath, string $sourceDisk, bool $preserveLocalCopy): void
+    {
+        if ($preserveLocalCopy) {
+            return;
+        }
+
+        if ($sourceDisk === 'public') {
+            if ($sourcePath !== $finalPath && Storage::disk('public')->exists($sourcePath)) {
+                Storage::disk('public')->delete($sourcePath);
+            }
+
+            return;
+        }
+
+        if (is_file($sourceAbsolutePath)) {
+            @unlink($sourceAbsolutePath);
+        }
+    }
+
+    private function cleanupWorkingCopy(string $workingPath): void
+    {
+        if (is_file($workingPath)) {
+            @unlink($workingPath);
+        }
     }
 
     private function writeMetadata(
