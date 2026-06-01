@@ -76,20 +76,18 @@ final class ArchiveOrgPodcastService
             'status_message' => 'Sincronizando Archive.org.',
         ])->saveQuietly();
 
-        $this->uploadFile($identifier, $remotePath, $absolutePath, $itemMetadata);
+        $this->uploadFile($identifier, $remotePath, $absolutePath, $itemMetadata, $fileMetadata);
 
         $episode->forceFill([
             'archive_org_remote_path' => $remotePath,
         ])->saveQuietly();
 
         if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
-            Log::warning('ArchiveOrgPodcastService: file not reachable after waiting, continuing with metadata patch anyway.', [
+            Log::warning('ArchiveOrgPodcastService: file not reachable after waiting, continuing with verification anyway.', [
                 'identifier' => $identifier,
                 'remote_path' => $remotePath,
             ]);
         }
-
-        $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
 
         $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
         $pendingIndexing = (bool) ($verification['pending_indexing'] ?? false);
@@ -134,7 +132,7 @@ final class ArchiveOrgPodcastService
         ];
     }
 
-    public function syncEpisodeMetadata(RadioProgram $episode): array
+    public function patchFileMetadata(RadioProgram $episode): array
     {
         $episode->loadMissing('masterProgram');
 
@@ -169,7 +167,7 @@ final class ArchiveOrgPodcastService
         $fileMetadata = $this->buildEpisodeFileMetadata($episode, $master);
 
         if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
-            Log::warning('ArchiveOrgPodcastService: file not reachable before metadata PATCH, continuing anyway.', [
+            Log::warning('ArchiveOrgPodcastService: file not reachable before metadata sync, continuing anyway.', [
                 'identifier' => $identifier,
                 'remote_path' => $remotePath,
             ]);
@@ -212,6 +210,11 @@ final class ArchiveOrgPodcastService
             'remote_path' => $remotePath,
             'verification' => $verification,
         ];
+    }
+
+    public function syncEpisodeMetadata(RadioProgram $episode): array
+    {
+        return $this->patchFileMetadata($episode);
     }
 
     public function canSync(): bool
@@ -546,7 +549,7 @@ final class ArchiveOrgPodcastService
         return trim($normalized);
     }
 
-    private function uploadFile(string $identifier, string $remotePath, string $absolutePath, array $itemMetadata = []): void
+    private function uploadFile(string $identifier, string $remotePath, string $absolutePath, array $itemMetadata = [], array $fileMetadata = []): void
     {
         if (! is_file($absolutePath) || ! is_readable($absolutePath)) {
             throw new RuntimeException("No se pudo leer el MP3 local: {$absolutePath}");
@@ -561,8 +564,12 @@ final class ArchiveOrgPodcastService
             'User-Agent' => config('app.name', 'Laravel') . ' ArchiveOrgPodcastService',
         ];
 
-        if ($itemMetadata !== []) {
-            $headers = array_merge($headers, $this->mapItemMetadataToHeaders($itemMetadata));
+        if ($itemMetadata !== [] || $fileMetadata !== []) {
+            $headers = array_merge(
+                $headers,
+                $this->mapItemMetadataToHeaders($itemMetadata),
+                $this->mapItemMetadataToHeaders($fileMetadata),
+            );
         }
 
         $this->retry(function () use ($identifier, $remotePath, $headers, $absolutePath): void {
