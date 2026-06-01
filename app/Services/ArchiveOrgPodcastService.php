@@ -78,7 +78,18 @@ final class ArchiveOrgPodcastService
 
         $this->uploadFile($identifier, $remotePath, $absolutePath, $itemMetadata);
 
-        // Apply file metadata explicitly and fail the job if Archive.org rejects it.
+        $episode->forceFill([
+            'archive_org_remote_path' => $remotePath,
+        ])->saveQuietly();
+
+        if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
+            throw new RuntimeException(
+                "Archive.org: uploaded file not reachable after waiting. " .
+                "Cannot patch metadata for a file that does not exist. " .
+                "Identifier: {$identifier}, Remote path: {$remotePath}"
+            );
+        }
+
         $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
 
         $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
@@ -157,6 +168,14 @@ final class ArchiveOrgPodcastService
         }
 
         $fileMetadata = $this->buildEpisodeFileMetadata($episode, $master);
+
+        if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
+            throw new RuntimeException(
+                "Archive.org: file not found. Cannot patch metadata. " .
+                "Identifier: {$identifier}, Remote path: {$remotePath}"
+            );
+        }
+
         $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
         $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
 
@@ -564,6 +583,40 @@ final class ArchiveOrgPodcastService
                 }
             }
         });
+    }
+
+    private function waitForRemoteFileOnArchiveOrg(string $identifier, string $remotePath): bool
+    {
+        $delays = [5, 10, 15];
+
+        foreach ($delays as $delaySeconds) {
+            sleep($delaySeconds);
+
+            if ($this->verifyFileExistsOnArchiveOrg($identifier, $remotePath)) {
+                return true;
+            }
+
+            Log::warning('ArchiveOrgPodcastService: file not yet reachable after upload, retrying.', [
+                'identifier' => $identifier,
+                'remote_path' => $remotePath,
+                'wait_seconds' => $delaySeconds,
+            ]);
+        }
+
+        return false;
+    }
+
+    private function verifyFileExistsOnArchiveOrg(string $identifier, string $remotePath): bool
+    {
+        try {
+            $response = $this->client->request('HEAD', $this->downloadEndpoint() . '/' . rawurlencode($identifier) . '/' . $this->encodePath($remotePath), [
+                'http_errors' => false,
+            ]);
+
+            return $response->getStatusCode() >= 200 && $response->getStatusCode() < 400;
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     /**
