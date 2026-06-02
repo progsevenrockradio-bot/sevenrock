@@ -76,16 +76,26 @@ final class ArchiveOrgPodcastService
             'status_message' => 'Sincronizando Archive.org.',
         ])->saveQuietly();
 
-        $this->uploadFile($identifier, $remotePath, $absolutePath, $itemMetadata, $fileMetadata);
+        $this->uploadFile($identifier, $remotePath, $absolutePath, $itemMetadata);
 
         $episode->forceFill([
             'archive_org_remote_path' => $remotePath,
         ])->saveQuietly();
 
         if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
-            Log::warning('ArchiveOrgPodcastService: file not reachable after waiting, continuing with verification anyway.', [
+            Log::warning('ArchiveOrgPodcastService: file not reachable after waiting, continuing with metadata patch anyway.', [
                 'identifier' => $identifier,
                 'remote_path' => $remotePath,
+            ]);
+        }
+
+        try {
+            $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
+        } catch (Throwable $exception) {
+            Log::warning('ArchiveOrgPodcastService: metadata PATCH failed in syncEpisode (non-fatal).', [
+                'identifier' => $identifier,
+                'remote_path' => $remotePath,
+                'error' => $exception->getMessage(),
             ]);
         }
 
@@ -107,7 +117,6 @@ final class ArchiveOrgPodcastService
             'archive_org_verified_at' => $pendingIndexing ? null : now(),
             'archive_org_last_error' => null,
             'archive_org_metadata' => array_merge($snapshot, [
-                'collection' => trim((string) ($snapshot['collection'] ?? '')),
                 'status' => $pendingIndexing ? 'pending' : 'synced',
                 'synced_at' => $pendingIndexing ? null : now()->toIso8601String(),
                 'remote_path' => $remotePath,
@@ -133,7 +142,7 @@ final class ArchiveOrgPodcastService
         ];
     }
 
-    public function patchFileMetadata(RadioProgram $episode): array
+    public function syncEpisodeMetadata(RadioProgram $episode): array
     {
         $episode->loadMissing('masterProgram');
 
@@ -168,7 +177,7 @@ final class ArchiveOrgPodcastService
         $fileMetadata = $this->buildEpisodeFileMetadata($episode, $master);
 
         if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
-            Log::warning('ArchiveOrgPodcastService: file not reachable before metadata sync, continuing anyway.', [
+            Log::warning('ArchiveOrgPodcastService: file not reachable before metadata PATCH, continuing anyway.', [
                 'identifier' => $identifier,
                 'remote_path' => $remotePath,
             ]);
@@ -211,61 +220,6 @@ final class ArchiveOrgPodcastService
             'remote_path' => $remotePath,
             'verification' => $verification,
         ];
-    }
-
-    public function syncEpisodeMetadata(RadioProgram $episode): array
-    {
-        return $this->patchFileMetadata($episode);
-    }
-
-    /**
-     * Publica un ítem oscuro asignándole la collection "opensource_audio".
-     *
-     * @return array{success: bool, identifier: string, message: string}
-     */
-    public function publishItem(string $identifier): array
-    {
-        if (! $this->canSync()) {
-            throw new RuntimeException('Faltan credenciales de Archive.org.');
-        }
-
-        try {
-            $this->retry(function () use ($identifier): void {
-                $this->client->request('POST', $this->apiEndpoint() . '/metadata/' . rawurlencode($identifier), [
-                    'headers' => [
-                        'Content-Type' => 'application/x-www-form-urlencoded',
-                    ],
-                    'form_params' => [
-                        '-target' => 'collection',
-                        '-patch' => json_encode([
-                            ['op' => 'add', 'path' => '/collection', 'value' => 'opensource_audio'],
-                        ], JSON_THROW_ON_ERROR),
-                        'access' => trim((string) config('services.archive_org.access_key', '')),
-                        'secret' => trim((string) config('services.archive_org.secret_key', '')),
-                    ],
-                ]);
-            });
-
-            return [
-                'success' => true,
-                'identifier' => $identifier,
-                'message' => 'Item published.',
-            ];
-        } catch (Throwable $exception) {
-            if (str_contains($exception->getMessage(), 'no changes')) {
-                return [
-                    'success' => true,
-                    'identifier' => $identifier,
-                    'message' => 'Collection already set.',
-                ];
-            }
-
-            return [
-                'success' => false,
-                'identifier' => $identifier,
-                'message' => $exception->getMessage(),
-            ];
-        }
     }
 
     public function canSync(): bool
@@ -535,7 +489,7 @@ final class ArchiveOrgPodcastService
         $creator = trim((string) ($master?->conductor ?: $episode->conductor ?: ''));
 
         return array_filter([
-            'collection' => '',
+            'collection' => trim((string) config('services.archive_org.collection', 'opensource_audio')),
             'mediatype' => trim((string) config('services.archive_org.mediatype', 'audio')),
             'title' => $programTitle,
             'description' => strip_tags($description),
@@ -615,12 +569,8 @@ final class ArchiveOrgPodcastService
             'User-Agent' => config('app.name', 'Laravel') . ' ArchiveOrgPodcastService',
         ];
 
-        if ($itemMetadata !== [] || $fileMetadata !== []) {
-            $headers = array_merge(
-                $headers,
-                $this->mapItemMetadataToHeaders($itemMetadata),
-                $this->mapItemMetadataToHeaders($fileMetadata),
-            );
+        if ($itemMetadata !== []) {
+            $headers = array_merge($headers, $this->mapItemMetadataToHeaders($itemMetadata));
         }
 
         $this->retry(function () use ($identifier, $remotePath, $headers, $absolutePath): void {
@@ -714,17 +664,11 @@ final class ArchiveOrgPodcastService
                 ]);
             });
         } catch (Throwable $exception) {
-            // "no changes" = metadata ya aplicada (éxito)
+            // "no changes" significa que la metadata ya estaba aplicada -> es éxito
             if (str_contains($exception->getMessage(), 'no changes')) {
                 return;
             }
-            // Otros errores se propagan para que el job reintente
             throw $exception;
-            Log::warning('ArchiveOrgPodcastService: metadata PATCH failed (non-fatal, ID3 tags carry essential metadata).', [
-                'identifier' => $identifier,
-                'remote_path' => $remotePath,
-                'error' => $exception->getMessage(),
-            ]);
         }
     }
 
@@ -733,6 +677,28 @@ final class ArchiveOrgPodcastService
      * @param array<string, string> $fileMetadata
      * @return array<string, mixed>
      */
+
+
+    public function patchFileMetadata(RadioProgram $episode): void
+    {
+        $episode->loadMissing('masterProgram');
+        $master = $episode->masterProgram;
+
+        $identifier = $this->resolveIdentifier($episode, $master);
+        $remotePath = trim((string) ($episode->archive_org_remote_path ?: $this->resolveRemotePath($episode)));
+
+        if ($remotePath === '') {
+            throw new RuntimeException('No remote path available for Archive.org metadata patch.');
+        }
+
+        if (! $this->itemExists($identifier)) {
+            throw new RuntimeException("Item {$identifier} does not exist on Archive.org.");
+        }
+
+        $fileMetadata = $this->buildEpisodeFileMetadata($episode, $master);
+        $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
+    }
+
     private function buildArchiveSnapshot(
         RadioProgram $episode,
         ?MasterProgram $master,

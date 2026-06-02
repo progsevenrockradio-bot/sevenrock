@@ -178,6 +178,16 @@ class ThemeSettingsController extends Controller
         $settings->social_youtube = trim((string) ($validated['social_youtube'] ?? '')) ?: null;
         $settings->social_tiktok = trim((string) ($validated['social_tiktok'] ?? '')) ?: null;
         $settings->social_x = trim((string) ($validated['social_x'] ?? '')) ?: null;
+        $settings->brand_mark = trim((string) ($validated['brand_mark'] ?? '')) ?: null;
+        $settings->brand_mark_font = trim((string) ($validated['brand_mark_font'] ?? '')) ?: null;
+        $settings->brand_display_mode = trim((string) ($validated['brand_display_mode'] ?? '')) ?: null;
+        $settings->contact_form_title = trim((string) ($validated['contact_form_title'] ?? '')) ?: null;
+        $settings->contact_info_title = trim((string) ($validated['contact_info_title'] ?? '')) ?: null;
+        $settings->contact_description = trim((string) ($validated['contact_description'] ?? '')) ?: null;
+        $settings->contact_address = trim((string) ($validated['contact_address'] ?? '')) ?: null;
+        $settings->contact_email = trim((string) ($validated['contact_email'] ?? '')) ?: null;
+        $settings->contact_phone_primary = trim((string) ($validated['contact_phone_primary'] ?? '')) ?: null;
+        $settings->contact_phone_secondary = trim((string) ($validated['contact_phone_secondary'] ?? '')) ?: null;
         $settings->featured_stories = $this->decodeJsonSection($validated['featured_stories_json'] ?? '', 'featured_stories_json', $settings->featuredStories());
         $settings->latest_podcasts = $this->decodeJsonSection($validated['latest_podcasts_json'] ?? '', 'latest_podcasts_json', $settings->latestPodcasts());
         $settings->home_headings = $this->decodeJsonSection($validated['home_headings_json'] ?? '', 'home_headings_json', $settings->homeHeadings());
