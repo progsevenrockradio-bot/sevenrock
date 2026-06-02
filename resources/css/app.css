@@ -330,6 +330,13 @@
         background-size: cover;
     }
 
+    @media (max-width: 767px) {
+        .hero-rocks-bg {
+            background-size: contain !important;
+            background-position: top center !important;
+        }
+    }
+
     .lucille-page-heading {
         position: relative;
         overflow: hidden;
