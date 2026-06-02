@@ -156,6 +156,7 @@
                 justify-content: space-between;
                 min-height: 0;
                 gap: clamp(.5rem, 1.2vh, 1rem);
+                margin-top: clamp(0.5rem, 2vh, 1.5rem);
             }
 
             .radio-player-popup-track-wrap {
@@ -204,6 +205,7 @@
                 flex-direction: column;
                 gap: clamp(.5rem, 1vh, .9rem);
                 width: min(100%, 560px);
+                margin-top: clamp(0.25rem, 1vh, 0.75rem);
             }
 
             .radio-player-popup-time-row {
@@ -234,11 +236,12 @@
             .radio-player-popup-volume {
                 display: flex;
                 align-items: center;
+                flex-shrink: 0;
                 gap: clamp(.5rem, 1.3vw, .75rem);
                 width: 100%;
                 border: 1px solid rgba(184,175,162,.10);
                 background: rgba(0,0,0,.20);
-                padding: clamp(.5rem, 1.2vh, .75rem) clamp(.75rem, 2vw, 1rem);
+                padding: clamp(.5rem, 1.2vh, .75rem) clamp(.75rem, 2vw, 1rem) clamp(.75rem, 2vh, 1.25rem);
                 backdrop-filter: blur(18px);
             }
 
@@ -372,7 +375,11 @@
                     <div class="radio-player-popup-controls">
                         <div class="radio-player-popup-time-row">
                             <div class="flex-1 min-w-0">
-                                <span class="block min-w-[64px] text-left text-[16px] font-mono uppercase tracking-[.22em] text-zinc-100" x-text="formatTime(progress.elapsed)"></span>
+                                <div class="rbcloud_tracktimer" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:18px; color:#b7ad9f; font-family:var(--font-display); font-size:14px; letter-spacing:.18em; text-transform:uppercase; white-space:nowrap;">
+                                    <span id="rbcloud_tracktimer_e11097"></span>
+                                    <span id="rbcloud_tracktimer_sep11097" hidden> &frasl; </span>
+                                    <span id="rbcloud_tracktimer_r11097"></span>
+                                </div>
                             </div>
                             <button type="button" class="radio-player-popup-control radio-player-popup-play-button shrink-0 rounded-full border-2 border-white/60 bg-white text-black shadow-[0_20px_40px_rgba(0,0,0,.45)]" @click="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'">
                                 <span class="radio-player-popup-action-icon" x-text="playing ? '❚❚' : '▶'"></span>
@@ -389,16 +396,16 @@
                                 <span class="block h-full rounded-full bg-red-600" :style="`width:${progress.ratio}%`"></span>
                             </button>
                         </div>
-
-                        <div class="radio-player-popup-volume">
-                            <button type="button" class="radio-player-popup-control h-8 w-8 shrink-0 rounded-full border-white/10 bg-white/0 text-zinc-200" @click="toggleMute()" aria-label="Mute">
-                                <span x-text="muted ? '🔇' : '🔊'"></span>
-                            </button>
-                            <input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" class="h-1 w-full cursor-pointer accent-red-600">
-                            <span class="min-w-[34px] text-right text-[11px] font-mono uppercase tracking-[.18em] text-zinc-400" x-text="Math.round(volume * 100) + '%'">80%</span>
-                        </div>
                     </div>
                 </main>
+
+                <div class="radio-player-popup-volume">
+                    <button type="button" class="radio-player-popup-control h-8 w-8 shrink-0 rounded-full border-white/10 bg-white/0 text-zinc-200" @click="toggleMute()" aria-label="Mute">
+                        <span x-text="muted ? '🔇' : '🔊'"></span>
+                    </button>
+                    <input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" class="h-1 w-full cursor-pointer accent-red-600">
+                    <span class="min-w-[34px] text-right text-[11px] font-mono uppercase tracking-[.18em] text-zinc-400" x-text="Math.round(volume * 100) + '%'">80%</span>
+                </div>
 
                 <section class="radio-player-popup-drawer overflow-hidden rounded-[22px] border border-white/10" x-show="panelOpen" x-transition.opacity>
                     <div class="radio-player-popup-drawer-grid">
@@ -510,6 +517,7 @@
                     </div>
                 </div>
                 <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11096"></script>
+                <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11097"></script>
 
                 <span class="radio-player-actions" style="display:flex; flex:0 0 auto; align-items:center; justify-content:center; gap:8px; white-space:nowrap; margin-left:auto; padding-right:4px;">
                     <button type="button" class="radio-player-icon" data-player-action="details" @click.stop="toggleInfoWindow()" title="Detalles" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.15); color:#dcd7cc; border-radius:50%; cursor:pointer; font-size:10px; font-weight:600; line-height:1; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.22); color:#dcd7cc; border-radius:50%; cursor:pointer; font-size:13px; font-weight:600; line-height:1; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;'">i</button>
