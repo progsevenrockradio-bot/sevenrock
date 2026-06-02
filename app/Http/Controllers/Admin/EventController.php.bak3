@@ -125,7 +125,7 @@ class EventController extends Controller
         if ($request->hasFile('poster_file')) {
             $this->deleteUploaded($current);
 
-            return app(FileUploadService::class)->upload($request->file('poster_file'), 'catalog/events')['url'];
+            return app(FileUploadService::class)->upload($request->file('poster_file'), 'catalog/events')['key'];
         }
 
         $value = trim((string) $input);

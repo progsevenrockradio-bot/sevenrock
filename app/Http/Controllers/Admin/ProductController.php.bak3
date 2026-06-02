@@ -105,7 +105,7 @@ class ProductController extends Controller
         if ($request->hasFile('image_file')) {
             $this->deleteUploaded($current);
 
-            return app(FileUploadService::class)->upload($request->file('image_file'), 'catalog/products')['url'];
+            return app(FileUploadService::class)->upload($request->file('image_file'), 'catalog/products')['key'];
         }
 
         return trim((string) $input) !== '' ? trim((string) $input) : (string) $current;

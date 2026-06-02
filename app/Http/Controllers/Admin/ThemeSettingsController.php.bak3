@@ -162,7 +162,7 @@ class ThemeSettingsController extends Controller
         ] as $input => $column) {
             if ($request->hasFile($input)) {
                 $this->removeIfUploaded($settings->{$column});
-                $settings->{$column} = app(FileUploadService::class)->upload($request->file($input), 'theme')['url'];
+                $settings->{$column} = app(FileUploadService::class)->upload($request->file($input), 'theme')['key'];
             }
         }
 

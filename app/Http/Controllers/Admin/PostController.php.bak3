@@ -290,7 +290,7 @@ class PostController extends Controller
         if ($request->hasFile('featured_image_file')) {
             $this->deleteUploaded($current);
 
-            return app(FileUploadService::class)->upload($request->file('featured_image_file'), 'catalog/posts')['url'];
+            return app(FileUploadService::class)->upload($request->file('featured_image_file'), 'catalog/posts')['key'];
         }
 
         return trim((string) $input) !== '' ? trim((string) $input) : (string) $current;

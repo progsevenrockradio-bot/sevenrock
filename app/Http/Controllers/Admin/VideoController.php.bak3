@@ -87,7 +87,7 @@ class VideoController extends Controller
         if ($request->hasFile('image_file')) {
             $this->deleteUploaded($current);
 
-            return app(FileUploadService::class)->upload($request->file('image_file'), $directory)['url'];
+            return app(FileUploadService::class)->upload($request->file('image_file'), $directory)['key'];
         }
 
         return trim((string) $input) !== '' ? trim((string) $input) : (string) $current;

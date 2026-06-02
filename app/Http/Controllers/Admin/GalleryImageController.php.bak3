@@ -80,7 +80,7 @@ class GalleryImageController extends Controller
         if ($request->hasFile('image_file')) {
             $this->deleteUploaded($current);
 
-            return app(FileUploadService::class)->upload($request->file('image_file'), 'catalog/gallery')['url'];
+            return app(FileUploadService::class)->upload($request->file('image_file'), 'catalog/gallery')['key'];
         }
 
         return trim((string) $input) !== '' ? trim((string) $input) : (string) $current;
