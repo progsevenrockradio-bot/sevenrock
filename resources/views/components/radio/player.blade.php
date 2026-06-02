@@ -64,9 +64,51 @@
                 50% { transform: scaleY(1); opacity: 1; }
             }
 
+            @keyframes fontCycle {
+                0%, 16% {
+                    opacity: 1;
+                    font-family: 'Playfair Display', serif;
+                }
+
+                20% {
+                    opacity: 0;
+                }
+
+                25%, 41% {
+                    opacity: 1;
+                    font-family: 'Bebas Neue', sans-serif;
+                }
+
+                45% {
+                    opacity: 0;
+                }
+
+                50%, 66% {
+                    opacity: 1;
+                    font-family: 'Dancing Script', cursive;
+                }
+
+                70% {
+                    opacity: 0;
+                }
+
+                75%, 91% {
+                    opacity: 1;
+                    font-family: 'Orbitron', monospace;
+                }
+
+                95%, 100% {
+                    opacity: 0;
+                }
+            }
+
             .radio-player-popup-shell {
+                display: flex;
+                flex-direction: column;
                 position: relative;
-                min-height: 100vh;
+                height: 100vh;
+                height: 100dvh;
+                max-height: 100vh;
                 overflow: hidden;
                 background: #050505;
                 color: #f4f1ea;
@@ -94,6 +136,116 @@
                 font-family: var(--font-display);
             }
 
+            .radio-player-popup-content-area {
+                position: relative;
+                z-index: 10;
+                display: flex;
+                flex: 1 1 auto;
+                flex-direction: column;
+                min-height: 0;
+                overflow: hidden;
+                gap: clamp(.5rem, 1.6vh, 1.5rem);
+                padding: clamp(.75rem, 2vh, 1.5rem) clamp(1rem, 3vw, 1.5rem);
+            }
+
+            .radio-player-popup-stage {
+                display: flex;
+                flex: 1 1 auto;
+                flex-direction: column;
+                align-items: center;
+                justify-content: space-between;
+                min-height: 0;
+                gap: clamp(.5rem, 1.2vh, 1rem);
+            }
+
+            .radio-player-popup-track-wrap {
+                width: min(90vw, 500px);
+                max-width: 100%;
+                flex: none;
+            }
+
+            .radio-player-popup-cover {
+                width: clamp(140px, 35vw, 280px);
+                height: clamp(140px, 35vw, 280px);
+                max-width: 50vh;
+                max-height: 50vh;
+                object-fit: cover;
+                flex-shrink: 0;
+            }
+
+            .radio-player-popup-meta {
+                max-width: min(90vw, 32rem);
+                text-align: center;
+                margin-bottom: clamp(.125rem, .5vh, .5rem);
+                padding-bottom: 0;
+            }
+
+            .radio-player-popup-meta p {
+                margin-top: clamp(.125rem, .5vh, .25rem);
+                font-size: clamp(.75rem, 1.8vw, 1rem);
+            }
+
+            .band-name-animated {
+                display: block;
+                overflow: hidden;
+                color: #f4f1ea;
+                font-size: clamp(1rem, 3vw, 1.5rem);
+                line-height: 1.08;
+                text-align: center;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                transition: opacity .4s ease;
+                animation: fontCycle 8s ease-in-out infinite;
+            }
+
+            .radio-player-popup-controls {
+                display: flex;
+                flex: none;
+                flex-direction: column;
+                gap: clamp(.5rem, 1vh, .9rem);
+                width: min(100%, 560px);
+            }
+
+            .radio-player-popup-time-row {
+                display: flex;
+                align-items: center;
+                gap: clamp(.5rem, 1.3vw, .75rem);
+                width: 100%;
+            }
+
+            .radio-player-popup-time-row .min-w-\[64px\] {
+                min-width: clamp(3.5rem, 10vw, 4.5rem);
+            }
+
+            .radio-player-popup-play-button {
+                width: clamp(3rem, 9vw, 4rem);
+                height: clamp(3rem, 9vw, 4rem);
+            }
+
+            .radio-player-popup-fav-button {
+                width: clamp(2.5rem, 7vw, 2.75rem);
+                height: clamp(2.5rem, 7vw, 2.75rem);
+            }
+
+            .radio-player-popup-progress {
+                width: 100%;
+            }
+
+            .radio-player-popup-volume {
+                display: flex;
+                align-items: center;
+                gap: clamp(.5rem, 1.3vw, .75rem);
+                width: 100%;
+                border: 1px solid rgba(184,175,162,.10);
+                background: rgba(0,0,0,.20);
+                padding: clamp(.5rem, 1.2vh, .75rem) clamp(.75rem, 2vw, 1rem);
+                backdrop-filter: blur(18px);
+            }
+
+            .radio-player-popup-volume input {
+                width: 100%;
+            }
+
             .radio-player-popup-chip,
             .radio-player-popup-control {
                 display: inline-flex;
@@ -116,6 +268,8 @@
                 border-top: 1px solid rgba(184,175,162,.14);
                 background: rgba(10,10,12,.76);
                 backdrop-filter: blur(18px);
+                flex-shrink: 0;
+                max-height: 35vh;
             }
 
             .radio-player-popup-drawer-grid {
@@ -126,12 +280,12 @@
             }
 
             .radio-player-popup-drawer-grid button {
-                min-height: 42px;
+                min-height: clamp(2rem, 4vw, 2.625rem);
                 border: 0;
                 background: transparent;
                 color: #b7ad9f;
-                font-size: 10px;
-                letter-spacing: .18em;
+                font-size: clamp(.55rem, 1.1vw, .75rem);
+                letter-spacing: .16em;
                 text-transform: uppercase;
                 border-right: 1px solid rgba(184,175,162,.08);
             }
@@ -142,98 +296,23 @@
             }
 
             .radio-player-popup-drawer-body {
-                max-height: 280px;
-                overflow: auto;
-                padding: 18px;
+                max-height: clamp(100px, 25vh, 280px);
+                overflow-y: auto;
+                padding: clamp(.75rem, 1.8vw, 1.125rem);
             }
 
             .radio-player-popup-action-icon {
-                font-size: 18px;
+                font-size: clamp(1rem, 2vw, 1.125rem);
                 line-height: 1;
             }
 
             .radio-player-popup-wavebar {
-                width: 4px;
-                height: 18px;
+                width: clamp(.25rem, .5vw, .3rem);
+                height: clamp(.9rem, 2vh, 1.125rem);
                 border-radius: 9999px;
                 background: linear-gradient(180deg, #ff5b4c 0%, #c32720 100%);
                 transform-origin: bottom;
                 animation: srPopupWave 1.2s ease-in-out infinite;
-            }
-
-            @media (max-width: 768px) {
-                .radio-player-popup-drawer-grid {
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                }
-
-                .radio-player-popup-drawer-grid button:nth-child(odd) {
-                    border-right: 1px solid rgba(184,175,162,.08);
-                }
-
-                .radio-player-popup-drawer-grid button:nth-child(2n) {
-                    border-right: 0;
-                }
-            }
-
-            @media (max-width: 640px) {
-                /* Permitir scroll en vez de recortar */
-                .radio-player-popup-shell {
-                    overflow-y: auto !important;
-                    overflow-x: hidden !important;
-                }
-
-                /* Reducir cover para que quepa */
-                .radio-player-popup-shell img.rounded-\[28px\] {
-                    height: 150px !important;
-                    width: 150px !important;
-                    border-radius: 18px !important;
-                }
-
-                /* Reducir gaps */
-                .radio-player-popup-shell .gap-6 {
-                    gap: 4px !important;
-                }
-
-                /* Reducir padding vertical */
-                .radio-player-popup-shell .py-4 {
-                    padding-top: 6px !important;
-                    padding-bottom: 6px !important;
-                }
-
-                /* Título más pequeño */
-                .radio-player-popup-shell h1 {
-                    font-size: 16px !important;
-                    line-height: 1.1 !important;
-                }
-
-                /* Texto secundario más compacto */
-                .radio-player-popup-shell .max-w-\[32rem\] {
-                    margin-bottom: 2px !important;
-                    padding-bottom: 0 !important;
-                }
-
-                .radio-player-popup-shell .max-w-\[32rem\] p {
-                    margin-top: 1px !important;
-                    font-size: 10px !important;
-                }
-
-                /* Play button más chico */
-                .radio-player-popup-shell .h-16.w-16 {
-                    height: 48px !important;
-                    width: 48px !important;
-                }
-
-                /* Drawer tabs más compactos */
-                .radio-player-popup-drawer-grid button {
-                    min-height: 34px !important;
-                    font-size: 9px !important;
-                }
-
-                /* Drawer body más chico */
-                .radio-player-popup-drawer-body {
-                    max-height: 140px !important;
-                    padding: 10px !important;
-                }
             }
         </style>
 
@@ -245,7 +324,7 @@
             ></div>
             <div class="radio-player-popup-overlay" aria-hidden="true"></div>
 
-            <div class="relative z-10 flex min-h-screen flex-col gap-6 px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
+            <div class="radio-player-popup-content-area popup-content-area">
                 <header class="flex items-center justify-between gap-4">
                     <div class="min-w-0">
                         <span style="display:block; color:#8f887d; font-size:10px; letter-spacing:.34em; text-transform:uppercase;">Seven Rock Radio</span>
@@ -261,12 +340,12 @@
                     </div>
                 </header>
 
-                <main class="flex flex-1 min-h-0 flex-col items-center justify-between gap-4 pt-2 pb-1">
-                    <div class="relative w-full max-w-[380px] flex-none">
+                <main class="radio-player-popup-stage">
+                    <div class="radio-player-popup-track-wrap relative">
                         <div class="mx-auto flex w-full flex-col items-center gap-4 text-center">
                             <div class="relative">
                                 <img
-                                    class="h-[240px] w-[240px] rounded-[28px] object-cover shadow-[0_20px_50px_rgba(0,0,0,.80)] ring-1 ring-white/10 sm:h-[280px] sm:w-[280px]"
+                                    class="radio-player-popup-cover popup-cover h-[240px] w-[240px] rounded-[28px] object-cover shadow-[0_20px_50px_rgba(0,0,0,.80)] ring-1 ring-white/10 sm:h-[280px] sm:w-[280px]"
                                     :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')"
                                     alt=""
                                     onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;"
@@ -280,38 +359,38 @@
                                 </div>
                             </div>
 
-                            <div class="max-w-[32rem] mb-4 pb-1">
+                            <div class="radio-player-popup-meta max-w-[32rem] mb-4 pb-1">
                                 <span class="radio-player-live-pill mx-auto mb-2" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'EN VIVO' : 'PLAYBACK'"></span>
                                 <h1 class="m-0 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl" x-text="track.title || defaultTitle"></h1>
-                                <p class="mt-1 text-sm font-medium text-zinc-300 sm:text-base" x-text="track.artist || defaultArtist"></p>
+                                <p class="mt-1 band-name-animated text-sm font-medium text-zinc-300 sm:text-base" x-text="track.artist || defaultArtist"></p>
                                 <p class="mt-2 text-[11px] uppercase tracking-[.18em] text-zinc-500" x-text="track.is_live ? 'Transmitiendo ahora' : (track.program_name || '')"></p>
                                 <p class="mt-1 text-[11px] uppercase tracking-[.18em] text-zinc-500" x-text="listeners > 0 ? `${listeners} oyentes` : ''"></p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex w-full flex-none flex-col items-center gap-3 pb-0">
-                        <div class="flex w-full max-w-[560px] items-center gap-3 px-1">
+                    <div class="radio-player-popup-controls">
+                        <div class="radio-player-popup-time-row">
                             <div class="flex-1 min-w-0">
                                 <span class="block min-w-[64px] text-left text-[16px] font-mono uppercase tracking-[.22em] text-zinc-100" x-text="formatTime(progress.elapsed)"></span>
                             </div>
-                            <button type="button" class="radio-player-popup-control h-16 w-16 shrink-0 rounded-full border-2 border-white/60 bg-white text-black shadow-[0_20px_40px_rgba(0,0,0,.45)]" @click="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'">
+                            <button type="button" class="radio-player-popup-control radio-player-popup-play-button shrink-0 rounded-full border-2 border-white/60 bg-white text-black shadow-[0_20px_40px_rgba(0,0,0,.45)]" @click="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'">
                                 <span class="radio-player-popup-action-icon" x-text="playing ? '❚❚' : '▶'"></span>
                             </button>
                             <div class="flex-1 min-w-0 flex justify-end">
-                                <button type="button" class="radio-player-popup-control h-10 w-10 shrink-0 rounded-full text-lg text-zinc-300" @click="toggleFavorite()" :aria-label="isFavoriteCurrent() ? 'Quitar de favoritos' : 'Me gusta'" :aria-pressed="isFavoriteCurrent()">
+                                <button type="button" class="radio-player-popup-control radio-player-popup-fav-button shrink-0 rounded-full text-lg text-zinc-300" @click="toggleFavorite()" :aria-label="isFavoriteCurrent() ? 'Quitar de favoritos' : 'Me gusta'" :aria-pressed="isFavoriteCurrent()">
                                     <span x-text="isFavoriteCurrent() ? '♥' : '♡'"></span>
                                 </button>
                             </div>
                         </div>
 
-                        <div class="w-full max-w-[560px]">
+                        <div class="radio-player-popup-progress">
                             <button type="button" class="h-1.5 w-full overflow-hidden rounded-full bg-white/10" @click="seek($event)" aria-label="Progreso">
                                 <span class="block h-full rounded-full bg-red-600" :style="`width:${progress.ratio}%`"></span>
                             </button>
                         </div>
 
-                        <div class="flex w-full max-w-[560px] items-center gap-3 rounded-[18px] border border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
+                        <div class="radio-player-popup-volume">
                             <button type="button" class="radio-player-popup-control h-8 w-8 shrink-0 rounded-full border-white/10 bg-white/0 text-zinc-200" @click="toggleMute()" aria-label="Mute">
                                 <span x-text="muted ? '🔇' : '🔊'"></span>
                             </button>

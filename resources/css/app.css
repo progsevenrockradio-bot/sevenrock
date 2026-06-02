@@ -1920,62 +1920,65 @@
     .radio-player-popup-shell {
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        overflow: hidden;
         background: rgba(0, 0, 0, .18);
     }
 
     .radio-player-popup-stage {
         position: relative;
         flex: 1 1 auto;
-        min-height: calc(100vh - 110px);
+        min-height: 0;
         background: linear-gradient(180deg, rgba(0, 0, 0, .84), rgba(0, 0, 0, .76));
     }
 
     .radio-player-popup-stage-label {
         position: absolute;
-        top: 10px;
-        left: 6px;
+        top: clamp(.5rem, 1vh, .75rem);
+        left: clamp(.375rem, .9vw, .75rem);
         color: #7b7b7b;
-        font-size: 13px;
+        font-size: clamp(.75rem, 1vw, .875rem);
         line-height: 1;
     }
 
     .radio-player-popup-bar {
         display: grid;
-        grid-template-columns: minmax(300px, 1.2fr) minmax(280px, .9fr) auto;
-        gap: 20px;
+        grid-template-columns: minmax(18rem, 1.2fr) minmax(16rem, .9fr) auto;
+        gap: clamp(.75rem, 1.6vw, 1.25rem);
         align-items: center;
-        min-height: 110px;
+        min-height: clamp(5.5rem, 11vh, 7rem);
         border-top: 1px solid rgba(195, 39, 32, .48);
         background: linear-gradient(180deg, rgba(16, 16, 18, .98), rgba(8, 8, 10, .98));
         box-shadow: 0 -1px 0 rgba(255, 255, 255, .02);
-        padding: 10px 14px 10px 8px;
+        padding: clamp(.625rem, 1.1vw, .875rem) clamp(.875rem, 1.5vw, 1rem) clamp(.625rem, 1.1vw, .875rem) clamp(.5rem, 1vw, .75rem);
     }
 
     .radio-player-popup-track {
         display: grid;
-        grid-template-columns: 72px minmax(0, 1fr);
-        gap: 12px;
+        grid-template-columns: clamp(3.5rem, 7vw, 4.5rem) minmax(0, 1fr);
+        gap: clamp(.5rem, 1vw, .875rem);
         align-items: center;
     }
 
     .radio-player-popup-cover {
-        width: 72px;
-        height: 72px;
+        width: clamp(3.5rem, 7vw, 4.5rem);
+        height: clamp(3.5rem, 7vw, 4.5rem);
         object-fit: cover;
     }
 
     .radio-player-popup-meta {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: clamp(.125rem, .3vw, .25rem);
         min-width: 0;
     }
 
     .radio-player-popup-meta strong {
         overflow: hidden;
         color: #dcdcdc;
-        font-size: 15px;
+        font-size: clamp(.95rem, 1.2vw, 1.05rem);
         font-weight: 400;
         letter-spacing: .08em;
         line-height: 1.1;
@@ -1987,7 +1990,7 @@
     .radio-player-popup-meta p {
         overflow: hidden;
         color: #dcdcdc;
-        font-size: 13px;
+        font-size: clamp(.8rem, 1vw, .95rem);
         letter-spacing: .08em;
         text-overflow: ellipsis;
         text-transform: none;
@@ -1996,7 +1999,7 @@
 
     .radio-player-popup-meta small {
         color: #7b7b7b;
-        font-size: 11px;
+        font-size: clamp(.68rem, .85vw, .75rem);
         letter-spacing: .18em;
         text-transform: uppercase;
     }
@@ -2005,24 +2008,24 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
-        gap: 10px;
+        gap: clamp(.5rem, 1vh, .75rem);
     }
 
     .radio-player-popup-time {
         display: flex;
         align-items: baseline;
         justify-content: center;
-        gap: 10px;
+        gap: clamp(.5rem, 1.2vw, .75rem);
         color: #dcdcdc;
         font-family: var(--font-display);
-        font-size: 18px;
+        font-size: clamp(1rem, 1.6vw, 1.25rem);
         font-weight: 700;
         letter-spacing: .04em;
     }
 
     .radio-player-popup-time strong {
         color: #dcdcdc;
-        font-size: 16px;
+        font-size: clamp(.9rem, 1.2vw, 1rem);
         opacity: .9;
     }
 
@@ -2030,19 +2033,19 @@
         display: grid;
         grid-template-columns: auto 1fr auto;
         align-items: center;
-        gap: 12px;
-        width: min(260px, 100%);
+        gap: clamp(.5rem, 1vw, .875rem);
+        width: min(100%, 18rem);
         margin-inline: auto;
         border: 1px solid rgba(184, 175, 162, .3);
         background: rgba(0, 0, 0, .18);
-        padding: 8px 12px;
+        padding: clamp(.5rem, 1vw, .75rem) clamp(.75rem, 1.5vw, 1rem);
     }
 
     .radio-player-popup-volume-label,
     .radio-player-popup-volume-value {
         color: #b7ad9f;
         font-family: var(--font-display);
-        font-size: 11px;
+        font-size: clamp(.68rem, .85vw, .75rem);
         letter-spacing: .18em;
         text-transform: uppercase;
     }
@@ -2062,14 +2065,14 @@
     .radio-player-popup-action {
         display: grid;
         place-items: center;
-        min-width: 62px;
-        min-height: 48px;
+        min-width: clamp(3rem, 6vw, 3.875rem);
+        min-height: clamp(2.75rem, 5vw, 3rem);
         border: 1px solid rgba(184, 175, 162, .38);
         background: rgba(0, 0, 0, .2);
-        padding: 8px 10px 6px;
+        padding: clamp(.5rem, 1vw, .65rem) clamp(.625rem, 1.1vw, .75rem) clamp(.375rem, .9vw, .5rem);
         color: #dcdcdc;
         font-family: var(--font-display);
-        font-size: 10px;
+        font-size: clamp(.6rem, .9vw, .7rem);
         letter-spacing: .14em;
         text-transform: uppercase;
         transition: border-color .2s ease, color .2s ease, background-color .2s ease;
@@ -2082,15 +2085,17 @@
     }
 
     .radio-player-popup-action-icon {
-        margin-bottom: 2px;
+        margin-bottom: .125rem;
         color: #b7ad9f;
-        font-size: 15px;
+        font-size: clamp(.95rem, 1.5vw, 1.1rem);
         line-height: 1;
     }
 
     .radio-player-popup-drawer {
         border-top: 1px solid #2b2b2b;
         background: rgba(16, 16, 18, .98);
+        flex-shrink: 0;
+        max-height: 35vh;
     }
 
     .radio-player-popup-drawer-grid {
@@ -2100,12 +2105,12 @@
     }
 
     .radio-player-popup-drawer-grid button {
-        min-height: 42px;
+        min-height: clamp(2rem, 4vw, 2.625rem);
         border-right: 1px solid #2b2b2b;
         background: transparent;
         color: #7b7b7b;
         font-family: var(--font-display);
-        font-size: 11px;
+        font-size: clamp(.55rem, .9vw, .75rem);
         letter-spacing: .12em;
         text-transform: uppercase;
     }
@@ -2121,16 +2126,16 @@
     }
 
     .radio-player-popup-drawer-body {
-        max-height: 260px;
-        overflow: auto;
-        padding: 18px 18px 10px;
+        max-height: clamp(6.25rem, 25vh, 17.5rem);
+        overflow-y: auto;
+        padding: clamp(.75rem, 1.5vw, 1.125rem) clamp(.75rem, 1.5vw, 1.125rem) clamp(.5rem, 1vw, .75rem);
     }
 
     .radio-player-popup-drawer-body h4 {
-        margin-bottom: 10px;
+        margin-bottom: clamp(.5rem, 1vh, .625rem);
         color: #dcdcdc;
         font-family: var(--font-display);
-        font-size: 15px;
+        font-size: clamp(.9rem, 1.2vw, 1rem);
         letter-spacing: .08em;
         text-transform: uppercase;
     }
@@ -2149,8 +2154,8 @@
     }
 
     .radio-player-popup-next {
-        margin-top: 12px;
-        padding: 10px 12px;
+        margin-top: clamp(.5rem, 1vh, .75rem);
+        padding: clamp(.625rem, 1vw, .75rem) clamp(.75rem, 1.2vw, .875rem);
     }
 
     .radio-player-popup-next strong,
@@ -2163,21 +2168,87 @@
     }
 
     .radio-player-popup-notice {
-        padding: 10px 12px;
+        padding: clamp(.625rem, 1vw, .75rem) clamp(.75rem, 1.2vw, .875rem);
     }
 
     .radio-player-popup-history {
         display: grid;
-        grid-template-columns: 48px minmax(0, 1fr);
-        gap: 10px;
+        grid-template-columns: clamp(2.5rem, 5vw, 3rem) minmax(0, 1fr);
+        gap: clamp(.5rem, 1vw, .75rem);
         align-items: center;
-        padding: 8px;
+        padding: clamp(.5rem, 1vw, .75rem);
     }
 
     .radio-player-popup-history img {
-        width: 48px;
-        height: 48px;
+        width: clamp(2.5rem, 5vw, 3rem);
+        height: clamp(2.5rem, 5vw, 3rem);
         object-fit: cover;
+    }
+
+    .popup-content-area,
+    .radio-player-popup-content-area {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+        gap: clamp(.5rem, 1.6vh, 1.5rem);
+    }
+
+    .radio-player-popup-track-wrap {
+        width: min(90vw, 500px);
+    }
+
+    .popup-cover,
+    .radio-player-popup-cover {
+        width: clamp(140px, 35vw, 280px);
+        height: clamp(140px, 35vw, 280px);
+        max-width: 50vh;
+        max-height: 50vh;
+    }
+
+    .radio-player-popup-meta .band-name-animated {
+        margin-top: .125rem;
+    }
+
+    .radio-player-popup-time-row {
+        width: 100%;
+    }
+
+    .radio-player-popup-play-button {
+        width: clamp(3rem, 9vw, 4rem);
+        height: clamp(3rem, 9vw, 4rem);
+    }
+
+    .radio-player-popup-fav-button {
+        width: clamp(2.5rem, 7vw, 2.75rem);
+        height: clamp(2.5rem, 7vw, 2.75rem);
+    }
+
+    .radio-player-popup-progress {
+        width: 100%;
+    }
+
+    .radio-player-popup-volume {
+        display: flex;
+        align-items: center;
+        gap: clamp(.5rem, 1vw, .875rem);
+        width: 100%;
+        max-width: 100%;
+        padding: clamp(.5rem, 1vw, .75rem) clamp(.75rem, 1.5vw, 1rem);
+    }
+
+    .band-name-animated {
+        display: block;
+        overflow: hidden;
+        color: #f4f1ea;
+        font-size: clamp(1rem, 3vw, 1.5rem);
+        line-height: 1.08;
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        transition: opacity .4s ease;
+        animation: fontCycle 8s ease-in-out infinite;
     }
 
     .talent-cover {
@@ -2559,20 +2630,20 @@
             text-align: center;
         }
 
-        .radio-player-popup-bar {
-            grid-template-columns: 1fr;
-            min-height: auto;
-            gap: 14px;
-            padding: 12px;
+        .radio-player-popup-shell {
+            overflow: hidden;
         }
 
-        .radio-player-popup-track {
-            grid-template-columns: 60px minmax(0, 1fr);
+        .radio-player-popup-bar {
+            grid-template-columns: minmax(0, 1fr);
+            min-height: auto;
+            gap: clamp(.75rem, 2vw, 1rem);
+            padding: clamp(.75rem, 2vw, 1rem);
         }
 
         .radio-player-popup-cover {
-            width: 60px;
-            height: 60px;
+            width: clamp(3.25rem, 12vw, 4.5rem);
+            height: clamp(3.25rem, 12vw, 4.5rem);
         }
 
         .radio-player-popup-actions {
