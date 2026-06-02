@@ -23,10 +23,10 @@ class UploadArchiveOrgJob implements ShouldQueue
 
     public int $timeout = 600;
 
-    public int $tries = 3;
+    public int $tries = 5;
 
     /** @var array<int, int> */
-    public array $backoff = [60, 300];
+    public array $backoff = [120, 300, 600, 1800];
 
     public function __construct(
         public int $radioProgramId,
@@ -53,26 +53,64 @@ class UploadArchiveOrgJob implements ShouldQueue
                 return;
             }
 
-            $archiveResult = $archiveOrgPodcastService->syncEpisode($radioProgram);
-            $archiveVerification = (array) ($archiveResult['verification'] ?? []);
-            $archiveStatus = (string) ($archiveResult['status'] ?? ($archiveVerification['pending_indexing'] ?? false ? 'pending' : 'synced'));
-            $archivePendingIndexing = (bool) ($archiveResult['pending_indexing'] ?? ($archiveVerification['pending_indexing'] ?? false));
+            $isRetry = $radioProgram->archive_org_remote_path !== null;
 
-            RadioProgram::withoutEvents(function () use ($radioProgram, $archiveResult, $archiveVerification): void {
+            // Paso 1: Subir el archivo (solo primera vez)
+            if (! $isRetry) {
+                $archiveResult = $archiveOrgPodcastService->syncEpisode($radioProgram);
+            } else {
+                $archiveResult = [
+                    'status' => $radioProgram->archive_org_status ?? 'pending',
+                    'remote_path' => $radioProgram->archive_org_remote_path,
+                    'verification' => (array) (data_get($radioProgram->archive_org_metadata, 'verification', [])),
+                    'pending_indexing' => true,
+                ];
+            }
+
+            // Paso 2: Aplicar metadata via PATCH (con reintento automático si falla)
+            try {
+                $archiveOrgPodcastService->patchFileMetadata($radioProgram);
+                // PATCH exitoso
+                $archiveResult['status'] = 'synced';
+                $archiveResult['pending_indexing'] = false;
+            } catch (Throwable $patchException) {
+                Log::warning('UploadArchiveOrgJob: metadata PATCH falló, reintentando en 3 minutos.', [
+                    'program_id' => $radioProgram->id,
+                    'message' => $patchException->getMessage(),
+                ]);
+
+                RadioProgram::withoutEvents(function () use ($radioProgram): void {
+                    $radioProgram->forceFill([
+                        'archive_org_status' => 'pending',
+                        'status_message' => 'Archive.org: metadata pendiente de indexación, reintentando...',
+                    ])->saveQuietly();
+                });
+
+                $this->release(180); // Reintentar en 3 minutos
+
+                return;
+            }
+
+            // Paso 3: Actualizar registro (éxito)
+            $archiveVerification = (array) ($archiveResult['verification'] ?? []);
+            $archiveStatus = (string) ($archiveResult['status'] ?? 'synced');
+            $archivePendingIndexing = (bool) ($archiveResult['pending_indexing'] ?? false);
+
+            RadioProgram::withoutEvents(function () use ($radioProgram, $archiveResult, $archiveVerification, $archivePendingIndexing, $archiveStatus): void {
                 $radioProgram->forceFill([
-                    'archive_org_status' => (string) ($archiveResult['status'] ?? 'synced'),
+                    'archive_org_status' => $archiveStatus,
                     'archive_org_remote_path' => $archiveResult['remote_path'] ?? $radioProgram->archive_org_remote_path,
-                    'archive_org_uploaded_at' => now(),
-                    'archive_org_verified_at' => (string) ($archiveResult['status'] ?? 'synced') === 'synced' ? now() : null,
+                    'archive_org_uploaded_at' => $radioProgram->archive_org_uploaded_at ?? now(),
+                    'archive_org_verified_at' => $archiveStatus === 'synced' ? now() : null,
                     'archive_org_last_error' => null,
                     'archive_org_metadata' => array_merge((array) ($radioProgram->archive_org_metadata ?? []), [
-                        'status' => (string) ($archiveResult['status'] ?? 'synced'),
-                        'synced_at' => (string) ($archiveResult['status'] ?? 'synced') === 'synced' ? now()->toIso8601String() : null,
+                        'status' => $archiveStatus,
+                        'synced_at' => $archiveStatus === 'synced' ? now()->toIso8601String() : null,
                         'remote_path' => $archiveResult['remote_path'] ?? null,
                         'verification' => $archiveVerification,
                         'pending_indexing' => $archivePendingIndexing,
                     ]),
-                    'status_message' => (string) ($archiveResult['status'] ?? 'synced') === 'pending'
+                    'status_message' => $archiveStatus === 'pending'
                         ? 'Archive.org subido, en espera de indexación.'
                         : 'Archive.org sincronizado correctamente.',
                 ])->saveQuietly();
