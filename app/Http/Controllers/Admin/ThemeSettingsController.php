@@ -82,6 +82,7 @@ class ThemeSettingsController extends Controller
             'background' => ['nullable', 'image', 'max:6144'],
             'hero_slide_primary' => ['nullable', 'image', 'max:6144'],
             'hero_slide_secondary' => ['nullable', 'image', 'max:6144'],
+            'hero_slides' => ['nullable', 'array'],
             'home_album_cover' => ['nullable', 'image', 'max:6144'],
             'home_video_image' => ['nullable', 'image', 'max:6144'],
             'contact_form_title' => ['nullable', 'string', 'max:255'],
@@ -124,6 +125,7 @@ class ThemeSettingsController extends Controller
             'background',
             'hero_slide_primary',
             'hero_slide_secondary',
+            'hero_slides',
             'home_album_cover',
             'home_video_image',
             'brand_mark',
@@ -182,6 +184,22 @@ class ThemeSettingsController extends Controller
         $settings->ui_texts = $this->decodeJsonSection($validated['ui_texts_json'] ?? '', 'ui_texts_json', $settings->uiTexts());
         $settings->admin_texts = $this->decodeJsonSection($validated['admin_texts_json'] ?? '', 'admin_texts_json', $settings->adminTexts());
 
+        $settings->save();
+
+        $heroSlides = $validated['hero_slides'] ?? [];
+        $slidesData = [];
+        foreach ($heroSlides as $index => $slideData) {
+            $image = $slideData['image'] ?? '';
+            $file = $request->file("hero_slides.{$index}.file");
+            if ($file && $file->isValid()) {
+                $uploaded = app(FileUploadService::class)->upload($file, 'theme');
+                $image = $uploaded['key'] ?? $image;
+            }
+            if ($image) {
+                $slidesData[] = ['image' => $image];
+            }
+        }
+        $settings->hero_slides = ! empty($slidesData) ? $slidesData : null;
         $settings->save();
 
         return redirect()->route('admin.settings.edit')->with('status', 'Theme settings updated.');

@@ -143,17 +143,25 @@
     <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
         <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Media principal</h3>
         <div class="mt-6 grid gap-6 lg:grid-cols-2">
-            <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['hero_slide_1_label'] }}</label>
-                <input type="file" name="hero_slide_primary" class="block w-full text-sm text-[#7b7b7b]">
-                <p class="mt-2 text-xs text-[#7b7b7b]">{{ $admin['current_label'] }}: {{ $settings->hero_slide_primary_path }}</p>
-                @error('hero_slide_primary')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
-            </div>
-            <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['hero_slide_2_label'] }}</label>
-                <input type="file" name="hero_slide_secondary" class="block w-full text-sm text-[#7b7b7b]">
-                <p class="mt-2 text-xs text-[#7b7b7b]">{{ $admin['current_label'] }}: {{ $settings->hero_slide_secondary_path }}</p>
-                @error('hero_slide_secondary')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            <div class="lg:col-span-2">
+                <div x-data="heroSlidesEditor({ slides: {{ Js::from($settings->hero_slides ?? []) }} })" class="border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] p-5">
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                        <label class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Hero Slides</label>
+                        <button type="button" @click="addSlide()" class="lucille-button text-xs">+ Agregar slide</button>
+                    </div>
+
+                    <template x-for="(slide, index) in slides" :key="index">
+                        <div class="mb-3 flex items-center gap-3 border border-[#242424] bg-[#131313] p-3">
+                            <span class="w-8 text-xs text-[#7b7b7b]" x-text="index + 1"></span>
+                            <input type="file" :name="'hero_slides[' + index + '][file]'" class="lucille-product-field flex-1 text-xs">
+                            <input type="hidden" :name="'hero_slides[' + index + '][image]'" :value="slide.image || ''">
+                            <template x-if="slide.image">
+                                <img :src="previewUrl(slide.image)" class="h-12 w-20 border border-[#2b2b2b] object-cover" alt="">
+                            </template>
+                            <button type="button" @click="removeSlide(index)" class="text-xs text-[#ff9e9e]" :disabled="slides.length <= 1">✕</button>
+                        </div>
+                    </template>
+                </div>
             </div>
             <div>
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['album_cover_label'] }}</label>
@@ -169,4 +177,31 @@
             </div>
         </div>
     </section>
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('heroSlidesEditor', (config) => ({
+                slides: config.slides || [],
+                addSlide() {
+                    this.slides.push({ image: '' });
+                },
+                removeSlide(index) {
+                    if (this.slides.length > 1) {
+                        this.slides.splice(index, 1);
+                    }
+                },
+                previewUrl(image) {
+                    if (!image) {
+                        return '';
+                    }
+
+                    if (image.startsWith('http://') || image.startsWith('https://') || image.startsWith('/')) {
+                        return image;
+                    }
+
+                    return '/' + image.replace(/^\/+/, '');
+                },
+            }));
+        });
+    </script>
 </section>

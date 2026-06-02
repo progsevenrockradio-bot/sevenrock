@@ -13,6 +13,7 @@ class ThemeSetting extends Model
     use Auditable;
     protected $casts = [
         'hero_video_disabled' => 'bool',
+        'hero_slides' => 'array',
         'featured_stories' => 'array',
         'latest_podcasts' => 'array',
         'home_headings' => 'array',
@@ -29,6 +30,7 @@ class ThemeSetting extends Model
         'background_path',
         'hero_slide_primary_path',
         'hero_slide_secondary_path',
+        'hero_slides',
         'home_album_cover_path',
         'home_video_image_path',
         'contact_form_title',
@@ -77,6 +79,10 @@ class ThemeSetting extends Model
             'background_path' => 'assets/lucille/dark-background.jpg',
             'hero_slide_primary_path' => 'assets/lucille/audience_opt.jpg',
             'hero_slide_secondary_path' => 'assets/lucille/live-slider-bg.jpg',
+            'hero_slides' => [
+                ['image' => 'assets/lucille/audience_opt.jpg'],
+                ['image' => 'assets/lucille/live-slider-bg.jpg'],
+            ],
             'home_album_cover_path' => 'assets/lucille/album3.jpg',
             'home_video_image_path' => 'assets/lucille/freedom-at-21-header.jpg',
             'contact_form_title' => 'Envíanos un mensaje',
@@ -587,6 +593,27 @@ class ThemeSetting extends Model
     public function getHomeVideoImageUrlAttribute(): string
     {
         return $this->resolveAsset($this->home_video_image_path, 'assets/lucille/freedom-at-21-header.jpg');
+    }
+
+    public function getHeroSlidesArrayAttribute(): array
+    {
+        $slides = $this->hero_slides;
+        if (! is_array($slides) || empty($slides)) {
+            $slides = [];
+            if ($this->hero_slide_primary_path) {
+                $slides[] = ['image' => $this->hero_slide_primary_path];
+            }
+            if ($this->hero_slide_secondary_path) {
+                $slides[] = ['image' => $this->hero_slide_secondary_path];
+            }
+        }
+
+        return array_map(function (array $slide): array {
+            $image = $slide['image'] ?? '';
+            $slide['image'] = $this->resolveAsset($image, $image);
+
+            return $slide;
+        }, $slides);
     }
 
     public function getHeroVideoMediaUrlAttribute(): string

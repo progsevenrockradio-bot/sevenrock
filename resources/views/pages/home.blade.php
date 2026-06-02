@@ -4,10 +4,7 @@
         $ui = $themeAppearance['ui_texts'];
     @endphp
 
-    <x-sections.hero-rocks :slides="[
-        ['image' => $themeAppearance['hero_slide_primary_url']],
-        ['image' => $themeAppearance['hero_slide_secondary_url']],
-    ]" />
+    <x-sections.hero-rocks :slides="$themeAppearance['hero_slides']" />
 
     <x-home.headline-ticker :ticker="$headlineTicker" />
 
