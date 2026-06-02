@@ -203,7 +203,7 @@ class ThemeSettingsController extends Controller
             $file = $request->file("hero_slides.{$index}.file");
             if ($file && $file->isValid()) {
                 $uploaded = app(FileUploadService::class)->upload($file, 'theme');
-                $image = $uploaded['key'] ?? $image;
+                $image = $uploaded['url'] ?? ($uploaded['key'] ?? $image);
             }
             if ($image) {
                 $slidesData[] = ['image' => $image];
