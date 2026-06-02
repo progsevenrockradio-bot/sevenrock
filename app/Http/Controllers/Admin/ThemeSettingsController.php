@@ -178,7 +178,7 @@ class ThemeSettingsController extends Controller
         $settings->social_youtube = trim((string) ($validated['social_youtube'] ?? '')) ?: null;
         $settings->social_tiktok = trim((string) ($validated['social_tiktok'] ?? '')) ?: null;
         $settings->social_x = trim((string) ($validated['social_x'] ?? '')) ?: null;
-        $settings->brand_mark = trim((string) ($validated['brand_mark'] ?? '')) ?: null;
+        $settings->brand_mark = trim((string) ($validated['brand_mark'] ?? '')) ?: '';
         $settings->brand_mark_font = trim((string) ($validated['brand_mark_font'] ?? '')) ?: null;
         $settings->brand_display_mode = trim((string) ($validated['brand_display_mode'] ?? '')) ?: null;
         $settings->contact_form_title = trim((string) ($validated['contact_form_title'] ?? '')) ?: null;
