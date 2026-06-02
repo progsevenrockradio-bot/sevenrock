@@ -332,8 +332,8 @@
 
     @media (max-width: 767px) {
         .hero-rocks-bg {
-            background-size: contain !important;
-            background-position: top center !important;
+            background-size: cover !important;
+            background-position: center !important;
         }
     }
 

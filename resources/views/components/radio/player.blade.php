@@ -166,8 +166,8 @@
             }
 
             .radio-player-popup-cover {
-                width: clamp(140px, 35vw, 280px);
-                height: clamp(140px, 35vw, 280px);
+                width: clamp(170px, 45vw, 350px);
+                height: clamp(170px, 45vw, 350px);
                 max-width: 50vh;
                 max-height: 50vh;
                 object-fit: cover;
@@ -376,9 +376,9 @@
                         <div class="radio-player-popup-time-row">
                             <div class="flex-1 min-w-0">
                                 <div class="rbcloud_tracktimer" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:18px; color:#b7ad9f; font-family:var(--font-display); font-size:14px; letter-spacing:.18em; text-transform:uppercase; white-space:nowrap;">
-                                    <span id="rbcloud_tracktimer_e11097"></span>
-                                    <span id="rbcloud_tracktimer_sep11097" hidden> &frasl; </span>
-                                    <span id="rbcloud_tracktimer_r11097"></span>
+                                    <span id="rbcloud_tracktimer_e11096"></span>
+                                    <span id="rbcloud_tracktimer_sep11096" hidden> &frasl; </span>
+                                    <span id="rbcloud_tracktimer_r11096"></span>
                                 </div>
                             </div>
                             <button type="button" class="radio-player-popup-control radio-player-popup-play-button shrink-0 rounded-full border-2 border-white/60 bg-white text-black shadow-[0_20px_40px_rgba(0,0,0,.45)]" @click="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'">
@@ -406,6 +406,8 @@
                     <input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" class="h-1 w-full cursor-pointer accent-red-600">
                     <span class="min-w-[34px] text-right text-[11px] font-mono uppercase tracking-[.18em] text-zinc-400" x-text="Math.round(volume * 100) + '%'">80%</span>
                 </div>
+
+                <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11096"></script>
 
                 <section class="radio-player-popup-drawer overflow-hidden rounded-[22px] border border-white/10" x-show="panelOpen" x-transition.opacity>
                     <div class="radio-player-popup-drawer-grid">
