@@ -103,7 +103,24 @@
 
             <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] p-5">
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Fecha de emisión</label>
-                <input type="date" name="fecha_emision" value="{{ old('fecha_emision', now()->toDateString()) }}" class="lucille-product-field w-full">
+                <input
+                    type="date"
+                    name="fecha_emision"
+                    x-model="fecha_emision"
+                    class="lucille-product-field w-full"
+                >
+
+                <template x-if="dateSuggestion">
+                    <p
+                        class="mt-2 text-xs uppercase tracking-[.12em]"
+                        :class="{
+                            'text-[#b8e6c3]': dateSuggestionType === 'today',
+                            'text-[#f2d89b]': dateSuggestionType === 'future' || dateSuggestionType === 'next',
+                            'text-[#e6c8b8]': dateSuggestionType === 'past',
+                        }"
+                        x-text="dateSuggestionType === 'today' ? '✅ ' + dateSuggestion : '📅 ' + dateSuggestion"
+                    ></p>
+                </template>
                 @error('fecha_emision')
                     <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
                 @enderror

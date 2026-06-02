@@ -68,7 +68,6 @@ class ProcessMp3Job implements ShouldQueue
         }
 
         $sourcePath = $this->rawPath;
-        $finalPath = $this->buildProcessedPath($sourcePath);
         $workingPath = $this->buildWorkingPath($sourcePath);
 
         $this->prepareWorkingCopy($sourceAbsolutePath, $workingPath);
@@ -85,6 +84,7 @@ class ProcessMp3Job implements ShouldQueue
         $fechaTitulo = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('d/m/Y') : now()->format('d/m/Y');
         $anio = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('Y') : now()->format('Y');
         $invitado = trim(strip_tags((string) $radioProgram->biografia_invitado));
+        $finalPath = $this->buildProcessedPath($sourcePath, $episodeNumber, $programName, $fecha);
 
         try {
             $this->writeMetadata($workingPath, $master, $radioProgram, $programName, $invitado, $fecha, $fechaTitulo, $anio);
@@ -115,7 +115,12 @@ class ProcessMp3Job implements ShouldQueue
         }
     }
 
-    private function buildProcessedPath(string $sourcePath): string
+    private function buildProcessedPath(
+        string $sourcePath,
+        int $episodeNumber,
+        string $programName,
+        string $fecha
+    ): string
     {
         $sourcePath = ltrim(str_replace('\\', '/', trim($sourcePath)), '/');
         if ($sourcePath === '') {
@@ -123,10 +128,22 @@ class ProcessMp3Job implements ShouldQueue
         }
 
         if (str_starts_with($sourcePath, 'programas_procesados/')) {
-            return $sourcePath;
+            $base = basename($sourcePath);
+            if (preg_match('/^\d{3}\.-/', $base)) {
+                return $sourcePath;
+            }
         }
 
-        return 'programas_procesados/' . basename($sourcePath);
+        $safeName = preg_replace('/[\/\\:*?"<>|]/u', '-', $programName);
+        $safeName = trim((string) $safeName);
+        if ($safeName === '') {
+            $safeName = 'PODCAST';
+        }
+
+        $paddedEpisode = str_pad((string) $episodeNumber, 3, '0', STR_PAD_LEFT);
+        $filename = "{$paddedEpisode}.- {$safeName} {$fecha}.mp3";
+
+        return 'programas_procesados/' . $filename;
     }
 
     private function buildWorkingPath(string $sourcePath): string

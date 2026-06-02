@@ -3,6 +3,16 @@ import { registerRadioPlayer } from './player';
 
 window.Alpine = Alpine;
 
+const DAY_MAP = {
+    LUNES: 1,
+    MARTES: 2,
+    MIERCOLES: 3,
+    JUEVES: 4,
+    VIERNES: 5,
+    SABADO: 6,
+    DOMINGO: 7,
+};
+
 Alpine.data('rocksHero', (slides = []) => ({
     active: 0,
     slides,
@@ -214,6 +224,9 @@ Alpine.data('bandProfilePicker', (options = {}) => ({
 Alpine.data('podcastUploadForm', (options = {}) => ({
     activeDay: options.initialDay ?? 'LUNES',
     activeTab: options.initialTab ?? 'multimedia',
+    fecha_emision: options.initialDate ?? '',
+    dateSuggestion: '',
+    dateSuggestionType: '',
     uploading: false,
     progress: 0,
     progressLabel: '0%',
@@ -235,6 +248,58 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         imagen_episodio_file: 'Archivo de imagen',
         biografia_invitado: 'Invitado',
         resena: 'Descripción / resumen',
+    },
+    init() {
+        this.computeDateForDay(this.activeDay);
+
+        this.$watch('activeDay', (day) => {
+            this.computeDateForDay(day);
+        });
+    },
+    computeDateForDay(dayKey) {
+        const targetDay = DAY_MAP[String(dayKey ?? '').toUpperCase()];
+        if (!targetDay) {
+            return;
+        }
+
+        const today = new Date();
+        const currentDay = today.getDay();
+        const currentDayIso = currentDay === 0 ? 7 : currentDay;
+        const targetDate = new Date(today);
+
+        if (targetDay === currentDayIso) {
+            this.dateSuggestionType = 'today';
+            this.dateSuggestion = 'Hoy es el día correcto';
+            this.fecha_emision = this.toDateInputValue(today);
+            return;
+        }
+
+        const diff = targetDay > currentDayIso
+            ? targetDay - currentDayIso
+            : 7 - currentDayIso + targetDay;
+
+        targetDate.setDate(today.getDate() + diff);
+        this.dateSuggestionType = targetDay > currentDayIso ? 'future' : 'next';
+        this.dateSuggestion = `Próximo ${this.formatWeekday(targetDate)} = ${this.formatDayMonth(targetDate)}`;
+        this.fecha_emision = this.toDateInputValue(targetDate);
+    },
+    formatWeekday(date) {
+        return date.toLocaleDateString('es-ES', {
+            weekday: 'long',
+        });
+    },
+    formatDayMonth(date) {
+        return date.toLocaleDateString('es-ES', {
+            day: 'numeric',
+            month: 'long',
+        });
+    },
+    toDateInputValue(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+
+        return `${y}-${m}-${d}`;
     },
     tabForField(field) {
         if (['archivo_mp3', 'imagen_episodio_url', 'imagen_episodio_file'].includes(field)) {
