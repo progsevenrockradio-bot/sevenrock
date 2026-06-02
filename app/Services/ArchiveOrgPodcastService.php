@@ -107,6 +107,7 @@ final class ArchiveOrgPodcastService
             'archive_org_verified_at' => $pendingIndexing ? null : now(),
             'archive_org_last_error' => null,
             'archive_org_metadata' => array_merge($snapshot, [
+                'collection' => trim((string) ($snapshot['collection'] ?? '')),
                 'status' => $pendingIndexing ? 'pending' : 'synced',
                 'synced_at' => $pendingIndexing ? null : now()->toIso8601String(),
                 'remote_path' => $remotePath,
@@ -215,6 +216,56 @@ final class ArchiveOrgPodcastService
     public function syncEpisodeMetadata(RadioProgram $episode): array
     {
         return $this->patchFileMetadata($episode);
+    }
+
+    /**
+     * Publica un ítem oscuro asignándole la collection "opensource_audio".
+     *
+     * @return array{success: bool, identifier: string, message: string}
+     */
+    public function publishItem(string $identifier): array
+    {
+        if (! $this->canSync()) {
+            throw new RuntimeException('Faltan credenciales de Archive.org.');
+        }
+
+        try {
+            $this->retry(function () use ($identifier): void {
+                $this->client->request('POST', $this->apiEndpoint() . '/metadata/' . rawurlencode($identifier), [
+                    'headers' => [
+                        'Content-Type' => 'application/x-www-form-urlencoded',
+                    ],
+                    'form_params' => [
+                        '-target' => 'collection',
+                        '-patch' => json_encode([
+                            ['op' => 'add', 'path' => '/collection', 'value' => 'opensource_audio'],
+                        ], JSON_THROW_ON_ERROR),
+                        'access' => trim((string) config('services.archive_org.access_key', '')),
+                        'secret' => trim((string) config('services.archive_org.secret_key', '')),
+                    ],
+                ]);
+            });
+
+            return [
+                'success' => true,
+                'identifier' => $identifier,
+                'message' => 'Item published.',
+            ];
+        } catch (Throwable $exception) {
+            if (str_contains($exception->getMessage(), 'no changes')) {
+                return [
+                    'success' => true,
+                    'identifier' => $identifier,
+                    'message' => 'Collection already set.',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'identifier' => $identifier,
+                'message' => $exception->getMessage(),
+            ];
+        }
     }
 
     public function canSync(): bool
@@ -484,7 +535,7 @@ final class ArchiveOrgPodcastService
         $creator = trim((string) ($master?->conductor ?: $episode->conductor ?: ''));
 
         return array_filter([
-            'collection' => trim((string) config('services.archive_org.collection', 'opensource_audio')),
+            'collection' => '',
             'mediatype' => trim((string) config('services.archive_org.mediatype', 'audio')),
             'title' => $programTitle,
             'description' => strip_tags($description),

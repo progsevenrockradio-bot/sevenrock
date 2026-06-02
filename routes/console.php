@@ -345,3 +345,10 @@ Schedule::command('queue:work', ['--stop-when-empty', '--timeout=120'])->everyMi
 
 // Publish scheduled posts every minute
 Schedule::command('posts:publish-scheduled')->everyMinute();
+
+// Publish dark Archive.org uploads after their broadcast date
+Schedule::command('podcast:publish-archive')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/publish-archive.log'));
