@@ -295,7 +295,7 @@ class RadioPlayerService
             }
         }
 
-        return $programs->first();
+        return null;
     }
 
     /**
@@ -574,6 +574,7 @@ class RadioPlayerService
             'description' => $program->description,
             'host' => $program->host,
             'schedule' => $program->schedule,
+            'schedule_time' => $program->schedule_time,
             'cover' => $program->cover_url,
             'social_links' => $program->social_links ?? [],
         ];

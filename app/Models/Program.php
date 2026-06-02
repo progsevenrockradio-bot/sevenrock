@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use App\Models\MasterProgram;
 use App\Support\PublicMediaUrl;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -168,5 +169,25 @@ class Program extends Model
         }
 
         return 0;
+    }
+
+    /**
+     * Hora de transmisión formateada (HH:MM).
+     */
+    public function getScheduleTimeAttribute(): string
+    {
+        $master = MasterProgram::query()->find($this->getKey());
+        $time = trim((string) ($this->hora_transmision ?: $master?->hora_transmision ?? ''));
+
+        if ($time === '') {
+            return '';
+        }
+
+        // Formatear: "17:00:00" → "17:00"
+        if (preg_match('/^(\d{1,2}):(\d{2})/', $time, $m)) {
+            return sprintf('%02d:%02d', (int) $m[1], (int) $m[2]);
+        }
+
+        return $time;
     }
 }

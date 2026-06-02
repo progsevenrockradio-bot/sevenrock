@@ -348,7 +348,12 @@
                         <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'EN VIVO' : 'PLAYBACK'" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:max-content; min-height:16px; padding:0 5px; border-radius:9999px; background:#b7ad9f; color:#151515; font-size:8px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;' : 'display:inline-flex; align-items:center; justify-content:center; width:max-content; min-height:22px; padding:0 8px; border-radius:9999px; background:#b7ad9f; color:#151515; font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;'"></span>
                         <strong data-player-title-text x-bind:style="dockMinimized ? 'font-size:12px; color:#ddd7cb; line-height:1.1; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;' : 'font-size:14px; color:#ddd7cb; line-height:1.08; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'" x-text="track.title || defaultTitle"></strong>
                         <span x-show="!dockMinimized" data-player-artist-text style="font-size:12px; color:#b9b1a5; line-height:1.08; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" x-text="track.artist || defaultArtist"></span>
-                        <small x-show="!dockMinimized && track.program_name" data-player-program-text style="font-size:11px; color:#b7ad9f; line-height:1.08; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" x-text="track.program_name || ''"></small>
+                        <small x-show="!dockMinimized && track.program_name" data-player-program-text
+                            style="font-size:11px; color:#b7ad9f; line-height:1.08; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                            x-text="track.program_name"></small>
+                        <small x-show="!dockMinimized && !track.program_name && nextProgram" data-player-next-program-text
+                            style="font-size:11px; color:#b7ad9f; line-height:1.08; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                            x-text="'Próximo: ' + (nextProgram.name || '') + (nextProgram.schedule_time ? ' a las ' + nextProgram.schedule_time : '')"></small>
                     </div>
                     <div x-show="!dockMinimized" class="rbcloud_tracktimer" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:18px; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.18em; text-transform:uppercase; white-space:nowrap; margin-top:2px;">
                         <span id="rbcloud_tracktimer_e11096"></span>
@@ -677,7 +682,8 @@
                         <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'LIVE' : 'PLAYBACK'"></span>
                         <h3 x-text="track.title || defaultTitle"></h3>
                         <p x-text="track.artist || defaultArtist"></p>
-                        <small x-text="track.program_name || ''"></small>
+                        <small x-show="track.program_name" x-text="track.program_name"></small>
+                        <small x-show="!track.program_name && nextProgram" x-text="'Próximo: ' + (nextProgram.name || '') + (nextProgram.schedule_time ? ' a las ' + nextProgram.schedule_time : '')"></small>
                         <small x-text="listeners > 0 ? `${listeners} oyentes` : ''"></small>
 
                         <div class="radio-player-progress-wrap" style="margin-top:8px;">
