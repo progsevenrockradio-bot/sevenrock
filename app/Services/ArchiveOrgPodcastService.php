@@ -714,6 +714,12 @@ final class ArchiveOrgPodcastService
                 ]);
             });
         } catch (Throwable $exception) {
+            // "no changes" = metadata ya aplicada (éxito)
+            if (str_contains($exception->getMessage(), 'no changes')) {
+                return;
+            }
+            // Otros errores se propagan para que el job reintente
+            throw $exception;
             Log::warning('ArchiveOrgPodcastService: metadata PATCH failed (non-fatal, ID3 tags carry essential metadata).', [
                 'identifier' => $identifier,
                 'remote_path' => $remotePath,
