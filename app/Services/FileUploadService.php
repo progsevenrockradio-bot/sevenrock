@@ -33,12 +33,18 @@ class FileUploadService
                 'threshold' => self::BACKBLAZE_LARGE_FILE_THRESHOLD_BYTES,
             ]);
 
-            $result = $this->uploadLargeToBackblazeFromFile($file, $path);
-            if ($result !== null) {
-                return $result;
+            try {
+                $result = $this->uploadLargeToBackblazeFromFile($file, $path);
+                if ($result !== null) {
+                    return $result;
+                }
+            } catch (Throwable $exception) {
+                Log::warning('FileUploadService: Large file B2 upload failed, falling back to standard upload.', [
+                    'path' => $path,
+                    'error' => $exception->getMessage(),
+                ]);
             }
-
-            throw new RuntimeException('No se pudo subir el archivo grande.');
+            // Fall through to attemptUpload below — will try public disk
         }
 
         $contents = @file_get_contents((string) $file->getRealPath());
