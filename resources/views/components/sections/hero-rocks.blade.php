@@ -7,7 +7,7 @@
         interval: null,
         init() {
             if (this.slides.length < 2) return;
-            this.interval = setInterval(() => this.next(), 6000);
+            this.interval = setInterval(() => this.next(), 7000);
         },
         next() {
             this.active = (this.active + 1) % this.slides.length;
@@ -15,7 +15,7 @@
         go(index) {
             clearInterval(this.interval);
             this.active = index;
-            this.interval = setInterval(() => this.next(), 6000);
+            this.interval = setInterval(() => this.next(), 7000);
         },
     }"
     x-init="init"
@@ -29,7 +29,7 @@
         @endphp
         <div
             x-show="active === {{ $index }}"
-            x-transition.opacity.duration.1000ms
+            x-transition.opacity.duration.2000ms
             class="absolute inset-0 lucille-card-image"
             style="background-image: url('{{ $slideImage }}');"
             aria-hidden="{{ $index === 0 ? 'false' : 'true' }}"
