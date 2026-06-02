@@ -188,10 +188,23 @@ final class AuditTrailService
         $files = [];
 
         foreach ($request->allFiles() as $key => $value) {
-            $files[$key] = $this->describeUploadedFile($value);
+            $files[$key] = $this->describeFileValue($value);
         }
 
         return $files;
+    }
+
+    private function describeFileValue(mixed $value): mixed
+    {
+        if ($value instanceof UploadedFile) {
+            return $this->describeUploadedFile($value);
+        }
+
+        if (is_array($value)) {
+            return array_map(fn ($item) => $this->describeFileValue($item), $value);
+        }
+
+        return $value;
     }
 
     /**
