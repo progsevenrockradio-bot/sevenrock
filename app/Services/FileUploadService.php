@@ -39,12 +39,13 @@ class FileUploadService
                     return $result;
                 }
             } catch (Throwable $exception) {
-                Log::warning('FileUploadService: Large file B2 upload failed, falling back to standard upload.', [
+                Log::warning('FileUploadService: Large file B2 upload failed, falling back to public disk.', [
                     'path' => $path,
                     'error' => $exception->getMessage(),
                 ]);
+                // Force public disk — don't retry B2
+                return $this->attemptUpload($file, null, $path, 'public') ?? throw new RuntimeException('No se pudo subir el archivo.');
             }
-            // Fall through to attemptUpload below — will try public disk
         }
 
         $contents = @file_get_contents((string) $file->getRealPath());
