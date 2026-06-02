@@ -176,7 +176,7 @@ class Program extends Model
      */
     public function getScheduleTimeAttribute(): string
     {
-        $master = MasterProgram::query()->find($this->getKey());
+        $master = MasterProgram::query()->find($this->master_program_id);
         $time = trim((string) ($this->hora_transmision ?: $master?->hora_transmision ?? ''));
 
         if ($time === '') {
