@@ -269,7 +269,7 @@
                 background: rgba(10,10,12,.76);
                 backdrop-filter: blur(18px);
                 flex-shrink: 0;
-                max-height: 35vh;
+                max-height: 33vh;
             }
 
             .radio-player-popup-drawer-grid {
@@ -345,7 +345,7 @@
                         <div class="mx-auto flex w-full flex-col items-center gap-4 text-center">
                             <div class="relative">
                                 <img
-                                    class="radio-player-popup-cover popup-cover h-[240px] w-[240px] rounded-[28px] object-cover shadow-[0_20px_50px_rgba(0,0,0,.80)] ring-1 ring-white/10 sm:h-[280px] sm:w-[280px]"
+                                    class="radio-player-popup-cover rounded-[28px] object-cover shadow-[0_20px_50px_rgba(0,0,0,.80)] ring-1 ring-white/10"
                                     :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')"
                                     alt=""
                                     onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;"
