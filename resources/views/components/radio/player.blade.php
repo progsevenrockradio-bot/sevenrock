@@ -174,6 +174,67 @@
                     border-right: 0;
                 }
             }
+
+            @media (max-width: 640px) {
+                /* Permitir scroll en vez de recortar */
+                .radio-player-popup-shell {
+                    overflow-y: auto !important;
+                    overflow-x: hidden !important;
+                }
+
+                /* Reducir cover para que quepa */
+                .radio-player-popup-shell img.rounded-\[28px\] {
+                    height: 150px !important;
+                    width: 150px !important;
+                    border-radius: 18px !important;
+                }
+
+                /* Reducir gaps */
+                .radio-player-popup-shell .gap-6 {
+                    gap: 4px !important;
+                }
+
+                /* Reducir padding vertical */
+                .radio-player-popup-shell .py-4 {
+                    padding-top: 6px !important;
+                    padding-bottom: 6px !important;
+                }
+
+                /* Título más pequeño */
+                .radio-player-popup-shell h1 {
+                    font-size: 16px !important;
+                    line-height: 1.1 !important;
+                }
+
+                /* Texto secundario más compacto */
+                .radio-player-popup-shell .max-w-\[32rem\] {
+                    margin-bottom: 2px !important;
+                    padding-bottom: 0 !important;
+                }
+
+                .radio-player-popup-shell .max-w-\[32rem\] p {
+                    margin-top: 1px !important;
+                    font-size: 10px !important;
+                }
+
+                /* Play button más chico */
+                .radio-player-popup-shell .h-16.w-16 {
+                    height: 48px !important;
+                    width: 48px !important;
+                }
+
+                /* Drawer tabs más compactos */
+                .radio-player-popup-drawer-grid button {
+                    min-height: 34px !important;
+                    font-size: 9px !important;
+                }
+
+                /* Drawer body más chico */
+                .radio-player-popup-drawer-body {
+                    max-height: 140px !important;
+                    padding: 10px !important;
+                }
+            }
         </style>
 
         <div class="radio-player-popup-shell">
