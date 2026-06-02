@@ -162,6 +162,24 @@
                         </div>
                     </template>
                 </div>
+
+                {{-- Hero Slides Controls --}}
+                <div class="mt-4 grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Intervalo (segundos)</label>
+                        <input type="range" name="hero_slides_interval" min="2" max="30" value="{{ old('hero_slides_interval', ($settings->hero_slides_interval ?? 7000) / 1000) }}"
+                            class="w-full accent-[#c32720]" oninput="this.nextElementSibling.textContent = this.value + 's'">
+                        <span class="ml-2 text-xs text-[#7b7b7b]">{{ old('hero_slides_interval', ($settings->hero_slides_interval ?? 7000) / 1000) }}s</span>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Efecto de transición</label>
+                        <select name="hero_slides_transition" class="lucille-product-field w-full text-xs">
+                            <option value="fade" {{ old('hero_slides_transition', $settings->hero_slides_transition ?? 'fade') === 'fade' ? 'selected' : '' }}>Fade (desvanecer)</option>
+                            <option value="slide" {{ old('hero_slides_transition', $settings->hero_slides_transition ?? 'fade') === 'slide' ? 'selected' : '' }}>Slide (deslizar)</option>
+                            <option value="zoom" {{ old('hero_slides_transition', $settings->hero_slides_transition ?? 'fade') === 'zoom' ? 'selected' : '' }}>Zoom (escala)</option>
+                        </select>
+                    </div>
+                </div>
             </div>
             <div>
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['album_cover_label'] }}</label>

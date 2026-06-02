@@ -65,6 +65,8 @@ class ThemeAppearance
             'logo_url' => $media['logo_url'],
             'background_url' => $media['background_url'],
             'hero_slides' => $settings->hero_slides_array,
+            'hero_slides_interval' => (int) ($settings->hero_slides_interval ?: 7000),
+            'hero_slides_transition' => trim((string) ($settings->hero_slides_transition ?: 'fade')),
             'hero_slide_primary_url' => $media['hero_slide_primary_url'],
             'hero_slide_secondary_url' => $media['hero_slide_secondary_url'],
             'home_album_cover_url' => $media['home_album_cover_url'],

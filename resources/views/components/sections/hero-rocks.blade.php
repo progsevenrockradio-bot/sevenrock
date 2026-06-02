@@ -1,13 +1,22 @@
-@props(['slides'])
+@props(['slides', 'interval' => 7000, 'transition' => 'fade'])
+
+@php
+    $transitionModifiers = match ($transition) {
+        'slide' => 'x-transition:enter="transition ease-out duration-700" x-transition:enter-start="translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100" x-transition:leave="transition ease-in duration-500" x-transition:leave-start="translate-x-0 opacity-100" x-transition:leave-end="-translate-x-full opacity-0"',
+        'zoom' => 'x-transition.scale.duration.1000ms',
+        default => 'x-transition.opacity.duration.2000ms',
+    };
+@endphp
 
 <section
     x-data="{
         active: 0,
         slides: {{ Js::from($slides) }},
         interval: null,
+        delay: {{ (int) $interval }},
         init() {
             if (this.slides.length < 2) return;
-            this.interval = setInterval(() => this.next(), 7000);
+            this.interval = setInterval(() => this.next(), this.delay);
         },
         next() {
             this.active = (this.active + 1) % this.slides.length;
@@ -15,7 +24,7 @@
         go(index) {
             clearInterval(this.interval);
             this.active = index;
-            this.interval = setInterval(() => this.next(), 7000);
+            this.interval = setInterval(() => this.next(), this.delay);
         },
     }"
     x-init="init"
@@ -29,7 +38,7 @@
         @endphp
         <div
             x-show="active === {{ $index }}"
-            x-transition.opacity.duration.2000ms
+            {!! $transitionModifiers !!}
             class="absolute inset-0 lucille-card-image"
             style="background-image: url('{{ $slideImage }}');"
             aria-hidden="{{ $index === 0 ? 'false' : 'true' }}"

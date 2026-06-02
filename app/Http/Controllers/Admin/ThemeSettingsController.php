@@ -110,6 +110,8 @@ class ThemeSettingsController extends Controller
             'social_youtube' => ['nullable', 'url', 'max:2048'],
             'social_tiktok' => ['nullable', 'url', 'max:2048'],
             'social_x' => ['nullable', 'url', 'max:2048'],
+            'hero_slides_interval' => ['nullable', 'integer', 'min:2', 'max:30'],
+            'hero_slides_transition' => ['nullable', 'string', 'in:fade,slide,zoom'],
             'body_font' => ['required', 'string', 'in:'.implode(',', array_keys(ThemeAppearance::fonts()['body']))],
             'heading_font' => ['required', 'string', 'in:'.implode(',', array_keys(ThemeAppearance::fonts()['heading']))],
             'accent_color' => ['required', 'string', 'regex:/^#([A-Fa-f0-9]{6})$/'],
@@ -193,6 +195,9 @@ class ThemeSettingsController extends Controller
         $settings->home_headings = $this->decodeJsonSection($validated['home_headings_json'] ?? '', 'home_headings_json', $settings->homeHeadings());
         $settings->ui_texts = $this->decodeJsonSection($validated['ui_texts_json'] ?? '', 'ui_texts_json', $settings->uiTexts());
         $settings->admin_texts = $this->decodeJsonSection($validated['admin_texts_json'] ?? '', 'admin_texts_json', $settings->adminTexts());
+
+        $settings->hero_slides_interval = ((int) ($validated['hero_slides_interval'] ?? 7)) * 1000;
+        $settings->hero_slides_transition = trim((string) ($validated['hero_slides_transition'] ?? 'fade')) ?: 'fade';
 
         $settings->save();
 
