@@ -3,6 +3,14 @@
         $lightboxImages = collect($images)
             ->map(fn ($image) => ['src' => asset($image['image']), 'caption' => $image['caption']])
             ->values();
+        $shareUrl = request()->fullUrl();
+        $shareTitle = trim((string) ($album['title'] ?? ''));
+        $shareImage = $lightboxImages->first()['src'] ?? '';
+        $twitterShareUrl = 'https://twitter.com/intent/tweet?text=' . rawurlencode($shareTitle) . '&url=' . rawurlencode($shareUrl);
+        $facebookShareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' . rawurlencode($shareUrl);
+        $pinterestShareUrl = 'https://pinterest.com/pin/create/button/?url=' . rawurlencode($shareUrl)
+            . ($shareImage !== '' ? '&media=' . rawurlencode($shareImage) : '')
+            . '&description=' . rawurlencode($shareTitle);
     @endphp
 
     <x-sections.page-heading
@@ -30,9 +38,9 @@
 
                         <div class="lucille-share-row pt-2">
                             <span>Share:</span>
-                            <a href="#" aria-label="Share on Twitter">T</a>
-                            <a href="#" aria-label="Share on Facebook">F</a>
-                            <a href="#" aria-label="Share on Pinterest">P</a>
+                            <a href="{{ $twitterShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Twitter">T</a>
+                            <a href="{{ $facebookShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook">F</a>
+                            <a href="{{ $pinterestShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Pinterest">P</a>
                         </div>
                     </div>
 

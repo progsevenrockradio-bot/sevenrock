@@ -1,4 +1,15 @@
 <x-layouts.site title="Seven Rock Radio - {{ $video['title'] }}">
+    @php
+        $shareUrl = request()->fullUrl();
+        $shareTitle = trim((string) ($video['title'] ?? ''));
+        $shareImage = trim((string) ($video['image'] ?? ''));
+        $shareImage = $shareImage !== '' ? (str_starts_with($shareImage, 'http') ? $shareImage : asset($shareImage)) : '';
+        $twitterShareUrl = 'https://twitter.com/intent/tweet?text=' . rawurlencode($shareTitle) . '&url=' . rawurlencode($shareUrl);
+        $facebookShareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' . rawurlencode($shareUrl);
+        $pinterestShareUrl = 'https://pinterest.com/pin/create/button/?url=' . rawurlencode($shareUrl)
+            . ($shareImage !== '' ? '&media=' . rawurlencode($shareImage) : '')
+            . '&description=' . rawurlencode($shareTitle);
+    @endphp
     <x-sections.page-heading
         :title="$video['title']"
         :subtitle="$video['artist']"
@@ -26,9 +37,9 @@
 
             <div class="mt-9 flex items-center gap-4 text-[#757575]">
                 <span class="font-display text-sm uppercase tracking-[.08em] text-[#dcdcdc]">Share:</span>
-                <a href="#" class="transition duration-300 hover:text-lucille-accent">Twitter</a>
-                <a href="#" class="transition duration-300 hover:text-lucille-accent">Facebook</a>
-                <a href="#" class="transition duration-300 hover:text-lucille-accent">Pinterest</a>
+                <a href="{{ $twitterShareUrl }}" target="_blank" rel="noopener noreferrer" class="transition duration-300 hover:text-lucille-accent">Twitter</a>
+                <a href="{{ $facebookShareUrl }}" target="_blank" rel="noopener noreferrer" class="transition duration-300 hover:text-lucille-accent">Facebook</a>
+                <a href="{{ $pinterestShareUrl }}" target="_blank" rel="noopener noreferrer" class="transition duration-300 hover:text-lucille-accent">Pinterest</a>
             </div>
         </div>
     </section>
