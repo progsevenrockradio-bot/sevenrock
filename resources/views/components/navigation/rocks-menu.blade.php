@@ -45,7 +45,7 @@
             @if ($brandDisplayMode === 'logo' && $logoUrl)
                 <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo" loading="lazy">
             @else
-                <span class="lucille-brand-mark">{{ $brandMark }}</span>
+                <span class="lucille-brand-mark" style="font-size: clamp(1rem, 2.2vw, 2.35rem);">{{ $brandMark }}</span>
             @endif
         </a>
 
