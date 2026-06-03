@@ -14,6 +14,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -279,7 +280,7 @@ class DatabaseSeeder extends Seeder
             Product::query()->create($product);
         }
 
-        Post::query()->insert([
+        $posts = [
             [
                 'title' => 'Pagination Post',
                 'slug' => 'pagination-post',
@@ -340,7 +341,17 @@ class DatabaseSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-        ]);
+        ];
+
+        if (! Schema::hasColumn('posts', 'categories') || ! Schema::hasColumn('posts', 'tags')) {
+            $posts = array_map(static function (array $post): array {
+                unset($post['categories'], $post['tags']);
+
+                return $post;
+            }, $posts);
+        }
+
+        Post::query()->insert($posts);
 
         foreach ([
             'audience_opt.jpg' => 'Audience lights',

@@ -16,10 +16,17 @@ class SyncPostTaxonomiesSeeder extends Seeder
             return;
         }
 
-        if (! Schema::hasColumn('posts', 'categories') || ! Schema::hasColumn('posts', 'tags')) {
+        if (Schema::hasColumn('posts', 'categories') && Schema::hasColumn('posts', 'tags')) {
+            $this->syncFromLegacyColumns();
+
             return;
         }
 
+        $this->syncFromContentPatterns();
+    }
+
+    private function syncFromLegacyColumns(): void
+    {
         Post::query()->select('id', 'categories', 'tags')->chunk(100, function ($posts): void {
             foreach ($posts as $post) {
                 $taxonomyIds = [];
@@ -35,6 +42,50 @@ class SyncPostTaxonomiesSeeder extends Seeder
                 $post->taxonomies()->sync(array_values(array_unique($taxonomyIds)));
             }
         });
+    }
+
+    private function syncFromContentPatterns(): void
+    {
+        $rules = [
+            PostTaxonomy::TYPE_CATEGORY => [
+                'Rock' => ['rock', 'metal', 'guitar', 'band'],
+                'Music' => ['music', 'album', 'song', 'single'],
+                'Conciertos' => ['concert', 'show', 'tour', 'festival', 'live', 'gig'],
+                'Artistas' => ['artist', 'interview', 'profile', 'entrevista'],
+            ],
+            PostTaxonomy::TYPE_TAG => [
+                'articles' => ['news', 'article', 'review', 'press', 'prensa', 'noticia'],
+                'concerts' => ['concert', 'show', 'tour', 'festival', 'gig'],
+                'live' => ['live', 'backstage', 'on stage', 'stage'],
+                'music' => ['music', 'album', 'song', 'single'],
+                'rock' => ['rock', 'metal', 'punk'],
+            ],
+        ];
+
+        Post::query()
+            ->published()
+            ->select('id', 'title', 'slug')
+            ->chunk(100, function ($posts) use ($rules): void {
+                foreach ($posts as $post) {
+                    $searchable = Str::lower(trim(($post->title ?? '').' '.($post->slug ?? '')));
+                    $taxonomyIds = [];
+
+                    foreach ($rules as $type => $terms) {
+                        foreach ($terms as $name => $patterns) {
+                            foreach ($patterns as $pattern) {
+                                if ($pattern !== '' && str_contains($searchable, Str::lower($pattern))) {
+                                    $taxonomyIds[] = $this->ensureTaxonomy($type, $name)->id;
+                                    break 2;
+                                }
+                            }
+                        }
+                    }
+
+                    if ($taxonomyIds !== []) {
+                        $post->taxonomies()->sync(array_values(array_unique($taxonomyIds)));
+                    }
+                }
+            });
     }
 
     /**
