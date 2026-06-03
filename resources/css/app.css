@@ -147,7 +147,7 @@
         align-items: center;
         color: var(--color-lucille-accent);
         font-family: var(--lucille-brand-font, "Rock Salt"), "Segoe Script", cursive;
-        font-size: clamp(1.4rem, 2.2vw, 2.35rem);
+        font-size: clamp(1rem, 2.2vw, 2.35rem);
         line-height: 1;
         letter-spacing: 0;
         text-transform: none;
