@@ -423,7 +423,14 @@
     }
 
     .lucille-event-single-shell {
+        padding-top: 96px;
         padding-bottom: 10px;
+    }
+
+    @media (max-width: 767px) {
+        .lucille-event-single-shell {
+            padding-top: 72px;
+        }
     }
 
     .lucille-event-detail-entry {
