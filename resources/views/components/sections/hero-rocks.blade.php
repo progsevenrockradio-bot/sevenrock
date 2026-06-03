@@ -40,7 +40,7 @@
             x-show="active === {{ $index }}"
             {!! $transitionModifiers !!}
             class="absolute inset-0 lucille-card-image hero-rocks-bg"
-            style="background-image: url('{{ $slideImage }}');"
+            style="background-image: url('{{ $slideImage }}'); background-repeat: no-repeat;"
             aria-hidden="{{ $index === 0 ? 'false' : 'true' }}"
         ></div>
     @endforeach
