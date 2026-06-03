@@ -40,14 +40,30 @@
     :class="sticky ? 'rocks-header-sticky' : 'rocks-header-top'"
     class="inset-x-0 top-0 z-50 transition-all duration-300"
 >
-    <div class="mx-auto flex h-full max-w-[1180px] items-center justify-between px-5 lg:px-8">
-    <a href="{{ route('home') }}" class="flex h-full items-center" aria-label="{{ $brandMark }} home">
-            @if ($brandDisplayMode === 'logo' && $logoUrl)
-                <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo" loading="lazy">
-            @else
-                <span class="lucille-brand-mark" style="font-size: clamp(1rem, 2.2vw, 2.35rem);">{{ $brandMark }}</span>
-            @endif
-        </a>
+    <div class="mx-auto flex h-full max-w-[1180px] flex-col justify-center px-5 py-2 lg:px-8 md:flex-row md:items-center md:justify-between md:py-0">
+        <div class="flex w-full items-center justify-between md:contents">
+            <a href="{{ route('home') }}" class="flex h-full items-center py-2 md:py-0" aria-label="{{ $brandMark }} home">
+                @if ($brandDisplayMode === 'logo' && $logoUrl)
+                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo" loading="lazy">
+                @else
+                    <span class="lucille-brand-mark">{{ $brandMark }}</span>
+                @endif
+            </a>
+
+            <div class="flex items-center gap-5 text-white">
+                <button type="button" class="relative h-10 w-10 lg:hidden" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
+                    <span class="absolute left-1/2 top-[12px] h-px w-9 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'top-1/2 rotate-45' : ''"></span>
+                    <span class="absolute left-1/2 top-1/2 h-px w-7 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'opacity-0' : ''"></span>
+                    <span class="absolute left-1/2 top-[28px] h-px w-9 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'top-1/2 -rotate-45' : ''"></span>
+                </button>
+            </div>
+        </div>
+
+        <div class="md:hidden w-full px-1 pb-1 pt-1 text-center">
+            <span class="inline-block max-w-full font-display text-[10px] uppercase tracking-[.24em] leading-tight text-white/80">
+                Todas las épocas del Rock, <span class="text-lucille-accent">están aquí</span>
+            </span>
+        </div>
 
         <nav class="hidden h-full items-center lg:flex">
             <ul class="flex h-full items-center">
@@ -110,17 +126,9 @@
             </ul>
         </nav>
 
-        <div class="flex items-center gap-5 text-white">
-            <button type="button" class="hidden text-lg transition-colors duration-300 hover:text-lucille-accent lg:block" @click="searchOpen = true" aria-label="Open search">
-                &#9906;
-            </button>
-
-            <button type="button" class="relative h-10 w-10 lg:hidden" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
-                <span class="absolute left-1/2 top-[12px] h-px w-9 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'top-1/2 rotate-45' : ''"></span>
-                <span class="absolute left-1/2 top-1/2 h-px w-7 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'opacity-0' : ''"></span>
-                <span class="absolute left-1/2 top-[28px] h-px w-9 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'top-1/2 -rotate-45' : ''"></span>
-            </button>
-        </div>
+        <button type="button" class="hidden text-lg text-white transition-colors duration-300 hover:text-lucille-accent lg:block" @click="searchOpen = true" aria-label="Open search">
+            &#9906;
+        </button>
     </div>
 
     <div x-cloak x-show="open" x-transition.opacity class="border-t border-[#003954] bg-[rgba(8,26,36,.9)] px-5 py-4 lg:hidden">
