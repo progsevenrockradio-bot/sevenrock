@@ -640,12 +640,10 @@ class SiteController extends Controller
 
     private function blogArchive(string $type, string $slug, string $pageTitle, string $pageSubtitle): View
     {
-        $taxonomy = $this->safeValue(function () use ($type, $slug) {
-            return PostTaxonomy::query()
-                ->where('type', $type)
-                ->where('slug', $slug)
-                ->first();
-        }, null);
+        $taxonomy = PostTaxonomy::query()
+            ->where('type', $type)
+            ->where('slug', $slug)
+            ->first();
 
         abort_if(! $taxonomy, 404);
 
