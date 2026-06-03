@@ -594,34 +594,51 @@ class ThemeSetting extends Model
 
     public function featuredAlbumUrl(): string
     {
-        $slug = trim((string) ($this->featured_album_slug ?? ''));
-        if ($slug !== '') {
-            $adminAlbum = Album::query()->where('slug', $slug)->first();
-            if ($adminAlbum) {
-                return route('albums.single', ['slug' => $adminAlbum->slug]);
+        try {
+            $slug = trim((string) ($this->featured_album_slug ?? ''));
+            $hasTalentAlbums = Schema::hasTable('talent_albums');
+            $hasAlbums = Schema::hasTable('albums');
+
+            if ($slug !== '') {
+                if ($hasAlbums) {
+                    $adminAlbum = Album::query()->where('slug', $slug)->first();
+                    if ($adminAlbum) {
+                        return url('/js_albums/' . $adminAlbum->slug);
+                    }
+                }
+
+                if ($hasTalentAlbums) {
+                    $talentAlbum = TalentAlbum::query()->where('slug', $slug)->where('is_published', true)->first();
+                    if ($talentAlbum) {
+                        return url('/js_albums/' . $talentAlbum->slug);
+                    }
+                }
             }
 
-            $talentAlbum = TalentAlbum::query()->where('slug', $slug)->where('is_published', true)->first();
-            if ($talentAlbum) {
-                return route('albums.single', ['slug' => $talentAlbum->slug]);
+            if ($hasTalentAlbums) {
+                $album = TalentAlbum::query()
+                    ->where('is_published', true)
+                    ->orderByDesc('release_date')
+                    ->first();
+
+                if ($album) {
+                    return url('/js_albums/' . $album->slug);
+                }
             }
+
+            if ($hasAlbums) {
+                $album = Album::query()
+                    ->whereNotNull('title')
+                    ->orderByDesc('released_at')
+                    ->first();
+
+                return $album?->slug ? url('/js_albums/' . $album->slug) : url('/discography');
+            }
+
+            return url('/discography');
+        } catch (\Throwable) {
+            return url('/discography');
         }
-
-        $album = TalentAlbum::query()
-            ->where('is_published', true)
-            ->orderByDesc('release_date')
-            ->first();
-
-        if ($album) {
-            return route('albums.single', ['slug' => $album->slug]);
-        }
-
-        $album = Album::query()
-            ->whereNotNull('title')
-            ->orderByDesc('released_at')
-            ->first();
-
-        return $album?->slug ? route('albums.single', ['slug' => $album->slug]) : route('discography');
     }
 
     public function getHomeVideoImageUrlAttribute(): string
