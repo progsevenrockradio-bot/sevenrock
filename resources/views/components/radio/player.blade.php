@@ -3,6 +3,34 @@
 @php
     $player = config('player');
     $theme = $themeAppearance;
+    $socialLinks = collect($theme['social_links'] ?? [])
+        ->filter(fn (array $social): bool => trim((string) ($social['url'] ?? '')) !== '')
+        ->map(static function (array $social): array {
+            $network = strtolower(trim((string) ($social['network'] ?? 'social')));
+            $label = match ($network) {
+                'facebook' => 'Facebook',
+                'instagram' => 'Instagram',
+                'youtube' => 'YouTube',
+                'x', 'twitter' => 'X',
+                'tiktok' => 'TikTok',
+                default => ucfirst($network !== '' ? $network : 'Social'),
+            };
+            $badge = match ($network) {
+                'facebook' => 'f',
+                'instagram' => 'ig',
+                'youtube' => 'yt',
+                'x', 'twitter' => 'x',
+                'tiktok' => 'tt',
+                default => strtoupper(substr($label, 0, 2)),
+            };
+
+            return [
+                'label' => $label,
+                'badge' => $badge,
+                'url' => trim((string) ($social['url'] ?? '')),
+            ];
+        })
+        ->values();
     $fallbackCover = ! empty($theme['media']['home_album_cover_url'] ?? '')
         ? $theme['media']['home_album_cover_url']
         : asset('assets/lucille/album3.jpg');
@@ -343,6 +371,18 @@
                     </div>
                 </header>
 
+                @if ($socialLinks->isNotEmpty())
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-[10px] uppercase tracking-[.34em] text-[#8f887d]">Síguenos</span>
+                        @foreach ($socialLinks as $social)
+                            <a href="{{ $social['url'] }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#2a0b0f]/85 px-3 py-2 text-[#f4e7e7] transition hover:border-[#ff6675]/55 hover:bg-[#3a0f15]/95 hover:text-white" aria-label="Seguir en {{ $social['label'] }}">
+                                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[9px] font-bold uppercase tracking-[.08em]">{{ $social['badge'] }}</span>
+                                <span class="text-[10px] font-semibold uppercase tracking-[.16em]">{{ $social['label'] }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+
                 <main class="radio-player-popup-stage">
                     <div class="radio-player-popup-track-wrap relative">
                         <div class="mx-auto flex w-full flex-col items-center gap-4 text-center">
@@ -517,6 +557,16 @@
                         <button type="button" class="radio-player-chip" @click="shareCurrent()" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:28px; padding:0 10px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; border-radius:14px;">Share</button>
                         <button type="button" class="radio-player-chip" @click="openPopout()" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:28px; padding:0 10px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; border-radius:14px;">Pop-out</button>
                     </div>
+                    @if ($socialLinks->isNotEmpty())
+                        <div x-show="!dockMinimized" class="flex flex-wrap gap-2" style="margin-top:8px;">
+                            @foreach ($socialLinks as $social)
+                                <a href="{{ $social['url'] }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[rgba(42,11,15,.85)] px-3 py-2 text-[#f4e7e7] transition hover:border-[#ff6675]/55 hover:bg-[rgba(58,15,21,.95)] hover:text-white" aria-label="Seguir en {{ $social['label'] }}">
+                                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[9px] font-bold uppercase tracking-[.08em]">{{ $social['badge'] }}</span>
+                                    <span style="font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;">{{ $social['label'] }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
                 <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11096"></script>
                 <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11097"></script>

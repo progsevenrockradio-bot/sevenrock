@@ -62,6 +62,133 @@
         .section-band { background: rgba(8, 26, 36, 0.2) !important; }
         .home-section-texture::before { opacity: 0.5; }
         .lucille-page-heading .lucille-card-image + div[class="absolute inset-0"] { background: rgba(21, 21, 21, 0.3) !important; }
+        .social-flyout {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            z-index: 85;
+            display: none;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+        .social-flyout:hover,
+        .social-flyout:focus-within {
+            pointer-events: auto;
+        }
+        .social-flyout__inner {
+            display: flex;
+            align-items: stretch;
+            pointer-events: auto;
+        }
+        .social-flyout__tab {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            min-height: 176px;
+            border: 1px solid rgba(184,175,162,.22);
+            border-left: 0;
+            border-radius: 0 18px 18px 0;
+            background: linear-gradient(180deg, rgba(31,10,13,.95), rgba(18,7,10,.95));
+            color: #f1e4e4;
+            font-family: var(--lucille-heading-font, var(--font-display));
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .34em;
+            text-transform: uppercase;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            box-shadow: 8px 0 26px rgba(0,0,0,.25);
+            transition: transform .55s ease, background .55s ease, border-color .55s ease;
+        }
+        .social-flyout__panel {
+            width: 0;
+            max-width: 0;
+            overflow: hidden;
+            border: 1px solid rgba(184,175,162,.22);
+            border-left: 0;
+            border-radius: 0 20px 20px 0;
+            background: linear-gradient(180deg, rgba(26,10,12,.96), rgba(14,6,8,.97));
+            box-shadow: 12px 0 36px rgba(0,0,0,.3);
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: max-width .55s ease, width .55s ease, opacity .55s ease, transform .55s ease;
+        }
+        .social-flyout:hover .social-flyout__panel,
+        .social-flyout:focus-within .social-flyout__panel {
+            width: 210px;
+            max-width: 210px;
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .social-flyout:hover .social-flyout__tab,
+        .social-flyout:focus-within .social-flyout__tab {
+            transform: translateX(2px);
+            border-color: rgba(255,94,109,.35);
+            background: linear-gradient(180deg, rgba(50,13,18,.98), rgba(26,8,11,.98));
+        }
+        .social-flyout__content {
+            width: 210px;
+            padding: 18px 16px 18px 14px;
+        }
+        .social-flyout__title {
+            margin-bottom: 14px;
+            color: #8f887d;
+            font-size: 10px;
+            letter-spacing: .34em;
+            text-transform: uppercase;
+        }
+        .social-flyout__links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .social-flyout__link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 38px;
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: 9999px;
+            padding: 0 12px 0 10px;
+            background: rgba(255,255,255,.03);
+            color: #f4e7e7;
+            text-decoration: none;
+            transition: transform .2s ease, border-color .2s ease, background .2s ease, color .2s ease;
+        }
+        .social-flyout__link:hover {
+            border-color: rgba(255,94,109,.5);
+            background: rgba(58,15,20,.96);
+            color: #fff;
+            transform: translateX(2px);
+        }
+        .social-flyout__badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 9999px;
+            background: rgba(255,255,255,.08);
+            color: #ffdede;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+        .social-flyout__label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+        @media (min-width: 1024px) {
+            .social-flyout {
+                display: block;
+            }
+        }
         .radio-player-mobile {
             grid-template-columns: 40px 1fr auto !important;
             gap: 6px !important;
@@ -123,6 +250,59 @@
     </main>
 
     <x-radio.player />
+
+    @php
+        $socialLinks = collect($theme['social_links'] ?? [])
+            ->filter(fn (array $social): bool => trim((string) ($social['url'] ?? '')) !== '')
+            ->map(static function (array $social): array {
+                $network = strtolower(trim((string) ($social['network'] ?? 'social')));
+                $label = match ($network) {
+                    'facebook' => 'Facebook',
+                    'instagram' => 'Instagram',
+                    'youtube' => 'YouTube',
+                    'x', 'twitter' => 'X',
+                    'tiktok' => 'TikTok',
+                    default => ucfirst($network !== '' ? $network : 'Social'),
+                };
+
+                $badge = match ($network) {
+                    'facebook' => 'f',
+                    'instagram' => 'ig',
+                    'youtube' => 'yt',
+                    'x', 'twitter' => 'x',
+                    'tiktok' => 'tt',
+                    default => strtoupper(substr($label, 0, 2)),
+                };
+
+                return [
+                    'label' => $label,
+                    'badge' => $badge,
+                    'url' => trim((string) ($social['url'] ?? '')),
+                ];
+            })
+            ->values();
+    @endphp
+
+    @if ($socialLinks->isNotEmpty())
+        <aside class="social-flyout" aria-label="Redes sociales">
+            <div class="social-flyout__inner">
+                <div class="social-flyout__tab">Social</div>
+                <div class="social-flyout__panel">
+                    <div class="social-flyout__content">
+                        <div class="social-flyout__title">Síguenos</div>
+                        <div class="social-flyout__links">
+                            @foreach ($socialLinks as $social)
+                                <a href="{{ $social['url'] }}" target="_blank" rel="noopener noreferrer" class="social-flyout__link" aria-label="Seguir en {{ $social['label'] }}">
+                                    <span class="social-flyout__badge">{{ $social['badge'] }}</span>
+                                    <span class="social-flyout__label">{{ $social['label'] }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    @endif
 
     <footer class="bg-lucille-surface py-7 text-center text-[13px] text-[#7b7b7b]">
         <div class="mx-auto flex max-w-[1180px] flex-col items-center gap-3 px-5">
