@@ -441,44 +441,42 @@ class SiteController extends Controller
 
     public function blog(): View
     {
-        $posts = $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->paginate(20), collect());
-
-        return view('pages.blog-standard', [
-            'posts' => $posts,
-            'recentPosts' => $posts->take(5),
-            'categories' => $this->mergeTaxonomyValues(
-                [],
-                PostTaxonomy::TYPE_CATEGORY,
-                ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']
-            ),
-            'tags' => $this->mergeTaxonomyValues(
-                [],
-                PostTaxonomy::TYPE_TAG,
-                ['articles', 'concerts', 'live', 'music', 'news', 'on stage']
-            ),
-        ]);
+        return $this->blogListing(
+            pageTitle: 'Blog',
+            pageSubtitle: null,
+            pageDescription: 'Blog de Seven Rock Radio. Noticias, entrevistas, lanzamientos y articulos sobre rock y metal.',
+            posts: $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->paginate(20), collect())
+        );
     }
 
     public function blogStandard(): View
     {
-        $posts = $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->paginate(20), collect());
-        $categories = $this->mergeTaxonomyValues(
-            [],
-            PostTaxonomy::TYPE_CATEGORY,
-            ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']
+        return $this->blogListing(
+            pageTitle: 'Blog',
+            pageSubtitle: null,
+            pageDescription: 'Blog de Seven Rock Radio. Noticias, entrevistas, lanzamientos y articulos sobre rock y metal.',
+            posts: $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->paginate(20), collect())
         );
-        $tags = $this->mergeTaxonomyValues(
-            [],
-            PostTaxonomy::TYPE_TAG,
-            ['articles', 'concerts', 'live', 'music', 'news', 'on stage']
-        );
+    }
 
-        return view('pages.blog-standard', [
-                'posts' => $posts,
-                'recentPosts' => $posts->take(5),
-                'categories' => $categories,
-                'tags' => $tags,
-            ]);
+    public function blogCategory(string $slug): View
+    {
+        return $this->blogArchive(
+            type: PostTaxonomy::TYPE_CATEGORY,
+            slug: $slug,
+            pageTitle: 'Categoría',
+            pageSubtitle: 'Artículos filtrados por categoría'
+        );
+    }
+
+    public function blogTag(string $slug): View
+    {
+        return $this->blogArchive(
+            type: PostTaxonomy::TYPE_TAG,
+            slug: $slug,
+            pageTitle: 'Etiqueta',
+            pageSubtitle: 'Artículos filtrados por etiqueta'
+        );
     }
 
     public function singlePost(string $year, string $month, string $day, string $slug): View
@@ -541,11 +539,8 @@ class SiteController extends Controller
                     ->orderBy('id')
                     ->first(['title', 'slug', 'published_at']), null),
                 'recentPosts' => $recentPosts,
-                'categories' => $this->mergeTaxonomyValues(
-                    [],
-                    PostTaxonomy::TYPE_CATEGORY,
-                    ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']
-                ),
+                'categories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
+                'tags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
                 'archives' => ['November 2016', 'October 2016', 'September 2016', 'August 2016'],
                 'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
             ]);
@@ -556,7 +551,8 @@ class SiteController extends Controller
             'recentPosts' => [],
             'prevPost' => null,
             'nextPost' => null,
-            'categories' => $this->mergeTaxonomyValues([], PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
+            'categories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
+            'tags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
             'archives' => ['November 2016', 'October 2016', 'September 2016', 'August 2016'],
             'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
         ]);
@@ -629,22 +625,85 @@ class SiteController extends Controller
      * @param array<int, string> $fallback
      * @return array<int, string>
      */
+    private function blogListing(string $pageTitle, ?string $pageSubtitle, string $pageDescription, mixed $posts): View
+    {
+        return view('pages.blog-standard', [
+            'pageTitle' => $pageTitle,
+            'pageSubtitle' => $pageSubtitle,
+            'pageDescription' => $pageDescription,
+            'posts' => $posts,
+            'recentPosts' => $this->safeValue(fn () => Post::query()->published()->latest('published_at')->limit(5)->get(), collect()),
+            'categories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
+            'tags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
+        ]);
+    }
+
+    private function blogArchive(string $type, string $slug, string $pageTitle, string $pageSubtitle): View
+    {
+        $taxonomy = $this->safeValue(function () use ($type, $slug) {
+            return PostTaxonomy::query()
+                ->where('type', $type)
+                ->where('slug', $slug)
+                ->first();
+        }, null);
+
+        abort_if(! $taxonomy, 404);
+
+        $posts = $this->safeValue(function () use ($type, $slug) {
+            return Post::query()
+                ->published()
+                ->whereHas('taxonomies', function ($query) use ($type, $slug): void {
+                    $query->where('type', $type)->where('slug', $slug);
+                })
+                ->orderByDesc('published_at')
+                ->paginate(20);
+        }, collect());
+
+        return $this->blogListing(
+            pageTitle: $taxonomy->name,
+            pageSubtitle: $pageSubtitle,
+            pageDescription: $this->blogArchiveDescription($taxonomy->name, $type),
+            posts: $posts
+        );
+    }
+
+    /**
+     * @param array<int, string> $fallback
+     * @return array<int, string>
+     */
+    private function blogTaxonomyTerms(string $type, array $fallback = []): array
+    {
+        if (DB::connection()->getSchemaBuilder()->hasTable('post_taxonomies') && DB::connection()->getSchemaBuilder()->hasTable('post_taxonomy_post')) {
+            $terms = PostTaxonomy::query()
+                ->where('type', $type)
+                ->whereHas('posts', fn ($query) => $query->published())
+                ->orderBy('name')
+                ->pluck('name')
+                ->all();
+
+            return array_values(array_unique(array_filter(array_map('trim', $terms))));
+        }
+
+        return array_values(array_unique(array_filter(array_map('trim', $fallback))));
+    }
+
+    private function blogArchiveDescription(string $term, string $type): string
+    {
+        $label = $type === PostTaxonomy::TYPE_TAG ? 'etiqueta' : 'categoría';
+
+        return "Entradas del blog filtradas por la {$label} {$term}.";
+    }
+
+    /**
+     * @param array<int, string> $values
+     * @param array<int, string> $fallback
+     * @return array<int, string>
+     */
     private function mergeTaxonomyValues(array $values, string $type, array $fallback = []): array
     {
         $terms = array_values(array_filter(array_map('trim', $values)));
 
-        if (DB::connection()->getSchemaBuilder()->hasTable('post_taxonomies')) {
-            $terms = array_merge(
-                $terms,
-                PostTaxonomy::query()
-                    ->where('type', $type)
-                    ->orderBy('name')
-                    ->pluck('name')
-                    ->all()
-            );
-        }
-
-        $terms = array_merge($terms, $fallback);
+        $terms = array_merge($terms, $this->blogTaxonomyTerms($type, $fallback));
 
         return array_values(array_unique(array_filter(array_map('trim', $terms))));
     }

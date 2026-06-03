@@ -6,7 +6,7 @@
         <a href="#" class="transition hover:text-lucille-accent">{{ $post['author'] }}</a>
         <span class="mx-1">in&nbsp;</span>
         @foreach ($post['categories'] as $category)
-            <a href="#" class="transition hover:text-lucille-accent">{{ $category }}</a>@if (! $loop->last)<span class="mx-1">·</span>@endif
+            <a href="{{ route('blog.category', ['slug' => \Illuminate\Support\Str::slug($category)]) }}" class="transition hover:text-lucille-accent">{{ $category }}</a>@if (! $loop->last)<span class="mx-1">·</span>@endif
         @endforeach
     </x-sections.page-heading>
 
@@ -189,9 +189,18 @@
                         <h3 class="lucille-sidebar-title">{{ $ui['categories'] }}</h3>
                         <ul class="lucille-sidebar-list">
                             @foreach ($categories as $category)
-                                <li><a href="#">{{ $category }}</a></li>
+                                <li><a href="{{ route('blog.category', ['slug' => \Illuminate\Support\Str::slug($category)]) }}">{{ $category }}</a></li>
                             @endforeach
                         </ul>
+                    </div>
+
+                    <div class="lucille-sidebar-widget">
+                        <h3 class="lucille-sidebar-title">{{ $ui['tags'] }}</h3>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach ($tags as $tag)
+                                <a href="{{ route('blog.tag', ['slug' => \Illuminate\Support\Str::slug($tag)]) }}" class="lucille-tag">{{ $tag }}</a>
+                            @endforeach
+                        </div>
                     </div>
 
                     <div class="lucille-sidebar-widget">

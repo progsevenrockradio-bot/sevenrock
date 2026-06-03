@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -34,5 +35,11 @@ class PostTaxonomy extends Model
     public function scopeTags(Builder $query): Builder
     {
         return $query->where('type', self::TYPE_TAG);
+    }
+
+    public function posts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class, 'post_taxonomy_post')
+            ->withTimestamps();
     }
 }

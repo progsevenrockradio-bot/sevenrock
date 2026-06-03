@@ -1,5 +1,7 @@
-<x-layouts.site title="Seven Rock Radio - Blog" description="Blog de Seven Rock Radio. Noticias, entrevistas, lanzamientos y articulos sobre rock y metal.">
-    <x-sections.page-heading title="Blog" />
+<x-layouts.site :title="'Seven Rock Radio - '.($pageTitle ?? 'Blog')" :description="$pageDescription ?? 'Blog de Seven Rock Radio. Noticias, entrevistas, lanzamientos y articulos sobre rock y metal.'">
+    <x-sections.page-heading :title="$pageTitle ?? 'Blog'" :subtitle="$pageSubtitle ?? null">
+        {{ $pageDescription ?? 'Blog de Seven Rock Radio. Noticias, entrevistas, lanzamientos y articulos sobre rock y metal.' }}
+    </x-sections.page-heading>
     @php $ui = $themeAppearance['ui_texts']; @endphp
 
     <section>
@@ -34,11 +36,11 @@
                             </a>
 
                             <div class="lucille-standard-meta">
-                                <span>Publicado el<span>Posted at&nbsp;nbsp;{{ $date }}</span>
+                                <span>Publicado el {{ $date }}</span>
                                 <span>por <a href="#">admin</a></span>
                                 <span>in&nbsp;</span>
                                 @foreach ($categories ?: [data_get($post, 'category')] as $category)
-                                    <a href="#">{{ $category }}</a>@if (! $loop->last) <span>·</span> @endif
+                                    <a href="{{ route('blog.category', ['slug' => \Illuminate\Support\Str::slug($category)]) }}">{{ $category }}</a>@if (! $loop->last) <span>·</span> @endif
                                 @endforeach
                             </div>
 
@@ -53,7 +55,7 @@
                     @endforeach
                 </main>
 
-                        @if ($posts instanceof Illuminate\Pagination\LengthAwarePaginator && $posts->hasPages())
+                        @if ($posts instanceof \Illuminate\Pagination\LengthAwarePaginator && $posts->hasPages())
                             <div class="mt-10 flex items-center justify-center gap-4">
                                 @if ($posts->previousPageUrl())
                                     <a href="{{ $posts->previousPageUrl() }}" class="flex items-center gap-2 rounded-lg px-5 py-3 text-sm uppercase tracking-[.12em] text-[#7b7b7b] transition hover:bg-white/5 hover:text-lucille-accent">
@@ -101,7 +103,7 @@
                         <h3 class="lucille-sidebar-title">{{ $ui['categories'] }}</h3>
                         <ul class="lucille-sidebar-list">
                             @foreach ($categories as $category)
-                                <li><a href="#">{{ $category }}</a></li>
+                                <li><a href="{{ route('blog.category', ['slug' => \Illuminate\Support\Str::slug($category)]) }}">{{ $category }}</a></li>
                             @endforeach
                         </ul>
                     </div>
@@ -110,7 +112,7 @@
                         <h3 class="lucille-sidebar-title">{{ $ui['tags'] }}</h3>
                         <div>
                             @foreach ($tags as $tag)
-                                <a href="#" class="lucille-tag">{{ $tag }}</a>
+                                <a href="{{ route('blog.tag', ['slug' => \Illuminate\Support\Str::slug($tag)]) }}" class="lucille-tag">{{ $tag }}</a>
                             @endforeach
                         </div>
                     </div>

@@ -14,7 +14,10 @@ class PostTaxonomySeeder extends Seeder
                 'Blog',
                 'Design',
                 'Discussion',
+                'Artistas',
+                'Conciertos',
                 'Music',
+                'Rock',
                 'Singles',
                 'Typography',
                 'Uncategorized',
@@ -26,6 +29,7 @@ class PostTaxonomySeeder extends Seeder
                 'music',
                 'news',
                 'on stage',
+                'rock',
             ],
         ];
 
