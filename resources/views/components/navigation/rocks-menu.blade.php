@@ -14,9 +14,9 @@
             ['label' => 'Video', 'url' => route('videos.single', ['slug' => 'gold-on-the-ceiling'])],
         ]],
         ['label' => 'Eventos', 'route' => 'events', 'children' => [
-            ['label' => 'Proximos eventos', 'route' => 'events'],
-            ['label' => 'Eventos pasados', 'route' => 'events'],
-            ['label' => 'Todos los eventos', 'route' => 'events'],
+            ['label' => 'Proximos eventos', 'route' => 'events.upcoming'],
+            ['label' => 'Eventos pasados', 'route' => 'events.past'],
+            ['label' => 'Todos los eventos', 'route' => 'events.all'],
             ['label' => 'Evento', 'url' => route('events.single', ['slug' => 'rockness-festival'])],
         ]],
         ['label' => 'Blog', 'route' => 'blog', 'children' => [

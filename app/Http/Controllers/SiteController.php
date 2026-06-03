@@ -53,9 +53,45 @@ class SiteController extends Controller
 
     public function events(): View
     {
-        return view('pages.events', [
-            'events' => $this->safeValue(fn () => Event::query()->orderBy('starts_at')->get(), collect()),
-        ]);
+        return $this->eventsCatalog(
+            title: 'Upcoming Shows',
+            subtitle: 'Tour Dates 2026',
+            description: 'Proximos eventos, conciertos y festivales de rock. Mantente al dia con la agenda musical de Seven Rock Radio.',
+            events: $this->safeValue(fn () => Event::query()->upcoming()->orderBy('starts_at')->get(), collect())
+        );
+    }
+
+    public function upcomingEvents(): View
+    {
+        return $this->eventsCatalog(
+            title: 'Próximos eventos',
+            subtitle: 'Eventos futuros',
+            description: 'Eventos futuros, conciertos y festivales de rock. Mantente al dia con la agenda musical de Seven Rock Radio.',
+            events: $this->safeValue(fn () => Event::query()->upcoming()->orderBy('starts_at')->get(), collect())
+        );
+    }
+
+    public function pastEvents(): View
+    {
+        return $this->eventsCatalog(
+            title: 'Eventos pasados',
+            subtitle: 'Eventos ya ocurridos',
+            description: 'Eventos ya ocurridos, conciertos y festivales de rock archivados por fecha.',
+            events: $this->safeValue(
+                fn () => Event::query()->where('starts_at', '<', now()->startOfDay())->orderByDesc('starts_at')->get(),
+                collect()
+            )
+        );
+    }
+
+    public function allEvents(): View
+    {
+        return $this->eventsCatalog(
+            title: 'Todos los eventos',
+            subtitle: 'Agenda completa',
+            description: 'Todos los eventos, conciertos y festivales de rock listados por fecha.',
+            events: $this->safeValue(fn () => Event::query()->orderByDesc('starts_at')->get(), collect())
+        );
     }
 
     public function eventSingle(string $slug): View
@@ -1002,6 +1038,16 @@ class SiteController extends Controller
             ['image' => 'assets/lucille/guitarist-407212_1920.jpg', 'caption' => 'Guitarist'],
             ['image' => 'assets/lucille/street-1026246_1920.jpg', 'caption' => 'Street'],
         ];
+    }
+
+    private function eventsCatalog(string $title, string $subtitle, string $description, $events): View
+    {
+        return view('pages.events', [
+            'pageTitle' => $title,
+            'pageSubtitle' => $subtitle,
+            'description' => $description,
+            'events' => $events,
+        ]);
     }
 
     private function blogPosts(): array
