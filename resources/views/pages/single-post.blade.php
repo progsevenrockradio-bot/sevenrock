@@ -1,5 +1,16 @@
 <x-layouts.site title="Seven Rock Radio - {{ $post['title'] }}">
-    @php $ui = $themeAppearance['ui_texts']; @endphp
+    @php
+        $ui = $themeAppearance['ui_texts'];
+        $shareUrl = request()->fullUrl();
+        $shareTitle = trim((string) ($post['title'] ?? ''));
+        $shareImage = trim((string) ($post['image'] ?? ''));
+        $shareImage = $shareImage !== '' ? (str_starts_with($shareImage, 'http') ? $shareImage : asset($shareImage)) : '';
+        $twitterShareUrl = 'https://twitter.com/intent/tweet?text=' . rawurlencode($shareTitle) . '&url=' . rawurlencode($shareUrl);
+        $facebookShareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' . rawurlencode($shareUrl);
+        $pinterestShareUrl = 'https://pinterest.com/pin/create/button/?url=' . rawurlencode($shareUrl)
+            . ($shareImage !== '' ? '&media=' . rawurlencode($shareImage) : '')
+            . '&description=' . rawurlencode($shareTitle);
+    @endphp
     <x-sections.page-heading :title="$post['title']" overlay="rgba(0,0,0,0)">
         <span>{{ $post['date'] }}</span>
         <span class="mx-1">by</span>
@@ -113,9 +124,9 @@
 
                         <div class="lucille-share-row">
                             <span>{{ $ui['share'] }}</span>
-                            <a href="#" aria-label="Share on Twitter">T</a>
-                            <a href="#" aria-label="Share on Facebook">F</a>
-                            <a href="#" aria-label="Share on Pinterest">P</a>
+                            <a href="{{ $twitterShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Twitter">T</a>
+                            <a href="{{ $facebookShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook">F</a>
+                            <a href="{{ $pinterestShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Pinterest">P</a>
                         </div>
 
                         <div class="mt-8"></div>
