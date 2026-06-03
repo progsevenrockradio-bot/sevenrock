@@ -22,39 +22,74 @@ class ContentSanitizer
     {
         $config = HTMLPurifier_Config::createDefault();
 
-        $config->set('HTML.Allowed', implode(',', [
-            'p', 'div', 'span', 'br', 'hr',
-            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-            'ul', 'ol', 'li',
-            'a', 'img',
-            'strong', 'em', 'b', 'i', 'u',
-            'blockquote', 'pre', 'code',
-            'table', 'thead', 'tbody', 'tr', 'th', 'td',
-            'figure', 'figcaption',
-            'video', 'audio', 'source', 'embed', 'iframe'
-        ]));
+        $allowedHtml = config('purify.allowed_html', [
+            'p[class]',
+            'div[class]',
+            'span[class]',
+            'br',
+            'hr',
+            'h1[class]',
+            'h2[class]',
+            'h3[class]',
+            'h4[class]',
+            'h5[class]',
+            'h6[class]',
+            'ul[class]',
+            'ol[class]',
+            'li[class]',
+            '*[class]',
+            'a[href|target|rel|class|title]',
+            'img[src|alt|class]',
+            'strong[class]',
+            'em[class]',
+            'b[class]',
+            'i[class]',
+            'u[class]',
+            'blockquote[class]',
+            'pre[class]',
+            'code[class]',
+            'table[class]',
+            'thead[class]',
+            'tbody[class]',
+            'tr[class]',
+            'th[class]',
+            'td[class]',
+            'figure[class]',
+            'figcaption[class]',
+            'video[class|controls|poster|preload]',
+            'audio[class|controls|preload]',
+            'source[src|type]',
+            'embed[src|type]',
+            'iframe[src|class|allow|allowfullscreen|frameborder|loading|title]',
+        ]);
 
-        $config->set('HTML.SafeIframe', true);
-        $config->set('URI.SafeIframeRegexp', '%^(?:https?:)?//(?:www\.|)(?:youtube(?:-nocookie)?\.com|vimeo\.com|youtube\.com)%');
+        $config->set('HTML.Allowed', implode(',', $allowedHtml));
 
-        $config->set('Attr.AllowedFrameborder', true);
+        $config->set('HTML.SafeIframe', (bool) config('purify.safe_iframe', true));
+        $config->set('URI.SafeIframeRegexp', (string) config('purify.safe_iframe_regexp', '%^(?:https?:)?//(?:www\.|)(?:youtube(?:-nocookie)?\.com|youtu\.be|vimeo\.com|youtube\.com)%'));
 
-        $config->set('Attr.AllowedRel', 'nofollow');
+        $config->set('Attr.AllowedFrameborder', (bool) config('purify.allowed_frameborder', true));
+        $config->set('Attr.AllowedFrameTargets', config('purify.allowed_frame_targets', ['_blank' => true]));
+        $config->set('Attr.AllowedRel', config('purify.allowed_rel', ['nofollow' => true, 'noopener' => true, 'noreferrer' => true]));
 
-        $config->set('CSS.AllowedProperties', [
+        $config->set('HTML.TargetBlank', (bool) config('purify.target_blank', false));
+        $config->set('HTML.TargetNoopener', (bool) config('purify.target_noopener', true));
+        $config->set('HTML.TargetNoreferrer', (bool) config('purify.target_noreferrer', true));
+
+        $config->set('CSS.AllowedProperties', config('purify.css_allowed_properties', [
             'text-align', 'color', 'background-color',
             'font-size', 'font-weight', 'margin', 'padding'
-        ]);
+        ]));
 
-        $config->set('HTML.ForbiddenElements', [
+        $config->set('HTML.ForbiddenElements', config('purify.forbidden_elements', [
             'script', 'style', 'object', 'applet',
             'meta', 'link', 'base', 'basefont',
-        ]);
+        ]));
 
-        $config->set('HTML.ForbiddenAttributes', [
+        $config->set('HTML.ForbiddenAttributes', config('purify.forbidden_attributes', [
             'onclick', 'onerror', 'onload', 'onmouseover',
             'onkeydown', 'onkeyup', 'onchange', 'onsubmit'
-        ]);
+        ]));
 
         return new HTMLPurifier($config);
     }

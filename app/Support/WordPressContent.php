@@ -222,15 +222,17 @@ final class WordPressContent
                 // Escape the text, then replace placeholders with actual links
                 $escaped = e($workingText);
                 $escaped = str_replace($placeholders, $replacements, $escaped);
-                return '<p>' . $escaped . '</p>';
+                return '<p>' . self::rewriteBareUrlsInHtml($escaped) . '</p>';
             }
         }
 
         if (preg_match('/<\s*(p|img|figure|blockquote|ul|ol|li|h[1-6]|div|section|article|br|iframe)\b/i', $text)) {
-            return PublicMediaUrl::rewriteLegacyWordPressUploadsInHtml(self::stripWpComments($text));
+            return self::rewriteBareUrlsInHtml(
+                PublicMediaUrl::rewriteLegacyWordPressUploadsInHtml(self::stripWpComments($text))
+            );
         }
 
-        return '<p>'.e($text).'</p>';
+        return '<p>'.self::rewriteBareUrlsInText($text).'</p>';
     }
 
     private static function wrapHeading(string $text, int $level): string
@@ -329,7 +331,130 @@ final class WordPressContent
     {
         $html = trim($html);
 
-        return $html !== '' ? PublicMediaUrl::rewriteLegacyWordPressUploadsInHtml(self::stripWpComments($html)) : '';
+        return $html !== ''
+            ? self::rewriteBareUrlsInHtml(
+                PublicMediaUrl::rewriteLegacyWordPressUploadsInHtml(self::stripWpComments($html))
+            )
+            : '';
+    }
+
+    private static function rewriteBareUrlsInText(string $text): string
+    {
+        return self::rewriteBareUrlsInHtml(e($text));
+    }
+
+    private static function rewriteBareUrlsInHtml(string $html): string
+    {
+        if ($html === '') {
+            return '';
+        }
+
+        $segments = preg_split('/(<[^>]+>)/', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+        if ($segments === false) {
+            return $html;
+        }
+
+        $output = '';
+
+        foreach ($segments as $segment) {
+            if ($segment === '') {
+                continue;
+            }
+
+            if (str_starts_with($segment, '<')) {
+                $output .= $segment;
+                continue;
+            }
+
+            $output .= self::rewriteBareUrlsInTextSegment($segment);
+        }
+
+        return $output;
+    }
+
+    private static function rewriteBareUrlsInTextSegment(string $text): string
+    {
+        $pattern = '/\bhttps?:\/\/[^\s<>"\'`]+/i';
+
+        return preg_replace_callback($pattern, static function (array $matches): string {
+            $url = (string) ($matches[0] ?? '');
+
+            if ($url === '') {
+                return '';
+            }
+
+            [$cleanUrl, $trailing] = self::splitTrailingPunctuation($url);
+
+            return self::renderUrlCard($cleanUrl).$trailing;
+        }, $text) ?? $text;
+    }
+
+    /**
+     * @return array{0:string,1:string}
+     */
+    private static function splitTrailingPunctuation(string $url): array
+    {
+        $trailing = '';
+
+        while ($url !== '') {
+            $lastChar = substr($url, -1);
+
+            if (! in_array($lastChar, ['.', ',', ';', ':', '!', '?'], true)) {
+                break;
+            }
+
+            $trailing = $lastChar.$trailing;
+            $url = substr($url, 0, -1);
+        }
+
+        return [$url, $trailing];
+    }
+
+    private static function renderUrlCard(string $url): string
+    {
+        $url = trim($url);
+
+        if ($url === '') {
+            return '';
+        }
+
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $host = preg_replace('/^www\./i', '', $host) ?? $host;
+        $domainLabel = $host !== '' ? $host : 'sitio web';
+
+        return match (true) {
+            str_contains($host, 'spotify.com') => self::renderLinkButton(
+                $url,
+                '🎵 Escuchar en Spotify',
+                'border-[#1db954]/45 bg-[#1db954] text-black hover:bg-[#1ed760] hover:border-[#1ed760] w-full md:w-max'
+            ),
+            str_contains($host, 'youtube.com'), str_contains($host, 'youtu.be') => self::renderLinkButton(
+                $url,
+                '📺 Ver en YouTube',
+                'border-red-500/35 bg-black text-white hover:border-red-400 hover:text-red-200 w-full md:w-max'
+            ),
+            str_contains($host, 'instagram.com') => self::renderLinkButton(
+                $url,
+                '📸 Ver en Instagram',
+                'border-pink-500/30 bg-black text-white hover:border-pink-400 hover:text-pink-100 w-full md:w-max'
+            ),
+            default => self::renderLinkButton(
+                $url,
+                '🔗 Visitar '.$domainLabel,
+                'border-white/10 bg-white/5 text-[#e7e7e7] hover:border-white/25 hover:bg-white/10 w-full md:w-max'
+            ),
+        };
+    }
+
+    private static function renderLinkButton(string $url, string $label, string $variantClasses): string
+    {
+        return sprintf(
+            '<a href="%s" target="_blank" rel="noopener noreferrer" class="%s inline-flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] transition duration-200">%s</a>',
+            e($url),
+            e($variantClasses),
+            e($label)
+        );
     }
 
     /**
