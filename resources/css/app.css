@@ -328,12 +328,14 @@
     .lucille-card-image {
         background-position: center;
         background-size: cover;
+        background-repeat: no-repeat;
     }
 
     @media (max-width: 767px) {
         .hero-rocks-bg {
             background-size: cover !important;
             background-position: center !important;
+            background-repeat: no-repeat !important;
         }
     }
 

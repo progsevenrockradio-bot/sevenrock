@@ -48,8 +48,8 @@
     <div class="absolute inset-0 bg-[rgba(0,0,0,.24)]"></div>
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_72%_42%,rgba(195,39,32,.12),transparent_30%),linear-gradient(90deg,rgba(0,0,0,.26),transparent_54%)]"></div>
 
-    <div class="relative z-10 mx-auto flex min-h-[100vw] max-w-[1240px] items-center justify-end px-6 pt-[48px] text-right sm:min-h-[60vh] md:min-h-[960px] lg:px-10 xl:min-h-[868px]">
-        <h1 class="max-w-[760px] font-sans text-[26px] font-bold uppercase leading-none text-white sm:text-[34px] md:text-[55px] lg:text-[65px]">
+    <div class="relative z-10 mx-auto flex min-h-[100vw] max-w-[1240px] items-end justify-end px-6 pt-[48px] pb-6 text-right sm:min-h-[60vh] md:min-h-[960px] lg:px-10 xl:min-h-[868px]">
+        <h1 class="max-w-[760px] font-sans font-bold uppercase leading-none text-white text-[24px] sm:text-[30px] md:text-[42px] lg:text-[48px]">
             todas la <span class="text-lucille-accent">épocas del rock</span>,<br>
             están <span class="text-lucille-accent">aquí!</span>
         </h1>
