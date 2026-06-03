@@ -427,22 +427,22 @@ final class WordPressContent
             str_contains($host, 'spotify.com') => self::renderLinkButton(
                 $url,
                 '🎵 Escuchar en Spotify',
-                'border-[#1db954]/45 bg-[#1db954] text-black hover:bg-[#1ed760] hover:border-[#1ed760] w-full md:w-max'
+                'border-[#ff4d5e]/35 bg-[#2a0b0f]/85 text-[#ffecec] hover:border-[#ff6675]/55 hover:bg-[#3a0f15]/92 w-full md:w-max'
             ),
             str_contains($host, 'youtube.com'), str_contains($host, 'youtu.be') => self::renderLinkButton(
                 $url,
                 '📺 Ver en YouTube',
-                'border-red-500/35 bg-black text-white hover:border-red-400 hover:text-red-200 w-full md:w-max'
+                'border-[#ff5a67]/32 bg-[#23090d]/88 text-[#fff3f3] hover:border-[#ff7a86]/58 hover:bg-[#330d12]/95 w-full md:w-max'
             ),
             str_contains($host, 'instagram.com') => self::renderLinkButton(
                 $url,
                 '📸 Ver en Instagram',
-                'border-pink-500/30 bg-black text-white hover:border-pink-400 hover:text-pink-100 w-full md:w-max'
+                'border-[#ff6b8a]/28 bg-[#23090d]/88 text-[#fff1f5] hover:border-[#ff8fa3]/54 hover:bg-[#330d12]/95 w-full md:w-max'
             ),
             default => self::renderLinkButton(
                 $url,
                 '🔗 Visitar '.$domainLabel,
-                'border-white/10 bg-white/5 text-[#e7e7e7] hover:border-white/25 hover:bg-white/10 w-full md:w-max'
+                'border-[#ff5b68]/24 bg-[#22080c]/82 text-[#f5dddd] hover:border-[#ff7481]/44 hover:bg-[#310d12]/94 w-full md:w-max'
             ),
         };
     }
