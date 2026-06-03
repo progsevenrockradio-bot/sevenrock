@@ -9,6 +9,7 @@ use App\Models\MasterProgram;
 use App\Models\Product;
 use App\Models\Post;
 use App\Models\PostTaxonomy;
+use App\Models\TalentAlbum;
 use App\Models\ThemeSetting;
 use App\Models\Video;
 use App\Services\ArchiveOrgService;
@@ -78,7 +79,9 @@ class SiteController extends Controller
                 'artist' => $a->talent->band_name ?? 'Artista',
                 'cover' => $a->coverUrl() ?? asset('assets/lucille/man-597179_1920.jpg'),
                 'date' => $a->release_date?->format('F j, Y') ?? '',
+                'sort' => $a->release_date?->timestamp ?? 0,
                 'type' => 'talent',
+                'url' => route('albums.single', ['slug' => $a->slug]),
             ]);
 
         $adminAlbums = \App\Models\Album::query()
@@ -92,10 +95,12 @@ class SiteController extends Controller
                 'artist' => $a->artist ?? 'Artista',
                 'cover' => $a->cover_image_url,
                 'date' => $a->released_at?->format('F j, Y') ?? '',
+                'sort' => $a->released_at?->timestamp ?? 0,
                 'type' => 'admin',
+                'url' => route('albums.single', ['slug' => $a->slug]),
             ]);
 
-        $allAlbums = $talentAlbums->concat($adminAlbums)->sortByDesc('date')->values();
+        $allAlbums = $talentAlbums->concat($adminAlbums)->sortByDesc('sort')->values();
 
         return view('pages.discography', [
             'albums' => $allAlbums,
@@ -108,28 +113,19 @@ class SiteController extends Controller
 
         if ($album) {
             return view('pages.album-single', [
-                'album' => [
-                    'title' => $album->title,
-                    'artist' => $album->artist,
-                    'cover' => $album->cover_image_url,
-                    'date' => $album->released_at?->format('F j, Y') ?? 'N/A',
-                    'label' => 'Seven Rock Radio',
-                    'producer' => 'Admin',
-                    'discs' => '1',
-                    'categories' => ['new album', 'official release'],
-                    'tracks' => $album->tracks ?? [],
-                    'buttons' => $this->albumButtons($album),
-                    'content' => array_values(array_filter([
-                        $album->summary,
-                        'This album is managed from the admin panel and is now part of the public catalog.',
-                    ])),
-                ],
+                'album' => $this->adminAlbumViewData($album),
             ]);
         }
 
-        return view('pages.album-single', [
-            'album' => $this->nightrideAlbum(),
-        ]);
+        $talentAlbum = $this->safeValue(fn () => TalentAlbum::query()->where('slug', $slug)->with('talent.media')->first(), null);
+
+        if ($talentAlbum) {
+            return view('pages.album-single', [
+                'album' => $this->talentAlbumViewData($talentAlbum),
+            ]);
+        }
+
+        abort(404);
     }
 
     public function videos(): View
@@ -377,7 +373,7 @@ class SiteController extends Controller
         ]);
     }
 
-        public function talentAlbumSingle(string $id, string $slug): View
+    public function talentAlbumSingle(string $id, string $slug): View
     {
         $album = \App\Models\TalentAlbum::query()
             ->whereKey((int) $id)
@@ -389,18 +385,8 @@ class SiteController extends Controller
             abort(404);
         }
 
-        // Get talent's MP3 media for preview URLs
-        $talentMp3s = $album->talent?->media()
-            ->where('type', 'mp3')
-            ->latest()
-            ->get() ?? collect();
-
-        return view('pages.talent-album-single', [
-            'album' => $album,
-            'talent' => $album->talent,
-            'talentMp3s' => $talentMp3s,
-            'hasProducts' => $album->talent?->products()->published()->exists() ?? false,
-            'paymentLinks' => $album->talent?->paymentLinkMap() ?? [],
+        return view('pages.album-single', [
+            'album' => $this->talentAlbumViewData($album),
         ]);
     }
 
@@ -862,6 +848,109 @@ class SiteController extends Controller
         ])->map(function (array $album): Album {
             return Album::make($album);
         });
+    }
+
+    /**
+     * @return array{
+     *     title:string,
+     *     artist:string,
+     *     cover:string,
+     *     date:string,
+     *     label:string,
+     *     producer:string,
+     *     discs:string,
+     *     categories:array<int,string>,
+     *     tracks:array<int,array{title:string,duration:string,audio:string}>,
+     *     buttons:array<int,array{label:string,url:string}>,
+     *     content:array<int,string>
+     * }
+     */
+    private function adminAlbumViewData(Album $album): array
+    {
+        return [
+            'title' => $album->title,
+            'artist' => $album->artist,
+            'cover' => $album->cover_image_url,
+            'date' => $album->released_at?->format('F j, Y') ?? 'N/A',
+            'label' => 'Seven Rock Radio',
+            'producer' => 'Admin',
+            'discs' => '1',
+            'categories' => ['new album', 'official release'],
+            'tracks' => array_values(array_map(static function ($track): array {
+                $track = is_array($track) ? $track : [];
+
+                return [
+                    'title' => (string) ($track['title'] ?? ''),
+                    'duration' => (string) ($track['duration'] ?? ''),
+                    'audio' => (string) ($track['audio'] ?? ''),
+                ];
+            }, is_array($album->tracks ?? null) ? $album->tracks : [])),
+            'buttons' => $this->albumButtons($album),
+            'content' => array_values(array_filter([
+                $album->summary,
+                'This album is managed from the admin panel and is now part of the public catalog.',
+            ])),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     title:string,
+     *     artist:string,
+     *     cover:string,
+     *     date:string,
+     *     label:string,
+     *     producer:string,
+     *     discs:string,
+     *     categories:array<int,string>,
+     *     tracks:array<int,array{title:string,duration:string,audio:string}>,
+     *     buttons:array<int,array{label:string,url:string}>,
+     *     content:array<int,string>
+     * }
+     */
+    private function talentAlbumViewData(TalentAlbum $album): array
+    {
+        $talent = $album->talent;
+        $audioMedia = $talent?->media()
+            ->where('type', 'mp3')
+            ->latest()
+            ->get() ?? collect();
+
+        $tracks = collect(is_array($album->tracks ?? null) ? $album->tracks : [])
+            ->values()
+            ->map(function ($track, int $index) use ($audioMedia): array {
+                $track = is_array($track) ? $track : ['title' => (string) $track];
+                $media = $audioMedia[$index] ?? null;
+                $directAudio = trim((string) ($track['audio'] ?? ''));
+                $linkedAudio = trim((string) ($track['url'] ?? ''));
+                $mediaAudio = trim((string) ($media->url ?? ''));
+                $audio = $directAudio !== '' ? $directAudio : ($linkedAudio !== '' ? $linkedAudio : $mediaAudio);
+
+                return [
+                    'title' => trim((string) ($track['title'] ?? $track['name'] ?? 'Track ' . ($index + 1))),
+                    'duration' => (string) ($track['duration'] ?? ''),
+                    'audio' => $audio,
+                    'audio_source' => $directAudio !== '' ? 'direct' : ($linkedAudio !== '' ? 'linked' : ($mediaAudio !== '' ? 'talent-media' : 'none')),
+                ];
+            })
+            ->all();
+
+        return [
+            'title' => $album->title,
+            'artist' => $talent?->band_name ?? 'Artista',
+            'cover' => $album->coverUrl() ?? asset('assets/lucille/man-597179_1920.jpg'),
+            'date' => $album->release_date?->format('F j, Y') ?? 'N/A',
+            'label' => $talent?->band_name ?? 'Seven Rock Radio',
+            'producer' => $talent?->band_name ?? 'Talent',
+            'discs' => '1',
+            'categories' => ['new album', 'official release'],
+            'tracks' => $tracks,
+            'buttons' => [],
+            'content' => array_values(array_filter([
+                $album->description,
+                'This album is managed from the talent panel and is now part of the public catalog.',
+            ])),
+        ];
     }
 
     private function videosCatalog(): array

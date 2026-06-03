@@ -71,6 +71,7 @@ class ThemeAppearance
             'hero_slide_secondary_url' => $media['hero_slide_secondary_url'],
             'home_album_cover_url' => $media['home_album_cover_url'],
             'home_video_image_url' => $media['home_video_image_url'],
+            'featured_album_url' => $settings->featuredAlbumUrl(),
             'hero_video_url' => $media['hero_video_media_url'],
             'hero_video_disabled' => (bool) $media['hero_video_disabled'],
             'social_links' => $links['social_links'],

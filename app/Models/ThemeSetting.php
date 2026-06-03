@@ -32,6 +32,7 @@ class ThemeSetting extends Model
         'hero_slide_secondary_path',
         'hero_slides',
         'home_album_cover_path',
+        'featured_album_slug',
         'home_video_image_path',
         'contact_form_title',
         'contact_info_title',
@@ -84,6 +85,7 @@ class ThemeSetting extends Model
                 ['image' => 'assets/lucille/live-slider-bg.jpg'],
             ],
             'home_album_cover_path' => 'assets/lucille/album3.jpg',
+            'featured_album_slug' => null,
             'home_video_image_path' => 'assets/lucille/freedom-at-21-header.jpg',
             'contact_form_title' => 'Envíanos un mensaje',
             'contact_info_title' => 'Donde encontrarnos',
@@ -588,6 +590,38 @@ class ThemeSetting extends Model
     public function getHomeAlbumCoverUrlAttribute(): string
     {
         return $this->resolveAsset($this->home_album_cover_path, 'assets/lucille/album3.jpg');
+    }
+
+    public function featuredAlbumUrl(): string
+    {
+        $slug = trim((string) ($this->featured_album_slug ?? ''));
+        if ($slug !== '') {
+            $adminAlbum = Album::query()->where('slug', $slug)->first();
+            if ($adminAlbum) {
+                return route('albums.single', ['slug' => $adminAlbum->slug]);
+            }
+
+            $talentAlbum = TalentAlbum::query()->where('slug', $slug)->where('is_published', true)->first();
+            if ($talentAlbum) {
+                return route('albums.single', ['slug' => $talentAlbum->slug]);
+            }
+        }
+
+        $album = TalentAlbum::query()
+            ->where('is_published', true)
+            ->orderByDesc('release_date')
+            ->first();
+
+        if ($album) {
+            return route('albums.single', ['slug' => $album->slug]);
+        }
+
+        $album = Album::query()
+            ->whereNotNull('title')
+            ->orderByDesc('released_at')
+            ->first();
+
+        return $album?->slug ? route('albums.single', ['slug' => $album->slug]) : route('discography');
     }
 
     public function getHomeVideoImageUrlAttribute(): string

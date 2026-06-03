@@ -1,16 +1,17 @@
 @props(['items' => null, 'theme' => null])
 
 @php
+    $themeData = is_array($theme ?? null) ? $theme : $themeAppearance;
     $ui = $themeAppearance['ui_texts'];
+    $featuredAlbumUrl = $themeData['featured_album_url'] ?? route('discography');
     $items ??= [
         ['label' => 'Inicio', 'route' => 'home'],
         ['label' => 'Multimedia', 'route' => 'discography', 'children' => [
             ['label' => 'Discografía', 'route' => 'discography'],
-            ['label' => 'Videos', 'route' => 'videos'],
+            ['label' => 'Álbum', 'url' => $featuredAlbumUrl],
             ['label' => 'Galería', 'route' => 'gallery'],
-            ['label' => 'Álbum', 'url' => route('albums.single', ['slug' => 'nightride'])],
-            ['label' => 'Video', 'url' => route('videos.single', ['slug' => 'gold-on-the-ceiling'])],
             ['label' => 'Álbum de fotos', 'route' => 'gallery.green-day'],
+            ['label' => 'Video', 'url' => route('videos.single', ['slug' => 'gold-on-the-ceiling'])],
         ]],
         ['label' => 'Eventos', 'route' => 'events', 'children' => [
             ['label' => 'Proximos eventos', 'route' => 'events'],
@@ -28,7 +29,6 @@
         ["label" => "Programas", "route" => "programs"],
         ['label' => 'Contacto', 'route' => 'contact'],
     ];
-    $themeData = is_array($theme ?? null) ? $theme : $themeAppearance;
     $brandMark = $themeData['visual']['brand_mark'] ?? $themeData['brand_mark'] ?? $themeData['site_name'] ?? 'Seven Rock Radio';
     $brandDisplayMode = $themeData['visual']['brand_display_mode'] ?? $themeData['brand_display_mode'] ?? 'mark';
     $logoUrl = $themeData['media']['logo_url'] ?? $themeData['logo_url'] ?? $themeSettings->logo_url;

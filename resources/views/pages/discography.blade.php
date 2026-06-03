@@ -15,12 +15,7 @@
             @else
                 <div class="lucille-albums-grid md:grid-cols-2 lg:grid-cols-3">
                     @foreach ($albums as $album)
-                        @php
-                            $detailUrl = $album['type'] === 'admin'
-                                ? route('albums.single', ['slug' => $album['slug']])
-                                : '#' /* talent albums disabled */
-                        @endphp
-                        <a href="{{ $detailUrl }}" class="lucille-album-card group">
+                        <a href="{{ $album['url'] }}" class="lucille-album-card group">
                             <img src="{{ $album['cover'] }}" alt="{{ $album['title'] }}" loading="lazy">
                             <span class="lucille-album-overlay"></span>
                             <h3 class="lucille-album-title">{{ $album['title'] }}</h3>

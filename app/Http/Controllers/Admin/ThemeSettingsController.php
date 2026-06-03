@@ -40,10 +40,12 @@ class ThemeSettingsController extends Controller
     public function edit(): View
     {
         $settings = ThemeSetting::current();
+        $featuredAlbums = $this->featuredAlbumOptions();
 
         return view('admin.settings', [
             'settings' => $settings,
             'fonts' => ThemeAppearance::fonts(),
+            'featuredAlbums' => $featuredAlbums,
             'featuredStoriesJson' => json_encode($settings->featuredStories(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
             'latestPodcastsJson' => json_encode($settings->latestPodcasts(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
             'homeHeadingsJson' => json_encode($settings->homeHeadings(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
@@ -84,6 +86,7 @@ class ThemeSettingsController extends Controller
             'hero_slide_secondary' => ['nullable', 'image', 'max:6144'],
             'hero_slides' => ['nullable', 'array'],
             'home_album_cover' => ['nullable', 'image', 'max:6144'],
+            'featured_album_slug' => ['nullable', 'string', 'max:255'],
             'home_video_image' => ['nullable', 'image', 'max:6144'],
             'contact_form_title' => ['nullable', 'string', 'max:255'],
             'contact_info_title' => ['nullable', 'string', 'max:255'],
@@ -129,6 +132,7 @@ class ThemeSettingsController extends Controller
             'hero_slide_secondary',
             'hero_slides',
             'home_album_cover',
+            'featured_album_slug',
             'home_video_image',
             'brand_mark',
             'brand_mark_font',
@@ -170,6 +174,7 @@ class ThemeSettingsController extends Controller
 
         $settings->hero_video_url = trim((string) ($validated['hero_video_url'] ?? '')) ?: null;
         $settings->hero_video_disabled = $request->boolean('hero_video_disabled');
+        $settings->featured_album_slug = trim((string) ($validated['featured_album_slug'] ?? '')) ?: null;
         $settings->notification_email = trim((string) ($validated['notification_email'] ?? '')) ?: null;
         $settings->notification_copy_email = trim((string) ($validated['notification_copy_email'] ?? '')) ?: null;
         $settings->notification_from_email = trim((string) ($validated['notification_from_email'] ?? '')) ?: null;
@@ -240,6 +245,33 @@ class ThemeSettingsController extends Controller
             'themeSettings' => $settings,
             'themeAppearance' => ThemeAppearance::resolved(),
         ];
+    }
+
+    /**
+     * @return array<int, array{label:string,slug:string}>
+     */
+    private function featuredAlbumOptions(): array
+    {
+        $talentAlbums = \App\Models\TalentAlbum::query()
+            ->where('is_published', true)
+            ->with('talent')
+            ->orderByDesc('release_date')
+            ->get()
+            ->map(fn ($album) => [
+                'label' => trim(($album->talent->band_name ?? 'Artista') . ' - ' . $album->title),
+                'slug' => $album->slug,
+            ]);
+
+        $adminAlbums = \App\Models\Album::query()
+            ->whereNotNull('title')
+            ->orderByDesc('released_at')
+            ->get()
+            ->map(fn ($album) => [
+                'label' => trim(($album->artist ?? 'Artista') . ' - ' . $album->title),
+                'slug' => $album->slug,
+            ]);
+
+        return $talentAlbums->concat($adminAlbums)->values()->all();
     }
 
     /**

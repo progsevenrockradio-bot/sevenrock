@@ -188,6 +188,19 @@
                 @error('home_album_cover')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
             </div>
             <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Álbum destacado del menú</label>
+                <select name="featured_album_slug" class="lucille-product-field lucille-select-field w-full">
+                    <option value="">Usar el más reciente automáticamente</option>
+                    @foreach ($featuredAlbums ?? [] as $featuredAlbum)
+                        <option value="{{ $featuredAlbum['slug'] }}" @selected(old('featured_album_slug', $settings->featured_album_slug) === $featuredAlbum['slug'])>
+                            {{ $featuredAlbum['label'] }}
+                        </option>
+                    @endforeach
+                </select>
+                <p class="mt-2 text-xs text-[#7b7b7b]">Si eliges uno, el bloque "Álbum" del menú irá siempre a ese detalle.</p>
+                @error('featured_album_slug')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+            <div>
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['featured_video_image_label'] }}</label>
                 <input type="file" name="home_video_image" class="block w-full text-sm text-[#7b7b7b]">
                 <p class="mt-2 text-xs text-[#7b7b7b]">{{ $admin['current_label'] }}: {{ $settings->home_video_image_path }}</p>

@@ -20,6 +20,9 @@
                     previewDuration: 20,
 
                     playTrack(track) {
+                        if (!track.audio) {
+                            return;
+                        }
                         if (this.activeTrack && this.activeTrack.title === track.title) {
                             this.togglePlayback();
                             return;
@@ -109,40 +112,47 @@
                                     <div class="mb-[3px] pl-[7px] text-[#dcdcdc]">
                                         <span class="mr-[5px]">{{ $loop->iteration }}.</span>{{ $track['title'] }}
                                     </div>
-                                    <button type="button"
-                                        class="h-10 w-full rounded-sm border border-[#2b2b2b] bg-[#191919] transition-all duration-200 hover:border-lucille-accent/40 hover:bg-[#222] active:bg-[#252525] group"
-                                        @click="playTrack({
-                                            title: '{{ str_replace("'", "\'", $track['title']) }}',
-                                            audio: '{{ $track['audio'] ?? '' }}'
-                                        })"
-                                        :class="{ 'border-lucille-accent/60 bg-[#222]': isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}') }">
-                                        <div class="flex h-full items-center gap-3 px-3 text-xs text-[#7b7b7b]">
-                                            {{-- Play/Pause icon --}}
-                                            <template x-if="isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}') && playing">
-                                                <span class="text-lg text-lucille-accent">⏸</span>
-                                            </template>
-                                            <template x-if="!(isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}') && playing)">
-                                                <span class="text-lg text-[#dcdcdc] transition-colors group-hover:text-lucille-accent">▶</span>
-                                            </template>
-                                            {{-- Progress bar --}}
-                                            <span class="h-px flex-1 bg-[#3a3a3a] rounded-full overflow-hidden">
+                                    @if (!empty($track['audio']))
+                                        <button type="button"
+                                            class="h-10 w-full rounded-sm border border-[#2b2b2b] bg-[#191919] transition-all duration-200 hover:border-lucille-accent/40 hover:bg-[#222] active:bg-[#252525] group"
+                                            @click="playTrack({
+                                                title: '{{ str_replace("'", "\'", $track['title']) }}',
+                                                audio: '{{ $track['audio'] ?? '' }}'
+                                            })"
+                                            :class="{ 'border-lucille-accent/60 bg-[#222]': isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}') }">
+                                            <div class="flex h-full items-center gap-3 px-3 text-xs text-[#7b7b7b]">
+                                                <template x-if="isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}') && playing">
+                                                    <span class="text-lg text-lucille-accent">⏸</span>
+                                                </template>
+                                                <template x-if="!(isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}') && playing)">
+                                                    <span class="text-lg text-[#dcdcdc] transition-colors group-hover:text-lucille-accent">▶</span>
+                                                </template>
+                                                <span class="h-px flex-1 overflow-hidden rounded-full bg-[#3a3a3a]">
+                                                    <template x-if="isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}')">
+                                                        <span class="block h-full bg-lucille-accent transition-all duration-300"
+                                                            :style="'width: ' + progressPct + '%'"></span>
+                                                    </template>
+                                                    <template x-if="!isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}')">
+                                                        <span class="block h-full w-0 bg-lucille-accent"></span>
+                                                    </template>
+                                                </span>
                                                 <template x-if="isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}')">
-                                                    <span class="block h-full bg-lucille-accent transition-all duration-300"
-                                                        :style="'width: ' + progressPct + '%'"></span>
+                                                    <span class="w-16 text-right tabular-nums" x-text="timeLabel"></span>
                                                 </template>
                                                 <template x-if="!isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}')">
-                                                    <span class="block h-full w-0 bg-lucille-accent"></span>
+                                                    <span class="w-16 text-right">00:00 / 00:20</span>
                                                 </template>
-                                            </span>
-                                            {{-- Time --}}
-                                            <template x-if="isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}')">
-                                                <span class="w-16 text-right tabular-nums" x-text="timeLabel"></span>
-                                            </template>
-                                            <template x-if="!isCurrentTrack('{{ str_replace("'", "\'", $track['title']) }}')">
-                                                <span class="w-16 text-right">00:00 / 00:20</span>
-                                            </template>
+                                            </div>
+                                        </button>
+                                    @else
+                                        <div class="flex h-10 items-center gap-3 rounded-sm border border-dashed border-[#2b2b2b] bg-[#191919] px-3 text-xs text-[#7b7b7b]">
+                                            <span class="text-lg text-[#7b7b7b]">•</span>
+                                            <span class="flex-1">Audio no disponible para este tema</span>
+                                            @if (!empty($track['duration']))
+                                                <span class="w-16 text-right tabular-nums">{{ $track['duration'] }}</span>
+                                            @endif
                                         </div>
-                                    </button>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>
