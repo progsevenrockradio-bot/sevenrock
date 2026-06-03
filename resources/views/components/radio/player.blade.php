@@ -3,6 +3,7 @@
 @php
     $player = config('player');
     $theme = $themeAppearance;
+    $preferredSocialOrder = ['facebook', 'instagram', 'youtube'];
     $socialLinks = collect($theme['social_links'] ?? [])
         ->filter(fn (array $social): bool => trim((string) ($social['url'] ?? '')) !== '')
         ->map(static function (array $social): array {
@@ -25,11 +26,14 @@
             };
 
             return [
+                'order' => $network,
                 'label' => $label,
                 'badge' => $badge,
                 'url' => trim((string) ($social['url'] ?? '')),
             ];
         })
+        ->filter(fn (array $social): bool => in_array($social['order'], $preferredSocialOrder, true))
+        ->sortBy(fn (array $social): int => array_search($social['order'], $preferredSocialOrder, true))
         ->values();
     $fallbackCover = ! empty($theme['media']['home_album_cover_url'] ?? '')
         ? $theme['media']['home_album_cover_url']
