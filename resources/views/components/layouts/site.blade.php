@@ -84,81 +84,85 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 38px;
-            min-height: 176px;
-            border: 1px solid rgba(184,175,162,.22);
+            width: 34px;
+            min-height: 162px;
+            border: 1px solid rgba(255,255,255,.08);
             border-left: 0;
-            border-radius: 0 18px 18px 0;
-            background: linear-gradient(180deg, rgba(31,10,13,.95), rgba(18,7,10,.95));
-            color: #f1e4e4;
+            border-radius: 0 14px 14px 0;
+            background: linear-gradient(180deg, rgba(18,18,18,.86), rgba(10,10,10,.78));
+            color: #b9b3ab;
             font-family: var(--lucille-heading-font, var(--font-display));
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
-            letter-spacing: .34em;
+            letter-spacing: .40em;
             text-transform: uppercase;
             writing-mode: vertical-rl;
             text-orientation: mixed;
-            box-shadow: 8px 0 26px rgba(0,0,0,.25);
-            transition: transform .55s ease, background .55s ease, border-color .55s ease;
+            box-shadow: 6px 0 18px rgba(0,0,0,.14);
+            transition: transform .6s ease, background .6s ease, border-color .6s ease, color .6s ease;
         }
         .social-flyout__panel {
             width: 0;
             max-width: 0;
             overflow: hidden;
-            border: 1px solid rgba(184,175,162,.22);
+            border: 1px solid rgba(255,255,255,.08);
             border-left: 0;
-            border-radius: 0 20px 20px 0;
-            background: linear-gradient(180deg, rgba(26,10,12,.96), rgba(14,6,8,.97));
-            box-shadow: 12px 0 36px rgba(0,0,0,.3);
+            border-radius: 0 16px 16px 0;
+            background:
+                linear-gradient(180deg, rgba(14,14,14,.82), rgba(10,10,10,.72)),
+                rgba(12,12,12,.78);
+            backdrop-filter: blur(12px);
+            box-shadow: 10px 0 28px rgba(0,0,0,.18);
             opacity: 0;
-            transform: translateX(-10px);
-            transition: max-width .55s ease, width .55s ease, opacity .55s ease, transform .55s ease;
+            transform: translateX(-12px);
+            transition: max-width .6s ease, width .6s ease, opacity .6s ease, transform .6s ease;
         }
         .social-flyout:hover .social-flyout__panel,
         .social-flyout:focus-within .social-flyout__panel {
-            width: 210px;
-            max-width: 210px;
+            width: 190px;
+            max-width: 190px;
             opacity: 1;
             transform: translateX(0);
         }
         .social-flyout:hover .social-flyout__tab,
         .social-flyout:focus-within .social-flyout__tab {
-            transform: translateX(2px);
-            border-color: rgba(255,94,109,.35);
-            background: linear-gradient(180deg, rgba(50,13,18,.98), rgba(26,8,11,.98));
+            transform: translateX(1px);
+            border-color: rgba(255,255,255,.12);
+            color: #e6dfd7;
+            background: linear-gradient(180deg, rgba(22,22,22,.92), rgba(12,12,12,.86));
         }
         .social-flyout__content {
-            width: 210px;
-            padding: 18px 16px 18px 14px;
+            width: 190px;
+            padding: 16px 14px 16px 12px;
         }
         .social-flyout__title {
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             color: #8f887d;
-            font-size: 10px;
-            letter-spacing: .34em;
+            font-size: 9px;
+            letter-spacing: .36em;
             text-transform: uppercase;
         }
         .social-flyout__links {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
         .social-flyout__link {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            min-height: 38px;
-            border: 1px solid rgba(255,255,255,.10);
+            gap: 8px;
+            min-height: 34px;
+            border: 1px solid rgba(255,255,255,.08);
             border-radius: 9999px;
-            padding: 0 12px 0 10px;
-            background: rgba(255,255,255,.03);
-            color: #f4e7e7;
+            padding: 0 11px 0 9px;
+            background: rgba(255,255,255,.025);
+            color: #e8dfd8;
             text-decoration: none;
-            transition: transform .2s ease, border-color .2s ease, background .2s ease, color .2s ease;
+            transition: transform .22s ease, border-color .22s ease, background .22s ease, color .22s ease;
         }
         .social-flyout__link:hover {
-            border-color: rgba(255,94,109,.5);
-            background: rgba(58,15,20,.96);
+            border-color: rgba(255,255,255,.14);
+            background: rgba(255,255,255,.045);
             color: #fff;
             transform: translateX(2px);
         }
@@ -166,21 +170,21 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             border-radius: 9999px;
-            background: rgba(255,255,255,.08);
-            color: #ffdede;
-            font-size: 9px;
+            background: rgba(255,255,255,.06);
+            color: #d9d1c7;
+            font-size: 8px;
             font-weight: 700;
-            letter-spacing: .08em;
+            letter-spacing: .06em;
             text-transform: uppercase;
             flex-shrink: 0;
         }
         .social-flyout__label {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
-            letter-spacing: .16em;
+            letter-spacing: .18em;
             text-transform: uppercase;
             line-height: 1;
         }
