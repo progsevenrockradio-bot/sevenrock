@@ -40,6 +40,7 @@
     :class="sticky ? 'rocks-header-sticky' : 'rocks-header-top'"
     class="inset-x-0 top-0 z-50 transition-all duration-300"
 >
+    <div class="absolute inset-0 bg-[#0a0a0a] md:hidden" aria-hidden="true"></div>
     <div class="mx-auto flex h-full max-w-[1180px] flex-col justify-center px-5 py-2 lg:px-8 md:flex-row md:items-center md:justify-between md:py-0">
         <div class="flex w-full items-center justify-between md:contents">
             <a href="{{ route('home') }}" class="flex h-full items-center py-2 md:py-0" aria-label="{{ $brandMark }} home">
@@ -59,7 +60,7 @@
             </div>
         </div>
 
-        <div class="md:hidden w-full px-1 pb-1 pt-1 text-center">
+        <div class="md:hidden w-full px-1 pb-3 pt-1 text-center">
             <span class="inline-block max-w-full font-display text-[10px] uppercase tracking-[.24em] leading-tight text-white/80">
                 Todas las épocas del Rock, <span class="text-lucille-accent">están aquí</span>
             </span>
