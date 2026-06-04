@@ -276,7 +276,7 @@
                     <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="shareCurrent()">Share</button>
                     <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="openPopout()">Popup</button>
                 </div>
-                <div class="radio-player-mobile-share-popout" aria-label="Acciones móviles extra" x-cloak>
+                <div class="radio-player-mobile-share-popout" aria-label="Acciones móviles extra" x-show="!dockMinimized" x-cloak>
                     <button type="button" class="radio-player-chip radio-player-mobile-share" @click="shareCurrent()">Share</button>
                     <button type="button" class="radio-player-chip radio-player-mobile-popout" @click="openPopout()">Pop-out</button>
                 </div>
