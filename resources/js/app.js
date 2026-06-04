@@ -1013,6 +1013,74 @@ Alpine.data('postContentEditor', (options = {}) => ({
     },
 }));
 
+function setupRadioPlayerLayout() {
+    const dock = document.querySelector('.radio-player-dock');
+    const footer = document.querySelector('#site-footer');
+    const siteContent = document.querySelector('#site-content');
+
+    if (!dock || !footer || !siteContent) {
+        return;
+    }
+
+    const rootStyle = document.documentElement.style;
+    const mobileQuery = window.matchMedia('(max-width: 767px)');
+
+    const syncMobileState = () => {
+        dock.classList.toggle('radio-player-mobile', mobileQuery.matches);
+    };
+
+    const syncDockOffset = () => {
+        const height = Math.ceil(dock.getBoundingClientRect().height);
+        rootStyle.setProperty('--radio-player-offset', `${height + 24}px`);
+    };
+
+    const syncFooterLift = (lift = 0) => {
+        rootStyle.setProperty('--radio-player-lift', `${Math.max(0, Math.ceil(lift))}px`);
+    };
+
+    syncMobileState();
+    syncDockOffset();
+    syncFooterLift(0);
+
+    if (typeof ResizeObserver !== 'undefined') {
+        const dockObserver = new ResizeObserver(() => {
+            syncDockOffset();
+        });
+        dockObserver.observe(dock);
+    } else {
+        window.addEventListener('resize', syncDockOffset, { passive: true });
+    }
+
+    if (typeof IntersectionObserver !== 'undefined') {
+        const footerObserver = new IntersectionObserver((entries) => {
+            const entry = entries[0];
+
+            if (!entry) {
+                return;
+            }
+
+            syncFooterLift(entry.isIntersecting ? entry.intersectionRect.height : 0);
+        }, {
+            root: null,
+            threshold: [0, 0.01, 0.1, 0.25, 0.5, 1],
+        });
+
+        footerObserver.observe(footer);
+    }
+
+    if (typeof mobileQuery.addEventListener === 'function') {
+        mobileQuery.addEventListener('change', syncMobileState);
+    } else if (typeof mobileQuery.addListener === 'function') {
+        mobileQuery.addListener(syncMobileState);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupRadioPlayerLayout, { once: true });
+} else {
+    setupRadioPlayerLayout();
+}
+
 registerRadioPlayer(Alpine);
 
 Alpine.start();

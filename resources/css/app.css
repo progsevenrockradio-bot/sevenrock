@@ -17,6 +17,11 @@
 }
 
 @layer base {
+    :root {
+        --radio-player-offset: 108px;
+        --radio-player-lift: 0px;
+    }
+
     html {
         scrollbar-gutter: stable;
         scroll-behavior: smooth;
@@ -30,6 +35,10 @@
         font-family: var(--font-sans);
         font-size: 14px;
         line-height: 26px;
+    }
+
+    #site-content {
+        padding-bottom: calc(var(--radio-player-offset, 108px) + env(safe-area-inset-bottom, 0px));
     }
 
     h1,
@@ -1454,7 +1463,7 @@
     .radio-player-dock {
         position: fixed;
         left: 50%;
-        bottom: 12px;
+        bottom: calc(12px + var(--radio-player-lift, 0px) + env(safe-area-inset-bottom, 0px));
         display: grid;
         grid-template-columns: auto auto minmax(0, 1fr) auto;
         align-items: center;

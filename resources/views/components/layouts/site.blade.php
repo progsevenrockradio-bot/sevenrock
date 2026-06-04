@@ -247,8 +247,8 @@
 
     <x-navigation.rocks-menu :theme="$theme" />
 
-    <main class="flex min-h-screen flex-col">
-        <div class="flex-1 pb-40">
+    <main id="site-main" class="flex min-h-screen flex-col">
+        <div id="site-content" class="flex-1">
             {{ $slot }}
         </div>
     </main>
@@ -312,7 +312,7 @@
         </aside>
     @endif
 
-    <footer class="bg-lucille-surface py-7 text-center text-[13px] text-[#7b7b7b]">
+    <footer id="site-footer" class="bg-lucille-surface py-7 text-center text-[13px] text-[#7b7b7b]">
         <div class="mx-auto flex max-w-[1180px] flex-col items-center gap-3 px-5">
             <div class="flex flex-wrap items-center justify-center gap-4">
                 @foreach ($theme['social_links'] as $social)
@@ -325,20 +325,5 @@
         </div>
     </footer>
     @stack('scripts')
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        function fixRadioPlayer() {
-            var dock = document.querySelector('.radio-player-dock');
-            if (!dock) return;
-            if (window.innerWidth < 768) {
-                dock.classList.add('radio-player-mobile');
-            } else {
-                dock.classList.remove('radio-player-mobile');
-            }
-        }
-        fixRadioPlayer();
-        window.addEventListener('resize', fixRadioPlayer);
-    });
-    </script>
 </body>
 </html>
