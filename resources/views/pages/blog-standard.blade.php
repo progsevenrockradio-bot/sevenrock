@@ -40,7 +40,9 @@
                                 <span>por <a href="#">admin</a></span>
                                 <span>in&nbsp;</span>
                                 @foreach ($categories ?: [data_get($post, 'category')] as $category)
+                                    @if ($category)
                                     <a href="{{ route('blog.category', ['slug' => \Illuminate\Support\Str::slug($category)]) }}">{{ $category }}</a>@if (! $loop->last) <span>·</span> @endif
+                                    @endif
                                 @endforeach
                             </div>
 
@@ -102,8 +104,8 @@
                     <div class="lucille-sidebar-widget">
                         <h3 class="lucille-sidebar-title">{{ $ui['categories'] }}</h3>
                         <ul class="lucille-sidebar-list">
-                            @foreach ($categories as $category)
-                                <li><a href="{{ route('blog.category', ['slug' => \Illuminate\Support\Str::slug($category)]) }}">{{ $category }}</a></li>
+                            @foreach ($blogCategories as $blogCategory)
+                                <li><a href="{{ route('blog.category', ['slug' => \Illuminate\Support\Str::slug($blogCategory)]) }}">{{ $blogCategory }}</a></li>
                             @endforeach
                         </ul>
                     </div>
@@ -111,8 +113,8 @@
                     <div class="lucille-sidebar-widget">
                         <h3 class="lucille-sidebar-title">{{ $ui['tags'] }}</h3>
                         <div>
-                            @foreach ($tags as $tag)
-                                <a href="{{ route('blog.tag', ['slug' => \Illuminate\Support\Str::slug($tag)]) }}" class="lucille-tag">{{ $tag }}</a>
+                            @foreach ($blogTags as $blogTag)
+                                <a href="{{ route('blog.tag', ['slug' => \Illuminate\Support\Str::slug($blogTag)]) }}" class="lucille-tag">{{ $blogTag }}</a>
                             @endforeach
                         </div>
                     </div>

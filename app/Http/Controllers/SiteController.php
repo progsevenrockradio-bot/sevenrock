@@ -496,6 +496,8 @@ class SiteController extends Controller
         if ($post) {
             $recentPosts = $this->safeValue(fn () => Post::query()->published()->latest('published_at')->limit(5)->get(), collect());
             return view('pages.single-post', [
+                'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
+                'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
                 'post' => [
                     'id' => $post->id,
                     'title' => $post->title,
@@ -539,8 +541,8 @@ class SiteController extends Controller
                     ->orderBy('id')
                     ->first(['title', 'slug', 'published_at']), null),
                 'recentPosts' => $recentPosts,
-                'categories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
-                'tags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
+                'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
+                'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
                 'archives' => ['November 2016', 'October 2016', 'September 2016', 'August 2016'],
                 'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
             ]);
@@ -551,8 +553,8 @@ class SiteController extends Controller
             'recentPosts' => [],
             'prevPost' => null,
             'nextPost' => null,
-            'categories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
-            'tags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
+            'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
+            'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
             'archives' => ['November 2016', 'October 2016', 'September 2016', 'August 2016'],
             'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
         ]);
@@ -633,8 +635,8 @@ class SiteController extends Controller
             'pageDescription' => $pageDescription,
             'posts' => $posts,
             'recentPosts' => $this->safeValue(fn () => Post::query()->published()->latest('published_at')->limit(5)->get(), collect()),
-            'categories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
-            'tags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
+            'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
+            'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
         ]);
     }
 
@@ -679,7 +681,11 @@ class SiteController extends Controller
                 ->pluck('name')
                 ->all();
 
-            return array_values(array_unique(array_filter(array_map('trim', $terms))));
+            $result = array_values(array_unique(array_filter(array_map('trim', $terms))));
+
+            if (!empty($result)) {
+                return $result;
+            }
         }
 
         return array_values(array_unique(array_filter(array_map('trim', $fallback))));
