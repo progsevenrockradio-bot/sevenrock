@@ -4,11 +4,24 @@ namespace App\Models;
 
 use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use App\Support\PublicMediaUrl;
 
 class Album extends Model
 {
     use Auditable;
+
+    protected static function booted(): void
+    {
+        $bumpVersion = static function (): void {
+            Cache::forever('cache.version.albums', now()->timestamp);
+        };
+
+        static::saved($bumpVersion);
+        static::deleted($bumpVersion);
+        static::restored($bumpVersion);
+    }
+
     protected $fillable = [
         'title',
         'slug',

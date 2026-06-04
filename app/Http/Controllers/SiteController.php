@@ -18,7 +18,9 @@ use App\Support\PublicMediaUrl;
 use App\Support\ProgramScheduleService;
 use App\Support\WordPressContent;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 use App\Mail\ContactMail;
 
 class SiteController extends Controller
@@ -32,11 +34,15 @@ class SiteController extends Controller
             $latestPodcasts = $theme->latestPodcasts();
         }
 
+        $events = $this->cachedEvents('home-upcoming', fn () => Event::query()->upcoming()->orderBy('starts_at')->limit(3)->get(), 10);
+        $galleryImages = $this->cachedGalleryImages(7, 15);
+        $latestAlbum = $this->cachedLatestAlbum(15);
+
         return view('pages.home', [
-            'events' => $this->safeValue(fn () => Event::query()->upcoming()->orderBy('starts_at')->limit(3)->get(), collect()),
-            'album' => $this->safeValue(fn () => Album::query()->latest('released_at')->first(), null),
+            'events' => $events,
+            'album' => $latestAlbum,
             'video' => $this->safeValue(fn () => Video::query()->latest()->first(), null),
-            'galleryImages' => $this->safeValue(fn () => GalleryImage::query()->ordered()->limit(7)->get(), collect()),
+            'galleryImages' => $galleryImages,
             'posts' => $this->latestPosts(),
             'nextProgram' => $this->safeValue(
                 fn () => app(ProgramScheduleService::class)->resolve(5),
@@ -57,7 +63,7 @@ class SiteController extends Controller
             title: 'Upcoming Shows',
             subtitle: 'Tour Dates 2026',
             description: 'Proximos eventos, conciertos y festivales de rock. Mantente al dia con la agenda musical de Seven Rock Radio.',
-            events: $this->safeValue(fn () => Event::query()->upcoming()->orderBy('starts_at')->get(), collect())
+            events: $this->cachedEvents('upcoming', fn () => Event::query()->upcoming()->orderBy('starts_at')->get(), 15)
         );
     }
 
@@ -67,7 +73,7 @@ class SiteController extends Controller
             title: 'Próximos eventos',
             subtitle: 'Eventos futuros',
             description: 'Eventos futuros, conciertos y festivales de rock. Mantente al dia con la agenda musical de Seven Rock Radio.',
-            events: $this->safeValue(fn () => Event::query()->upcoming()->orderBy('starts_at')->get(), collect())
+            events: $this->cachedEvents('upcoming', fn () => Event::query()->upcoming()->orderBy('starts_at')->get(), 15)
         );
     }
 
@@ -77,10 +83,7 @@ class SiteController extends Controller
             title: 'Eventos pasados',
             subtitle: 'Eventos ya ocurridos',
             description: 'Eventos ya ocurridos, conciertos y festivales de rock archivados por fecha.',
-            events: $this->safeValue(
-                fn () => Event::query()->where('starts_at', '<', now()->startOfDay())->orderByDesc('starts_at')->get(),
-                collect()
-            )
+            events: $this->cachedEvents('past', fn () => Event::query()->where('starts_at', '<', now()->startOfDay())->orderByDesc('starts_at')->get(), 15)
         );
     }
 
@@ -90,7 +93,7 @@ class SiteController extends Controller
             title: 'Todos los eventos',
             subtitle: 'Agenda completa',
             description: 'Todos los eventos, conciertos y festivales de rock listados por fecha.',
-            events: $this->safeValue(fn () => Event::query()->orderByDesc('starts_at')->get(), collect())
+            events: $this->cachedEvents('all', fn () => Event::query()->orderByDesc('starts_at')->get(), 20)
         );
     }
 
@@ -103,40 +106,7 @@ class SiteController extends Controller
 
     public function discography(): View
     {
-        $talentAlbums = \App\Models\TalentAlbum::query()
-            ->where('is_published', true)
-            ->with('talent')
-            ->orderByDesc('release_date')
-            ->get()
-            ->map(fn ($a) => [
-                'id' => $a->id,
-                'title' => $a->title,
-                'slug' => $a->slug,
-                'artist' => $a->talent->band_name ?? 'Artista',
-                'cover' => $a->coverUrl() ?? asset('assets/lucille/man-597179_1920.jpg'),
-                'date' => $a->release_date?->format('F j, Y') ?? '',
-                'sort' => $a->release_date?->timestamp ?? 0,
-                'type' => 'talent',
-                'url' => route('albums.single', ['slug' => $a->slug]),
-            ]);
-
-        $adminAlbums = \App\Models\Album::query()
-            ->whereNotNull('title')
-            ->orderByDesc('released_at')
-            ->get()
-            ->map(fn ($a) => [
-                'id' => $a->id,
-                'title' => $a->title,
-                'slug' => $a->slug,
-                'artist' => $a->artist ?? 'Artista',
-                'cover' => $a->cover_image_url,
-                'date' => $a->released_at?->format('F j, Y') ?? '',
-                'sort' => $a->released_at?->timestamp ?? 0,
-                'type' => 'admin',
-                'url' => route('albums.single', ['slug' => $a->slug]),
-            ]);
-
-        $allAlbums = $talentAlbums->concat($adminAlbums)->sortByDesc('sort')->values();
+        $allAlbums = $this->cachedDiscographyAlbums();
 
         return view('pages.discography', [
             'albums' => $allAlbums,
@@ -145,7 +115,7 @@ class SiteController extends Controller
 
     public function albumSingle(string $slug): View
     {
-        $album = $this->safeValue(fn () => Album::query()->where('slug', $slug)->first(), null);
+        $album = $this->cachedAlbumBySlug($slug);
 
         if ($album) {
             return view('pages.album-single', [
@@ -153,7 +123,7 @@ class SiteController extends Controller
             ]);
         }
 
-        $talentAlbum = $this->safeValue(fn () => TalentAlbum::query()->where('slug', $slug)->with('talent.media')->first(), null);
+        $talentAlbum = $this->cachedTalentAlbumBySlug($slug);
 
         if ($talentAlbum) {
             return view('pages.album-single', [
@@ -205,12 +175,7 @@ class SiteController extends Controller
 
     public function gallery(): View
     {
-        $images = \App\Models\TalentMedia::query()
-            ->where('type', 'photo')
-            ->whereHas('talent', fn ($q) => $q->where('subscription_status', 'active'))
-            ->with('talent')
-            ->latest()
-            ->get();
+        $images = $this->cachedGalleryImages(20, 15);
 
         return view('pages.gallery', [
             'images' => $images,
@@ -219,109 +184,124 @@ class SiteController extends Controller
 
     public function programs(ArchiveOrgService $archiveOrgService): View
     {
-        $programsByDay = [];
-        $latestEpisodes = [];
-        try {
-            $masterPrograms = MasterProgram::query()
-                ->where('activo', true)
-                ->orderBy('nombre')
-                ->get();
+        $cacheVersion = $this->cacheVersion('programs');
+        $cached = Cache::remember(
+            "site.programs.catalog.v{$cacheVersion}",
+            now()->addMinutes(10),
+            function () use ($archiveOrgService): array {
+                $programsByDay = [];
+                $latestEpisodes = [];
+                $groupedEpisodes = [];
 
-            $dayOrder = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
-            $dayLabels = [
-                'LUNES' => 'Lunes',
-                'MARTES' => 'Martes',
-                'MIERCOLES' => 'Miércoles',
-                'JUEVES' => 'Jueves',
-                'VIERNES' => 'Viernes',
-                'SABADO' => 'Sábado',
-                'DOMINGO' => 'Domingo',
-            ];
+                try {
+                    $masterPrograms = MasterProgram::query()
+                        ->where('activo', true)
+                        ->orderBy('nombre')
+                        ->get();
 
-            $grouped = [];
-            foreach ($masterPrograms as $program) {
-                $day = strtoupper(trim((string) $program->dia_transmision));
-                if (!isset($grouped[$day])) {
-                    $grouped[$day] = [];
+                    $dayOrder = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+                    $dayLabels = [
+                        'LUNES' => 'Lunes',
+                        'MARTES' => 'Martes',
+                        'MIERCOLES' => 'Miércoles',
+                        'JUEVES' => 'Jueves',
+                        'VIERNES' => 'Viernes',
+                        'SABADO' => 'Sábado',
+                        'DOMINGO' => 'Domingo',
+                    ];
+
+                    $grouped = [];
+                    foreach ($masterPrograms as $program) {
+                        $day = strtoupper(trim((string) $program->dia_transmision));
+                        if (! isset($grouped[$day])) {
+                            $grouped[$day] = [];
+                        }
+                        $grouped[$day][] = [
+                            'id' => $program->id,
+                            'title' => $program->nombre,
+                            'name' => $program->nombre,
+                            'cover' => $program->cover_url,
+                            'host' => $program->host,
+                            'conductor' => $program->conductor,
+                            'schedule' => $program->schedule,
+                            'description' => $program->description,
+                            'genre' => $program->genero,
+                            'hora' => $program->hora_transmision,
+                            'archive_identifier' => $program->archive_identifier,
+                            'slug' => $program->publicSlug(),
+                        ];
+                    }
+
+                    foreach ($dayOrder as $day) {
+                        if (! empty($grouped[$day])) {
+                            usort($grouped[$day], fn ($a, $b) => ($a['hora'] ?? '99:99') <=> ($b['hora'] ?? '99:99'));
+                            $programsByDay[] = [
+                                'day' => $day,
+                                'label' => $dayLabels[$day] ?? $day,
+                                'programs' => $grouped[$day],
+                            ];
+                        }
+                    }
+
+                    $payload = $archiveOrgService->homePodcastPayload(20);
+                    $latestEpisodes = $payload['episodes'] ?? [];
+                    if (! empty($payload['featured']['src'] ?? '')) {
+                        array_unshift($latestEpisodes, $payload['featured']);
+                    }
+
+                    foreach ($latestEpisodes as $ep) {
+                        $progName = trim((string) ($ep['program'] ?? $ep['title'] ?? 'Sin programa'));
+                        if (! isset($groupedEpisodes[$progName])) {
+                            $groupedEpisodes[$progName] = [];
+                        }
+
+                        $src = $ep['src'] ?? '';
+                        $exists = false;
+                        foreach ($groupedEpisodes[$progName] as $existing) {
+                            if (($existing['src'] ?? '') === $src) {
+                                $exists = true;
+                                break;
+                            }
+                        }
+
+                        if (! $exists) {
+                            $groupedEpisodes[$progName][] = $ep;
+                        }
+                    }
+
+                    foreach ($groupedEpisodes as $name => &$eps) {
+                        usort($eps, function ($a, $b) {
+                            $da = $a['date'] ?? '';
+                            $db = $b['date'] ?? '';
+                            $tsA = $da ? (\DateTimeImmutable::createFromFormat('d/m/Y', $da)?->getTimestamp() ?? 0) : 0;
+                            $tsB = $db ? (\DateTimeImmutable::createFromFormat('d/m/Y', $db)?->getTimestamp() ?? 0) : 0;
+                            return $tsB - $tsA;
+                        });
+                    }
+                    unset($eps);
+
+                    uasort($groupedEpisodes, function ($a, $b) {
+                        $dateA = $a[0]['date'] ?? '';
+                        $dateB = $b[0]['date'] ?? '';
+                        $tsA = $dateA ? (\DateTimeImmutable::createFromFormat('d/m/Y', $dateA)?->getTimestamp() ?? 0) : 0;
+                        $tsB = $dateB ? (\DateTimeImmutable::createFromFormat('d/m/Y', $dateB)?->getTimestamp() ?? 0) : 0;
+                        return $tsB - $tsA;
+                    });
+                } catch (Throwable) {
                 }
-                $grouped[$day][] = [
-                    'id' => $program->id,
-                    'title' => $program->nombre,
-                    'name' => $program->nombre,
-                    'cover' => $program->cover_url,
-                    'host' => $program->host,
-                    'conductor' => $program->conductor,
-                    'schedule' => $program->schedule,
-                    'description' => $program->description,
-                    'genre' => $program->genero,
-                    'hora' => $program->hora_transmision,
-                    'archive_identifier' => $program->archive_identifier,
-                    'slug' => $program->publicSlug(),
+
+                return [
+                    'programsByDay' => $programsByDay,
+                    'latestEpisodes' => $latestEpisodes,
+                    'groupedEpisodes' => $groupedEpisodes,
                 ];
             }
+        );
 
-            foreach ($dayOrder as $day) {
-                if (!empty($grouped[$day])) {
-                    usort($grouped[$day], fn($a, $b) => ($a['hora'] ?? '99:99') <=> ($b['hora'] ?? '99:99'));
-                    $programsByDay[] = [
-                        'day' => $day,
-                        'label' => $dayLabels[$day] ?? $day,
-                        'programs' => $grouped[$day],
-                    ];
-                }
-            }
-
-            $payload = $archiveOrgService->homePodcastPayload(20);
-            $latestEpisodes = $payload['episodes'] ?? [];
-            if (!empty($payload['featured']['src'] ?? '')) {
-                array_unshift($latestEpisodes, $payload['featured']);
-            }
-
-            // Group episodes by program name, newest first, deduplicated
-            $groupedEpisodes = [];
-            foreach ($latestEpisodes as $ep) {
-                $progName = trim((string) ($ep['program'] ?? $ep['title'] ?? 'Sin programa'));
-                if (!isset($groupedEpisodes[$progName])) {
-                    $groupedEpisodes[$progName] = [];
-                }
-                // Deduplicate by src
-                $src = $ep['src'] ?? '';
-                $exists = false;
-                foreach ($groupedEpisodes[$progName] as $existing) {
-                    if (($existing['src'] ?? '') === $src) {
-                        $exists = true;
-                        break;
-                    }
-                }
-                if (!$exists) {
-                    $groupedEpisodes[$progName][] = $ep;
-                }
-            }
-            foreach ($groupedEpisodes as $name => &$eps) {
-                usort($eps, function($a, $b) {
-                    $da = $a['date'] ?? '';
-                    $db = $b['date'] ?? '';
-                    $tsA = $da ? (\DateTimeImmutable::createFromFormat('d/m/Y', $da)?->getTimestamp() ?? 0) : 0;
-                    $tsB = $db ? (\DateTimeImmutable::createFromFormat('d/m/Y', $db)?->getTimestamp() ?? 0) : 0;
-                    return $tsB - $tsA;
-                });
-            }
-            unset($eps);
-
-            // Sort programs by their most recent episode (newest first)
-            uasort($groupedEpisodes, function($a, $b) {
-                $dateA = $a[0]['date'] ?? '';
-                $dateB = $b[0]['date'] ?? '';
-                $tsA = $dateA ? (\DateTimeImmutable::createFromFormat('d/m/Y', $dateA)?->getTimestamp() ?? 0) : 0;
-                $tsB = $dateB ? (\DateTimeImmutable::createFromFormat('d/m/Y', $dateB)?->getTimestamp() ?? 0) : 0;
-                return $tsB - $tsA;
-            });
-        } catch (Throwable) {
-        }
         return view('pages.programs', [
-            'programsByDay' => $programsByDay,
-            'latestEpisodes' => $latestEpisodes,
-            'groupedEpisodes' => $groupedEpisodes,
+            'programsByDay' => $cached['programsByDay'],
+            'latestEpisodes' => $cached['latestEpisodes'],
+            'groupedEpisodes' => $cached['groupedEpisodes'],
         ]);
     }
 
@@ -445,7 +425,7 @@ class SiteController extends Controller
             pageTitle: 'Blog',
             pageSubtitle: null,
             pageDescription: 'Blog de Seven Rock Radio. Noticias, entrevistas, lanzamientos y articulos sobre rock y metal.',
-            posts: $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->paginate(20), collect())
+            posts: $this->cachedPublishedPostsPaginator(20)
         );
     }
 
@@ -455,7 +435,7 @@ class SiteController extends Controller
             pageTitle: 'Blog',
             pageSubtitle: null,
             pageDescription: 'Blog de Seven Rock Radio. Noticias, entrevistas, lanzamientos y articulos sobre rock y metal.',
-            posts: $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->paginate(20), collect())
+            posts: $this->cachedPublishedPostsPaginator(20)
         );
     }
 
@@ -584,42 +564,175 @@ class SiteController extends Controller
 
     private function latestPosts(): array
     {
-        try {
-            if (! DB::connection()->getSchemaBuilder()->hasTable('posts')) {
+        $version = $this->cacheVersion('posts');
+
+        return Cache::remember("site.home.latest_posts.v{$version}", now()->addMinutes(10), function (): array {
+            try {
+                if (! DB::connection()->getSchemaBuilder()->hasTable('posts')) {
+                    return [];
+                }
+
+                return DB::table('posts')
+                    ->where('status', 'published')
+                    ->orderByDesc('published_at')
+                    ->limit(3)
+                    ->get()
+                    ->map(function (object $post): array {
+                        $publishedAt = ! empty($post->published_at)
+                            ? \Illuminate\Support\Carbon::parse((string) $post->published_at)
+                            : null;
+                        $image = $this->resolvePublicImage((string) ($post->featured_image_path ?? ''));
+                        $excerpt = $this->excerptFromContent((string) ($post->content ?? ''), (string) ($post->meta_description ?? ''));
+
+                        return [
+                            'title' => (string) $post->title,
+                            'date' => $publishedAt?->format('F j, Y') ?? '',
+                            'category' => 'Blog',
+                            'categories' => ['Blog'],
+                            'excerpt' => $excerpt,
+                            'image' => $image,
+                            'url' => route('posts.single', [
+                                'year' => $publishedAt?->format('Y') ?? now()->format('Y'),
+                                'month' => $publishedAt?->format('m') ?? now()->format('m'),
+                                'day' => $publishedAt?->format('d') ?? now()->format('d'),
+                                'slug' => (string) $post->slug,
+                            ]),
+                        ];
+                    })
+                    ->all();
+            } catch (\Throwable) {
                 return [];
             }
+        });
+    }
 
-            return DB::table('posts')
-                ->where('status', 'published')
-                ->orderByDesc('published_at')
-                ->limit(3)
+    private function cacheVersion(string $scope, int $fallback = 1): int
+    {
+        return (int) Cache::rememberForever("cache.version.{$scope}", static fn () => $fallback);
+    }
+
+    private function cachedPublishedPostsPaginator(int $perPage = 20)
+    {
+        $page = max(1, (int) request()->integer('page', 1));
+        $version = $this->cacheVersion('posts');
+
+        return Cache::remember(
+            "site.posts.paginator.v{$version}.page{$page}.per{$perPage}",
+            now()->addMinutes(10),
+            fn () => Post::query()->published()->orderByDesc('published_at')->paginate($perPage, ['*'], 'page', $page)
+        );
+    }
+
+    /**
+     * @template T
+     * @param callable():T $resolver
+     * @return T
+     */
+    private function cachedEvents(string $scope, callable $resolver, int $minutes = 15): mixed
+    {
+        $version = $this->cacheVersion('events');
+
+        return Cache::remember(
+            "site.events.{$scope}.v{$version}",
+            now()->addMinutes($minutes),
+            $resolver
+        );
+    }
+
+    private function cachedGalleryImages(int $limit = 20, int $minutes = 15): mixed
+    {
+        $version = $this->cacheVersion('gallery');
+
+        return Cache::remember(
+            "site.gallery.images.v{$version}.limit{$limit}",
+            now()->addMinutes($minutes),
+            fn () => \App\Models\TalentMedia::query()
+                ->where('type', 'photo')
+                ->whereHas('talent', fn ($q) => $q->where('subscription_status', 'active'))
+                ->with('talent')
+                ->latest()
+                ->limit($limit)
                 ->get()
-                ->map(function (object $post): array {
-                    $publishedAt = ! empty($post->published_at)
-                        ? \Illuminate\Support\Carbon::parse((string) $post->published_at)
-                        : null;
-                    $image = $this->resolvePublicImage((string) ($post->featured_image_path ?? ''));
-                    $excerpt = $this->excerptFromContent((string) ($post->content ?? ''), (string) ($post->meta_description ?? ''));
+        );
+    }
 
-                    return [
-                        'title' => (string) $post->title,
-                        'date' => $publishedAt?->format('F j, Y') ?? '',
-                        'category' => 'Blog',
-                        'categories' => ['Blog'],
-                        'excerpt' => $excerpt,
-                        'image' => $image,
-                        'url' => route('posts.single', [
-                            'year' => $publishedAt?->format('Y') ?? now()->format('Y'),
-                            'month' => $publishedAt?->format('m') ?? now()->format('m'),
-                            'day' => $publishedAt?->format('d') ?? now()->format('d'),
-                            'slug' => (string) $post->slug,
-                        ]),
-                    ];
-                })
-                ->all();
-        } catch (\Throwable) {
-            return [];
-        }
+    private function cachedLatestAlbum(int $minutes = 15): ?Album
+    {
+        $version = $this->cacheVersion('albums');
+
+        return Cache::remember(
+            "site.albums.latest.v{$version}",
+            now()->addMinutes($minutes),
+            fn () => Album::query()->latest('released_at')->first()
+        );
+    }
+
+    private function cachedAlbumBySlug(string $slug): ?Album
+    {
+        $version = $this->cacheVersion('albums');
+
+        return Cache::remember(
+            "site.albums.single.admin.{$slug}.v{$version}",
+            now()->addMinutes(20),
+            fn () => Album::query()->where('slug', $slug)->first()
+        );
+    }
+
+    private function cachedTalentAlbumBySlug(string $slug): ?TalentAlbum
+    {
+        $version = $this->cacheVersion('albums');
+
+        return Cache::remember(
+            "site.albums.single.talent.{$slug}.v{$version}",
+            now()->addMinutes(20),
+            fn () => TalentAlbum::query()->where('slug', $slug)->with('talent.media')->first()
+        );
+    }
+
+    private function cachedDiscographyAlbums(): array
+    {
+        $version = $this->cacheVersion('albums');
+
+        return Cache::remember(
+            "site.albums.discography.v{$version}",
+            now()->addMinutes(20),
+            function (): array {
+                $talentAlbums = \App\Models\TalentAlbum::query()
+                    ->where('is_published', true)
+                    ->with('talent')
+                    ->orderByDesc('release_date')
+                    ->get()
+                    ->map(fn ($a) => [
+                        'id' => $a->id,
+                        'title' => $a->title,
+                        'slug' => $a->slug,
+                        'artist' => $a->talent->band_name ?? 'Artista',
+                        'cover' => $a->coverUrl() ?? asset('assets/lucille/man-597179_1920.jpg'),
+                        'date' => $a->release_date?->format('F j, Y') ?? '',
+                        'sort' => $a->release_date?->timestamp ?? 0,
+                        'type' => 'talent',
+                        'url' => route('albums.single', ['slug' => $a->slug]),
+                    ]);
+
+                $adminAlbums = \App\Models\Album::query()
+                    ->whereNotNull('title')
+                    ->orderByDesc('released_at')
+                    ->get()
+                    ->map(fn ($a) => [
+                        'id' => $a->id,
+                        'title' => $a->title,
+                        'slug' => $a->slug,
+                        'artist' => $a->artist ?? 'Artista',
+                        'cover' => $a->cover_image_url,
+                        'date' => $a->released_at?->format('F j, Y') ?? '',
+                        'sort' => $a->released_at?->timestamp ?? 0,
+                        'type' => 'admin',
+                        'url' => route('albums.single', ['slug' => $a->slug]),
+                    ]);
+
+                return $talentAlbums->concat($adminAlbums)->sortByDesc('sort')->values()->all();
+            }
+        );
     }
 
     /**
@@ -629,12 +742,18 @@ class SiteController extends Controller
      */
     private function blogListing(string $pageTitle, ?string $pageSubtitle, string $pageDescription, mixed $posts): View
     {
+        $version = $this->cacheVersion('posts');
+
         return view('pages.blog-standard', [
             'pageTitle' => $pageTitle,
             'pageSubtitle' => $pageSubtitle,
             'pageDescription' => $pageDescription,
             'posts' => $posts,
-            'recentPosts' => $this->safeValue(fn () => Post::query()->published()->latest('published_at')->limit(5)->get(), collect()),
+            'recentPosts' => Cache::remember(
+                "site.posts.recent.v{$version}",
+                now()->addMinutes(10),
+                fn () => Post::query()->published()->latest('published_at')->limit(5)->get()
+            ),
             'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
             'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
         ]);
@@ -649,15 +768,19 @@ class SiteController extends Controller
 
         abort_if(! $taxonomy, 404);
 
-        $posts = $this->safeValue(function () use ($type, $slug) {
-            return Post::query()
+        $version = $this->cacheVersion('posts');
+        $page = max(1, (int) request()->integer('page', 1));
+        $posts = Cache::remember(
+            "site.blog.archive.{$type}.{$slug}.v{$version}.page{$page}.per20",
+            now()->addMinutes(10),
+            fn () => Post::query()
                 ->published()
                 ->whereHas('taxonomies', function ($query) use ($type, $slug): void {
                     $query->where('type', $type)->where('slug', $slug);
                 })
                 ->orderByDesc('published_at')
-                ->paginate(20);
-        }, collect());
+                ->paginate(20, ['*'], 'page', $page)
+        );
 
         return $this->blogListing(
             pageTitle: $taxonomy->name,
@@ -673,22 +796,27 @@ class SiteController extends Controller
      */
     private function blogTaxonomyTerms(string $type, array $fallback = []): array
     {
-        if (DB::connection()->getSchemaBuilder()->hasTable('post_taxonomies') && DB::connection()->getSchemaBuilder()->hasTable('post_taxonomy_post')) {
-            $terms = PostTaxonomy::query()
-                ->where('type', $type)
-                ->whereHas('posts', fn ($query) => $query->published())
-                ->orderBy('name')
-                ->pluck('name')
-                ->all();
+        $version = $this->cacheVersion('posts');
+        $cacheKey = "site.blog.taxonomy.{$type}.v{$version}";
 
-            $result = array_values(array_unique(array_filter(array_map('trim', $terms))));
+        return Cache::remember($cacheKey, now()->addMinutes(20), function () use ($type, $fallback): array {
+            if (DB::connection()->getSchemaBuilder()->hasTable('post_taxonomies') && DB::connection()->getSchemaBuilder()->hasTable('post_taxonomy_post')) {
+                $terms = PostTaxonomy::query()
+                    ->where('type', $type)
+                    ->whereHas('posts', fn ($query) => $query->published())
+                    ->orderBy('name')
+                    ->pluck('name')
+                    ->all();
 
-            if (!empty($result)) {
-                return $result;
+                $result = array_values(array_unique(array_filter(array_map('trim', $terms))));
+
+                if (! empty($result)) {
+                    return $result;
+                }
             }
-        }
 
-        return array_values(array_unique(array_filter(array_map('trim', $fallback))));
+            return array_values(array_unique(array_filter(array_map('trim', $fallback))));
+        });
     }
 
     private function blogArchiveDescription(string $term, string $type): string
@@ -882,9 +1010,12 @@ class SiteController extends Controller
 
     private function singleEvent(string $slug): array
     {
-        $event = $this->safeValue(function () use ($slug) {
-            return Event::query()->where('slug', $slug)->first();
-        }, null);
+        $version = $this->cacheVersion('events');
+        $event = Cache::remember(
+            "site.events.single.{$slug}.v{$version}",
+            now()->addMinutes(20),
+            fn () => Event::query()->where('slug', $slug)->first()
+        );
 
         if ($event instanceof Event) {
             $startsAt = $event->starts_at ?? now();

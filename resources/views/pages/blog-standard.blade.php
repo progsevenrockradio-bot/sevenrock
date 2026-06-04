@@ -27,7 +27,15 @@
                         <article class="lucille-standard-post">
                             @if ($image)
                                 <a href="{{ $url }}" class="mb-0 block">
-                                    <img src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}" alt="{{ $title }}" loading="lazy">
+                                    <img
+                                        src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}"
+                                        alt="{{ $title }}"
+                                        width="1200"
+                                        height="675"
+                                        class="aspect-video"
+                                        loading="lazy"
+                                        decoding="async"
+                                    >
                                 </a>
                             @endif
 

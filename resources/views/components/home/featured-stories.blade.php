@@ -2,7 +2,16 @@
 
 <div class="mt-[60px] grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
     <article class="home-panel overflow-hidden">
-        <div class="home-story-hero" style="background-image: url('{{ asset($stories['featured']['image']) }}');">
+        <div class="home-story-hero">
+            <img
+                src="{{ asset($stories['featured']['image']) }}"
+                alt="{{ $stories['featured']['title'] }}"
+                width="1200"
+                height="800"
+                class="home-story-hero-media"
+                loading="lazy"
+                decoding="async"
+            >
             <div class="home-story-overlay"></div>
             <div class="home-story-content">
                 <div class="home-badge">Perfil monitorizado</div>
@@ -23,7 +32,7 @@
         @foreach ($stories['stories'] as $story)
             <article class="home-story-row group flex-col md:flex-row">
                 <div class="home-story-row-media">
-                    <img src="{{ asset($story['image']) }}" alt="{{ $story['title'] }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" loading="lazy">
+                    <img src="{{ asset($story['image']) }}" alt="{{ $story['title'] }}" width="640" height="480" class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" loading="lazy" decoding="async">
                 </div>
                 <div class="min-w-0 flex-1 px-5 py-5">
                     <div class="text-xs uppercase tracking-[.22em] text-[#7b7b7b]">{{ $story['type'] }}</div>

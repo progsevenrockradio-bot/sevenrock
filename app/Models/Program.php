@@ -8,11 +8,23 @@ use App\Support\PublicMediaUrl;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class Program extends Model
 {
     use Auditable;
+
+    protected static function booted(): void
+    {
+        $bumpVersion = static function (): void {
+            Cache::forever('cache.version.programs', now()->timestamp);
+        };
+
+        static::saved($bumpVersion);
+        static::deleted($bumpVersion);
+        static::restored($bumpVersion);
+    }
 
     /**
      * The legacy schema stores schedule rows in radio_programs.

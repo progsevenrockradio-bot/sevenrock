@@ -5,10 +5,23 @@ namespace App\Models;
 use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Event extends Model
 {
     use Auditable;
+
+    protected static function booted(): void
+    {
+        $bumpVersion = static function (): void {
+            Cache::forever('cache.version.events', now()->timestamp);
+        };
+
+        static::saved($bumpVersion);
+        static::deleted($bumpVersion);
+        static::restored($bumpVersion);
+    }
+
     protected $fillable = [
         'title',
         'slug',

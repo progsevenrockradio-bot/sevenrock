@@ -396,6 +396,9 @@
                 <img
                     :src="activeEpisode.image"
                     :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
+                    width="1280"
+                    height="720"
+                    fetchpriority="high"
                     class="block h-[220px] w-full bg-[#111] object-contain p-3 object-center sm:h-[250px] md:h-[300px]"
                 >
             </div>
@@ -449,7 +452,7 @@
                         @click="selectEpisode(@js($episode))"
                     >
                         <div class="h-16 w-16 shrink-0 overflow-hidden border border-[#2b2b2b] bg-[#111] md:h-18 md:w-18">
-                            <img src="{{ $episode['image'] }}" alt="{{ $episode['program'] }}" class="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.02]">
+                            <img src="{{ $episode['image'] }}" alt="{{ $episode['program'] }}" width="320" height="240" class="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.02]" loading="lazy" decoding="async">
                         </div>
 
                         <div class="min-w-0 flex-1">
@@ -480,7 +483,7 @@
         @keydown.escape.window="closeInfoModal()"
         @click.self="closeInfoModal()"
     >
-        <div class="w-full border border-[#2b2b2b] bg-[#111] p-5 shadow-[0_24px_80px_rgba(0,0,0,.65)]" style="width:min(560px, calc(100vw - 32px)); max-width:none;">
+        <div class="mx-auto w-full max-w-[560px] border border-[#2b2b2b] bg-[#111] p-5 shadow-[0_24px_80px_rgba(0,0,0,.65)]">
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <div class="home-badge" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></div>

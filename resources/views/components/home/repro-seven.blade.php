@@ -1,11 +1,14 @@
 <div class="mt-6 border border-[#2b2b2b] bg-[#101010] p-4 shadow-[0_18px_48px_rgba(0,0,0,.35)]">
-    <div class="mejs-container wp-audio-shortcode mejs-audio flex flex-col gap-4" tabindex="0" role="application" aria-label="Audio Player" style="width:100%;">
+    <div class="mejs-container wp-audio-shortcode mejs-audio flex w-full flex-col gap-4" tabindex="0" role="application" aria-label="Audio Player">
         <div class="mejs-inner">
             <div class="flex items-start gap-3">
                 <div class="h-14 w-14 shrink-0 overflow-hidden border border-[#2b2b2b] bg-[#0f0f0f] shadow-[0_10px_30px_rgba(0,0,0,.35)]">
                     <img
                         :src="activeEpisode.image"
                         :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
+                        width="1280"
+                        height="720"
+                        fetchpriority="high"
                         class="h-full w-full object-cover"
                     >
                 </div>

@@ -16,7 +16,15 @@
                     @endphp
                     <article class="lucille-masonry-card group relative overflow-hidden bg-[#1d1d1d] {{ $span }}">
                         @if ($image)
-                            <img src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}" alt="{{ $title }}" class="lucille-card-bg absolute inset-0 h-full w-full object-cover opacity-55 transition duration-500 ease-out" loading="lazy">
+                            <img
+                                src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}"
+                                alt="{{ $title }}"
+                                width="1200"
+                                height="800"
+                                class="lucille-card-bg absolute inset-0 aspect-[3/2] h-full w-full object-cover opacity-55 transition duration-500 ease-out"
+                                loading="lazy"
+                                decoding="async"
+                            >
                             <span class="absolute inset-0 bg-black/20"></span>
                         @else
                             <span class="absolute inset-0 bg-[rgba(7,16,33,.4)]"></span>

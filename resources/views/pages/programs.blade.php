@@ -135,7 +135,7 @@
                                                class="group flex items-start gap-3 px-4 py-3.5 transition-all duration-200 hover:bg-[#181818] hover:pl-5 active:bg-[#1a1a1a]">
                                                 {{-- Mini cover --}}
                                                 <div class="w-12 h-12 shrink-0 rounded-lg overflow-hidden border border-[#2a2a2a] shadow-[0_2px_8px_rgba(0,0,0,.3)] transition-transform duration-300 group-hover:scale-105">
-                                                    <img src="{{ $progCover }}" alt="{{ $progName }}" class="w-full h-full object-cover" loading="lazy">
+                                                    <img src="{{ $progCover }}" alt="{{ $progName }}" width="256" height="256" class="w-full h-full object-cover" loading="lazy" decoding="async">
                                                 </div>
                                                 {{-- Info --}}
                                                 <div class="min-w-0 flex-1">
@@ -175,8 +175,11 @@
                         <div class="mb-10 mt-4 w-full overflow-hidden rounded-xl">
                             <img src="{{ asset('assets/lucille/podcats.webp') }}"
                                 alt="Podcasts"
+                                width="1200"
+                                height="400"
                                 class="w-full h-auto object-contain"
-                                loading="lazy" loading="lazy">
+                                loading="lazy"
+                                decoding="async">
                         </div>
 
                         <div class="grid gap-6 md:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
@@ -201,8 +204,11 @@
                                         @click="expandedProgram = expandedProgram === '{{ $progId }}' ? null : '{{ $progId }}'"
                                         :title="(expandedProgram === '{{ $progId }}' ? 'Ocultar' : 'Mostrar') + ' episodios'">
                                         <img src="{{ $progImage }}" alt="{{ $programName }}"
+                                            width="640"
+                                            height="480"
                                             class="w-full h-full object-contain p-3 transition duration-500 ease-out hover:scale-105"
-                                            loading="lazy" loading="lazy">
+                                            loading="lazy"
+                                            decoding="async">
                                     </button>
 
                                     {{-- Program info below image --}}
@@ -293,8 +299,7 @@
                     class="fixed bottom-0 left-0 right-0 z-[100] border-t border-[#242424] bg-gradient-to-t from-[#0a0a0a] via-[#0d0d0d] to-[#111] shadow-[0_-8px_40px_rgba(0,0,0,.6)]">
 
                     <div class="h-0.5 w-full bg-[#2b2b2b]">
-                        <div class="h-full bg-lucille-accent transition-all duration-300 ease-linear"
-                            :style="'width: ' + progressPct + '%'"></div>
+                        <progress class="program-progress-meter" :value="progressPct" max="100" aria-label="Progreso de reproducción"></progress>
                     </div>
 
                     <div class="mx-auto max-w-[1180px] px-3 py-2 sm:px-6 sm:py-4">
@@ -303,8 +308,8 @@
                                 {{-- Info --}}
                                 <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-[2] sm:flex-1">
                                     <div class="h-9 w-9 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded-lg border border-[#2b2b2b] bg-[#111] shadow-[0_4px_12px_rgba(0,0,0,.3)]">
-                                        <img :src="activeEpisode.image || '{{ $fallbackImage }}'"
-                                            :alt="activeEpisode.program" class="h-full w-full object-cover" loading="lazy">
+                                                <img :src="activeEpisode.image || '{{ $fallbackImage }}'"
+                                            :alt="activeEpisode.program" width="640" height="480" class="h-full w-full object-cover" loading="lazy" decoding="async">
                                     </div>
                                     <div class="min-w-0">
                                         <div class="truncate font-display text-[11px] sm:text-[14px] uppercase tracking-[.08em] text-[#dcdcdc] leading-tight"

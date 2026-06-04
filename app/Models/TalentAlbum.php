@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Support\PublicMediaUrl;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class TalentAlbum extends Model
@@ -63,5 +64,13 @@ class TalentAlbum extends Model
                 $album->slug = Str::slug($album->title);
             }
         });
+
+        $bumpVersion = static function (): void {
+            Cache::forever('cache.version.albums', now()->timestamp);
+        };
+
+        static::saved($bumpVersion);
+        static::deleted($bumpVersion);
+        static::restored($bumpVersion);
     }
 }

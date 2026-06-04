@@ -18,7 +18,17 @@ export default defineConfig({
         tailwindcss(),
     ],
     build: {
-        emptyOutDir: false,
+        outDir: 'public/build',
+        emptyOutDir: true,
+        manifest: true,
+        sourcemap: false,
+        rollupOptions: {
+            output: {
+                entryFileNames: 'assets/[name]-[hash].js',
+                chunkFileNames: 'assets/[name]-[hash].js',
+                assetFileNames: 'assets/[name]-[hash][extname]',
+            },
+        },
     },
     server: {
         watch: {

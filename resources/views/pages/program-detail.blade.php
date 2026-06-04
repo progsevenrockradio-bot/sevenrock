@@ -119,7 +119,11 @@
                                 <div class="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded border border-[#2b2b2b] bg-[#0a0a0a]">
                                     <img src="{{ $program['cover'] ?: $fallbackImage }}"
                                          alt="{{ $epTitle }}"
-                                         class="h-full w-full object-cover" loading="lazy">
+                                         width="256"
+                                         height="256"
+                                         class="h-full w-full object-cover"
+                                         loading="lazy"
+                                         decoding="async">
                                 </div>
 
                                 {{-- Info del episodio --}}
@@ -176,8 +180,7 @@
                     class="fixed bottom-0 left-0 right-0 z-[100] border-t border-[#2b2b2b] bg-gradient-to-t from-[#0a0a0a] via-[#0d0d0d] to-[#111] shadow-[0_-8px_40px_rgba(0,0,0,.6)]">
 
                     <div class="h-0.5 w-full bg-[#2b2b2b]">
-                        <div class="h-full bg-lucille-accent transition-all duration-300 ease-linear"
-                            :style="'width: ' + progressPct + '%'"></div>
+                        <progress class="program-progress-meter" :value="progressPct" max="100" aria-label="Progreso de reproducción"></progress>
                     </div>
 
                     <div class="mx-auto max-w-[1180px] px-3 py-2 sm:px-6 sm:py-4">
@@ -186,7 +189,7 @@
                                 <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-[2] sm:flex-1">
                                     <div class="h-9 w-9 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded border border-[#2b2b2b] bg-[#111] shadow-[0_4px_12px_rgba(0,0,0,.3)]">
                                         <img :src="activeEpisode.image || '{{ $fallbackImage }}'"
-                                            :alt="activeEpisode.program" class="h-full w-full object-cover" loading="lazy">
+                                            :alt="activeEpisode.program" width="640" height="480" class="h-full w-full object-cover" loading="lazy" decoding="async">
                                     </div>
                                     <div class="min-w-0">
                                         <div class="truncate font-display text-[11px] sm:text-[14px] uppercase tracking-[.08em] text-[#dcdcdc] leading-tight"

@@ -7,12 +7,25 @@ use App\Support\WordPressContent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use App\Support\PublicMediaUrl;
 use Illuminate\Support\Facades\Schema;
 
 class Post extends Model
 {
     use Auditable;
+
+    protected static function booted(): void
+    {
+        $bumpVersion = static function (): void {
+            Cache::forever('cache.version.posts', now()->timestamp);
+        };
+
+        static::saved($bumpVersion);
+        static::deleted($bumpVersion);
+        static::restored($bumpVersion);
+    }
+
     protected $fillable = [
         'title',
         'slug',
