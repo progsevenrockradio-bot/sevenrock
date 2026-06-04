@@ -213,7 +213,6 @@
         .radio-player-mobile .radio-player-meta span { font-size: 9px !important; }
         .radio-player-mobile .radio-player-actions { gap: 3px !important; }
         .radio-player-mobile .radio-player-icon { width: 30px !important; height: 30px !important; min-width: 30px !important; font-size: 9px !important; }
-        .radio-player-mobile .radio-player-icon span:last-child { display: none !important; }
         .radio-player-mobile [data-player-volume-input],
         .radio-player-mobile [data-player-volume-output],
         .radio-player-mobile .rbcloud_tracktimer { display: none !important; }

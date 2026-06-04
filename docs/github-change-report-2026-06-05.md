@@ -30,6 +30,11 @@
 - El drawer de banda en móvil usa un fallback más estable.
 - Se compactaron alturas, paddings y badges de origen.
 - Se reforzó la coherencia visual entre desktop y móvil.
+- Se corrigió la visibilidad de los controles del dock en móvil:
+  - `Detalles`
+  - `Play`
+  - `Expandir / Minimizar`
+  - `Me gusta`
 
 ### 6. Estructura documentada
 - Se añadieron documentos permanentes de referencia:
@@ -42,6 +47,7 @@
 - `resources/js/player.js`
 - `resources/views/components/radio/player.blade.php`
 - `resources/css/app.css`
+- `resources/views/components/layouts/site.blade.php`
 - `public/build/*`
 
 ## Validación
@@ -51,4 +57,4 @@
 
 ## Resultado
 
-El reproductor queda más estable, la modal de banda no hace reflows bruscos y la información biográfica se muestra con jerarquía clara y fallback seguro.
+El reproductor queda más estable, la modal de banda no hace reflows bruscos, la información biográfica se muestra con jerarquía clara y fallback seguro, y los controles del dock móvil vuelven a ser visibles.

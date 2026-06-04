@@ -4695,6 +4695,33 @@
             display: none;
         }
 
+        .radio-player-dock.radio-player-mobile .radio-player-dock-actions {
+            display: inline-flex;
+            align-items: center;
+            justify-self: end;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-dock-actions-spacer {
+            display: none;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-dock-icon {
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
+            min-height: 30px;
+            font-size: 9px;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-dock-play {
+            width: 30px !important;
+            height: 30px !important;
+            min-width: 30px !important;
+            min-height: 30px !important;
+        }
+
         .radio-player-dock.radio-player-mobile .radio-player-dock-side {
             display: none;
         }
