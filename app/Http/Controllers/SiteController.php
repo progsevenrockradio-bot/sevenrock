@@ -646,7 +646,7 @@ class SiteController extends Controller
         );
     }
 
-    private function cachedGalleryImages(int $limit = 20, int $minutes = 15): mixed
+    private function cachedGalleryImages(int $limit = 20, int $minutes = 15): array
     {
         $version = $this->cacheVersion('gallery');
 
@@ -660,39 +660,40 @@ class SiteController extends Controller
                 ->latest()
                 ->limit($limit)
                 ->get()
+                ->toArray()
         );
     }
 
-    private function cachedLatestAlbum(int $minutes = 15): ?Album
+    private function cachedLatestAlbum(int $minutes = 15): ?array
     {
         $version = $this->cacheVersion('albums');
 
         return Cache::remember(
             "site.albums.latest.v{$version}",
             now()->addMinutes($minutes),
-            fn () => Album::query()->latest('released_at')->first()
+            fn () => Album::query()->latest('released_at')->first()?->toArray()
         );
     }
 
-    private function cachedAlbumBySlug(string $slug): ?Album
+    private function cachedAlbumBySlug(string $slug): ?array
     {
         $version = $this->cacheVersion('albums');
 
         return Cache::remember(
             "site.albums.single.admin.{$slug}.v{$version}",
             now()->addMinutes(20),
-            fn () => Album::query()->where('slug', $slug)->first()
+            fn () => Album::query()->where('slug', $slug)->first()?->toArray()
         );
     }
 
-    private function cachedTalentAlbumBySlug(string $slug): ?TalentAlbum
+    private function cachedTalentAlbumBySlug(string $slug): ?array
     {
         $version = $this->cacheVersion('albums');
 
         return Cache::remember(
             "site.albums.single.talent.{$slug}.v{$version}",
             now()->addMinutes(20),
-            fn () => TalentAlbum::query()->where('slug', $slug)->with('talent.media')->first()
+            fn () => TalentAlbum::query()->where('slug', $slug)->with('talent.media')->first()?->toArray()
         );
     }
 
