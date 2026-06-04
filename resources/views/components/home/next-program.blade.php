@@ -43,11 +43,22 @@
             }, 7000);
         },
         infoModalOpen: false,
-        openInfoModal() {
+        openInfoModal(event = null) {
+            if ((event && event.isTrusted === false) || !window.__srUserGesture) {
+                return;
+            }
             this.infoModalOpen = true;
         },
         closeInfoModal() {
             this.infoModalOpen = false;
+        },
+        init() {
+            window.addEventListener('sr-force-close-modals', () => {
+                this.closeInfoModal();
+            }, { once: true });
+            window.addEventListener('pageshow', () => {
+                this.closeInfoModal();
+            }, { once: true });
         },
     }"
 >
@@ -85,7 +96,7 @@
                                     <button
                                         type="button"
                                         class="inline-flex h-7 items-center justify-center border border-[#dcdcdc] bg-transparent px-2.5 py-0 text-[9px] font-display uppercase tracking-[.14em] text-[#dcdcdc] transition-colors hover:bg-white/5"
-                                        @click="openInfoModal()"
+                                        @click="openInfoModal($event)"
                                     >
                                         Info
                                     </button>
@@ -135,8 +146,8 @@
         </div>
     </aside>
 
+    <template x-if="infoModalOpen">
     <div
-        x-show="infoModalOpen"
         x-cloak
         class="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 px-4 py-8"
         @keydown.escape.window="closeInfoModal()"
@@ -180,4 +191,5 @@
             </div>
         </div>
     </div>
+    </template>
 </div>

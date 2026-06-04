@@ -2,7 +2,12 @@
 
 @php
     $lightboxImages = collect($images)
-        ->map(fn ($image) => ['src' => $image->image_url, 'caption' => $image->caption])
+        ->map(function ($image) {
+            return [
+                'src' => data_get($image, 'image_url', ''),
+                'caption' => data_get($image, 'caption', ''),
+            ];
+        })
         ->values();
 @endphp
 
@@ -22,17 +27,19 @@
                     5 => 'md:row-span-2',
                     default => '',
                 };
+                $imageUrl = data_get($image, 'image_url', '');
+                $caption = data_get($image, 'caption', '');
             @endphp
             <a
-                href="{{ $image->image_url }}"
+                href="{{ $imageUrl }}"
                 data-lightbox="gallery"
-                data-title="{{ $image->caption }}"
+                data-title="{{ $caption }}"
                 class="lucille-gallery-tile group relative block overflow-hidden bg-[#1d1d1d] {{ $spanClass }}"
                 @click.prevent="show({{ $loop->index }})"
             >
-                <img src="{{ $image->image_url }}" alt="{{ $image->caption }}" loading="lazy" class="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.045]">
+                <img src="{{ $imageUrl }}" alt="{{ $caption }}" loading="lazy" class="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.045]">
                 <span class="absolute inset-0 bg-[rgba(7,16,33,.4)] opacity-0 transition duration-300 group-hover:opacity-100"></span>
-                <span class="absolute inset-x-0 bottom-0 z-10 translate-y-3 bg-gradient-to-t from-black/75 to-transparent px-4 pb-4 pt-10 font-display text-sm uppercase tracking-[.08em] text-white opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">{{ $image->caption }}</span>
+                <span class="absolute inset-x-0 bottom-0 z-10 translate-y-3 bg-gradient-to-t from-black/75 to-transparent px-4 pb-4 pt-10 font-display text-sm uppercase tracking-[.08em] text-white opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">{{ $caption }}</span>
             </a>
         @endforeach
     </div>

@@ -43,16 +43,18 @@ class BandInfoController extends Controller
                     'logo_path' => '',
                     'country' => '',
                     'genre' => '',
-                    'members_count' => null,
-                    'status' => '',
-                    'labels' => '',
-                    'social_links' => [],
-                    'formed_year' => null,
-                    'formed_label' => '',
-                    'facts' => [],
-                    'lyrics' => '',
-                ],
-            ]);
+                'members_count' => null,
+                'status' => '',
+                'labels' => '',
+                'social_links' => [],
+                'formed_year' => null,
+                'formed_label' => '',
+                'facts' => [],
+                'biography' => '',
+                'biography_source' => 'none',
+                'lyrics' => '',
+            ],
+        ]);
         }
 
         $payload = $this->resolver->resolve($artist);
@@ -71,20 +73,35 @@ class BandInfoController extends Controller
 
             if ($songMatchesArtist && $songBandProfileMatchesArtist && $song?->band_info && trim((string) $song->band_info) !== '' && ! $this->isFallbackSummary((string) $song->band_info, $artist)) {
                 $payload['summary'] = $this->formatSummaryText((string) $song->band_info);
+                $bioPayload = $this->resolveBiographyPayload($song?->bandProfile, (string) $payload['summary']);
+                $payload['biography'] = $bioPayload['biography'];
+                $payload['biography_source'] = $bioPayload['biography_source'];
             } elseif ($songMatchesArtist && $songBandProfileMatchesArtist && $song?->bandProfile) {
                 $bandProfile = $song->bandProfile;
                 $payload['summary'] = $this->formatSummaryText((string) ($song->bandProfile->editorial_summary ?: $song->bandProfile->biography ?: $payload['summary']));
+                $bioPayload = $this->resolveBiographyPayload($song->bandProfile, (string) $payload['summary']);
+                $payload['biography'] = $bioPayload['biography'];
+                $payload['biography_source'] = $bioPayload['biography_source'];
                 $payload['thumbnail'] = $song->bandProfile->normalizedImageUrl() ?: $payload['thumbnail'];
                 $payload['social_links'] = $song->bandProfile->official_links ?: $payload['social_links'];
             } else {
                 $bandProfile = $this->resolveBandProfile($artist);
                 if ($bandProfile) {
                     $payload['summary'] = $this->formatSummaryText((string) ($bandProfile->editorial_summary ?: $bandProfile->biography ?: $payload['summary']));
+                    $bioPayload = $this->resolveBiographyPayload($bandProfile, (string) $payload['summary']);
+                    $payload['biography'] = $bioPayload['biography'];
+                    $payload['biography_source'] = $bioPayload['biography_source'];
                     $payload['thumbnail'] = $bandProfile->normalizedImageUrl() ?: $payload['thumbnail'];
                     $payload['social_links'] = $bandProfile->official_links ?: $payload['social_links'];
                     $payload['formed_year'] = $payload['formed_year'] ?: $this->yearFromBandProfile($bandProfile);
                     $payload['formed_label'] = $payload['formed_label'] ?: ($payload['formed_year'] ? sprintf('Se formó en %d', $payload['formed_year']) : '');
                 }
+            }
+
+            if (! isset($payload['biography_source']) || ! is_string($payload['biography_source'])) {
+                $bioPayload = $this->resolveBiographyPayload($bandProfile, (string) ($payload['summary'] ?? ''));
+                $payload['biography'] = $bioPayload['biography'];
+                $payload['biography_source'] = $bioPayload['biography_source'];
             }
 
             if ($songMatchesArtist && $song?->lyrics) {
@@ -355,6 +372,31 @@ class BandInfoController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * @return array{biography:string, biography_source:string}
+     */
+    private function resolveBiographyPayload(?RadioArtist $bandProfile, string $summary): array
+    {
+        $biography = '';
+        $source = 'none';
+
+        if ($bandProfile && trim((string) $bandProfile->biography) !== '') {
+            $biography = $this->formatSummaryText((string) $bandProfile->biography);
+            $source = 'real';
+        } elseif ($bandProfile && trim((string) $bandProfile->editorial_summary) !== '') {
+            $biography = $this->formatSummaryText((string) $bandProfile->editorial_summary);
+            $source = 'summary';
+        } elseif (trim($summary) !== '') {
+            $biography = $this->formatSummaryText($summary);
+            $source = 'fallback';
+        }
+
+        return [
+            'biography' => $biography,
+            'biography_source' => $source,
+        ];
     }
     private function isFallbackSummary(string $summary, string $artist = ''): bool
     {

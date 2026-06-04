@@ -22,6 +22,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Mail\ContactMail;
 
 class SiteController extends Controller
@@ -137,12 +138,16 @@ class SiteController extends Controller
 
     public function videos(): View
     {
-        $videos = \App\Models\TalentMedia::query()
-            ->where('type', 'video')
-            ->whereHas('talent', fn ($q) => $q->where('subscription_status', 'active'))
-            ->with('talent')
-            ->latest()
-            ->get();
+        $videos = collect();
+
+        if (Schema::hasTable('talent_media') && Schema::hasTable('talents')) {
+            $videos = \App\Models\TalentMedia::query()
+                ->where('type', 'video')
+                ->whereHas('talent', fn ($q) => $q->where('subscription_status', 'active'))
+                ->with('talent')
+                ->latest()
+                ->get();
+        }
 
         return view('pages.videos', [
             'videos' => $videos,
@@ -637,11 +642,29 @@ class SiteController extends Controller
             "site.events.{$scope}.v{$version}",
             now()->addMinutes($minutes),
             function () use ($resolver) {
-                // FIX: Convertir a array para evitar incomplete object al deserializar
                 $result = $resolver();
-                return $result instanceof \Illuminate\Database\Eloquent\Collection
-                    ? $result->toArray()
-                    : $result;
+
+                if ($result instanceof \Illuminate\Database\Eloquent\Collection) {
+                    return $result->toArray();
+                }
+
+                return collect($result)
+                    ->map(function ($event): array {
+                        $startsAt = data_get($event, 'starts_at');
+
+                        return [
+                            'slug' => (string) data_get($event, 'slug', ''),
+                            'title' => (string) data_get($event, 'title', ''),
+                            'starts_at' => $startsAt instanceof \DateTimeInterface
+                                ? $startsAt->format('Y-m-d H:i:s')
+                                : (string) $startsAt,
+                            'location' => data_get($event, 'location'),
+                            'venue' => (string) data_get($event, 'venue', ''),
+                            'ticket_label' => (string) data_get($event, 'ticket_label', 'Details'),
+                        ];
+                    })
+                    ->values()
+                    ->all();
             }
         );
     }
@@ -653,14 +676,20 @@ class SiteController extends Controller
         return Cache::remember(
             "site.gallery.images.v{$version}.limit{$limit}",
             now()->addMinutes($minutes),
-            fn () => \App\Models\TalentMedia::query()
-                ->where('type', 'photo')
-                ->whereHas('talent', fn ($q) => $q->where('subscription_status', 'active'))
-                ->with('talent')
-                ->latest()
-                ->limit($limit)
-                ->get()
-                ->toArray()
+            function () use ($limit) {
+                if (! Schema::hasTable('talent_media') || ! Schema::hasTable('talents')) {
+                    return [];
+                }
+
+                return \App\Models\TalentMedia::query()
+                    ->where('type', 'photo')
+                    ->whereHas('talent', fn ($q) => $q->where('subscription_status', 'active'))
+                    ->with('talent')
+                    ->latest()
+                    ->limit($limit)
+                    ->get()
+                    ->toArray();
+            }
         );
     }
 

@@ -2,6 +2,14 @@ import Alpine from 'alpinejs';
 import { registerRadioPlayer } from './player';
 
 window.Alpine = Alpine;
+window.__srUserGesture = false;
+
+const markUserGesture = () => {
+    window.__srUserGesture = true;
+};
+
+window.addEventListener('pointerdown', markUserGesture, { once: true, passive: true });
+window.addEventListener('keydown', markUserGesture, { once: true });
 
 const DAY_MAP = {
     LUNES: 1,
@@ -1084,3 +1092,10 @@ if (document.readyState === 'loading') {
 registerRadioPlayer(Alpine);
 
 Alpine.start();
+
+const forceCloseModals = () => {
+    window.dispatchEvent(new CustomEvent('sr-force-close-modals'));
+};
+
+window.addEventListener('load', forceCloseModals, { once: true });
+window.addEventListener('pageshow', forceCloseModals);
