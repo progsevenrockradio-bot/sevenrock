@@ -19,7 +19,6 @@ class Event extends Model
 
         static::saved($bumpVersion);
         static::deleted($bumpVersion);
-        static::restored($bumpVersion);
     }
 
     protected $fillable = [

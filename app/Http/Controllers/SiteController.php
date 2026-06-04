@@ -636,7 +636,13 @@ class SiteController extends Controller
         return Cache::remember(
             "site.events.{$scope}.v{$version}",
             now()->addMinutes($minutes),
-            $resolver
+            function () use ($resolver) {
+                // FIX: Convertir a array para evitar incomplete object al deserializar
+                $result = $resolver();
+                return $result instanceof \Illuminate\Database\Eloquent\Collection
+                    ? $result->toArray()
+                    : $result;
+            }
         );
     }
 

@@ -33,7 +33,7 @@
     </x-sections.background-band>
     @endif
 
-    @if ($events && $events->isNotEmpty())
+    @if (is_array($events) && count($events) > 0)
     <x-sections.background-band class="home-section-texture home-section-cool" style="margin-bottom: 100px;">
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['upcoming_shows']['title']" :accent="$homeHeadings['upcoming_shows']['accent']" :subtitle="$homeHeadings['upcoming_shows']['subtitle']" />
