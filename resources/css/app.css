@@ -4727,10 +4727,24 @@
         }
 
         .radio-player-dock.radio-player-mobile .radio-player-mobile-share-popout {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 6px;
             margin-top: 4px;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            width: max-content;
+            max-width: 100%;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-mobile-share-popout .radio-player-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            line-height: 1;
+            padding: 0 10px;
+            min-height: 30px;
         }
 
         .radio-player-dock.radio-player-mobile .radio-player-mobile-actions {
@@ -4755,6 +4769,10 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-mobile-toggle svg {
+            display: block;
         }
 
         .radio-player-actions {
