@@ -525,48 +525,43 @@
         <div
             class="radio-player-dock"
             aria-label="Reproductor"
-            :class="{ 'is-minimized': dockMinimized }"
-            :style="dockMinimized
-                ? 'position:fixed; left:50%; bottom:12px; z-index:90; display:grid; grid-template-columns:76px minmax(0,1fr) auto minmax(140px,200px); align-items:center; gap:8px; width:min(1100px, calc(100vw - 24px)); min-height:72px; padding:6px 12px 6px 10px; border:1px solid rgba(184,175,162,.28); background:linear-gradient(180deg, rgba(18,17,16,.98), rgba(12,11,10,.98)); box-shadow:0 10px 26px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.03); transform:translateX(-50%); pointer-events:auto;'
-                : 'position:fixed; left:50%; bottom:12px; z-index:90; display:grid; grid-template-columns:100px minmax(0,1fr) auto minmax(180px,280px); align-items:center; gap:12px; width:min(1160px, calc(100vw - 24px)); min-height:84px; padding:10px 16px; border:1px solid rgba(184,175,162,.28); background:linear-gradient(180deg, rgba(18,17,16,.98), rgba(12,11,10,.98)); box-shadow:0 12px 32px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.03); transform:translateX(-50%); pointer-events:auto;"'
+            :data-dock-state="dockMinimized ? 'minimized' : 'expanded'"
         >
-                <div class="rbcloud_nowplaying" style="display:flex; flex-direction:column; gap:4px; min-width:0; align-items:flex-start; padding-left:0; margin-right:0;">
-                    <button type="button" data-player-band-trigger @click="toggleInfoWindow()" aria-label="Abrir información" style="appearance:none; display:inline-flex; border:0; background:transparent; padding:0; cursor:pointer; text-align:left;">
-                        <img class="radio-player-cover" data-player-cover-image :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="cover art" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" x-bind:style="dockMinimized ? 'width:48px; height:48px; border:1px solid rgba(184,175,162,.14); box-shadow:0 1px 6px rgba(0,0,0,.18); object-fit:cover; border-radius:6px;' : 'width:80px; height:80px; border:1px solid rgba(184,175,162,.18); box-shadow:0 1px 10px rgba(0,0,0,.2); object-fit:cover; border-radius:8px;'" loading="lazy">
+                <div class="rbcloud_nowplaying radio-player-dock-cover-wrap">
+                    <button type="button" class="radio-player-dock-trigger" data-player-band-trigger @click="toggleInfoWindow()" aria-label="Abrir información">
+                        <img class="radio-player-cover radio-player-dock-cover" data-player-cover-image :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="cover art" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" loading="lazy">
                     </button>
                 </div>
 
-                <div class="radio-player-meta-column" style="display:flex; flex-direction:column; gap:2px; min-width:0; justify-content:center; padding-left:0; margin-left:8px; transform:translateY(0);">
-                    <div class="radio-player-meta" style="min-width:0; gap:4px; align-items:flex-start;">
-                        <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'EN VIVO' : 'PLAYBACK'" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:max-content; min-height:16px; padding:0 5px; border-radius:9999px; background:#b7ad9f; color:#151515; font-size:8px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;' : 'display:inline-flex; align-items:center; justify-content:center; width:max-content; min-height:22px; padding:0 8px; border-radius:9999px; background:#b7ad9f; color:#151515; font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;'"></span>
-                        <strong data-player-title-text x-bind:style="dockMinimized ? 'font-size:12px; color:#ddd7cb; line-height:1.1; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;' : 'font-size:14px; color:#ddd7cb; line-height:1.08; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'" x-text="track.title || defaultTitle"></strong>
-                        <span x-show="!dockMinimized" data-player-artist-text style="font-size:12px; color:#b9b1a5; line-height:1.08; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" x-text="track.artist || defaultArtist"></span>
-                        <small x-show="!dockMinimized && track.program_name" data-player-program-text
-                            style="font-size:11px; color:#b7ad9f; line-height:1.08; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                <div class="radio-player-meta-column">
+                    <div class="radio-player-meta radio-player-dock-meta">
+                        <span class="radio-player-live-pill radio-player-dock-live" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'EN VIVO' : 'PLAYBACK'"></span>
+                        <strong class="radio-player-dock-title" data-player-title-text x-text="track.title || defaultTitle"></strong>
+                        <span x-show="!dockMinimized" x-cloak data-player-artist-text class="radio-player-dock-artist" x-text="track.artist || defaultArtist"></span>
+                        <small x-show="!dockMinimized && track.program_name" x-cloak data-player-program-text class="radio-player-dock-program"
                             x-text="track.program_name"></small>
-                        <small x-show="!dockMinimized && !track.program_name && nextProgram" data-player-next-program-text
-                            style="font-size:11px; color:#b7ad9f; line-height:1.08; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                        <small x-show="!dockMinimized && !track.program_name && nextProgram" x-cloak data-player-next-program-text class="radio-player-dock-next-program"
                             x-text="'Próximo: ' + (nextProgram.name || '') + (nextProgram.schedule_time ? ' a las ' + nextProgram.schedule_time : '')"></small>
                     </div>
-                    <div x-show="!dockMinimized" class="rbcloud_tracktimer" style="display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:18px; color:#b7ad9f; font-family:var(--font-display); font-size:11px; letter-spacing:.18em; text-transform:uppercase; white-space:nowrap; margin-top:2px;">
+                    <div x-show="!dockMinimized" x-cloak class="rbcloud_tracktimer radio-player-dock-timer">
                         <span id="rbcloud_tracktimer_e11096"></span>
                         <span id="rbcloud_tracktimer_sep11096" hidden> &frasl; </span>
                         <span id="rbcloud_tracktimer_r11096"></span>
                     </div>
-                    <div class="radio-player-mobile-share-popout radio-player-mobile-share-popout-inline" aria-label="Acciones móviles extra" style="display:none;">
+                    <div class="radio-player-mobile-share-popout radio-player-mobile-share-popout-inline" aria-label="Acciones móviles extra" x-cloak>
                         <button type="button" class="radio-player-chip radio-player-mobile-share" @click="shareCurrent()">Share</button>
                         <button type="button" class="radio-player-chip radio-player-mobile-popout" @click="openPopout()">Pop-out</button>
                     </div>
-                    <div class="radio-player-share-popout-desktop" x-show="!dockMinimized" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;">
-                        <button type="button" class="radio-player-chip" @click="shareCurrent()" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:28px; padding:0 10px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; border-radius:14px;">Share</button>
-                        <button type="button" class="radio-player-chip" @click="openPopout()" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:28px; padding:0 10px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; font-family:var(--font-display); font-size:10px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; border-radius:14px;">Pop-out</button>
+                    <div class="radio-player-share-popout-desktop radio-player-dock-share-popout-desktop" x-show="!dockMinimized" x-cloak>
+                        <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="shareCurrent()">Share</button>
+                        <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="openPopout()">Pop-out</button>
                     </div>
                     @if ($socialLinks->isNotEmpty())
-                        <div x-show="!dockMinimized" class="flex flex-wrap gap-2" style="margin-top:8px;">
+                        <div x-show="!dockMinimized" x-cloak class="radio-player-dock-socials">
                             @foreach ($socialLinks as $social)
-                                <a href="{{ $social['url'] }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[rgba(42,11,15,.85)] px-3 py-2 text-[#f4e7e7] transition hover:border-[#ff6675]/55 hover:bg-[rgba(58,15,21,.95)] hover:text-white" aria-label="Seguir en {{ $social['label'] }}">
-                                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[9px] font-bold uppercase tracking-[.08em]">{{ $social['badge'] }}</span>
-                                    <span style="font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;">{{ $social['label'] }}</span>
+                                <a href="{{ $social['url'] }}" target="_blank" rel="noopener noreferrer" class="radio-player-dock-social-link" aria-label="Seguir en {{ $social['label'] }}">
+                                    <span class="radio-player-dock-social-badge">{{ $social['badge'] }}</span>
+                                    <span class="radio-player-dock-social-label">{{ $social['label'] }}</span>
                                 </a>
                             @endforeach
                         </div>
@@ -575,35 +570,35 @@
                 <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11096"></script>
                 <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11097"></script>
 
-                <span class="radio-player-actions" style="display:flex; flex:0 0 auto; align-items:center; justify-content:center; gap:8px; white-space:nowrap; margin-left:auto; padding-right:4px;">
-                    <button type="button" class="radio-player-icon" data-player-action="details" @click.stop="toggleInfoWindow()" title="Detalles" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.15); color:#dcd7cc; border-radius:50%; cursor:pointer; font-size:10px; font-weight:600; line-height:1; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.22); color:#dcd7cc; border-radius:50%; cursor:pointer; font-size:13px; font-weight:600; line-height:1; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;'">i</button>
-                    <div class="radio-player-actions-center" style="display:flex; align-items:center; justify-content:center; gap:8px; min-width:0; flex:1 1 auto;">
-                        <button type="button" data-player-action="expand" @click.stop="dockMinimized = false" aria-label="Expandir" title="Expandir" x-show="dockMinimized" style="display:none; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.25); background:rgba(0,0,0,.15); color:#dcd7cc; cursor:pointer; border-radius:50%; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;" class="radio-player-expand-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:auto;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <span class="radio-player-actions radio-player-dock-actions">
+                    <button type="button" class="radio-player-icon radio-player-dock-icon radio-player-dock-icon--details" data-player-action="details" @click.stop="toggleInfoWindow()" title="Detalles">i</button>
+                    <div class="radio-player-actions-center radio-player-dock-actions-center">
+                        <button type="button" data-player-action="expand" @click.stop="dockMinimized = false" aria-label="Expandir" title="Expandir" x-show="dockMinimized" x-cloak class="radio-player-expand-btn radio-player-dock-icon radio-player-dock-icon--toggle">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
-                        <button type="button" class="radio-player-primary" data-player-action="play" @click.stop="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'" title="Play / Pause" x-bind:style="dockMinimized ? 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:2px solid rgba(184,175,162,.4); background:rgba(184,175,162,.08); color:#eee; border-radius:50%; cursor:pointer; font-size:14px; line-height:1; transition:all .15s ease; flex-shrink:0; padding:0; margin:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border:2px solid rgba(184,175,162,.5); background:rgba(184,175,162,.12); color:#eee; border-radius:50%; cursor:pointer; font-size:16px; line-height:1; transition:all .15s ease; flex-shrink:0; padding:0; margin:0;'">
+                        <button type="button" class="radio-player-primary radio-player-dock-play" data-player-action="play" @click.stop="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'" title="Play / Pause">
                             <span x-text="playing ? '❚❚' : '▶'">▶</span>
                         </button>
-                        <button type="button" data-player-action="minimize" @click.stop="dockMinimized = true" aria-label="Minimizar" title="Minimizar" x-show="!dockMinimized" style="display:none; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.38); background:rgba(0,0,0,.22); color:#dcd7cc; cursor:pointer; border-radius:50%; position:relative; z-index:10; flex-shrink:0; padding:0; margin:0;" class="radio-player-minimize-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:auto;"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        <button type="button" data-player-action="minimize" @click.stop="dockMinimized = true" aria-label="Minimizar" title="Minimizar" x-show="!dockMinimized" x-cloak class="radio-player-minimize-btn radio-player-dock-icon radio-player-dock-icon--toggle">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
                         </button>
                     </div>
-                    <div class="radio-player-actions-spacer" aria-hidden="true" style="flex:1 1 28px;"></div>
-                    <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" x-bind:style="dockMinimized ? (isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; border-radius:50%; cursor:pointer; font-size:10px; flex-shrink:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid rgba(184,175,162,.18); background:rgba(0,0,0,.1); color:#dcd7cb; border-radius:50%; cursor:pointer; font-size:10px; flex-shrink:0;') : (isFavoriteCurrent() ? 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(195,39,32,.55); background:rgba(195,39,32,.14); color:#fff; border-radius:50%; cursor:pointer; flex-shrink:0;' : 'display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid rgba(184,175,162,.22); background:rgba(0,0,0,.18); color:#dcd7cb; border-radius:50%; cursor:pointer; flex-shrink:0;')">
+                    <div class="radio-player-actions-spacer radio-player-dock-actions-spacer" aria-hidden="true"></div>
+                    <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" class="radio-player-dock-icon radio-player-dock-icon--favorite">
                         <span data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
                     </button>
                 </span>
 
-                <div class="sr-dock-volume" x-bind:style="dockMinimized ? 'display:flex; align-items:center; gap:0; min-width:36px; max-width:36px; justify-self:end;' : 'display:flex; align-items:center; gap:10px; min-width:160px; max-width:240px; justify-self:end; overflow:visible;'">
-                    <button type="button" data-player-action="mute" @click.stop="toggleMute()" aria-label="Silenciar" title="Silenciar" x-bind:style="dockMinimized ? 'display:inline-flex; width:28px; height:28px; align-items:center; justify-content:center; border:0; background:transparent; color:#b7ad9f; border-radius:4px; cursor:pointer; flex-shrink:0;' : 'display:inline-flex; width:32px; height:32px; align-items:center; justify-content:center; border:1px solid rgba(184,175,162,.3); background:transparent; color:#b7ad9f; border-radius:4px; cursor:pointer; flex-shrink:0;'">
-                        <span data-player-mute-muted-icon x-show="muted" aria-hidden="true" style="display:inline-flex; width:20px; height:20px; align-items:center; justify-content:center;">
+                <div class="sr-dock-volume radio-player-dock-volume">
+                    <button type="button" class="radio-player-dock-mute" data-player-action="mute" @click.stop="toggleMute()" aria-label="Silenciar" title="Silenciar">
+                        <span data-player-mute-muted-icon x-show="muted" aria-hidden="true" class="radio-player-dock-mute-icon">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M11 5 6 9H3v6h3l5 4z"></path>
                                 <path d="M16 9l5 6"></path>
                                 <path d="M21 9l-5 6"></path>
                             </svg>
                         </span>
-                        <span data-player-mute-unmuted-icon x-show="!muted" aria-hidden="true" style="display:inline-flex; width:20px; height:20px; align-items:center; justify-content:center;">
+                        <span data-player-mute-unmuted-icon x-show="!muted" aria-hidden="true" class="radio-player-dock-mute-icon">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M11 5 6 9H3v6h3l5 4z"></path>
                                 <path d="M16 9a4 4 0 0 1 0 6"></path>
@@ -611,22 +606,22 @@
                             </svg>
                         </span>
                     </button>
-                    <input x-show="!dockMinimized" data-player-volume-input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" style="width:100%; accent-color:#b7ad9f; min-height:24px; cursor:pointer;">
-                    <span x-show="!dockMinimized" data-player-volume-output x-text="Math.round(volume * 100) + '%'" style="color:#b7ad9f; font-family:var(--font-display); font-size:10px; letter-spacing:.12em; text-transform:uppercase; min-width:32px; text-align:right;">80%</span>
+                    <input x-show="!dockMinimized" x-cloak data-player-volume-input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" class="radio-player-dock-volume-range">
+                    <span x-show="!dockMinimized" x-cloak data-player-volume-output x-text="Math.round(volume * 100) + '%'" class="radio-player-dock-volume-output">80%</span>
                 </div>
 
-                <div class="radio-player-mobile-share-popout" aria-label="Acciones móviles extra" style="display:none;">
+                <div class="radio-player-mobile-share-popout" aria-label="Acciones móviles extra" x-cloak>
                     <button type="button" class="radio-player-chip radio-player-mobile-share" @click="shareCurrent()">Share</button>
                     <button type="button" class="radio-player-chip radio-player-mobile-popout" @click="openPopout()">Pop-out</button>
                 </div>
 
-                <div class="radio-player-mobile-actions" aria-label="Controles móviles" style="display:none;">
+                <div class="radio-player-mobile-actions" aria-label="Controles móviles" x-cloak>
                     <button type="button" class="radio-player-icon radio-player-mobile-details" data-player-action="details" @click.stop="toggleInfoWindow()" title="Detalles" aria-label="Detalles">
                         <span>i</span>
                     </button>
 
                     <div class="radio-player-mobile-actions-center">
-                        <button type="button" class="radio-player-icon radio-player-mobile-toggle radio-player-expand-btn" data-player-action="expand" @click.stop="dockMinimized = false" aria-label="Expandir" title="Expandir" x-show="dockMinimized" style="display:none;">
+                        <button type="button" class="radio-player-icon radio-player-mobile-toggle radio-player-expand-btn" data-player-action="expand" @click.stop="dockMinimized = false" aria-label="Expandir" title="Expandir" x-show="dockMinimized" x-cloak>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
 
@@ -634,7 +629,7 @@
                             <span x-text="playing ? '❚❚' : '▶'">▶</span>
                         </button>
 
-                        <button type="button" class="radio-player-icon radio-player-mobile-toggle radio-player-minimize-btn" data-player-action="minimize" @click.stop="dockMinimized = true" aria-label="Contraer" title="Contraer" x-show="!dockMinimized" style="display:none;">
+                        <button type="button" class="radio-player-icon radio-player-mobile-toggle radio-player-minimize-btn" data-player-action="minimize" @click.stop="dockMinimized = true" aria-label="Contraer" title="Contraer" x-show="!dockMinimized" x-cloak>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
                         </button>
                     </div>

@@ -1465,16 +1465,337 @@
         left: 50%;
         bottom: calc(12px + var(--radio-player-lift, 0px) + env(safe-area-inset-bottom, 0px));
         display: grid;
-        grid-template-columns: auto auto minmax(0, 1fr) auto;
+        grid-template-columns: 76px minmax(0, 1fr) auto minmax(140px, 200px);
         align-items: center;
-        gap: 14px;
-        width: min(1180px, calc(100vw - 24px));
-        min-height: 64px;
+        gap: 8px;
+        width: min(1100px, calc(100vw - 24px));
+        min-height: 72px;
+        padding: 6px 12px 6px 10px;
         transform: translateX(-50%);
         border: 1px solid #2b2b2b;
         background: rgba(16, 16, 18, .96);
         box-shadow: 0 18px 50px rgba(0, 0, 0, .45);
-        padding: 10px 14px;
+        pointer-events: auto;
+    }
+
+    .radio-player-dock[data-dock-state='minimized'] {
+        grid-template-columns: 76px minmax(0, 1fr) auto minmax(140px, 200px);
+        gap: 8px;
+        width: min(1100px, calc(100vw - 24px));
+        min-height: 72px;
+        padding: 6px 12px 6px 10px;
+    }
+
+    .radio-player-dock[data-dock-state='expanded'] {
+        grid-template-columns: 100px minmax(0, 1fr) auto minmax(180px, 280px);
+        gap: 12px;
+        width: min(1160px, calc(100vw - 24px));
+        min-height: 84px;
+        padding: 10px 16px;
+    }
+
+    .radio-player-dock-cover-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        align-items: flex-start;
+        padding-left: 0;
+        margin-right: 0;
+    }
+
+    .radio-player-dock-trigger {
+        appearance: none;
+        display: inline-flex;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    .radio-player-dock-cover {
+        object-fit: cover;
+    }
+
+    .radio-player-dock[data-dock-state='minimized'] .radio-player-dock-cover {
+        width: 48px;
+        height: 48px;
+        border: 1px solid rgba(184, 175, 162, .14);
+        box-shadow: 0 1px 6px rgba(0, 0, 0, .18);
+        border-radius: 6px;
+    }
+
+    .radio-player-dock[data-dock-state='expanded'] .radio-player-dock-cover {
+        width: 80px;
+        height: 80px;
+        border: 1px solid rgba(184, 175, 162, .18);
+        box-shadow: 0 1px 10px rgba(0, 0, 0, .2);
+        border-radius: 8px;
+    }
+
+    .radio-player-meta-column {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        justify-content: center;
+        padding-left: 0;
+        margin-left: 8px;
+        transform: translateY(0);
+    }
+
+    .radio-player-dock-meta {
+        min-width: 0;
+        gap: 4px;
+        align-items: flex-start;
+    }
+
+    .radio-player-dock-live {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: max-content;
+        border-radius: 9999px;
+        background: #b7ad9f;
+        color: #151515;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .radio-player-dock[data-dock-state='minimized'] .radio-player-dock-live {
+        min-height: 16px;
+        padding: 0 5px;
+        font-size: 8px;
+        letter-spacing: .12em;
+    }
+
+    .radio-player-dock[data-dock-state='expanded'] .radio-player-dock-live {
+        min-height: 22px;
+        padding: 0 8px;
+        font-size: 10px;
+        letter-spacing: .16em;
+    }
+
+    .radio-player-dock-title,
+    .radio-player-dock-artist,
+    .radio-player-dock-program,
+    .radio-player-dock-next-program {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .radio-player-dock-title {
+        color: #ddd7cb;
+        font-family: var(--font-display);
+        line-height: 1.08;
+    }
+
+    .radio-player-dock[data-dock-state='minimized'] .radio-player-dock-title {
+        font-size: 12px;
+    }
+
+    .radio-player-dock[data-dock-state='expanded'] .radio-player-dock-title {
+        font-size: 14px;
+    }
+
+    .radio-player-dock-artist,
+    .radio-player-dock-program,
+    .radio-player-dock-next-program {
+        color: #b7ad9f;
+        line-height: 1.08;
+    }
+
+    .radio-player-dock-artist {
+        font-size: 12px;
+    }
+
+    .radio-player-dock-program,
+    .radio-player-dock-next-program {
+        font-size: 11px;
+    }
+
+    .radio-player-dock-timer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+        min-height: 18px;
+        color: #b7ad9f;
+        font-family: var(--font-display);
+        font-size: 11px;
+        letter-spacing: .18em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        margin-top: 2px;
+    }
+
+    .radio-player-dock-share-popout-desktop {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 6px;
+    }
+
+    .radio-player-dock-share-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 28px;
+        padding: 0 10px;
+        border: 1px solid rgba(184, 175, 162, .22);
+        background: rgba(0, 0, 0, .18);
+        color: #dcd7cb;
+        cursor: pointer;
+        border-radius: 14px;
+    }
+
+    .radio-player-dock-socials {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .radio-player-dock-social-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid rgba(255, 255, 255, .1);
+        background: rgba(42, 11, 15, .85);
+        padding: 8px 12px;
+        color: #f4e7e7;
+        text-decoration: none;
+        border-radius: 9999px;
+        transition: border-color .2s ease, background-color .2s ease, color .2s ease;
+    }
+
+    .radio-player-dock-social-link:hover {
+        border-color: rgba(255, 103, 117, .55);
+        background: rgba(58, 15, 21, .95);
+        color: #fff;
+    }
+
+    .radio-player-dock-social-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, .1);
+        color: #fff;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        flex-shrink: 0;
+    }
+
+    .radio-player-dock-social-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+    }
+
+    .radio-player-dock-actions {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        white-space: nowrap;
+        margin-left: auto;
+        padding-right: 4px;
+    }
+
+    .radio-player-dock-actions-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .radio-player-dock-actions-spacer {
+        flex: 1 1 28px;
+    }
+
+    .radio-player-dock-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        cursor: pointer;
+        flex-shrink: 0;
+        padding: 0;
+        margin: 0;
+        position: relative;
+        z-index: 10;
+        line-height: 1;
+    }
+
+    .radio-player-dock-icon--details {
+        font-weight: 600;
+    }
+
+    .radio-player-dock-icon--favorite {
+        color: #dcd7cb;
+    }
+
+    .radio-player-dock-mute,
+    .radio-player-dock-volume-range,
+    .radio-player-dock-volume-output {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .radio-player-dock-mute {
+        justify-content: center;
+    }
+
+    .radio-player-dock-mute-icon {
+        display: inline-flex;
+        width: 20px;
+        height: 20px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .radio-player-dock-volume {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 160px;
+        max-width: 240px;
+        justify-self: end;
+        overflow: visible;
+    }
+
+    .radio-player-dock-volume-range {
+        width: 100%;
+        accent-color: #b7ad9f;
+        min-height: 24px;
+        cursor: pointer;
+    }
+
+    .radio-player-dock-volume-output {
+        color: #b7ad9f;
+        font-family: var(--font-display);
+        font-size: 10px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        min-width: 32px;
+        text-align: right;
+    }
+
+    .radio-player-mobile-share-popout,
+    .radio-player-mobile-actions {
+        display: none;
     }
 
     .radio-player[data-mode='page'] .radio-player-dock {
@@ -2621,12 +2942,91 @@
     }
 
     @media (max-width: 767px) {
-        .radio-player-dock {
-            grid-template-columns: auto minmax(0, 1fr) auto;
-        }
-
         .radio-player-live {
             display: none;
+        }
+
+        .radio-player-dock.radio-player-mobile {
+            left: 0;
+            right: 0;
+            width: 100%;
+            transform: none;
+            border-left: 0;
+            border-right: 0;
+            border-bottom: 0;
+            border-radius: 0;
+        }
+
+        .radio-player-dock.radio-player-mobile[data-dock-state='minimized'] {
+            grid-template-columns: 40px minmax(0, 1fr) auto;
+            gap: 6px;
+            min-height: 44px;
+            padding: 6px 8px;
+        }
+
+        .radio-player-dock.radio-player-mobile[data-dock-state='expanded'] {
+            grid-template-columns: 40px minmax(0, 1fr) auto;
+            gap: 6px;
+            min-height: 44px;
+            padding: 6px 8px;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-dock-cover {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-dock-live {
+            font-size: 8px;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-dock-title {
+            font-size: 10px;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-dock-artist,
+        .radio-player-dock.radio-player-mobile .radio-player-dock-program,
+        .radio-player-dock.radio-player-mobile .radio-player-dock-next-program {
+            font-size: 9px;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-dock-actions,
+        .radio-player-dock.radio-player-mobile .radio-player-dock-volume,
+        .radio-player-dock.radio-player-mobile .radio-player-dock-share-popout-desktop,
+        .radio-player-dock.radio-player-mobile .radio-player-dock-socials {
+            display: none;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-mobile-share-popout {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-mobile-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-mobile-actions-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .radio-player-dock.radio-player-mobile .radio-player-mobile-details,
+        .radio-player-dock.radio-player-mobile .radio-player-mobile-toggle,
+        .radio-player-dock.radio-player-mobile .radio-player-mobile-favorite {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .radio-player-actions {
