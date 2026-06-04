@@ -55,11 +55,11 @@ Route::get('/{year}/{month}/{day}/{slug}', [SiteController::class, 'singlePost']
 Route::get('/shop', [SiteController::class, 'shop'])->name('shop');
 Route::get('/product/{slug}', [SiteController::class, 'productSingle'])->name('products.single');
 Route::get('/contact', [SiteController::class, 'contact'])->name('contact');
-Route::post('/contact', [SiteController::class, 'contactSend'])->name('contact.send');
-Route::post('/home-contact', [SiteController::class, 'homeContactSend'])->name('home.contact.send');
+Route::post('/contact', [SiteController::class, 'contactSend'])->middleware('throttle:contact-form')->name('contact.send');
+Route::post('/home-contact', [SiteController::class, 'homeContactSend'])->middleware('throttle:contact-form')->name('home.contact.send');
 Route::get('/player/popup', [PlayerController::class, 'show'])->name('player.popup');
-Route::get('/search', [SearchController::class, 'index'])->name('search');
-Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('posts.comments.store');
+Route::get('/search', [SearchController::class, 'index'])->middleware('throttle:public-search')->name('search');
+Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:comment-submit')->name('posts.comments.store');
 
 Route::get("/programas", [SiteController::class, "programs"])->name("programs");
 Route::get("/programas/{identifier}", [SiteController::class, "programDetail"])->name("programs.detail");

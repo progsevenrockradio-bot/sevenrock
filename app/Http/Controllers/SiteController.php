@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ContactFormRequest;
 use App\Models\Album;
 use App\Models\Event;
 use App\Models\GalleryImage;
@@ -18,9 +19,9 @@ use App\Support\PublicMediaUrl;
 use App\Support\ProgramScheduleService;
 use App\Support\WordPressContent;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
 use App\Mail\ContactMail;
 
 class SiteController extends Controller
@@ -889,14 +890,9 @@ class SiteController extends Controller
 
 
 
-        public function contactSend(Request $request)
+    public function contactSend(ContactFormRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'phone' => 'nullable|string|max:50',
-            'message' => 'required|string|max:5000',
-        ]);
+        $validated = $request->validated();
 
         Mail::to('prog.sevenrockradio@gmail.com')->send(new ContactMail(
             senderName: $validated['name'],
@@ -908,14 +904,9 @@ class SiteController extends Controller
 
         return redirect()->back()->with('success', '¡Mensaje enviado correctamente!');
     }
-    public function homeContactSend(\Illuminate\Http\Request $request): \Illuminate\Http\RedirectResponse
+    public function homeContactSend(ContactFormRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'phone' => 'nullable|string|max:50',
-            'message' => 'required|string|max:5000',
-        ]);
+        $validated = $request->validated();
 
         try {
             \Illuminate\Support\Facades\Mail::to(config('mail.from.address', 'prog.sevenrockradio@gmail.com'))

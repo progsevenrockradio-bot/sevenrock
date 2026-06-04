@@ -16,7 +16,11 @@ final class SearchController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = $request->input('q');
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $query = trim((string) ($validated['q'] ?? ''));
         $results = collect();
 
         if ($query) {

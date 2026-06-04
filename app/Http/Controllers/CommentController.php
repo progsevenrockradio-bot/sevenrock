@@ -4,24 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCommentRequest;
 use App\Mail\NewCommentNotification;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 
 final class CommentController extends Controller
 {
-    public function store(Request $request, Post $post): RedirectResponse
+    public function store(StoreCommentRequest $request, Post $post): RedirectResponse
     {
-        $validated = $request->validate([
-            'content' => ['required', 'string', 'min:5', 'max:1000'],
-            'author_name' => ['nullable', 'string', 'max:255'],
-            'author_email' => ['nullable', 'string', 'email', 'max:255'],
-        ]);
+        $validated = $request->validated();
 
         $comment = new Comment($validated);
         $comment->post_id = $post->id;

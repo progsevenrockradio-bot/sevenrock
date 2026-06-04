@@ -43,6 +43,23 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->input('email') ?: $request->ip());
         });
 
+        RateLimiter::for('contact-form', function (Request $request) {
+            $key = strtolower(trim((string) $request->input('email', 'guest')));
+
+            return Limit::perMinute(10)->by($request->ip() . '|' . $key);
+        });
+
+        RateLimiter::for('comment-submit', function (Request $request) {
+            $postId = (string) ($request->route('post')?->id ?? $request->route('post') ?? '0');
+            $userId = (string) ($request->user()?->id ?? 'guest');
+
+            return Limit::perMinute(10)->by($request->ip() . '|' . $userId . '|' . $postId);
+        });
+
+        RateLimiter::for('public-search', function (Request $request) {
+            return Limit::perMinute(30)->by($request->ip());
+        });
+
         if (is_file(app_path('helpers.php'))) {
             require_once app_path('helpers.php');
         }
