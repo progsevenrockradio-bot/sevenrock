@@ -4746,12 +4746,14 @@
 
         .radio-player-dock.radio-player-mobile .radio-player-dock-title {
             font-size: 10px;
+            line-height: 1.05;
         }
 
         .radio-player-dock.radio-player-mobile .radio-player-dock-artist,
         .radio-player-dock.radio-player-mobile .radio-player-dock-program,
         .radio-player-dock.radio-player-mobile .radio-player-dock-next-program {
             font-size: 9px;
+            line-height: 1.05;
         }
 
         .radio-player-dock.radio-player-mobile .radio-player-dock-actions,
@@ -4765,7 +4767,7 @@
             display: inline-flex;
             align-items: center;
             justify-self: end;
-            gap: 4px;
+            gap: 3px;
             min-width: 0;
         }
 
@@ -4795,7 +4797,7 @@
         .radio-player-dock.radio-player-mobile .radio-player-mobile-share-popout {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
             margin-top: 4px;
             flex-wrap: nowrap;
             white-space: nowrap;
@@ -4809,8 +4811,8 @@
             justify-content: center;
             white-space: nowrap;
             line-height: 1;
-            padding: 0 10px;
-            min-height: 30px;
+            padding: 0 8px;
+            min-height: 28px;
         }
 
         .radio-player-dock.radio-player-mobile .radio-player-mobile-actions {
@@ -4885,6 +4887,26 @@
             min-height: 44px;
         }
 
+        .radio-player-panel--dock .radio-player-dock-socials--icons {
+            grid-auto-columns: 30px;
+            gap: 8px;
+        }
+
+        .radio-player-panel--dock .radio-player-dock-social-link--icon {
+            width: 30px;
+            height: 30px;
+        }
+
+        .radio-player-panel--dock .radio-player-dock-social-badge {
+            width: 16px;
+            height: 16px;
+            font-size: 7px;
+        }
+
+        .radio-player-panel--dock .radio-player-dock-social-label {
+            font-size: 8px;
+        }
+
         .radio-player-panel--dock .radio-player-volume--dock {
             min-height: 44px;
         }
@@ -4936,6 +4958,35 @@
         .radio-player-popup-drawer-body {
             max-height: clamp(5rem, 20vh, 14rem);
             padding: .65rem .7rem .55rem;
+        }
+
+        .radio-player-nexttrack-shell {
+            gap: 8px;
+            margin-top: 10px;
+            padding: 10px;
+        }
+
+        .radio-player-nexttrack-shell--dock,
+        .radio-player-nexttrack-shell--popup {
+            max-width: none;
+        }
+
+        .radio-player-nexttrack-widget {
+            gap: 8px;
+            padding: 8px 10px;
+        }
+
+        .radio-player-nexttrack-widget img {
+            width: 54px;
+            height: 54px;
+        }
+
+        .radio-player-nexttrack-widget #rbcloud_nt_a14745 {
+            font-size: 12px;
+        }
+
+        .radio-player-nexttrack-widget #rbcloud_nt_t14745 {
+            font-size: 11px;
         }
 
         .radio-player-popup-source-line {
