@@ -131,15 +131,40 @@
 
                         <div class="mt-8"></div>
 
-<div class="lucille-share-row">
-    <span>{{ $ui['share'] }}</span>
-    <a href="{{ $twitterShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Twitter">T</a>
-    <a href="{{ $facebookShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook">F</a>
-    <a href="{{ $whatsappShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on WhatsApp">W</a>
-    <a href="{{ $telegramShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Telegram">TG</a>
-    <a href="{{ $linkedinShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on LinkedIn">IN</a>
-    <a href="{{ $pinterestShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Pinterest">P</a>
-</div>
+                        <div x-data="{ shareOpen: false }" class="space-y-3">
+                            <div class="flex items-center gap-3">
+                                <button type="button" class="radio-player-popup-chip" @click="shareOpen = !shareOpen" :aria-expanded="shareOpen">{{ $ui['share'] }}</button>
+                                <span class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Redes</span>
+                            </div>
+
+                            <div x-show="shareOpen" x-cloak @click.outside="shareOpen = false" class="radio-player-share-panel radio-player-share-panel--post" aria-label="Compartir artículo">
+                                <span class="radio-player-share-panel-label">Compartir</span>
+                                <a href="{{ $facebookShareUrl }}" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Share on Facebook" title="Facebook">
+                                    <span class="radio-player-share-link-code">FB</span>
+                                    <span class="radio-player-share-link-text">Facebook</span>
+                                </a>
+                                <a href="{{ $whatsappShareUrl }}" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Share on WhatsApp" title="WhatsApp">
+                                    <span class="radio-player-share-link-code">WA</span>
+                                    <span class="radio-player-share-link-text">WhatsApp</span>
+                                </a>
+                                <a href="{{ $telegramShareUrl }}" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Share on Telegram" title="Telegram">
+                                    <span class="radio-player-share-link-code">TG</span>
+                                    <span class="radio-player-share-link-text">Telegram</span>
+                                </a>
+                                <a href="{{ $twitterShareUrl }}" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Share on X" title="X">
+                                    <span class="radio-player-share-link-code">X</span>
+                                    <span class="radio-player-share-link-text">X</span>
+                                </a>
+                                <a href="{{ $linkedinShareUrl }}" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Share on LinkedIn" title="LinkedIn">
+                                    <span class="radio-player-share-link-code">IN</span>
+                                    <span class="radio-player-share-link-text">LinkedIn</span>
+                                </a>
+                                <a href="{{ $pinterestShareUrl }}" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Share on Pinterest" title="Pinterest">
+                                    <span class="radio-player-share-link-code">P</span>
+                                    <span class="radio-player-share-link-text">Pinterest</span>
+                                </a>
+                            </div>
+                        </div>
 
                         <div class="mt-8"></div>
 
