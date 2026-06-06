@@ -1,16 +1,27 @@
 <x-layouts.site title="Seven Rock Radio - {{ $post['title'] }}">
-    @php
-        $ui = $themeAppearance['ui_texts'];
-        $shareUrl = request()->fullUrl();
-        $shareTitle = trim((string) ($post['title'] ?? ''));
-        $shareImage = trim((string) ($post['image'] ?? ''));
-        $shareImage = $shareImage !== '' ? (str_starts_with($shareImage, 'http') ? $shareImage : asset($shareImage)) : '';
-        $twitterShareUrl = 'https://twitter.com/intent/tweet?text=' . rawurlencode($shareTitle) . '&url=' . rawurlencode($shareUrl);
-        $facebookShareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' . rawurlencode($shareUrl);
-        $pinterestShareUrl = 'https://pinterest.com/pin/create/button/?url=' . rawurlencode($shareUrl)
-            . ($shareImage !== '' ? '&media=' . rawurlencode($shareImage) : '')
-            . '&description=' . rawurlencode($shareTitle);
-    @endphp
+@php
+    $ui = $themeAppearance['ui_texts'];
+    $shareBaseUrl = request()->url();
+    $updatedAt = data_get($post, 'updated_at');
+    if (is_string($updatedAt) && $updatedAt !== '') {
+        $updatedAt = \Illuminate\Support\Carbon::parse($updatedAt);
+    }
+    $shareVersion = $updatedAt instanceof \Illuminate\Support\Carbon ? $updatedAt->timestamp : now()->timestamp;
+    $shareUrl = $shareBaseUrl . '?v=' . $shareVersion;
+    $shareTitle = trim((string) ($post['title'] ?? ''));
+    $shareTitleEncoded = urlencode($shareTitle);
+    $shareUrlEncoded = urlencode($shareUrl);
+    $shareImage = trim((string) ($post['image'] ?? ''));
+    $shareImage = $shareImage !== '' ? (str_starts_with($shareImage, 'http') ? $shareImage : asset($shareImage)) : '';
+    $twitterShareUrl = 'https://twitter.com/intent/tweet?text=' . $shareTitleEncoded . '&url=' . $shareUrlEncoded;
+    $facebookShareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' . $shareUrlEncoded;
+    $whatsappShareUrl = 'https://api.whatsapp.com/send?text=' . $shareTitleEncoded . '%20' . $shareUrlEncoded;
+    $telegramShareUrl = 'https://t.me/share/url?url=' . $shareUrlEncoded . '&text=' . $shareTitleEncoded;
+    $linkedinShareUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' . $shareUrlEncoded;
+    $pinterestShareUrl = 'https://pinterest.com/pin/create/button/?url=' . $shareUrlEncoded
+        . ($shareImage !== '' ? '&media=' . urlencode($shareImage) : '')
+        . '&description=' . $shareTitleEncoded;
+@endphp
     <x-sections.page-heading :title="$post['title']" overlay="rgba(0,0,0,0)">
         <span>{{ $post['date'] }}</span>
         <span class="mx-1">by</span>
@@ -120,12 +131,15 @@
 
                         <div class="mt-8"></div>
 
-                        <div class="lucille-share-row">
-                            <span>{{ $ui['share'] }}</span>
-                            <a href="{{ $twitterShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Twitter">T</a>
-                            <a href="{{ $facebookShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook">F</a>
-                            <a href="{{ $pinterestShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Pinterest">P</a>
-                        </div>
+<div class="lucille-share-row">
+    <span>{{ $ui['share'] }}</span>
+    <a href="{{ $twitterShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Twitter">T</a>
+    <a href="{{ $facebookShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook">F</a>
+    <a href="{{ $whatsappShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on WhatsApp">W</a>
+    <a href="{{ $telegramShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Telegram">TG</a>
+    <a href="{{ $linkedinShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on LinkedIn">IN</a>
+    <a href="{{ $pinterestShareUrl }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Pinterest">P</a>
+</div>
 
                         <div class="mt-8"></div>
 
