@@ -108,10 +108,42 @@
                     </div>
 
                     <div class="radio-player-popup-header-actions">
-                        <button type="button" class="radio-player-popup-chip" @click="shareCurrent()">Share</button>
+                        <button type="button" class="radio-player-popup-chip" @click="toggleSharePanel()" :aria-expanded="sharePanelOpen">Share</button>
                         <button type="button" class="radio-player-popup-chip" @click="window.close()">Cerrar</button>
                     </div>
                 </header>
+
+                <div x-show="sharePanelOpen" x-cloak class="radio-player-share-panel radio-player-share-panel--popup" aria-label="Compartir emisión">
+                    <span class="radio-player-share-panel-label">Compartir</span>
+                    <a :href="shareTargets().facebook" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Facebook" title="Facebook">
+                        <span class="radio-player-share-link-code">FB</span>
+                        <span class="radio-player-share-link-text">Facebook</span>
+                    </a>
+                    <a :href="shareTargets().whatsapp" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en WhatsApp" title="WhatsApp">
+                        <span class="radio-player-share-link-code">WA</span>
+                        <span class="radio-player-share-link-text">WhatsApp</span>
+                    </a>
+                    <a :href="shareTargets().telegram" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Telegram" title="Telegram">
+                        <span class="radio-player-share-link-code">TG</span>
+                        <span class="radio-player-share-link-text">Telegram</span>
+                    </a>
+                    <a :href="shareTargets().twitter" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en X" title="X">
+                        <span class="radio-player-share-link-code">X</span>
+                        <span class="radio-player-share-link-text">X</span>
+                    </a>
+                    <a :href="shareTargets().linkedin" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en LinkedIn" title="LinkedIn">
+                        <span class="radio-player-share-link-code">IN</span>
+                        <span class="radio-player-share-link-text">LinkedIn</span>
+                    </a>
+                    <a :href="shareTargets().pinterest" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Pinterest" title="Pinterest">
+                        <span class="radio-player-share-link-code">P</span>
+                        <span class="radio-player-share-link-text">Pinterest</span>
+                    </a>
+                    <button type="button" class="radio-player-share-link radio-player-share-link--native" @click="shareCurrent()" aria-label="Compartir nativo">
+                        <span class="radio-player-share-link-code">N</span>
+                        <span class="radio-player-share-link-text">Nativo</span>
+                    </button>
+                </div>
 
                 @if ($socialLinks->isNotEmpty())
                     <div class="radio-player-popup-socials">
@@ -277,12 +309,43 @@
                     <img class="radio-player-cover radio-player-dock-cover" data-player-cover-image :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="cover art" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" loading="lazy">
                 </button>
                 <div class="radio-player-share-popout radio-player-dock-share-popout-desktop" x-show="!dockMinimized" x-cloak>
-                    <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="shareCurrent()">Share</button>
+                    <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="toggleSharePanel()" :aria-expanded="sharePanelOpen">Share</button>
                     <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="openPopout()">Popup</button>
                 </div>
                 <div class="radio-player-mobile-share-popout" aria-label="Acciones móviles extra" x-show="!dockMinimized" x-cloak>
-                    <button type="button" class="radio-player-chip radio-player-mobile-share" @click="shareCurrent()">Share</button>
+                    <button type="button" class="radio-player-chip radio-player-mobile-share" @click="toggleSharePanel()" :aria-expanded="sharePanelOpen">Share</button>
                     <button type="button" class="radio-player-chip radio-player-mobile-popout" @click="openPopout()">Pop-out</button>
+                </div>
+                <div x-show="sharePanelOpen && !dockMinimized" x-cloak class="radio-player-share-panel radio-player-share-panel--dock" aria-label="Compartir emisión">
+                    <span class="radio-player-share-panel-label">Compartir</span>
+                    <a :href="shareTargets().facebook" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Facebook" title="Facebook">
+                        <span class="radio-player-share-link-code">FB</span>
+                        <span class="radio-player-share-link-text">Facebook</span>
+                    </a>
+                    <a :href="shareTargets().whatsapp" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en WhatsApp" title="WhatsApp">
+                        <span class="radio-player-share-link-code">WA</span>
+                        <span class="radio-player-share-link-text">WhatsApp</span>
+                    </a>
+                    <a :href="shareTargets().telegram" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Telegram" title="Telegram">
+                        <span class="radio-player-share-link-code">TG</span>
+                        <span class="radio-player-share-link-text">Telegram</span>
+                    </a>
+                    <a :href="shareTargets().twitter" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en X" title="X">
+                        <span class="radio-player-share-link-code">X</span>
+                        <span class="radio-player-share-link-text">X</span>
+                    </a>
+                    <a :href="shareTargets().linkedin" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en LinkedIn" title="LinkedIn">
+                        <span class="radio-player-share-link-code">IN</span>
+                        <span class="radio-player-share-link-text">LinkedIn</span>
+                    </a>
+                    <a :href="shareTargets().pinterest" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Pinterest" title="Pinterest">
+                        <span class="radio-player-share-link-code">P</span>
+                        <span class="radio-player-share-link-text">Pinterest</span>
+                    </a>
+                    <button type="button" class="radio-player-share-link radio-player-share-link--native" @click="shareCurrent()" aria-label="Compartir nativo">
+                        <span class="radio-player-share-link-code">N</span>
+                        <span class="radio-player-share-link-text">Nativo</span>
+                    </button>
                 </div>
             </div>
 

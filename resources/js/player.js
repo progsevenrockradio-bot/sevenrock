@@ -33,6 +33,7 @@ export function registerRadioPlayer(Alpine) {
         defaultArtist: options.defaultArtist || '',
         defaultTitle: options.defaultTitle || '',
         panelOpen: false,
+        sharePanelOpen: false,
         bandWindowOpen: false,
         programWindowOpen: false,
         bandWindowTab: 'bio',
@@ -125,6 +126,7 @@ export function registerRadioPlayer(Alpine) {
 
         init() {
             this.panelOpen = this.mode === 'page' ? true : false;
+            this.sharePanelOpen = false;
             this.bandWindowOpen = false;
             this.bandWindowTab = 'bio';
             this.dockMinimized = true;
@@ -246,6 +248,7 @@ export function registerRadioPlayer(Alpine) {
         closeTransientOverlays() {
             this.closeBandWindow();
             this.closeProgramWindow();
+            this.sharePanelOpen = false;
             if (this.mode !== 'page') {
                 this.panelOpen = false;
             }
@@ -1383,12 +1386,18 @@ export function registerRadioPlayer(Alpine) {
             safeWrite('sr-player-favorites', JSON.stringify(this.favorites));
         },
 
-        async shareCurrent() {
+        toggleSharePanel() {
+            this.sharePanelOpen = !this.sharePanelOpen;
+        },
+
+        shareContext() {
             const title = this.track.title || this.defaultTitle || 'Seven Rock Radio';
             const artist = this.track.artist || this.defaultArtist || '';
             const program = this.track.program_name || '';
             const cover = this.track.cover || this.fallbackCover || '';
-            const url = window.location.href;
+            const baseUrl = document.referrer || window.location.href;
+            const version = this.track.signature || this.track.audio_url || this.track.program_id || '';
+            const url = version ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}v=${encodeURIComponent(String(version))}` : baseUrl;
             const textParts = [
                 `Estoy escuchando "${title}"${artist ? ` de ${artist}` : ''} en Seven Rock Radio.`,
             ];
@@ -1403,6 +1412,35 @@ export function registerRadioPlayer(Alpine) {
 
             textParts.push(url);
             const text = textParts.join(' ').replace(/\s{2,}/g, ' ').trim();
+
+            return {
+                title,
+                artist,
+                program,
+                cover,
+                url,
+                text,
+                encodedUrl: encodeURIComponent(url),
+                encodedTitle: encodeURIComponent(title),
+                encodedText: encodeURIComponent(text),
+            };
+        },
+
+        shareTargets() {
+            const share = this.shareContext();
+
+            return {
+                twitter: `https://twitter.com/intent/tweet?text=${share.encodedTitle}&url=${share.encodedUrl}`,
+                facebook: `https://www.facebook.com/sharer/sharer.php?u=${share.encodedUrl}`,
+                whatsapp: `https://api.whatsapp.com/send?text=${share.encodedText}`,
+                telegram: `https://t.me/share/url?url=${share.encodedUrl}&text=${share.encodedTitle}`,
+                linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${share.encodedUrl}`,
+                pinterest: `https://pinterest.com/pin/create/button/?url=${share.encodedUrl}${share.cover ? `&media=${encodeURIComponent(share.cover)}` : ''}&description=${share.encodedTitle}`,
+            };
+        },
+
+        async shareCurrent() {
+            const { text, url } = this.shareContext();
 
             if (navigator.share) {
                 try {

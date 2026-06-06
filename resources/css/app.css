@@ -328,6 +328,7 @@
 .radio-player-popup-header-meta,
 .radio-player-popup-header-actions,
 .radio-player-popup-socials,
+.radio-player-share-panel,
 .radio-player-popup-stack,
 .radio-player-popup-time-action {
     display: flex;
@@ -371,6 +372,67 @@
 
 .radio-player-popup-socials {
     align-items: center;
+}
+
+.radio-player-share-panel {
+    align-items: center;
+    gap: .45rem;
+}
+
+.radio-player-share-panel-label {
+    color: #8f887d;
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+}
+
+.radio-player-share-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    min-height: 2.25rem;
+    padding: .45rem .7rem;
+    border: 1px solid rgba(184, 175, 162, .22);
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, .18);
+    color: #dcd7cb;
+    text-decoration: none;
+    transition: transform .2s ease, border-color .2s ease, background-color .2s ease, color .2s ease;
+    cursor: pointer;
+}
+
+.radio-player-share-link:hover,
+.radio-player-share-link:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(214, 207, 196, .6);
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+}
+
+.radio-player-share-link-code {
+    min-width: 1.6rem;
+    color: inherit;
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.radio-player-share-link-text {
+    display: none;
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.radio-player-share-link--native {
+    border-style: dashed;
 }
 
 .radio-player-popup-social-link,
@@ -774,13 +836,17 @@
         width: min(100%, 720px);
     }
 
-    .radio-player-popup-volume {
-        width: min(100%, 22rem);
-    }
+        .radio-player-popup-volume {
+            width: min(100%, 22rem);
+        }
 
-    .radio-player-panel--dock {
-        border-radius: 28px;
-    }
+        .radio-player-share-link-text {
+            display: inline;
+        }
+
+        .radio-player-panel--dock {
+            border-radius: 28px;
+        }
 
     .radio-player-head--dock,
     .radio-player-body--dock {
