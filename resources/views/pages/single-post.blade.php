@@ -106,7 +106,7 @@
                                         @endphp
                                         <a href="{{ $prevUrl }}" class="group inline-flex max-w-full items-center gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
                                             <span class="text-2xl font-bold leading-none text-lucille-accent md:text-3xl">←</span>
-                                            <span class="min-w-0 truncate font-display text-sm uppercase tracking-[.18em] md:text-base">{{ $prevPost->title }}</span>
+                                            <span class="min-w-0 truncate font-display text-sm uppercase tracking-[.18em] md:max-w-[32vw] md:whitespace-normal md:overflow-visible md:text-clip md:text-base">{{ $prevPost->title }}</span>
                                         </a>
                                     @endif
                                 </div>
@@ -121,7 +121,7 @@
                                             ]);
                                         @endphp
                                         <a href="{{ $nextUrl }}" class="group inline-flex max-w-full items-center justify-end gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
-                                            <span class="min-w-0 truncate text-right font-display text-sm uppercase tracking-[.18em] md:text-base">{{ $nextPost->title }}</span>
+                                            <span class="min-w-0 truncate text-right font-display text-sm uppercase tracking-[.18em] md:max-w-[32vw] md:whitespace-normal md:overflow-visible md:text-clip md:text-base">{{ $nextPost->title }}</span>
                                             <span class="text-2xl font-bold leading-none text-lucille-accent md:text-3xl">→</span>
                                         </a>
                                     @endif
