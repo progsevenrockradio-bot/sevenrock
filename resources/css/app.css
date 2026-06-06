@@ -2472,6 +2472,61 @@
         text-transform: uppercase;
     }
 
+    .radio-player-nexttrack-shell {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+        padding: 12px;
+        border: 1px solid rgba(220, 220, 220, .14);
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(9, 9, 11, .82), rgba(20, 20, 24, .92));
+        box-shadow: 0 10px 24px rgba(0, 0, 0, .25);
+    }
+
+    .radio-player-nexttrack-shell--dock {
+        max-width: 330px;
+    }
+
+    .radio-player-nexttrack-shell--popup {
+        max-width: 420px;
+    }
+
+    .radio-player-nexttrack-title {
+        color: #f2ede3;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .22em;
+        text-transform: uppercase;
+        opacity: .86;
+    }
+
+    .radio-player-nexttrack-widget {
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(220, 220, 220, .08);
+        background: rgba(255, 255, 255, .03);
+    }
+
+    .radio-player-nexttrack-widget img {
+        display: block;
+        border-radius: 8px;
+        object-fit: cover;
+    }
+
+    .radio-player-nexttrack-widget #rbcloud_nt_a14745 {
+        color: #fff;
+        font-size: 13px;
+        line-height: 1.2;
+    }
+
+    .radio-player-nexttrack-widget #rbcloud_nt_t14745 {
+        margin-top: 4px;
+        color: #d9d3c8;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
     .radio-player-dock-actions {
         display: flex;
         flex: 0 0 auto;

@@ -28,6 +28,7 @@ export function registerRadioPlayer(Alpine) {
         programInfoUrl: options.programInfoUrl || '/api/player/program-info',
         fallbackCover: options.fallbackCover || '',
         pollInterval: Number(options.pollInterval || 5),
+        nextTrackThresholdSeconds: Number(options.nextTrackThresholdSeconds || 20),
         historyLimit: Number(options.historyLimit || 10),
         defaultArtist: options.defaultArtist || '',
         defaultTitle: options.defaultTitle || '',
@@ -635,6 +636,21 @@ export function registerRadioPlayer(Alpine) {
 
         get biographySourceLabel() {
             return this.formatBiographySourceLabel(this.bandWindowView.biographySource || '');
+        },
+
+        get nextTrackRemainingSeconds() {
+            if (this.track.is_live || this.progress.duration <= 0) {
+                return Number.POSITIVE_INFINITY;
+            }
+
+            return Math.max(0, Math.round(this.progress.duration - this.progress.elapsed));
+        },
+
+        get showNextTrackWidget() {
+            return !this.track.is_live
+                && this.progress.duration > 0
+                && this.nextTrackRemainingSeconds > 0
+                && this.nextTrackRemainingSeconds <= this.nextTrackThresholdSeconds;
         },
 
         formatBiographySourceLabel(source) {

@@ -305,6 +305,31 @@ class ProgramScheduleService
             return $now->between($startsAt, $endsAt);
         }
 
+        $episode = $this->episodeForProgramOnDate($program, $now->toDateString());
+        if ($episode) {
+            $startTime = trim((string) ($episode->hora_inicio ?: $program->hora_transmision ?: ''));
+            $start = $this->parseScheduleTimeToCarbon($now, $startTime);
+            if ($start) {
+                $endTime = trim((string) ($episode->hora_fin ?: ''));
+                if ($endTime !== '') {
+                    $end = $this->parseScheduleTimeToCarbon($now, $endTime);
+                } elseif ((int) ($episode->duration_seconds ?? 0) > 0) {
+                    $end = $start->copy()->addSeconds((int) $episode->duration_seconds);
+                } else {
+                    $duration = max(15, (int) ($program->duracion_minutos ?? 120));
+                    $end = $start->copy()->addMinutes($duration);
+                }
+
+                if ($end instanceof Carbon) {
+                    if ($end->lessThanOrEqualTo($start)) {
+                        $end = $end->copy()->addDay();
+                    }
+
+                    return $now->between($start, $end);
+                }
+            }
+        }
+
         $dayNumber = $this->dayNumber((string) $program->dia_transmision);
         if ($dayNumber === null) {
             return false;
@@ -326,6 +351,18 @@ class ProgramScheduleService
         }
 
         return $now->between($start, $end);
+    }
+
+    private function parseScheduleTimeToCarbon(Carbon $base, string $value): ?Carbon
+    {
+        $hm = $this->parseScheduleTime($value);
+        if (! $hm) {
+            return null;
+        }
+
+        [$hour, $minute] = $hm;
+
+        return $base->copy()->startOfDay()->setTime($hour, $minute, 0);
     }
 
     private function nextProgramStart(MasterProgram $program, ?Carbon $reference = null): ?Carbon
@@ -607,6 +644,11 @@ class ProgramScheduleService
         $timezone = trim((string) ($program->timezone ?: 'America/Caracas'));
 
         return $timezone !== '' ? $timezone : 'America/Caracas';
+    }
+
+    public function nextProgramStartFor(MasterProgram $program, ?Carbon $reference = null): ?Carbon
+    {
+        return $this->nextProgramStart($program, $reference);
     }
 
     private function episodeForProgramOnDate(MasterProgram $program, ?string $date = null): ?RadioProgram

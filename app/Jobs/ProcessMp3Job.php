@@ -84,6 +84,7 @@ class ProcessMp3Job implements ShouldQueue
         $fechaTitulo = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('d/m/Y') : now()->format('d/m/Y');
         $anio = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('Y') : now()->format('Y');
         $invitado = trim(strip_tags((string) $radioProgram->biografia_invitado));
+        $durationSeconds = $this->extractDurationSeconds($workingPath);
         $finalPath = $this->buildProcessedPath($sourcePath, $episodeNumber, $programName, $fecha);
 
         try {
@@ -102,6 +103,14 @@ class ProcessMp3Job implements ShouldQueue
                     'status_message' => 'MP3 procesado localmente. Preparando entregas.',
                 ])->saveQuietly();
             });
+
+            if ($durationSeconds > 0) {
+                RadioProgram::withoutEvents(function () use ($radioProgram, $durationSeconds): void {
+                    $radioProgram->forceFill([
+                        'duration_seconds' => $durationSeconds,
+                    ])->saveQuietly();
+                });
+            }
 
             if ($this->dispatchNextJobs) {
                 Bus::chain([
@@ -144,6 +153,32 @@ class ProcessMp3Job implements ShouldQueue
         $filename = "{$paddedEpisode}.- {$safeName} {$fecha}.mp3";
 
         return 'programas_procesados/' . $filename;
+    }
+
+    private function extractDurationSeconds(string $absolutePath): int
+    {
+        if (! is_file($absolutePath) || ! is_readable($absolutePath)) {
+            return 0;
+        }
+
+        try {
+            $getID3 = new GetID3();
+            $getID3->setOption(['encoding' => 'UTF-8']);
+            $analysis = $getID3->analyze($absolutePath);
+        } catch (Throwable) {
+            return 0;
+        }
+
+        if (! is_array($analysis)) {
+            return 0;
+        }
+
+        $playtime = data_get($analysis, 'playtime_seconds');
+        if (! is_numeric($playtime)) {
+            return 0;
+        }
+
+        return max(0, (int) round((float) $playtime));
     }
 
     private function buildWorkingPath(string $sourcePath): string

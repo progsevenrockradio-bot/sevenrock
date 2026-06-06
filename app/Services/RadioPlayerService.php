@@ -12,6 +12,7 @@ use App\Support\BandProfileMatcher;
 use App\Support\BandInfoResolver;
 use App\Support\ExternalHttp;
 use App\Support\PublicMediaUrl;
+use App\Support\ProgramScheduleService;
 use App\Support\RadioPlayerStateStore;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -25,6 +26,7 @@ class RadioPlayerService
     public function __construct(
         private readonly RadioPlayerStateStore $store,
         private readonly BandInfoResolver $bandInfoResolver,
+        private readonly ProgramScheduleService $programScheduleService,
     ) {
     }
 
@@ -413,11 +415,12 @@ class RadioPlayerService
             return false;
         }
 
-        return $this->isTimeWithinWindow(
+        return $this->isWindowActive(
             $localNow,
             (string) $master->hora_transmision,
             '',
-            (int) $master->duracion_minutos
+            (int) $master->duracion_minutos,
+            $this->programScheduleService->nextProgramStartFor($master, $localNow)
         );
     }
 
@@ -449,34 +452,80 @@ class RadioPlayerService
             return $localNow->betweenIncluded($start, $end);
         }
 
-        $startTime = (string) ($episode->hora_inicio ?: $master->hora_transmision ?: '');
-        $endTime = (string) ($episode->hora_fin ?: '');
+        $window = $this->resolveEpisodeWindow($episode, $master, $localNow);
+        if ($window === null) {
+            return false;
+        }
 
-        return $this->isTimeWithinWindow($localNow, $startTime, $endTime, (int) $master->duracion_minutos);
+        [$start, $end] = $window;
+
+        return $localNow->betweenIncluded($start, $end);
     }
 
-    private function isTimeWithinWindow(Carbon $moment, string $startTime, string $endTime, int $durationMinutes): bool
+    private function isWindowActive(Carbon $moment, string $startTime, string $endTime, int $durationMinutes, ?Carbon $cutoff = null): bool
     {
-        $start = $this->parseTimeToSeconds($startTime);
+        $start = $this->parseTimeToCarbon($moment, $startTime);
         if ($start === null) {
             return false;
         }
 
-        $end = $this->parseTimeToSeconds($endTime);
+        $end = $this->parseTimeToCarbon($moment, $endTime);
         if ($end === null) {
-            $end = $durationMinutes > 0 ? $start + ($durationMinutes * 60) : $start;
+            $end = $durationMinutes > 0 ? $start->copy()->addMinutes($durationMinutes) : $start->copy();
         }
 
-        $current = ((int) $moment->format('H')) * 3600 + ((int) $moment->format('i')) * 60 + (int) $moment->format('s');
-
-        if ($end < $start) {
-            return $current >= $start || $current <= $end;
+        if ($end->lessThan($start)) {
+            $end = $end->copy()->addDay();
         }
 
-        return $current >= $start && $current <= $end;
+        if ($cutoff instanceof Carbon && $cutoff->greaterThan($start) && $cutoff->lessThan($end)) {
+            $end = $cutoff->copy();
+        }
+
+        return $moment->betweenIncluded($start, $end);
     }
 
-    private function parseTimeToSeconds(string $value): ?int
+    /**
+     * @return array{0:Carbon,1:Carbon}|null
+     */
+    private function resolveEpisodeWindow(RadioProgram $episode, MasterProgram $master, Carbon $reference): ?array
+    {
+        $timezone = $this->normalizeTimezone((string) ($master->timezone ?: config('app.timezone')));
+        $baseDate = $episode->fecha_emision
+            ? Carbon::parse((string) $episode->fecha_emision, $timezone)->startOfDay()
+            : $reference->copy()->setTimezone($timezone)->startOfDay();
+
+        $start = $this->parseTimeToCarbon($baseDate, (string) ($episode->hora_inicio ?: $master->hora_transmision ?: ''));
+        if ($start === null) {
+            return null;
+        }
+
+        $endTime = trim((string) ($episode->hora_fin ?: ''));
+        if ($endTime !== '') {
+            $end = $this->parseTimeToCarbon($baseDate, $endTime);
+        } elseif ((int) ($episode->duration_seconds ?? 0) > 0) {
+            $end = $start->copy()->addSeconds((int) $episode->duration_seconds);
+        } else {
+            $end = $start->copy()->addMinutes(max(1, (int) $master->duracion_minutos));
+        }
+
+        if (! $end instanceof Carbon) {
+            return null;
+        }
+
+        if ($end->lessThanOrEqualTo($start)) {
+            $end = $end->copy()->addDay();
+        }
+
+        $cutoff = $this->programScheduleService->nextProgramStartFor($master, $reference);
+        if ($cutoff instanceof Carbon && $cutoff->greaterThan($start) && $cutoff->lessThan($end)) {
+            $end = $cutoff->copy();
+        }
+
+        return [$start, $end];
+    }
+
+    private function parseTimeToCarbon(Carbon $base, string $value): ?Carbon
     {
         $value = trim($value);
         if ($value === '') {
@@ -491,7 +540,7 @@ class RadioPlayerService
         $minutes = (int) $matches[2];
         $seconds = (int) ($matches[3] ?? 0);
 
-        return ($hours * 3600) + ($minutes * 60) + $seconds;
+        return $base->copy()->startOfDay()->setTime($hours, $minutes, $seconds);
     }
 
     private function currentDayKey(Carbon $moment): string
