@@ -68,22 +68,34 @@
                     @endforeach
                 </main>
 
-                        @if ($posts instanceof \Illuminate\Pagination\LengthAwarePaginator && $posts->hasPages())
+                        @if ($posts instanceof \Illuminate\Pagination\LengthAwarePaginator)
                             <nav class="mt-14 flex min-h-[96px] items-stretch justify-between gap-6 border border-white/10 bg-[#070707f2] px-5 py-7 shadow-[0_28px_70px_rgba(0,0,0,.55)] md:px-10 md:py-8">
                                 <div class="min-w-0 flex-1">
-                                    @if ($posts->previousPageUrl())
-                                        <a href="{{ $posts->previousPageUrl() }}" class="group inline-flex max-w-full items-center gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
+                                    @php $previousUrl = $posts->previousPageUrl(); @endphp
+                                    @if ($previousUrl)
+                                        <a href="{{ $previousUrl }}" class="group inline-flex max-w-full items-center gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
                                             <span class="text-2xl font-bold leading-none text-lucille-accent md:text-3xl">←</span>
                                             <span class="min-w-0 truncate font-display text-sm uppercase tracking-[.18em] md:text-base">Anterior</span>
                                         </a>
+                                    @else
+                                        <span class="inline-flex items-center gap-3 text-[#7b7b7b]/40">
+                                            <span class="text-2xl font-bold leading-none text-lucille-accent/40 md:text-3xl">←</span>
+                                            <span class="min-w-0 truncate font-display text-sm uppercase tracking-[.18em] md:text-base">Anterior</span>
+                                        </span>
                                     @endif
                                 </div>
                                 <div class="min-w-0 flex-1 text-right">
-                                    @if ($posts->nextPageUrl())
-                                        <a href="{{ $posts->nextPageUrl() }}" class="group inline-flex max-w-full items-center justify-end gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
+                                    @php $nextUrl = $posts->nextPageUrl(); @endphp
+                                    @if ($nextUrl)
+                                        <a href="{{ $nextUrl }}" class="group inline-flex max-w-full items-center justify-end gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
                                             <span class="min-w-0 truncate text-right font-display text-sm uppercase tracking-[.18em] md:text-base">Siguiente</span>
                                             <span class="text-2xl font-bold leading-none text-lucille-accent md:text-3xl">→</span>
                                         </a>
+                                    @else
+                                        <span class="inline-flex items-center justify-end gap-3 text-[#7b7b7b]/40">
+                                            <span class="min-w-0 truncate text-right font-display text-sm uppercase tracking-[.18em] md:text-base">Siguiente</span>
+                                            <span class="text-2xl font-bold leading-none text-lucille-accent/40 md:text-3xl">→</span>
+                                        </span>
                                     @endif
                                 </div>
                             </nav>
