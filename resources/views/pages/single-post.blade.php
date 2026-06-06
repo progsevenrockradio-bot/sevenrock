@@ -93,8 +93,8 @@
 
 
                         @if ($prevPost || $nextPost)
-                            <nav class="mt-14 flex min-h-[96px] items-stretch justify-between gap-6 border border-white/10 bg-[#070707f2] px-5 py-7 shadow-[0_28px_70px_rgba(0,0,0,.55)] md:px-10 md:py-8">
-                                <div class="min-w-0 flex-1">
+                            <nav class="mt-14 flex min-h-[96px] items-center justify-between gap-6 border border-white/10 bg-[#070707f2] px-5 py-7 shadow-[0_28px_70px_rgba(0,0,0,.55)] md:px-10 md:py-8">
+                                <div class="min-w-0 flex-1 self-center">
                                     @if ($prevPost)
                                         @php
                                             $prevUrl = route('posts.single', [
@@ -110,7 +110,7 @@
                                         </a>
                                     @endif
                                 </div>
-                                <div class="min-w-0 flex-1 text-right">
+                                <div class="min-w-0 flex-1 self-center text-right">
                                     @if ($nextPost)
                                         @php
                                             $nextUrl = route('posts.single', [
