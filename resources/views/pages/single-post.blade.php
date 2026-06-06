@@ -166,6 +166,9 @@
                             @foreach ($recentPosts as $recent)
                                 @php
                                     $recentPublished = data_get($recent, 'published_at');
+                                    if (is_string($recentPublished) && $recentPublished !== '') {
+                                        $recentPublished = \Illuminate\Support\Carbon::parse($recentPublished);
+                                    }
                                     $recentUrl = route('posts.single', [
                                         'year' => $recentPublished?->format('Y') ?? now()->format('Y'),
                                         'month' => $recentPublished?->format('m') ?? now()->format('m'),

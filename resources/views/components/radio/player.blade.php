@@ -177,9 +177,9 @@
                             <progress class="radio-player-popup-progress-meter" :value="progress.ratio" max="100" @click="seek($event)" aria-label="Progreso"></progress>
                         </div>
 
-                        <template x-if="showNextTrackWidget">
+                        <div x-cloak x-show="showNextTrackWidget">
                             <x-radio.next-track-widget variant="popup" />
-                        </template>
+                        </div>
                     </div>
                 </main>
 
@@ -639,9 +639,9 @@
                                 <progress class="radio-player-progress-meter radio-player-progress-meter--dock" :value="progress.ratio" max="100" @click="seek($event)" aria-label="Progreso"></progress>
                             </div>
 
-                            <template x-if="showNextTrackWidget">
+                            <div x-cloak x-show="showNextTrackWidget">
                                 <x-radio.next-track-widget variant="dock" />
-                            </template>
+                            </div>
 
                             <div class="player-expanded-controls" aria-label="Controles principales">
                                 <button type="button" class="player-expanded-control" data-player-action="details" @click.stop="toggleInfoWindow($event)" aria-label="Detalles" title="Detalles">

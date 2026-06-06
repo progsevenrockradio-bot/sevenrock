@@ -376,23 +376,55 @@
 .radio-player-popup-social-link,
 .radio-player-popup-chip,
 .radio-player-popup-control,
-.radio-player-popup-tab {
+.radio-player-popup-tab,
+.radio-player-dock-share-button,
+.radio-player-dock-icon,
+.radio-player-primary,
+.radio-player-secondary,
+.player-expanded-control,
+.player-expanded-popup-button,
+.radio-player-dock-social-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(220, 220, 220, .55);
+    border: 1px solid rgba(184, 175, 162, .22);
     background: rgba(0, 0, 0, .18);
-    color: #fff;
-    transition: transform .3s ease-out, border-color .3s ease-out, background-color .3s ease-out, color .3s ease-out;
+    color: #dcd7cb;
+    transition: transform .2s ease, border-color .2s ease, background-color .2s ease, color .2s ease;
 }
 
 .radio-player-popup-social-link:hover,
 .radio-player-popup-chip:hover,
 .radio-player-popup-control:hover,
-.radio-player-popup-tab:hover {
+.radio-player-popup-tab:hover,
+.radio-player-dock-share-button:hover,
+.radio-player-dock-icon:hover,
+.radio-player-primary:hover,
+.radio-player-secondary:hover,
+.player-expanded-control:hover,
+.player-expanded-popup-button:hover,
+.radio-player-dock-social-link:hover {
     transform: translateY(-1px);
-    border-color: var(--color-lucille-accent);
-    background: var(--color-lucille-accent);
+    border-color: rgba(214, 207, 196, .6);
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+}
+
+.radio-player-popup-social-link:focus-visible,
+.radio-player-popup-chip:focus-visible,
+.radio-player-popup-control:focus-visible,
+.radio-player-popup-tab:focus-visible,
+.radio-player-dock-share-button:focus-visible,
+.radio-player-dock-icon:focus-visible,
+.radio-player-primary:focus-visible,
+.radio-player-secondary:focus-visible,
+.player-expanded-control:focus-visible,
+.player-expanded-popup-button:focus-visible,
+.radio-player-dock-social-link:focus-visible {
+    border-color: rgba(214, 207, 196, .7);
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+    transform: translateY(-1px);
 }
 
 .radio-player-popup-social-link {
@@ -2419,13 +2451,9 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        border: 1px solid rgba(220, 220, 220, .55);
-        background: rgba(0, 0, 0, .18);
         padding: 8px 12px;
-        color: #fff;
         text-decoration: none;
         border-radius: 9999px;
-        transition: border-color .3s ease-out, background-color .3s ease-out, color .3s ease-out, transform .3s ease-out;
     }
 
     .radio-player-dock-social-link--icon {
@@ -2436,13 +2464,6 @@
         padding: 0;
         border-radius: 4px;
         overflow: hidden;
-    }
-
-    .radio-player-dock-social-link:hover {
-        border-color: var(--color-lucille-accent);
-        background: var(--color-lucille-accent);
-        color: #fff;
-        transform: translateY(-1px);
     }
 
     .radio-player-dock-social-link--icon .radio-player-dock-social-label {
@@ -2587,9 +2608,8 @@
     .radio-player-panel--dock .player-expanded-popup-button:hover,
     .radio-player-panel--dock .player-expanded-popup-button:focus-visible {
         border-color: rgba(214, 207, 196, .6);
-        background: rgba(184, 175, 162, .14);
+        background: rgba(255, 255, 255, .06);
         color: #fff;
-        transform: translateY(-1px);
     }
 
     .radio-player-dock-play {
@@ -2602,15 +2622,15 @@
         min-height: 34px !important;
         padding: 0 !important;
         border-radius: 4px;
-        background: transparent !important;
-        border: 1px solid rgba(184, 175, 162, .42);
-        color: #dcd7cc !important;
+        background: rgba(0, 0, 0, .18) !important;
+        border: 1px solid rgba(184, 175, 162, .22);
+        color: #dcd7cb !important;
         flex-shrink: 0;
     }
 
     .radio-player-dock-play:hover {
         border-color: rgba(214, 207, 196, .6);
-        background: rgba(184, 175, 162, .14) !important;
+        background: rgba(255, 255, 255, .06) !important;
         color: #fff;
     }
 
@@ -3046,14 +3066,13 @@
         padding: 0;
         white-space: nowrap;
         border-radius: 4px;
-        transition: border-color .2s ease, background-color .2s ease, color .2s ease, transform .2s ease;
     }
 
     .radio-player-panel--dock .player-expanded-controls {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 2rem;
+        gap: 8px;
         margin-top: 18px;
     }
 
@@ -3061,32 +3080,27 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 50px;
-        height: 50px;
-        border: 1px solid #2b2b2b;
+        width: 34px;
+        height: 35px;
         border-radius: 4px;
-        background: rgba(0, 0, 0, .36);
-        color: #dcdcdc;
-        transition: border-color .2s ease, background-color .2s ease, color .2s ease, transform .2s ease;
         flex-shrink: 0;
     }
 
     .radio-player-panel--dock .player-expanded-control:hover {
         border-color: rgba(214, 207, 196, .6);
-        background: rgba(184, 175, 162, .14);
+        background: rgba(255, 255, 255, .06);
         color: #fff;
-        transform: translateY(-1px);
     }
 
     .radio-player-panel--dock .player-expanded-control--play {
-        background-color: transparent !important;
-        border: 2px solid currentColor;
-        color: #dcdcdc;
+        background-color: rgba(0, 0, 0, .18) !important;
+        border: 1px solid rgba(184, 175, 162, .22);
+        color: #dcd7cb;
     }
 
     .radio-player-panel--dock .player-expanded-control--play:hover {
-        background-color: transparent !important;
-        border-color: rgba(214, 207, 196, .85);
+        background-color: rgba(255, 255, 255, .06) !important;
+        border-color: rgba(214, 207, 196, .6);
         color: #fff;
     }
 
@@ -3106,11 +3120,10 @@
     }
 
     .radio-player-panel--dock .radio-player-secondary--square {
-        min-width: 50px;
-        min-height: 50px;
-        padding: 0 14px;
+        min-width: 34px;
+        min-height: 35px;
+        padding: 0 12px;
         border-radius: 4px;
-        background: rgba(0, 0, 0, .36);
     }
 
     .radio-player-panel--dock .radio-player-volume--dock {
@@ -3140,23 +3153,19 @@
     .radio-player-primary,
     .radio-player-secondary {
         min-height: 38px;
-        border: 1px solid #2b2b2b;
         padding: 0 14px;
-        color: #dcdcdc;
         font-family: var(--font-display);
         font-size: 12px;
         letter-spacing: .08em;
         text-transform: uppercase;
-        transition: border-color .2s ease, background-color .2s ease, color .2s ease;
     }
 
     .radio-player-primary {
-        background: #b7ad9f;
-        color: #fff;
+        background: rgba(0, 0, 0, .18);
     }
 
     .radio-player-secondary {
-        background: rgba(184, 175, 162, .12);
+        background: rgba(0, 0, 0, .18);
     }
 
     .radio-player-secondary--square {
@@ -3173,6 +3182,8 @@
     .radio-player-primary:hover,
     .radio-player-secondary:hover {
         border-color: rgba(214, 207, 196, .6);
+        background: rgba(255, 255, 255, .06);
+        color: #fff;
     }
 
     .radio-player-volume {
@@ -3220,7 +3231,7 @@
 
     .radio-player-tabs button.is-active,
     .radio-player-tabs button:hover {
-        background: rgba(195, 39, 32, .08);
+        background: rgba(255, 255, 255, .06);
         color: #fff;
     }
 
@@ -3489,20 +3500,20 @@
         place-items: center;
         min-width: clamp(3rem, 6vw, 3.875rem);
         min-height: clamp(2.75rem, 5vw, 3rem);
-        border: 1px solid rgba(184, 175, 162, .38);
-        background: rgba(0, 0, 0, .2);
+        border: 1px solid rgba(184, 175, 162, .22);
+        background: rgba(0, 0, 0, .18);
         padding: clamp(.5rem, 1vw, .65rem) clamp(.625rem, 1.1vw, .75rem) clamp(.375rem, .9vw, .5rem);
-        color: #dcdcdc;
+        color: #dcd7cb;
         font-family: var(--font-display);
         font-size: clamp(.6rem, .9vw, .7rem);
         letter-spacing: .14em;
         text-transform: uppercase;
-        transition: border-color .2s ease, color .2s ease, background-color .2s ease;
+        transition: border-color .2s ease, color .2s ease, background-color .2s ease, transform .2s ease;
     }
 
     .radio-player-popup-action:hover {
         border-color: rgba(214, 207, 196, .6);
-        background: rgba(184, 175, 162, .12);
+        background: rgba(255, 255, 255, .06);
         color: #fff;
     }
 
@@ -3543,7 +3554,7 @@
 
     .radio-player-popup-drawer-grid button.is-active,
     .radio-player-popup-drawer-grid button:hover {
-        background: rgba(195, 39, 32, .08);
+        background: rgba(255, 255, 255, .06);
         color: #fff;
     }
 
