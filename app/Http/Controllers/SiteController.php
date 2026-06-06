@@ -622,14 +622,31 @@ class SiteController extends Controller
         $page = max(1, (int) request()->integer('page', 1));
         $version = $this->cacheVersion('posts');
 
-        return Cache::remember(
-            "site.posts.paginator.v{$version}.page{$page}.per{$perPage}",
+        $cached = Cache::remember(
+            "site.posts.paginator.safe.v{$version}.page{$page}.per{$perPage}",
             now()->addMinutes(10),
             function () use ($perPage, $page) {
-                return Post::query()->published()->orderByDesc('published_at')
-                    ->paginate($perPage, ['*'], 'page', $page)
-                    ->through(fn ($post) => $post->toArray());
+                $paginator = Post::query()->published()->orderByDesc('published_at')
+                    ->paginate($perPage, ['*'], 'page', $page);
+
+                return [
+                    'items' => $paginator->getCollection()->map(fn ($post) => $post->toArray())->all(),
+                    'total' => $paginator->total(),
+                    'lastPage' => $paginator->lastPage(),
+                ];
             }
+        );
+
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $cached['items'] ?? [],
+            (int) ($cached['total'] ?? 0),
+            $perPage,
+            $page,
+            [
+                'path' => \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => 'page',
+                'lastPage' => (int) ($cached['lastPage'] ?? 1),
+            ]
         );
     }
 
