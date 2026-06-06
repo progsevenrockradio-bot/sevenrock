@@ -305,15 +305,33 @@
 
                     <div class="lucille-sidebar-widget">
                         <h3 class="lucille-sidebar-title">{{ $ui['archives'] }}</h3>
-                        <ul class="lucille-sidebar-list">
-                            @foreach ($archives as $archive)
-                                <li>
-                                    <a href="{{ data_get($archive, 'url', '#') }}">
-                                        {{ data_get($archive, 'label', $archive) }}
+                        <div class="space-y-4">
+                            @foreach ($archives as $archiveYear)
+                                <div class="space-y-2">
+                                    <a
+                                        href="{{ data_get($archiveYear, 'url', '#') }}"
+                                        class="block font-display text-sm uppercase tracking-[.16em] text-[#ece4d8] transition hover:text-lucille-accent"
+                                    >
+                                        {{ data_get($archiveYear, 'label', data_get($archiveYear, 'year')) }}
                                     </a>
-                                </li>
+
+                                    @if (! empty(data_get($archiveYear, 'months', [])))
+                                        <ul class="space-y-1 border-l border-white/10 pl-4">
+                                            @foreach (data_get($archiveYear, 'months', []) as $archiveMonth)
+                                                <li>
+                                                    <a
+                                                        href="{{ data_get($archiveMonth, 'url', '#') }}"
+                                                        class="block text-sm text-[#8f8a82] transition hover:text-lucille-accent"
+                                                    >
+                                                        {{ data_get($archiveMonth, 'label', data_get($archiveMonth, 'month')) }}
+                                                    </a>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+                                </div>
                             @endforeach
-                        </ul>
+                        </div>
                     </div>
 
                     <div class="lucille-sidebar-widget">

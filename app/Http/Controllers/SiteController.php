@@ -630,23 +630,34 @@ class SiteController extends Controller
                     ->orderByDesc('yr')
                     ->orderByDesc('mo')
                     ->get()
-                    ->map(function ($row): array {
-                        $year = trim((string) $row->yr);
-                        $month = \DateTime::createFromFormat('!m', (string) $row->mo)?->format('F') ?? '';
-                        $monthValue = str_pad((string) ((int) $row->mo), 2, '0', STR_PAD_LEFT);
-                        $url = route('blog.archives', [
-                            'year' => $year,
-                            'month' => $monthValue,
-                        ]);
+                    ->groupBy(fn ($row) => (string) $row->yr)
+                    ->map(function ($rows, string $year): array {
+                        $months = collect($rows)
+                            ->map(function ($row) use ($year): array {
+                                $monthValue = str_pad((string) ((int) $row->mo), 2, '0', STR_PAD_LEFT);
+                                $monthLabel = \DateTime::createFromFormat('!m', $monthValue)?->format('F') ?? '';
+
+                                return [
+                                    'year' => $year,
+                                    'month' => $monthValue,
+                                    'label' => trim($monthLabel . ' ' . $year),
+                                    'url' => route('blog.archives', [
+                                        'year' => $year,
+                                        'month' => $monthValue,
+                                    ]),
+                                ];
+                            })
+                            ->filter()
+                            ->values()
+                            ->all();
 
                         return [
                             'year' => $year,
-                            'month' => $monthValue,
-                            'label' => trim($month . ' ' . $year),
-                            'url' => $url,
+                            'label' => $year,
+                            'url' => route('blog.archives', ['year' => $year]),
+                            'months' => $months,
                         ];
                     })
-                    ->filter()
                     ->values()
                     ->all();
             }
