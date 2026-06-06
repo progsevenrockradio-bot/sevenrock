@@ -254,6 +254,21 @@
 
     <x-radio.player />
 
+    <button
+        type="button"
+        x-data="backToTopButton()"
+        x-cloak
+        x-show="visible"
+        x-transition.opacity.duration.200ms
+        @click="scrollToTop()"
+        class="back-to-top-button"
+        aria-label="Volver arriba"
+        title="Volver arriba"
+    >
+        <span class="back-to-top-button__icon">↑</span>
+        <span>Arriba</span>
+    </button>
+
     @php
         $preferredSocialOrder = ['facebook', 'instagram', 'youtube'];
         $socialLinks = collect($theme['social_links'] ?? [])

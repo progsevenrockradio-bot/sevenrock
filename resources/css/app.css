@@ -149,6 +149,47 @@
     box-shadow: var(--player-shadow);
 }
 
+.back-to-top-button {
+    position: fixed;
+    right: 1rem;
+    bottom: calc(var(--radio-player-offset, 108px) + 1rem);
+    z-index: 92;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    min-width: 3.35rem;
+    min-height: 3.35rem;
+    padding: 0 .95rem;
+    border: 1px solid rgba(184, 175, 162, .22);
+    border-radius: 9999px;
+    background: rgba(12, 12, 12, .9);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .45);
+    color: #dcd7cb;
+    font-family: var(--font-display);
+    font-size: .72rem;
+    letter-spacing: .18em;
+    line-height: 1;
+    text-transform: uppercase;
+    transition: transform .2s ease, border-color .2s ease, background-color .2s ease, color .2s ease, opacity .2s ease;
+}
+
+.back-to-top-button:hover,
+.back-to-top-button:focus-visible {
+    border-color: rgba(214, 207, 196, .6);
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.back-to-top-button__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    line-height: 1;
+}
+
 .radio-player-dock[data-dock-state='expanded'] {
     min-height: var(--player-height-expanded);
 }

@@ -52,6 +52,28 @@ Alpine.data('rocksNav', () => ({
     },
 }));
 
+Alpine.data('backToTopButton', () => ({
+    visible: false,
+    threshold: 420,
+    onScroll: null,
+    init() {
+        this.onScroll = () => {
+            this.visible = window.scrollY > this.threshold;
+        };
+
+        this.onScroll();
+        window.addEventListener('scroll', this.onScroll, { passive: true });
+    },
+    destroy() {
+        if (this.onScroll) {
+            window.removeEventListener('scroll', this.onScroll);
+        }
+    },
+    scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+}));
+
 Alpine.data('galleryLightbox', (images = []) => ({
     images,
     active: 0,
