@@ -47,6 +47,12 @@ Route::get('/blog', [SiteController::class, 'blog'])->name('blog');
 Route::get('/blog-standard', [SiteController::class, 'blogStandard'])->name('blog.standard');
 Route::get('/blog/category/{slug}', [SiteController::class, 'blogCategory'])->name('blog.category');
 Route::get('/blog/tag/{slug}', [SiteController::class, 'blogTag'])->name('blog.tag');
+Route::get('/blog/archives/{year}/{month?}', [SiteController::class, 'blogDateArchive'])
+    ->where([
+        'year' => '\d{4}',
+        'month' => '\d{2}',
+    ])
+    ->name('blog.archives');
 Route::get('/legacy-wp-uploads/{path}', [LegacyWordPressUploadController::class, 'show'])
     ->where('path', '.*')
     ->name('legacy-wp-uploads.show');

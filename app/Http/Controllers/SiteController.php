@@ -466,6 +466,67 @@ class SiteController extends Controller
         );
     }
 
+    public function blogDateArchive(string $year, ?string $month = null): View
+    {
+        $page = max(1, (int) request()->integer('page', 1));
+        $version = $this->cacheVersion('posts');
+        $monthValue = $month !== null ? str_pad((string) ((int) $month), 2, '0', STR_PAD_LEFT) : null;
+        $monthLabel = $monthValue ? \DateTime::createFromFormat('!m', $monthValue)?->format('F') : null;
+        $archiveLabel = $monthLabel ? "{$monthLabel} {$year}" : (string) $year;
+        $cacheKey = "site.blog.archives.date.{$year}." . ($monthValue ?? 'all') . ".v{$version}.page{$page}.per20";
+
+        $cached = Cache::remember(
+            $cacheKey,
+            now()->addMinutes(10),
+            function () use ($year, $monthValue, $page): array {
+                $query = Post::query()
+                    ->published()
+                    ->whereYear('published_at', (int) $year);
+
+                if ($monthValue !== null) {
+                    $query->whereMonth('published_at', (int) $monthValue);
+                }
+
+                $query->orderByDesc('published_at');
+
+                if (Schema::hasTable('post_reactions')) {
+                    $query->withCount([
+                        'reactions as likes_count' => fn ($reactionQuery) => $reactionQuery->where('reaction_type', 'like'),
+                    ]);
+                }
+
+                $paginator = $query->paginate(20, ['*'], 'page', $page);
+
+                return [
+                    'items' => $paginator->getCollection()->map(fn ($post) => $post->toArray())->all(),
+                    'total' => $paginator->total(),
+                    'lastPage' => $paginator->lastPage(),
+                ];
+            }
+        );
+
+        $posts = new \Illuminate\Pagination\LengthAwarePaginator(
+            $cached['items'] ?? [],
+            (int) ($cached['total'] ?? 0),
+            20,
+            $page,
+            [
+                'path' => \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => 'page',
+                'lastPage' => (int) ($cached['lastPage'] ?? 1),
+            ]
+        );
+
+        return $this->blogListing(
+            pageTitle: 'Archivos',
+            pageSubtitle: $archiveLabel,
+            pageDescription: $monthLabel
+                ? "Entradas publicadas en {$archiveLabel}."
+                : "Entradas publicadas durante {$year}.",
+            posts: $posts
+        );
+    }
+
     public function singlePost(string $year, string $month, string $day, string $slug): View
     {
         $post = $this->safeValue(function () use ($slug, $year, $month, $day) {
@@ -569,11 +630,21 @@ class SiteController extends Controller
                     ->orderByDesc('yr')
                     ->orderByDesc('mo')
                     ->get()
-                    ->map(function ($row): string {
-                        $month = \DateTime::createFromFormat('!m', (string) $row->mo)?->format('F') ?? '';
+                    ->map(function ($row): array {
                         $year = trim((string) $row->yr);
+                        $month = \DateTime::createFromFormat('!m', (string) $row->mo)?->format('F') ?? '';
+                        $monthValue = str_pad((string) ((int) $row->mo), 2, '0', STR_PAD_LEFT);
+                        $url = route('blog.archives', [
+                            'year' => $year,
+                            'month' => $monthValue,
+                        ]);
 
-                        return trim($month . ' ' . $year);
+                        return [
+                            'year' => $year,
+                            'month' => $monthValue,
+                            'label' => trim($month . ' ' . $year),
+                            'url' => $url,
+                        ];
                     })
                     ->filter()
                     ->values()

@@ -307,7 +307,11 @@
                         <h3 class="lucille-sidebar-title">{{ $ui['archives'] }}</h3>
                         <ul class="lucille-sidebar-list">
                             @foreach ($archives as $archive)
-                                <li><a href="#">{{ $archive }}</a></li>
+                                <li>
+                                    <a href="{{ data_get($archive, 'url', '#') }}">
+                                        {{ data_get($archive, 'label', $archive) }}
+                                    </a>
+                                </li>
                             @endforeach
                         </ul>
                     </div>
