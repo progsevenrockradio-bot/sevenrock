@@ -82,8 +82,8 @@
 
 
                         @if ($prevPost || $nextPost)
-                            <nav class="mt-10 flex items-center justify-between border-t border-[#003954] pt-6">
-                                <div>
+                            <nav class="home-section-texture section-band-strong mt-10 flex items-stretch justify-between gap-6 border border-white/10 px-4 py-5 shadow-[0_18px_50px_rgba(0,0,0,.35)] md:px-8 md:py-6">
+                                <div class="min-w-0 flex-1">
                                     @if ($prevPost)
                                         @php
                                             $prevUrl = route('posts.single', [
@@ -93,14 +93,13 @@
                                                 'slug' => $prevPost->slug,
                                             ]);
                                         @endphp
-                                        <a href="{{ $prevUrl }}" class="group flex items-center gap-2 text-sm uppercase tracking-[.12em] text-[#7b7b7b] transition hover:text-lucille-accent">
-                                            <span class="text-3xl font-bold text-lucille-accent leading-none">←</span>
-                                            <span class="hidden sm:inline">{{ $prevPost->title }}</span>
-                                            <span class="sm:hidden">Anterior</span>
+                                        <a href="{{ $prevUrl }}" class="group inline-flex max-w-full items-center gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
+                                            <span class="text-2xl font-bold leading-none text-lucille-accent md:text-3xl">←</span>
+                                            <span class="min-w-0 truncate font-display text-sm uppercase tracking-[.18em] md:text-base">{{ $prevPost->title }}</span>
                                         </a>
                                     @endif
                                 </div>
-                                <div class="text-right">
+                                <div class="min-w-0 flex-1 text-right">
                                     @if ($nextPost)
                                         @php
                                             $nextUrl = route('posts.single', [
@@ -110,10 +109,9 @@
                                                 'slug' => $nextPost->slug,
                                             ]);
                                         @endphp
-                                        <a href="{{ $nextUrl }}" class="group flex items-center gap-2 text-sm uppercase tracking-[.12em] text-[#7b7b7b] transition hover:text-lucille-accent">
-                                            <span class="hidden sm:inline">{{ $nextPost->title }}</span>
-                                            <span class="sm:hidden">Siguiente</span>
-                                            <span class="text-3xl font-bold text-lucille-accent leading-none">→</span>
+                                        <a href="{{ $nextUrl }}" class="group inline-flex max-w-full items-center justify-end gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
+                                            <span class="min-w-0 truncate text-right font-display text-sm uppercase tracking-[.18em] md:text-base">{{ $nextPost->title }}</span>
+                                            <span class="text-2xl font-bold leading-none text-lucille-accent md:text-3xl">→</span>
                                         </a>
                                     @endif
                                 </div>
