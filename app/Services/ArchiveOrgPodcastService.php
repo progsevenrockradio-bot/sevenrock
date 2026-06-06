@@ -656,7 +656,7 @@ final class ArchiveOrgPodcastService
                         'Content-Type' => 'application/x-www-form-urlencoded',
                     ],
                     'form_params' => [
-                        '-target' => 'files/' . $this->encodePath($remotePath),
+                        '-target' => 'files/' . trim(str_replace('\\', '/', $remotePath), '/'),
                         '-patch' => json_encode($patches, JSON_THROW_ON_ERROR),
                         'access' => trim((string) config('services.archive_org.access_key', '')),
                         'secret' => trim((string) config('services.archive_org.secret_key', '')),
