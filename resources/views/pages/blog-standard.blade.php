@@ -145,15 +145,15 @@
                     }
                 @endphp
 
-                <nav class="mt-12 flex flex-wrap items-center justify-center gap-2 border border-white/10 bg-[#050505f5] px-4 py-4 shadow-[0_28px_70px_rgba(0,0,0,.55)] md:px-6 md:py-5" aria-label="Paginación del blog">
+                <nav class="mt-12 flex flex-wrap items-center justify-center gap-2 border border-white/10 bg-[#050505f5] px-3 py-3.5 shadow-[0_28px_70px_rgba(0,0,0,.55)] md:px-5 md:py-4" aria-label="Paginación del blog">
                     @php $previousUrl = $posts->previousPageUrl(); @endphp
                     <a
                         href="{{ $previousUrl ?: '#' }}"
-                        class="inline-flex items-center gap-2 rounded-none border border-white/10 bg-black/20 px-3.5 py-2.5 font-display text-[11px] uppercase tracking-[.22em] text-[#7b7b7b] transition hover:border-white/20 hover:bg-white/5 hover:text-lucille-accent {{ $previousUrl ? '' : 'pointer-events-none opacity-40' }}"
+                        class="inline-flex items-center gap-2 rounded-none border border-white/10 bg-black/20 px-3 py-2 font-display text-[10px] uppercase tracking-[.22em] text-[#7b7b7b] transition hover:border-white/20 hover:bg-white/5 hover:text-lucille-accent {{ $previousUrl ? '' : 'pointer-events-none opacity-40' }}"
                         aria-label="Página anterior"
                         @if (! $previousUrl) aria-disabled="true" tabindex="-1" @endif
                     >
-                        <span class="text-lg font-bold leading-none text-lucille-accent">←</span>
+                        <span class="text-base font-bold leading-none text-lucille-accent">←</span>
                         <span>Más antiguos</span>
                     </a>
 
@@ -164,7 +164,7 @@
                             @else
                                 <a
                                     href="{{ $item['url'] }}"
-                                    class="inline-flex h-10 min-w-10 items-center justify-center border px-2.5 font-display text-[11px] uppercase tracking-[.2em] transition {{ $item['current'] ? 'border-lucille-accent bg-lucille-accent text-black shadow-[0_0_0_1px_rgba(195,39,32,.35)]' : 'border-white/10 bg-black/20 text-[#d8d1c6] hover:border-white/20 hover:bg-white/5 hover:text-white' }}"
+                                    class="inline-flex h-9 min-w-9 items-center justify-center border px-2 font-display text-[10px] uppercase tracking-[.18em] transition {{ $item['current'] ? 'border-2 border-lucille-accent bg-lucille-accent text-black shadow-[0_0_0_1px_rgba(195,39,32,.55)]' : 'border-white/10 bg-black/20 text-[#d8d1c6] hover:border-white/20 hover:bg-white/5 hover:text-white' }}"
                                     aria-current="{{ $item['current'] ? 'page' : 'false' }}"
                                 >
                                     {{ $item['page'] }}
@@ -176,12 +176,12 @@
                     @php $nextUrl = $posts->nextPageUrl(); @endphp
                     <a
                         href="{{ $nextUrl ?: '#' }}"
-                        class="inline-flex items-center gap-2 rounded-none border border-white/10 bg-black/20 px-3.5 py-2.5 font-display text-[11px] uppercase tracking-[.22em] text-[#7b7b7b] transition hover:border-white/20 hover:bg-white/5 hover:text-lucille-accent {{ $nextUrl ? '' : 'pointer-events-none opacity-40' }}"
+                        class="inline-flex items-center gap-2 rounded-none border border-white/10 bg-black/20 px-3 py-2 font-display text-[10px] uppercase tracking-[.22em] text-[#7b7b7b] transition hover:border-white/20 hover:bg-white/5 hover:text-lucille-accent {{ $nextUrl ? '' : 'pointer-events-none opacity-40' }}"
                         aria-label="Página siguiente"
                         @if (! $nextUrl) aria-disabled="true" tabindex="-1" @endif
                     >
                         <span>Más recientes</span>
-                        <span class="text-lg font-bold leading-none text-lucille-accent">→</span>
+                        <span class="text-base font-bold leading-none text-lucille-accent">→</span>
                     </a>
                 </nav>
             @endif
