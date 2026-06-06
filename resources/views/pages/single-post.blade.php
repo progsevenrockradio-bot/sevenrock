@@ -313,9 +313,12 @@
                                 <div class="space-y-2">
                                     <a
                                         href="{{ data_get($archiveYear, 'url', '#') }}"
-                                        class="block font-display text-sm uppercase tracking-[.16em] transition {{ $isActiveYear ? 'text-lucille-accent' : 'text-[#ece4d8] hover:text-lucille-accent' }}"
+                                        class="flex items-center gap-2 font-display text-sm uppercase tracking-[.16em] transition {{ $isActiveYear ? 'pl-1 text-lucille-accent' : 'text-[#ece4d8] hover:text-lucille-accent' }}"
                                     >
-                                        {{ data_get($archiveYear, 'label', data_get($archiveYear, 'year')) }}
+                                        @if ($isActiveYear)
+                                            <span class="inline-flex h-2.5 w-2.5 shrink-0 rounded-full bg-lucille-accent shadow-[0_0_0_3px_rgba(195,39,32,.14)]" aria-hidden="true"></span>
+                                        @endif
+                                        <span>{{ data_get($archiveYear, 'label', data_get($archiveYear, 'year')) }}</span>
                                     </a>
 
                                     @if (! empty(data_get($archiveYear, 'months', [])))
