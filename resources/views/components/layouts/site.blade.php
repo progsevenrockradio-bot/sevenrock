@@ -217,10 +217,26 @@
         .radio-player-mobile [data-player-volume-output],
         .radio-player-mobile .rbcloud_tracktimer { display: none !important; }
         .radio-player-mobile [data-player-action="favorite"] { min-width: 30px !important; padding: 0 4px !important; }
+        .back-to-top-button > span:last-child {
+            display: none;
+        }
+        .back-to-top-button {
+            width: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            padding: 0;
+            border-radius: 12px;
+            gap: 0;
+        }
+        .back-to-top-button__icon {
+            width: 100%;
+            height: 100%;
+        }
         @media (max-width: 767px) {
             .back-to-top-button {
                 right: 10px;
                 bottom: 78px;
+                width: auto;
                 min-width: 40px;
                 min-height: 40px;
                 padding: 0 10px;
