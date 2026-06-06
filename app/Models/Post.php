@@ -52,6 +52,10 @@ class Post extends Model
         'is_published',
     ];
 
+    protected $appends = [
+        'featured_image_url',
+    ];
+
     protected function casts(): array
     {
         return [

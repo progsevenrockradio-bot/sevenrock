@@ -7,7 +7,7 @@
                 @foreach ($posts as $post)
                     @php
                         $span = $loop->index % 5 === 0 ? 'lg:col-span-2 lg:row-span-2' : ($loop->index % 3 === 0 ? 'lg:col-span-2' : '');
-                        $image = data_get($post, 'featured_image_path');
+                        $image = data_get($post, 'featured_image_url') ?: data_get($post, 'featured_image_path');
                         $publishedAt = data_get($post, 'published_at');
                         if (is_string($publishedAt)) {
                             $publishedAt = \Carbon\Carbon::parse($publishedAt);
