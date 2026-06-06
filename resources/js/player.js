@@ -15,6 +15,26 @@ export function registerRadioPlayer(Alpine) {
         }
     };
 
+    const readFavoritesCache = () => {
+        try {
+            const raw = safeRead('sr-player-favorites', '[]');
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed)
+                ? parsed.filter((item) => item && item.signature)
+                : [];
+        } catch (error) {
+            return [];
+        }
+    };
+
+    const writeFavoritesCache = (favorites) => {
+        try {
+            safeWrite('sr-player-favorites', JSON.stringify((Array.isArray(favorites) ? favorites : []).slice(-50)));
+        } catch (error) {
+            // ignore
+        }
+    };
+
     Alpine.data('radioPlayer', (options = {}) => ({
         mode: options.mode || 'dock',
         statusUrl: options.statusUrl || '/api/player/status',
@@ -26,6 +46,9 @@ export function registerRadioPlayer(Alpine) {
         popupUrl: options.popupUrl || '/player/popup',
         bandInfoUrl: options.bandInfoUrl || '/api/player/band-info',
         programInfoUrl: options.programInfoUrl || '/api/player/program-info',
+        favoritesUrl: options.favoritesUrl || '/api/player/favorites',
+        favoritesToggleUrl: options.favoritesToggleUrl || '/api/player/favorites/toggle',
+        favoritesImportUrl: options.favoritesImportUrl || '/api/player/favorites/import',
         fallbackCover: options.fallbackCover || '',
         pollInterval: Number(options.pollInterval || 5),
         nextTrackThresholdSeconds: Number(options.nextTrackThresholdSeconds || 20),
@@ -48,13 +71,10 @@ export function registerRadioPlayer(Alpine) {
         isMobile: window.innerWidth < 640,
         muted: safeRead('sr-player-muted', '0') === '1',
         volume: Number(safeRead('sr-player-volume', '0.8')) || 0.8,
-        favorites: (() => {
-            try {
-                return JSON.parse(safeRead('sr-player-favorites', '[]'));
-            } catch (error) {
-                return [];
-            }
-        })(),
+        favorites: readFavoritesCache(),
+        favoriteCount: 0,
+        favoriteSyncInFlight: false,
+        favoriteSyncReady: false,
         progress: {
             elapsed: 0,
             duration: 0,
@@ -1010,6 +1030,10 @@ export function registerRadioPlayer(Alpine) {
                 es_bloque_programa: track.es_bloque_programa ?? data.es_bloque_programa ?? false,
             };
 
+            if ((trackChanged || !this.favoriteSyncReady) && this.track.signature) {
+                void this.syncFavorites(this.track.signature || '', !this.favoriteSyncReady);
+            }
+
             if (trackChanged) {
                 this.bandLookupArtist = '';
                 this.bandPanel = this.bandWindowOpen
@@ -1362,28 +1386,149 @@ export function registerRadioPlayer(Alpine) {
             return this.favorites.some((item) => item.signature && item.signature === this.track.signature);
         },
 
-        toggleFavorite() {
+        async syncFavorites(signature = '', allowMigration = true) {
+            if (!this.favoritesUrl || this.favoriteSyncInFlight) {
+                return;
+            }
+
+            this.favoriteSyncInFlight = true;
+
+            try {
+                const url = new URL(this.favoritesUrl, window.location.origin);
+                if (signature) {
+                    url.searchParams.set('signature', signature);
+                }
+
+                const response = await fetch(url.toString(), {
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                });
+                const payload = await response.json();
+
+                if (!payload?.success) {
+                    throw new Error('Invalid favorites payload');
+                }
+
+                const data = payload.data || {};
+                const favorites = Array.isArray(data.favorites) ? data.favorites : [];
+
+                if (allowMigration && favorites.length === 0) {
+                    const legacyFavorites = Array.isArray(this.favorites) && this.favorites.length > 0
+                        ? [...this.favorites]
+                        : readFavoritesCache();
+
+                    await this.importLegacyFavorites(legacyFavorites);
+                    this.favoriteSyncInFlight = false;
+                    await this.syncFavorites(signature, false);
+                    return;
+                }
+
+                this.favorites = favorites;
+                this.favoriteCount = Number(data.track_count ?? 0);
+                writeFavoritesCache(this.favorites);
+                this.favoriteSyncReady = true;
+            } catch (error) {
+                this.favorites = readFavoritesCache();
+            } finally {
+                this.favoriteSyncInFlight = false;
+            }
+        },
+
+        async importLegacyFavorites(legacyFavorites = null) {
+            if (safeRead('sr-player-favorites-migrated-v1', '0') === '1') {
+                return;
+            }
+
+            const favorites = Array.isArray(legacyFavorites) ? legacyFavorites : readFavoritesCache();
+            if (!favorites.length || !this.favoritesImportUrl) {
+                return;
+            }
+
+            try {
+                const response = await fetch(this.favoritesImportUrl, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ favorites }),
+                });
+                const payload = await response.json();
+
+                if (!payload?.success) {
+                    throw new Error('Invalid favorites import payload');
+                }
+
+                const data = payload.data || {};
+                this.favorites = Array.isArray(data.favorites) ? data.favorites : favorites;
+                writeFavoritesCache(this.favorites);
+                safeWrite('sr-player-favorites-migrated-v1', '1');
+            } catch (error) {
+                // Keep local cache as fallback.
+            }
+        },
+
+        async toggleFavorite() {
             if (!this.track.signature) {
                 return;
             }
 
-            if (this.isFavoriteCurrent()) {
+            if (!this.favoritesToggleUrl) {
+                return;
+            }
+
+            const payload = {
+                signature: this.track.signature,
+                title: this.track.title,
+                artist: this.track.artist,
+                cover: this.track.cover,
+            };
+            const previousFavorites = [...this.favorites];
+            const previousCount = this.favoriteCount;
+            const wasFavorite = this.isFavoriteCurrent();
+
+            if (wasFavorite) {
                 this.favorites = this.favorites.filter((item) => item.signature !== this.track.signature);
-                this.toastMessage('Favorito eliminado');
+                this.favoriteCount = Math.max(0, this.favoriteCount - 1);
             } else {
                 this.favorites = [
                     ...this.favorites,
-                    {
-                        signature: this.track.signature,
-                        title: this.track.title,
-                        artist: this.track.artist,
-                        cover: this.track.cover,
-                    },
+                    payload,
                 ].slice(-50);
-                this.toastMessage('Añadido a favoritos');
+                this.favoriteCount += 1;
             }
 
-            safeWrite('sr-player-favorites', JSON.stringify(this.favorites));
+            writeFavoritesCache(this.favorites);
+
+            try {
+                const response = await fetch(this.favoritesToggleUrl, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const result = await response.json();
+
+                if (!result?.success) {
+                    throw new Error('Invalid favorites toggle payload');
+                }
+
+                const data = result.data || {};
+                this.favorites = Array.isArray(data.favorites) ? data.favorites : this.favorites;
+                this.favoriteCount = Number(data.track_count ?? this.favoriteCount);
+                writeFavoritesCache(this.favorites);
+                this.toastMessage(data.is_favorite ? 'Añadido a favoritos' : 'Favorito eliminado');
+            } catch (error) {
+                this.favorites = previousFavorites;
+                this.favoriteCount = previousCount;
+                writeFavoritesCache(this.favorites);
+                this.toastMessage('No se pudo sincronizar');
+            }
         },
 
         toggleSharePanel() {

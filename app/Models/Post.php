@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\Auditable;
 use App\Support\WordPressContent;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -136,6 +137,11 @@ class Post extends Model
     {
         return $this->belongsToMany(PostTaxonomy::class, 'post_taxonomy_post')
             ->withTimestamps();
+    }
+
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(PostReaction::class);
     }
 
     public function categoryTaxonomies(): BelongsToMany

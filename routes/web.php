@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
 use App\Http\Controllers\Admin\ProgramCodeController as AdminProgramCodeController;
 use App\Http\Controllers\LegacyWordPressUploadController;
+use App\Http\Controllers\PostReactionController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SearchController;
@@ -60,6 +61,7 @@ Route::post('/home-contact', [SiteController::class, 'homeContactSend'])->middle
 Route::get('/player/popup', [PlayerController::class, 'show'])->name('player.popup');
 Route::get('/search', [SearchController::class, 'index'])->middleware('throttle:public-search')->name('search');
 Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:comment-submit')->name('posts.comments.store');
+Route::post('/posts/{post}/like', [PostReactionController::class, 'toggle'])->middleware('throttle:60,1')->name('posts.like');
 
 Route::get("/programas", [SiteController::class, "programs"])->name("programs");
 Route::get("/programas/{identifier}", [SiteController::class, "programDetail"])->name("programs.detail");

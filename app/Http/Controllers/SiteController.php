@@ -9,6 +9,7 @@ use App\Models\GalleryImage;
 use App\Models\MasterProgram;
 use App\Models\Product;
 use App\Models\Post;
+use App\Models\PostReaction;
 use App\Models\PostTaxonomy;
 use App\Models\TalentAlbum;
 use App\Models\ThemeSetting;
@@ -503,6 +504,8 @@ class SiteController extends Controller
                     'meta_description' => $post->meta_description,
                     'content' => WordPressContent::toRenderableBlocks($post->content),
                     'quote' => $post->quote ?: '',
+                    'likes_count' => $this->postLikesCount($post->id),
+                    'liked' => $this->hasPostLiked($post->id),
                 ],
                 'prevPost' => $this->safeValue(fn () => Post::query()->published()
                     ->where(function ($q) use ($post) {
@@ -544,6 +547,39 @@ class SiteController extends Controller
             'archives' => ['November 2016', 'October 2016', 'September 2016', 'August 2016'],
             'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
         ]);
+    }
+
+    private function postLikesCount(int $postId): int
+    {
+        return (int) PostReaction::query()
+            ->where('post_id', $postId)
+            ->where('reaction_type', 'like')
+            ->count();
+    }
+
+    private function hasPostLiked(int $postId): bool
+    {
+        $ownerKey = $this->contentReactionOwnerKey();
+        if ($ownerKey === '') {
+            return false;
+        }
+
+        return PostReaction::query()
+            ->where('post_id', $postId)
+            ->where('reaction_type', 'like')
+            ->where('owner_key', $ownerKey)
+            ->exists();
+    }
+
+    private function contentReactionOwnerKey(): string
+    {
+        if (auth()->check()) {
+            return 'user:' . (string) auth()->id();
+        }
+
+        $cookieValue = trim((string) request()->cookie('sr_content_reactions_owner', ''));
+
+        return $cookieValue !== '' ? 'visitor:' . $cookieValue : '';
     }
 
     public function shop(): View
@@ -626,8 +662,15 @@ class SiteController extends Controller
             "site.posts.paginator.safe.v{$version}.page{$page}.per{$perPage}",
             now()->addMinutes(10),
             function () use ($perPage, $page) {
-                $paginator = Post::query()->published()->orderByDesc('published_at')
-                    ->paginate($perPage, ['*'], 'page', $page);
+                $query = Post::query()->published()->orderByDesc('published_at');
+
+                if (Schema::hasTable('post_reactions')) {
+                    $query->withCount([
+                        'reactions as likes_count' => fn ($reactionQuery) => $reactionQuery->where('reaction_type', 'like'),
+                    ]);
+                }
+
+                $paginator = $query->paginate($perPage, ['*'], 'page', $page);
 
                 return [
                     'items' => $paginator->getCollection()->map(fn ($post) => $post->toArray())->all(),
@@ -810,7 +853,17 @@ class SiteController extends Controller
             'recentPosts' => Cache::remember(
                 "site.posts.recent.v{$version}",
                 now()->addMinutes(10),
-                fn () => Post::query()->published()->latest('published_at')->limit(5)->get()->toArray()
+                function () {
+                    $query = Post::query()->published()->latest('published_at')->limit(5);
+
+                    if (Schema::hasTable('post_reactions')) {
+                        $query->withCount([
+                            'reactions as likes_count' => fn ($reactionQuery) => $reactionQuery->where('reaction_type', 'like'),
+                        ]);
+                    }
+
+                    return $query->get()->toArray();
+                }
             ),
             'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
             'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
@@ -832,13 +885,20 @@ class SiteController extends Controller
             "site.blog.archive.safe.{$type}.{$slug}.v{$version}.page{$page}.per20",
             now()->addMinutes(10),
             function () use ($type, $slug, $page): array {
-                $paginator = Post::query()
+                $query = Post::query()
                     ->published()
                     ->whereHas('taxonomies', function ($query) use ($type, $slug): void {
                         $query->where('type', $type)->where('slug', $slug);
                     })
-                    ->orderByDesc('published_at')
-                    ->paginate(20, ['*'], 'page', $page);
+                    ->orderByDesc('published_at');
+
+                if (Schema::hasTable('post_reactions')) {
+                    $query->withCount([
+                        'reactions as likes_count' => fn ($reactionQuery) => $reactionQuery->where('reaction_type', 'like'),
+                    ]);
+                }
+
+                $paginator = $query->paginate(20, ['*'], 'page', $page);
 
                 return [
                     'items' => $paginator->getCollection()->map(fn ($post) => $post->toArray())->all(),
@@ -1402,6 +1462,8 @@ class SiteController extends Controller
             'author' => 'admin',
             'categories' => ['Design', 'Uncategorized'],
             'image' => 'assets/lucille/back-1822702_1920.jpg',
+            'likes_count' => 0,
+            'liked' => false,
             'content' => [
                 'Sometimes I will have sections that I am not quite sure how they fit in the puzzle of a tune, they will get moved around; what I think was originally a verse ends up becoming the chorus, or what is an intro gets dropped as a hook, things get shifted around a lot.',
                 'Inspiration comes from so many sources. Music, other fiction, the non-fiction I read, TV shows, films, news reports, people I know, stories I hear, misheard words or lyrics, dreams.',

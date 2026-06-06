@@ -37,6 +37,10 @@
                         <div class="absolute inset-x-0 bottom-0 p-7">
                             <h2 class="font-display text-2xl font-light uppercase text-[#f9f9f9] transition duration-300 group-hover:text-lucille-accent">{{ $title }}</h2>
                             <p class="mt-2 text-sm italic text-[#cbcbcb]">{{ $date }} · {{ $category }}</p>
+                            <div class="mt-3 inline-flex items-center gap-2">
+                                <span class="content-reaction-count">♥ {{ (int) data_get($post, 'likes_count', 0) }}</span>
+                                <span class="text-xs uppercase tracking-[.18em] text-[#cbcbcb]/80">Me gusta</span>
+                            </div>
                             <p class="mt-4 line-clamp-3 text-[14px] leading-[26px] text-[#cbcbcb]">{{ $excerpt }}</p>
                         </div>
                     </article>

@@ -49,6 +49,9 @@
         data-player-listen-url="{{ $player['streams']['listen'] }}"
         data-player-band-info-url="{{ route('api.player.band-info') }}"
         data-player-program-info-url="{{ route('api.player.program-info') }}"
+        data-player-favorites-url="{{ route('api.player.favorites.index') }}"
+        data-player-favorites-toggle-url="{{ route('api.player.favorites.toggle') }}"
+        data-player-favorites-import-url="{{ route('api.player.favorites.import') }}"
         data-player-fallback-cover="{{ $fallbackCover }}"
         data-player-default-title="{{ $player['defaults']['title'] ?? '' }}"
         data-player-default-artist="{{ $player['defaults']['artist'] ?? '' }}"
@@ -59,8 +62,11 @@
             streamUrl: @js($player['streams']['direct']),
         altStreamUrl: @js($player['streams']['alt_direct']),
         listenUrl: @js($player['streams']['listen']),
-        bandInfoUrl: @js(route('api.player.band-info')),
-        programInfoUrl: @js(route('api.player.program-info')),
+            bandInfoUrl: @js(route('api.player.band-info')),
+            programInfoUrl: @js(route('api.player.program-info')),
+            favoritesUrl: @js(route('api.player.favorites.index')),
+            favoritesToggleUrl: @js(route('api.player.favorites.toggle')),
+            favoritesImportUrl: @js(route('api.player.favorites.import')),
             playlistM3u: @js($player['streams']['m3u']),
             playlistPls: @js($player['streams']['pls']),
             fallbackCover: @js($fallbackCover),
@@ -198,10 +204,11 @@
                             <button type="button" class="radio-player-popup-control radio-player-popup-play-button" @click="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'">
                                 <span class="radio-player-popup-action-icon" x-text="playing ? '❚❚' : '▶'"></span>
                             </button>
-                            <div class="radio-player-popup-time-action">
+                            <div class="radio-player-popup-time-action radio-player-popup-time-action--favorite">
                                 <button type="button" class="radio-player-popup-control radio-player-popup-fav-button" @click="toggleFavorite()" :aria-label="isFavoriteCurrent() ? 'Quitar de favoritos' : 'Me gusta'" :aria-pressed="isFavoriteCurrent()">
                                     <span x-text="isFavoriteCurrent() ? '♥' : '♡'"></span>
                                 </button>
+                                <span class="radio-player-favorite-count" x-show="favoriteCount > 0" x-cloak x-text="favoriteCount"></span>
                             </div>
                         </div>
 
@@ -380,9 +387,12 @@
                     </button>
                 </div>
                 <div class="radio-player-actions-spacer radio-player-dock-actions-spacer" aria-hidden="true"></div>
-                <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" class="radio-player-dock-icon radio-player-dock-icon--favorite">
-                    <span data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
-                </button>
+                <div class="radio-player-favorite-wrap">
+                    <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" class="radio-player-dock-icon radio-player-dock-icon--favorite">
+                        <span data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
+                    </button>
+                    <span class="radio-player-favorite-count" x-show="favoriteCount > 0" x-cloak x-text="favoriteCount"></span>
+                </div>
             </span>
 
             <div class="radio-player-dock-side">
@@ -716,9 +726,12 @@
                                 <button type="button" class="player-expanded-control" data-player-action="minimize" @click.stop="closePanel()" aria-label="Minimizar" title="Minimizar">
                                     <span class="player-expanded-control__icon">⌄</span>
                                 </button>
-                                <button type="button" class="player-expanded-control" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" title="Me gusta">
-                                    <span class="player-expanded-control__icon" data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
-                                </button>
+                                <div class="player-expanded-control-group">
+                                    <button type="button" class="player-expanded-control" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" title="Me gusta">
+                                        <span class="player-expanded-control__icon" data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
+                                    </button>
+                                    <span class="radio-player-favorite-count" x-show="favoriteCount > 0" x-cloak x-text="favoriteCount"></span>
+                                </div>
                             </div>
 
                             <div class="radio-player-controls radio-player-controls--dock">

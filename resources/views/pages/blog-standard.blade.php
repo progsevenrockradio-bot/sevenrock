@@ -57,6 +57,11 @@
                                 @endforeach
                             </div>
 
+                            <div class="mt-4 inline-flex items-center gap-2">
+                                <span class="content-reaction-count">♥ {{ (int) data_get($post, 'likes_count', 0) }}</span>
+                                <span class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Me gusta</span>
+                            </div>
+
                             <div class="lucille-standard-excerpt">
                                 <p>{{ $excerpt }}...</p>
                             </div>

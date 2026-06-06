@@ -113,8 +113,10 @@
 
             <div class="space-y-6">
                 <div class="border border-white/10 bg-[#10161b] p-6">
-                    <button type="button" class="btn-like" data-band="{{ $talent->band_name }}">
-                        👍 Like (<span class="like-count">{{ $likesCount }}</span>)
+                    <button type="button" class="btn-like content-reaction-button" data-band="{{ $talent->band_name }}">
+                        <span class="content-reaction-button__icon">♥</span>
+                        <span>Like</span>
+                        <span class="like-count content-reaction-count">{{ $likesCount }}</span>
                     </button>
                     <form method="POST" action="{{ route('talents.comment', ['bandName' => $talent->band_name]) }}" class="comment-section mt-6">
                         @csrf

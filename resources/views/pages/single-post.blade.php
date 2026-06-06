@@ -21,6 +21,7 @@
     $pinterestShareUrl = 'https://pinterest.com/pin/create/button/?url=' . $shareUrlEncoded
         . ($shareImage !== '' ? '&media=' . urlencode($shareImage) : '')
         . '&description=' . $shareTitleEncoded;
+    $postLikeUrl = filled(data_get($post, 'id')) ? route('posts.like', ['post' => data_get($post, 'id')]) : '';
 @endphp
     <x-sections.page-heading :title="$post['title']" overlay="rgba(0,0,0,0)">
         <span>{{ $post['date'] }}</span>
@@ -134,6 +135,10 @@
                         <div
                             x-data="{
                                 shareOpen: false,
+                                likeCount: @js((int) data_get($post, 'likes_count', 0)),
+                                liked: @js((bool) data_get($post, 'liked', false)),
+                                likeBusy: false,
+                                likeUrl: @js($postLikeUrl),
                                 shareTitle: @js($shareTitle),
                                 shareUrl: @js($shareUrl),
                                 shareImage: @js($shareImage),
@@ -152,11 +157,54 @@
                                             console.warn(clipboardError);
                                         }
                                     }
+                                },
+                                async toggleLike() {
+                                    if (!this.likeUrl) {
+                                        return;
+                                    }
+
+                                    if (this.likeBusy) {
+                                        return;
+                                    }
+
+                                    this.likeBusy = true;
+                                    try {
+                                        const response = await fetch(this.likeUrl, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Accept': 'application/json',
+                                                'Content-Type': 'application/json',
+                                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                                'X-Requested-With': 'XMLHttpRequest',
+                                            },
+                                            body: JSON.stringify({
+                                                post_id: @js(data_get($post, 'id')),
+                                            }),
+                                        });
+                                        const payload = await response.json();
+
+                                        if (!payload?.success) {
+                                            throw new Error('Invalid like payload');
+                                        }
+
+                                        const data = payload.data || {};
+                                        this.liked = Boolean(data.liked);
+                                        this.likeCount = Number(data.likes_count ?? this.likeCount);
+                                    } catch (error) {
+                                        console.warn(error);
+                                    } finally {
+                                        this.likeBusy = false;
+                                    }
                                 }
                             }"
                             class="space-y-3"
                         >
-                            <div class="flex items-center gap-3">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <button type="button" class="btn-like content-reaction-button" :class="{ 'is-active': liked }" @click="toggleLike()" :aria-pressed="liked" :disabled="likeBusy">
+                                    <span class="content-reaction-button__icon" x-text="liked ? '♥' : '♡'">♡</span>
+                                    <span>Me gusta</span>
+                                    <span class="like-count content-reaction-count" x-text="likeCount">0</span>
+                                </button>
                                 <button type="button" class="radio-player-popup-chip" @click="shareOpen = !shareOpen" :aria-expanded="shareOpen">{{ $ui['share'] }}</button>
                                 <span class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Redes</span>
                             </div>
