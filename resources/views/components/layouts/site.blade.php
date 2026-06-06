@@ -217,6 +217,25 @@
         .radio-player-mobile [data-player-volume-output],
         .radio-player-mobile .rbcloud_tracktimer { display: none !important; }
         .radio-player-mobile [data-player-action="favorite"] { min-width: 30px !important; padding: 0 4px !important; }
+        @media (max-width: 767px) {
+            .back-to-top-button {
+                right: 10px;
+                bottom: 78px;
+                min-width: 40px;
+                min-height: 40px;
+                padding: 0 10px;
+                gap: 5px;
+                font-size: 9px;
+                letter-spacing: .16em;
+                box-shadow: 0 8px 20px rgba(0, 0, 0, .35);
+            }
+
+            .back-to-top-button__icon {
+                width: 20px;
+                height: 20px;
+                font-size: 9px;
+            }
+        }
     </style>
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id={{ env('GOOGLE_ANALYTICS_ID') }}"></script>

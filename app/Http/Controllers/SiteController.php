@@ -532,7 +532,7 @@ class SiteController extends Controller
                 'recentPosts' => $recentPosts,
                 'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
                 'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
-                'archives' => ['November 2016', 'October 2016', 'September 2016', 'August 2016'],
+                'archives' => $this->cachedPostArchives(),
                 'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
             ]);
         }
@@ -544,9 +544,42 @@ class SiteController extends Controller
             'nextPost' => null,
             'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
             'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
-            'archives' => ['November 2016', 'October 2016', 'September 2016', 'August 2016'],
+            'archives' => $this->cachedPostArchives(),
             'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
         ]);
+    }
+
+    private function cachedPostArchives(): array
+    {
+        $version = $this->cacheVersion('posts');
+
+        return Cache::remember(
+            "site.posts.archives.v{$version}",
+            now()->addHours(24),
+            function (): array {
+                if (! Schema::hasTable('posts')) {
+                    return [];
+                }
+
+                return Post::query()
+                    ->published()
+                    ->whereNotNull('published_at')
+                    ->selectRaw('YEAR(published_at) as yr, MONTH(published_at) as mo')
+                    ->groupByRaw('YEAR(published_at), MONTH(published_at)')
+                    ->orderByDesc('yr')
+                    ->orderByDesc('mo')
+                    ->get()
+                    ->map(function ($row): string {
+                        $month = \DateTime::createFromFormat('!m', (string) $row->mo)?->format('F') ?? '';
+                        $year = trim((string) $row->yr);
+
+                        return trim($month . ' ' . $year);
+                    })
+                    ->filter()
+                    ->values()
+                    ->all();
+            }
+        );
     }
 
     private function postLikesCount(int $postId): int
