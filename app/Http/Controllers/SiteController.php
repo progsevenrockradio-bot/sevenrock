@@ -480,7 +480,7 @@ class SiteController extends Controller
         }
 
         if ($post) {
-            $recentPosts = $this->safeValue(fn () => Post::query()->published()->latest('published_at')->limit(5)->get(), collect());
+            $recentPosts = $this->safeValue(fn () => Post::query()->published()->latest('published_at')->limit(5)->get()->toArray(), collect());
             return view('pages.single-post', [
                 'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
                 'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
@@ -625,7 +625,11 @@ class SiteController extends Controller
         return Cache::remember(
             "site.posts.paginator.v{$version}.page{$page}.per{$perPage}",
             now()->addMinutes(10),
-            fn () => Post::query()->published()->orderByDesc('published_at')->paginate($perPage, ['*'], 'page', $page)
+            function () use ($perPage, $page) {
+                return Post::query()->published()->orderByDesc('published_at')
+                    ->paginate($perPage, ['*'], 'page', $page)
+                    ->through(fn ($post) => $post->toArray());
+            }
         );
     }
 
@@ -789,7 +793,7 @@ class SiteController extends Controller
             'recentPosts' => Cache::remember(
                 "site.posts.recent.v{$version}",
                 now()->addMinutes(10),
-                fn () => Post::query()->published()->latest('published_at')->limit(5)->get()
+                fn () => Post::query()->published()->latest('published_at')->limit(5)->get()->toArray()
             ),
             'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
             'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),

@@ -8,7 +8,7 @@
 
     <section>
         <div class="lucille-content-box">
-            @if ($albums->isEmpty())
+            @if (empty($albums))
                 <div class="py-16 text-center text-sm text-[#7b7b7b]">
                     No hay álbumes publicados todavía.
                 </div>

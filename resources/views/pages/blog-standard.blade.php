@@ -13,6 +13,9 @@
                             $title = data_get($post, 'title');
                             $image = data_get($post, 'featured_image_url', data_get($post, 'featured_image'));
                             $publishedAt = data_get($post, 'published_at');
+                            if (is_string($publishedAt)) {
+                                $publishedAt = \Carbon\Carbon::parse($publishedAt);
+                            }
                             $date = $publishedAt?->format('F j, Y');
                             $categories = data_get($post, 'categories', []);
                             $excerpt = data_get($post, 'excerpt');
@@ -97,6 +100,9 @@
                             @foreach ($recentPosts as $recent)
                                 @php
                                     $recentPublished = data_get($recent, 'published_at');
+                                    if (is_string($recentPublished)) {
+                                        $recentPublished = \Carbon\Carbon::parse($recentPublished);
+                                    }
                                     $recentUrl = route('posts.single', [
                                         'year' => $recentPublished?->format('Y') ?? now()->format('Y'),
                                         'month' => $recentPublished?->format('m') ?? now()->format('m'),

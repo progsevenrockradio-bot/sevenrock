@@ -8,9 +8,13 @@
                     @php
                         $span = $loop->index % 5 === 0 ? 'lg:col-span-2 lg:row-span-2' : ($loop->index % 3 === 0 ? 'lg:col-span-2' : '');
                         $image = data_get($post, 'featured_image_url', data_get($post, 'featured_image'));
-                        $url = data_get($post, 'url', route('posts.single', ['year' => data_get($post, 'published_at')?->format('Y') ?? now()->format('Y'), 'month' => data_get($post, 'published_at')?->format('m') ?? now()->format('m'), 'day' => data_get($post, 'published_at')?->format('d') ?? now()->format('d'), 'slug' => data_get($post, 'slug', 'inspiration')]));
+                        $publishedAt = data_get($post, 'published_at');
+                        if (is_string($publishedAt)) {
+                            $publishedAt = \Carbon\Carbon::parse($publishedAt);
+                        }
+                        $url = data_get($post, 'url', route('posts.single', ['year' => $publishedAt?->format('Y') ?? now()->format('Y'), 'month' => $publishedAt?->format('m') ?? now()->format('m'), 'day' => $publishedAt?->format('d') ?? now()->format('d'), 'slug' => data_get($post, 'slug', 'inspiration')]));
                         $title = data_get($post, 'title');
-                        $date = data_get($post, 'published_at')?->format('F j, Y');
+                        $date = $publishedAt?->format('F j, Y');
                         $category = data_get($post, 'categories.0', 'Blog');
                         $excerpt = data_get($post, 'excerpt');
                     @endphp
