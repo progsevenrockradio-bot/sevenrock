@@ -50,12 +50,12 @@
                         @if ($previousUrl)
                             <a href="{{ $previousUrl }}" class="group inline-flex max-w-full items-center gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
                                 <span class="text-2xl font-bold leading-none text-lucille-accent md:text-3xl">←</span>
-                                <span class="min-w-0 truncate font-display text-sm uppercase tracking-[.18em] md:text-base">Anterior</span>
+                                <span class="min-w-0 truncate font-display text-sm uppercase tracking-[.18em] md:text-base">Más antiguos</span>
                             </a>
                         @else
                             <span class="inline-flex items-center gap-3 text-[#7b7b7b]/40">
                                 <span class="text-2xl font-bold leading-none text-lucille-accent/40 md:text-3xl">←</span>
-                                <span class="min-w-0 truncate font-display text-sm uppercase tracking-[.18em] md:text-base">Anterior</span>
+                                <span class="min-w-0 truncate font-display text-sm uppercase tracking-[.18em] md:text-base">Más antiguos</span>
                             </span>
                         @endif
                     </div>
@@ -63,12 +63,12 @@
                         @php $nextUrl = $posts->nextPageUrl(); @endphp
                         @if ($nextUrl)
                             <a href="{{ $nextUrl }}" class="group inline-flex max-w-full items-center justify-end gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
-                                <span class="min-w-0 truncate text-right font-display text-sm uppercase tracking-[.18em] md:text-base">Siguiente</span>
+                                <span class="min-w-0 truncate text-right font-display text-sm uppercase tracking-[.18em] md:text-base">Más recientes</span>
                                 <span class="text-2xl font-bold leading-none text-lucille-accent md:text-3xl">→</span>
                             </a>
                         @else
                             <span class="inline-flex items-center justify-end gap-3 text-[#7b7b7b]/40">
-                                <span class="min-w-0 truncate text-right font-display text-sm uppercase tracking-[.18em] md:text-base">Siguiente</span>
+                                <span class="min-w-0 truncate text-right font-display text-sm uppercase tracking-[.18em] md:text-base">Más recientes</span>
                                 <span class="text-2xl font-bold leading-none text-lucille-accent/40 md:text-3xl">→</span>
                             </span>
                         @endif
