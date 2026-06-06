@@ -828,16 +828,36 @@ class SiteController extends Controller
 
         $version = $this->cacheVersion('posts');
         $page = max(1, (int) request()->integer('page', 1));
-        $posts = Cache::remember(
-            "site.blog.archive.{$type}.{$slug}.v{$version}.page{$page}.per20",
+        $cached = Cache::remember(
+            "site.blog.archive.safe.{$type}.{$slug}.v{$version}.page{$page}.per20",
             now()->addMinutes(10),
-            fn () => Post::query()
-                ->published()
-                ->whereHas('taxonomies', function ($query) use ($type, $slug): void {
-                    $query->where('type', $type)->where('slug', $slug);
-                })
-                ->orderByDesc('published_at')
-                ->paginate(20, ['*'], 'page', $page)
+            function () use ($type, $slug, $page): array {
+                $paginator = Post::query()
+                    ->published()
+                    ->whereHas('taxonomies', function ($query) use ($type, $slug): void {
+                        $query->where('type', $type)->where('slug', $slug);
+                    })
+                    ->orderByDesc('published_at')
+                    ->paginate(20, ['*'], 'page', $page);
+
+                return [
+                    'items' => $paginator->getCollection()->map(fn ($post) => $post->toArray())->all(),
+                    'total' => $paginator->total(),
+                    'lastPage' => $paginator->lastPage(),
+                ];
+            }
+        );
+
+        $posts = new \Illuminate\Pagination\LengthAwarePaginator(
+            $cached['items'] ?? [],
+            (int) ($cached['total'] ?? 0),
+            20,
+            $page,
+            [
+                'path' => \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => 'page',
+                'lastPage' => (int) ($cached['lastPage'] ?? 1),
+            ]
         );
 
         return $this->blogListing(
