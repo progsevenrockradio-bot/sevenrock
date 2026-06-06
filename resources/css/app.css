@@ -380,10 +380,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(184, 175, 162, .22);
-    background: rgba(0, 0, 0, .22);
-    color: #ddd7cb;
-    transition: transform .15s ease, border-color .15s ease, background .15s ease, color .15s ease;
+    border: 1px solid rgba(220, 220, 220, .55);
+    background: rgba(0, 0, 0, .18);
+    color: #fff;
+    transition: transform .3s ease-out, border-color .3s ease-out, background-color .3s ease-out, color .3s ease-out;
 }
 
 .radio-player-popup-social-link:hover,
@@ -391,15 +391,15 @@
 .radio-player-popup-control:hover,
 .radio-player-popup-tab:hover {
     transform: translateY(-1px);
-    border-color: rgba(184, 175, 162, .38);
-    background: rgba(0, 0, 0, .30);
+    border-color: var(--color-lucille-accent);
+    background: var(--color-lucille-accent);
 }
 
 .radio-player-popup-social-link {
     gap: .5rem;
     padding: .55rem .8rem;
     border-radius: 9999px;
-    color: #f4e7e7;
+    color: #fff;
     text-decoration: none;
 }
 
@@ -410,7 +410,7 @@
     width: 1.25rem;
     height: 1.25rem;
     border-radius: 9999px;
-    background: rgba(255, 255, 255, .10);
+    background: rgba(255, 255, 255, .14);
     color: #fff;
     font-size: 9px;
     font-weight: 700;
@@ -2419,13 +2419,13 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        border: 1px solid rgba(255, 255, 255, .1);
-        background: rgba(42, 11, 15, .85);
+        border: 1px solid rgba(220, 220, 220, .55);
+        background: rgba(0, 0, 0, .18);
         padding: 8px 12px;
-        color: #f4e7e7;
+        color: #fff;
         text-decoration: none;
         border-radius: 9999px;
-        transition: border-color .2s ease, background-color .2s ease, color .2s ease;
+        transition: border-color .3s ease-out, background-color .3s ease-out, color .3s ease-out, transform .3s ease-out;
     }
 
     .radio-player-dock-social-link--icon {
@@ -2439,9 +2439,10 @@
     }
 
     .radio-player-dock-social-link:hover {
-        border-color: rgba(255, 103, 117, .55);
-        background: rgba(58, 15, 21, .95);
+        border-color: var(--color-lucille-accent);
+        background: var(--color-lucille-accent);
         color: #fff;
+        transform: translateY(-1px);
     }
 
     .radio-player-dock-social-link--icon .radio-player-dock-social-label {
