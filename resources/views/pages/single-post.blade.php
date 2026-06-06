@@ -82,7 +82,7 @@
 
 
                         @if ($prevPost || $nextPost)
-                            <nav class="home-section-texture section-band-strong mt-14 flex min-h-[96px] items-stretch justify-between gap-6 border border-white/10 bg-[#070707e6] px-5 py-7 shadow-[0_28px_70px_rgba(0,0,0,.55)] backdrop-blur-[2px] md:px-10 md:py-8">
+                            <nav class="mt-14 flex min-h-[96px] items-stretch justify-between gap-6 border border-white/10 bg-[#070707f2] px-5 py-7 shadow-[0_28px_70px_rgba(0,0,0,.55)] md:px-10 md:py-8">
                                 <div class="min-w-0 flex-1">
                                     @if ($prevPost)
                                         @php
