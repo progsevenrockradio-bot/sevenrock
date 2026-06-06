@@ -4942,6 +4942,47 @@
             flex-wrap: wrap;
         }
 
+        .radio-player-popup-title {
+            font-size: clamp(1.35rem, 7vw, 2rem);
+            line-height: 1.02;
+        }
+
+        .radio-player-popup-artist {
+            font-size: clamp(.82rem, 3.6vw, 1rem);
+        }
+
+        .radio-player-popup-progress {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .radio-player-popup-progress-meter {
+            height: 10px;
+        }
+
+        .radio-player-popup-socials {
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-inline: 2px;
+        }
+
+        .radio-player-popup-social-link {
+            padding: .45rem .65rem;
+        }
+
+        .radio-player-popup-social-badge {
+            width: 1.1rem;
+            height: 1.1rem;
+            font-size: 7px;
+        }
+
+        .radio-player-popup-social-label {
+            font-size: 8px;
+            letter-spacing: .12em;
+        }
+
         .radio-player-popup-time {
             justify-content: flex-start;
         }
