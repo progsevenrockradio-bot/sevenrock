@@ -48,35 +48,67 @@
             </div>
 
             @if ($posts instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                <nav class="mt-14 flex min-h-[96px] items-stretch justify-between gap-6 border border-white/10 bg-[#070707f2] px-5 py-7 shadow-[0_28px_70px_rgba(0,0,0,.55)] md:px-10 md:py-8">
-                    <div class="min-w-0 flex-1">
-                        @php $previousUrl = $posts->previousPageUrl(); @endphp
-                        @if ($previousUrl)
-                            <a href="{{ $previousUrl }}" class="group inline-flex max-w-full items-center gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
-                                <span class="text-2xl font-bold leading-none text-lucille-accent md:text-3xl">←</span>
-                                <span class="min-w-0 truncate font-display text-sm uppercase tracking-[.18em] md:text-base">Más antiguos</span>
-                            </a>
-                        @else
-                            <span class="inline-flex items-center gap-3 text-[#7b7b7b]/40">
-                                <span class="text-2xl font-bold leading-none text-lucille-accent/40 md:text-3xl">←</span>
-                                <span class="min-w-0 truncate font-display text-sm uppercase tracking-[.18em] md:text-base">Más antiguos</span>
-                            </span>
-                        @endif
+                @php
+                    $currentPage = $posts->currentPage();
+                    $lastPage = $posts->lastPage();
+                    $pages = [];
+
+                    for ($page = 1; $page <= $lastPage; $page++) {
+                        if ($page === 1 || $page === $lastPage || abs($page - $currentPage) <= 1) {
+                            $pages[] = [
+                                'type' => 'page',
+                                'page' => $page,
+                                'url' => $posts->url($page),
+                                'current' => $page === $currentPage,
+                            ];
+                            continue;
+                        }
+
+                        $lastItem = end($pages);
+                        if (! $lastItem || $lastItem['type'] !== 'ellipsis') {
+                            $pages[] = ['type' => 'ellipsis'];
+                        }
+                    }
+                @endphp
+
+                <nav class="mt-14 flex flex-wrap items-center justify-center gap-3 border border-white/10 bg-[#070707f2] px-5 py-5 shadow-[0_28px_70px_rgba(0,0,0,.55)] md:px-10 md:py-6" aria-label="Paginación del blog">
+                    @php $previousUrl = $posts->previousPageUrl(); @endphp
+                    <a
+                        href="{{ $previousUrl ?: '#' }}"
+                        class="inline-flex items-center gap-3 rounded-none border border-white/10 bg-black/20 px-4 py-3 font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b] transition hover:border-white/20 hover:bg-white/5 hover:text-lucille-accent {{ $previousUrl ? '' : 'pointer-events-none opacity-40' }}"
+                        aria-label="Página anterior"
+                        @if (! $previousUrl) aria-disabled="true" tabindex="-1" @endif
+                    >
+                        <span class="text-xl font-bold leading-none text-lucille-accent">←</span>
+                        <span>Más antiguos</span>
+                    </a>
+
+                    <div class="flex flex-wrap items-center justify-center gap-2">
+                        @foreach ($pages as $item)
+                            @if ($item['type'] === 'ellipsis')
+                                <span class="px-2 text-[#7b7b7b]">…</span>
+                            @else
+                                <a
+                                    href="{{ $item['url'] }}"
+                                    class="inline-flex h-11 min-w-11 items-center justify-center border px-3 font-display text-sm uppercase tracking-[.18em] transition {{ $item['current'] ? 'border-lucille-accent bg-lucille-accent text-black' : 'border-white/10 bg-black/20 text-[#d8d1c6] hover:border-white/20 hover:bg-white/5 hover:text-white' }}"
+                                    aria-current="{{ $item['current'] ? 'page' : 'false' }}"
+                                >
+                                    {{ $item['page'] }}
+                                </a>
+                            @endif
+                        @endforeach
                     </div>
-                    <div class="min-w-0 flex-1 text-right">
-                        @php $nextUrl = $posts->nextPageUrl(); @endphp
-                        @if ($nextUrl)
-                            <a href="{{ $nextUrl }}" class="group inline-flex max-w-full items-center justify-end gap-3 text-[#7b7b7b] transition hover:text-lucille-accent">
-                                <span class="min-w-0 truncate text-right font-display text-sm uppercase tracking-[.18em] md:text-base">Más recientes</span>
-                                <span class="text-2xl font-bold leading-none text-lucille-accent md:text-3xl">→</span>
-                            </a>
-                        @else
-                            <span class="inline-flex items-center justify-end gap-3 text-[#7b7b7b]/40">
-                                <span class="min-w-0 truncate text-right font-display text-sm uppercase tracking-[.18em] md:text-base">Más recientes</span>
-                                <span class="text-2xl font-bold leading-none text-lucille-accent/40 md:text-3xl">→</span>
-                            </span>
-                        @endif
-                    </div>
+
+                    @php $nextUrl = $posts->nextPageUrl(); @endphp
+                    <a
+                        href="{{ $nextUrl ?: '#' }}"
+                        class="inline-flex items-center gap-3 rounded-none border border-white/10 bg-black/20 px-4 py-3 font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b] transition hover:border-white/20 hover:bg-white/5 hover:text-lucille-accent {{ $nextUrl ? '' : 'pointer-events-none opacity-40' }}"
+                        aria-label="Página siguiente"
+                        @if (! $nextUrl) aria-disabled="true" tabindex="-1" @endif
+                    >
+                        <span>Más recientes</span>
+                        <span class="text-xl font-bold leading-none text-lucille-accent">→</span>
+                    </a>
                 </nav>
             @endif
         </div>
