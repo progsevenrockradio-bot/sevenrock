@@ -307,10 +307,13 @@
                         <h3 class="lucille-sidebar-title">{{ $ui['archives'] }}</h3>
                         <div class="space-y-4">
                             @foreach ($archives as $archiveYear)
+                                @php
+                                    $isActiveYear = (string) data_get($archiveYear, 'year') === (string) ($archiveActiveYear ?? '');
+                                @endphp
                                 <div class="space-y-2">
                                     <a
                                         href="{{ data_get($archiveYear, 'url', '#') }}"
-                                        class="block font-display text-sm uppercase tracking-[.16em] text-[#ece4d8] transition hover:text-lucille-accent"
+                                        class="block font-display text-sm uppercase tracking-[.16em] transition {{ $isActiveYear ? 'text-lucille-accent' : 'text-[#ece4d8] hover:text-lucille-accent' }}"
                                     >
                                         {{ data_get($archiveYear, 'label', data_get($archiveYear, 'year')) }}
                                     </a>
@@ -318,10 +321,14 @@
                                     @if (! empty(data_get($archiveYear, 'months', [])))
                                         <ul class="space-y-1 border-l border-white/10 pl-4">
                                             @foreach (data_get($archiveYear, 'months', []) as $archiveMonth)
+                                                @php
+                                                    $isActiveMonth = $isActiveYear
+                                                        && (string) data_get($archiveMonth, 'month') === (string) ($archiveActiveMonth ?? '');
+                                                @endphp
                                                 <li>
                                                     <a
                                                         href="{{ data_get($archiveMonth, 'url', '#') }}"
-                                                        class="block text-sm text-[#8f8a82] transition hover:text-lucille-accent"
+                                                        class="block text-sm transition {{ $isActiveMonth ? 'font-semibold text-lucille-accent' : 'text-[#8f8a82] hover:text-lucille-accent' }}"
                                                     >
                                                         {{ data_get($archiveMonth, 'label', data_get($archiveMonth, 'month')) }}
                                                     </a>

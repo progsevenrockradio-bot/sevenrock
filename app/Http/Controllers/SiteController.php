@@ -594,6 +594,8 @@ class SiteController extends Controller
                 'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
                 'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
                 'archives' => $this->cachedPostArchives(),
+                'archiveActiveYear' => $post->published_at?->format('Y'),
+                'archiveActiveMonth' => $post->published_at?->format('m'),
                 'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
             ]);
         }
@@ -606,6 +608,8 @@ class SiteController extends Controller
             'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
             'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
             'archives' => $this->cachedPostArchives(),
+            'archiveActiveYear' => null,
+            'archiveActiveMonth' => null,
             'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
         ]);
     }
