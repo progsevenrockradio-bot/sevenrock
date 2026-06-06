@@ -341,7 +341,7 @@ Artisan::command('talents:refresh-featured {--limit=6}', function () {
 
 // Process queue every minute
 
-Schedule::command('queue:work', ['--stop-when-empty', '--timeout=120'])->everyMinute()->withoutOverlapping();
+Schedule::command('queue:work', ['--stop-when-empty', '--timeout=900'])->everyMinute()->withoutOverlapping();
 
 // Publish scheduled posts every minute
 Schedule::command('posts:publish-scheduled')->everyMinute();
