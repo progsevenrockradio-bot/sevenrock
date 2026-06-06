@@ -131,7 +131,31 @@
 
                         <div class="mt-8"></div>
 
-                        <div x-data="{ shareOpen: false }" class="space-y-3">
+                        <div
+                            x-data="{
+                                shareOpen: false,
+                                shareTitle: @js($shareTitle),
+                                shareUrl: @js($shareUrl),
+                                shareImage: @js($shareImage),
+                                async nativeShare() {
+                                    const text = `Estoy leyendo \"${this.shareTitle}\" en Seven Rock Radio.`;
+                                    try {
+                                        if (navigator.share) {
+                                            await navigator.share({ title: this.shareTitle || 'Seven Rock Radio', text, url: this.shareUrl });
+                                        } else {
+                                            await navigator.clipboard.writeText(`${text} ${this.shareUrl}`.trim());
+                                        }
+                                    } catch (error) {
+                                        try {
+                                            await navigator.clipboard.writeText(`${text} ${this.shareUrl}`.trim());
+                                        } catch (clipboardError) {
+                                            console.warn(clipboardError);
+                                        }
+                                    }
+                                }
+                            }"
+                            class="space-y-3"
+                        >
                             <div class="flex items-center gap-3">
                                 <button type="button" class="radio-player-popup-chip" @click="shareOpen = !shareOpen" :aria-expanded="shareOpen">{{ $ui['share'] }}</button>
                                 <span class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Redes</span>
@@ -163,6 +187,10 @@
                                     <span class="radio-player-share-link-code">P</span>
                                     <span class="radio-player-share-link-text">Pinterest</span>
                                 </a>
+                                <button type="button" class="radio-player-share-link radio-player-share-link--native" @click="nativeShare()" aria-label="Share nativo">
+                                    <span class="radio-player-share-link-code">N</span>
+                                    <span class="radio-player-share-link-text">Nativo</span>
+                                </button>
                             </div>
                         </div>
 
