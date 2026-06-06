@@ -11,7 +11,7 @@
                     @foreach ($posts as $post)
                         @php
                             $title = data_get($post, 'title');
-                            $image = data_get($post, 'featured_image_url', data_get($post, 'featured_image'));
+                            $image = data_get($post, 'featured_image_path');
                             $publishedAt = data_get($post, 'published_at');
                             if (is_string($publishedAt)) {
                                 $publishedAt = \Carbon\Carbon::parse($publishedAt);
