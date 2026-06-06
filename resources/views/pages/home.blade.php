@@ -45,7 +45,7 @@
     @if ($album)
     <x-sections.background-band class="home-section-texture home-section-gray" style="margin-bottom: 100px;">
         <div class="pt-[100px] pb-[80px]">
-            <x-ui.section-heading :title="$homeHeadings['new_album_release']['title']" :accent="$homeHeadings['new_album_release']['accent']" :subtitle="$homeHeadings['new_album_release']['subtitle'] ?: ($album?->artist . ' - ' . $album?->title)" />
+            <x-ui.section-heading :title="$homeHeadings['new_album_release']['title']" :accent="$homeHeadings['new_album_release']['accent']" :subtitle="$homeHeadings['new_album_release']['subtitle'] ?: (data_get($album, 'artist', '') . ' - ' . data_get($album, 'title', ''))" />
             <x-ui.album-feature :album="$album" :cover-image="$themeAppearance['home_album_cover_url']" />
         </div>
     </x-sections.background-band>

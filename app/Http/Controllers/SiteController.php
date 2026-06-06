@@ -1169,46 +1169,50 @@ class SiteController extends Controller
      *     content:array<int,string>
      * }
      */
-    private function talentAlbumViewData(TalentAlbum $album): array
+    private function talentAlbumViewData(array|TalentAlbum $album): array
     {
-        $talent = $album->talent;
-        $audioMedia = $talent?->media()
-            ->where('type', 'mp3')
-            ->latest()
-            ->get() ?? collect();
+        $talent = data_get($album, 'talent');
+        $audioMedia = collect(data_get($album, 'talent.media', []));
 
-        $tracks = collect(is_array($album->tracks ?? null) ? $album->tracks : [])
+        $tracks = collect(data_get($album, 'tracks', []))
             ->values()
             ->map(function ($track, int $index) use ($audioMedia): array {
-                $track = is_array($track) ? $track : ['title' => (string) $track];
                 $media = $audioMedia[$index] ?? null;
-                $directAudio = trim((string) ($track['audio'] ?? ''));
-                $linkedAudio = trim((string) ($track['url'] ?? ''));
-                $mediaAudio = trim((string) ($media->url ?? ''));
+                $directAudio = trim((string) data_get($track, 'audio', ''));
+                $linkedAudio = trim((string) data_get($track, 'url', ''));
+                $mediaAudio = trim((string) data_get($media, 'url', ''));
                 $audio = $directAudio !== '' ? $directAudio : ($linkedAudio !== '' ? $linkedAudio : $mediaAudio);
 
                 return [
-                    'title' => trim((string) ($track['title'] ?? $track['name'] ?? 'Track ' . ($index + 1))),
-                    'duration' => (string) ($track['duration'] ?? ''),
+                    'title' => trim((string) (data_get($track, 'title') ?? data_get($track, 'name') ?? 'Track ' . ($index + 1))),
+                    'duration' => (string) data_get($track, 'duration', ''),
                     'audio' => $audio,
                     'audio_source' => $directAudio !== '' ? 'direct' : ($linkedAudio !== '' ? 'linked' : ($mediaAudio !== '' ? 'talent-media' : 'none')),
                 ];
             })
             ->all();
 
+        $releaseDate = data_get($album, 'release_date');
+        $releaseDateLabel = $releaseDate instanceof \DateTimeInterface
+            ? $releaseDate->format('F j, Y')
+            : (filled($releaseDate) ? \Illuminate\Support\Carbon::parse($releaseDate)->format('F j, Y') : 'N/A');
+        $cover = PublicMediaUrl::normalizePublicUrl(data_get($album, 'cover_url'))
+            ?: PublicMediaUrl::normalizePublicUrl(data_get($album, 'cover_image'))
+            ?: asset('assets/lucille/man-597179_1920.jpg');
+
         return [
-            'title' => $album->title,
-            'artist' => $talent?->band_name ?? 'Artista',
-            'cover' => $album->coverUrl() ?? asset('assets/lucille/man-597179_1920.jpg'),
-            'date' => $album->release_date?->format('F j, Y') ?? 'N/A',
-            'label' => $talent?->band_name ?? 'Seven Rock Radio',
-            'producer' => $talent?->band_name ?? 'Talent',
+            'title' => (string) data_get($album, 'title', ''),
+            'artist' => (string) data_get($talent, 'band_name', 'Artista'),
+            'cover' => $cover,
+            'date' => $releaseDateLabel,
+            'label' => (string) data_get($talent, 'band_name', 'Seven Rock Radio'),
+            'producer' => (string) data_get($talent, 'band_name', 'Talent'),
             'discs' => '1',
             'categories' => ['new album', 'official release'],
             'tracks' => $tracks,
             'buttons' => [],
             'content' => array_values(array_filter([
-                $album->description,
+                data_get($album, 'description'),
                 'This album is managed from the talent panel and is now part of the public catalog.',
             ])),
         ];

@@ -9,10 +9,12 @@
             $excerpt = data_get($post, 'excerpt');
             $image = data_get($post, 'image');
             $url = data_get($post, 'url', route('posts.single', ['year' => now()->format('Y'), 'month' => now()->format('m'), 'day' => now()->format('d'), 'slug' => 'inspiration']));
+            $imageUrl = \App\Support\PublicMediaUrl::normalizePublicUrl($image)
+                ?: (str_starts_with((string) $image, 'http') ? (string) $image : asset((string) $image));
         @endphp
         <article class="group relative min-h-[455px] overflow-hidden bg-[#111722] text-center">
             @if ($image)
-                <div class="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.03]" style="background-image: url('{{ str_starts_with($image, 'http') ? $image : asset($image) }}');"></div>
+                <div class="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.03]" style="background-image: url('{{ $imageUrl }}');"></div>
                 <div class="absolute inset-0 bg-[rgba(21,21,21,.48)] transition duration-300 group-hover:bg-[rgba(21,21,21,.34)]"></div>
             @else
                 <div class="absolute inset-0 bg-[rgba(7,16,33,.45)]"></div>

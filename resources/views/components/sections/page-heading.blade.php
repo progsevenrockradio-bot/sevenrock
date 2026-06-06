@@ -9,9 +9,10 @@
 <section class="lucille-page-heading {{ $subtitle ? '' : 'no-subtitle' }} {{ ! empty($categories) ? 'has-cpt-tax' : '' }}">
     @if ($image)
         @php
-            $pageHeadingImage = str_starts_with($image, 'http://') || str_starts_with($image, 'https://')
-                ? $image
-                : asset($image);
+            $pageHeadingImage = \App\Support\PublicMediaUrl::normalizePublicUrl($image)
+                ?: (str_starts_with((string) $image, 'http://') || str_starts_with((string) $image, 'https://')
+                    ? (string) $image
+                    : asset((string) $image));
         @endphp
         <div class="absolute inset-0 lucille-card-image" style="background-image: url('{{ $pageHeadingImage }}');"></div>
     @endif
@@ -32,7 +33,7 @@
     @if (! empty($categories))
         <div class="lucille-cpt-meta">
             @foreach ($categories as $category)
-                <a href="#">{{ $category }}</a>@if (! $loop->last) <span class="px-1 text-[#757575]"> </span>@endif
+                <a href="#">{{ data_get($category, 'label', $category) }}</a>@if (! $loop->last) <span class="px-1 text-[#757575]"> </span>@endif
             @endforeach
         </div>
     @endif
