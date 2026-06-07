@@ -4439,8 +4439,9 @@
         width: 150px;
         height: 150px;
         min-width: 150px;
-        border: 1px solid rgba(184, 175, 162, .18);
-        border-radius: 8px;
+        border: 1px solid rgba(184, 175, 162, .22);
+        border-radius: 14px;
+        box-shadow: 0 14px 32px rgba(0, 0, 0, .38);
     }
 
     .radio-modal-copy {
@@ -4450,6 +4451,11 @@
         gap: 9px;
         min-width: 0;
         padding-top: 2px;
+    }
+
+    .radio-modal-copy--program {
+        gap: 8px;
+        padding-top: 0;
     }
 
     .radio-modal-title {
@@ -4687,7 +4693,7 @@
     }
 
     .radio-modal-body--program {
-        padding-bottom: 4px;
+        padding-bottom: 2px;
     }
 
     .radio-modal-guest-image-wrap {
@@ -4864,6 +4870,10 @@
 
         .radio-modal-skeleton__body--program {
             gap: 8px;
+        }
+
+        .radio-modal-copy--program {
+            gap: 10px;
         }
 
         .radio-modal-program-title {
