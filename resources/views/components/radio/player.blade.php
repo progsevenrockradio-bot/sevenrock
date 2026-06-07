@@ -621,15 +621,7 @@
                 <template x-if="programInfo">
                     <div class="radio-modal-content radio-modal-content--program">
                         <div class="radio-modal-header radio-modal-header--program">
-                            <img
-                                x-show="programCoverVisible"
-                                x-transition.opacity.duration.300ms
-                                class="radio-modal-cover radio-modal-cover--program"
-                                :src="programInfo.cover || fallbackCover"
-                                :alt="programInfo.name || ''"
-                                onerror="this.src=fallbackCover; this.onerror=null;"
-                                loading="lazy"
-                            >
+                            <img class="radio-modal-cover radio-modal-cover--program" :src="programInfo.cover || fallbackCover" :alt="programInfo.name || ''" onerror="this.src=fallbackCover; this.onerror=null;" loading="lazy">
                             <div class="radio-modal-copy radio-modal-copy--program">
                                 <span x-show="track.is_live" class="radio-modal-live-badge">
                                     <span class="radio-modal-live-dot sr-pulse"></span>

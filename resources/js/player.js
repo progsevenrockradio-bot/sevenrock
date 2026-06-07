@@ -68,7 +68,6 @@ export function registerRadioPlayer(Alpine) {
         bandInfoLoading: false,
         programInfoLoading: false,
         programInfo: null,
-        programCoverVisible: false,
         isMobile: window.innerWidth < 640,
         muted: safeRead('sr-player-muted', '0') === '1',
         volume: Number(safeRead('sr-player-volume', '0.8')) || 0.8,
@@ -140,7 +139,6 @@ export function registerRadioPlayer(Alpine) {
         widgetObserver: null,
         widgetSyncHandle: null,
         widgetRetryHandle: null,
-        programCoverHideHandle: null,
         toastHandle: null,
         statusInFlight: false,
         statusSyncHandle: null,
@@ -199,9 +197,6 @@ export function registerRadioPlayer(Alpine) {
             }
             if (this.widgetRetryHandle) {
                 clearTimeout(this.widgetRetryHandle);
-            }
-            if (this.programCoverHideHandle) {
-                clearTimeout(this.programCoverHideHandle);
             }
             if (this.widgetSyncHandle) {
                 clearTimeout(this.widgetSyncHandle);
@@ -563,7 +558,6 @@ export function registerRadioPlayer(Alpine) {
 
             this.programInfoLoading = true;
             this.programWindowOpen = true;
-            this.programCoverVisible = true;
             this.programInfo = {
                 id: this.track.program_id || null,
                 name: this.track.program_name || '',
@@ -603,18 +597,6 @@ export function registerRadioPlayer(Alpine) {
                     nextProgramInfo.episode = payload.data.episode ?? this.programInfo?.episode ?? null;
 
                     this.programInfo = nextProgramInfo;
-
-                    if (this.programCoverHideHandle) {
-                        clearTimeout(this.programCoverHideHandle);
-                    }
-
-                    this.programCoverHideHandle = window.setTimeout(() => {
-                        if (!this.programWindowOpen) {
-                            return;
-                        }
-
-                        this.programCoverVisible = false;
-                    }, 1000);
                 }
             } catch (error) {
                 // ignore program info lookup failures
@@ -627,12 +609,6 @@ export function registerRadioPlayer(Alpine) {
             this.programWindowOpen = false;
             this.programInfoLoading = false;
             this.programInfo = null;
-            this.programCoverVisible = false;
-
-            if (this.programCoverHideHandle) {
-                clearTimeout(this.programCoverHideHandle);
-                this.programCoverHideHandle = null;
-            }
         },
 
         setBandWindowTab(tab) {
