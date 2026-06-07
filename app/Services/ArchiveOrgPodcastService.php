@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\ArchiveOrgPodcastServiceContract;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
 use App\Services\FileUploadService;
@@ -17,7 +18,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
-final class ArchiveOrgPodcastService
+final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
 {
     private Client $client;
 
@@ -46,7 +47,7 @@ final class ArchiveOrgPodcastService
             $absolutePath = $this->resolveLocalPath($episode);
         } catch (Throwable $exception) {
             $episode->forceFill([
-                'archive_org_status' => 'error',
+                'archive_org_status' => 'archive_error',
                 'archive_org_last_error' => $exception->getMessage(),
                 'status_message' => 'Archive.org no pudo iniciar: falta el MP3 local.',
             ])->saveQuietly();
@@ -70,7 +71,7 @@ final class ArchiveOrgPodcastService
         );
 
         $episode->forceFill([
-            'archive_org_status' => 'pending',
+            'archive_org_status' => 'archive_pending',
             'archive_org_last_error' => null,
             'archive_org_metadata' => $snapshot,
             'status_message' => 'Sincronizando Archive.org.',
@@ -111,13 +112,13 @@ final class ArchiveOrgPodcastService
         }
 
         $episode->forceFill([
-            'archive_org_status' => $pendingIndexing ? 'pending' : 'synced',
+            'archive_org_status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
             'archive_org_remote_path' => $remotePath,
             'archive_org_uploaded_at' => now(),
             'archive_org_verified_at' => $pendingIndexing ? null : now(),
             'archive_org_last_error' => null,
             'archive_org_metadata' => array_merge($snapshot, [
-                'status' => $pendingIndexing ? 'pending' : 'synced',
+                'status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
                 'synced_at' => $pendingIndexing ? null : now()->toIso8601String(),
                 'remote_path' => $remotePath,
                 'verification' => $verification,
@@ -137,7 +138,7 @@ final class ArchiveOrgPodcastService
             'remote_path' => $remotePath,
             'item_exists_before' => $itemExistsBefore,
             'verification' => $verification,
-            'status' => $pendingIndexing ? 'pending' : 'synced',
+            'status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
             'pending_indexing' => $pendingIndexing,
         ];
     }
@@ -162,7 +163,7 @@ final class ArchiveOrgPodcastService
             $absolutePath = $this->resolveLocalPath($episode);
         } catch (Throwable $exception) {
             $episode->forceFill([
-                'archive_org_status' => 'error',
+                'archive_org_status' => 'archive_error',
                 'archive_org_last_error' => $exception->getMessage(),
                 'status_message' => 'Archive.org no pudo verificar la metadata porque falta el MP3 local.',
             ])->saveQuietly();
@@ -197,14 +198,14 @@ final class ArchiveOrgPodcastService
             'record_id' => $episode->id,
             'identifier' => $identifier,
             'remote_path' => $remotePath,
-            'status' => 'synced',
+            'status' => 'archive_verified',
             'synced_at' => now()->toIso8601String(),
             'episode_metadata' => $fileMetadata,
             'verification' => $verification,
         ]);
 
         $episode->forceFill([
-            'archive_org_status' => $pendingIndexing ? 'pending' : 'synced',
+            'archive_org_status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
             'archive_org_remote_path' => $remotePath,
             'archive_org_uploaded_at' => $episode->archive_org_uploaded_at ?? now(),
             'archive_org_verified_at' => $pendingIndexing ? null : now(),
@@ -718,7 +719,7 @@ final class ArchiveOrgPodcastService
             'created' => $created,
             'item_metadata' => $itemMetadata,
             'episode_metadata' => $fileMetadata,
-            'status' => 'pending',
+            'status' => 'archive_pending',
             'episode' => [
                 'master_program_id' => $episode->master_program_id,
                 'numero_episodio' => $episode->numero_episodio,

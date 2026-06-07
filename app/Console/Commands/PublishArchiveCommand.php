@@ -26,7 +26,7 @@ class PublishArchiveCommand extends Command
         $episodes = RadioProgram::query()
             ->with('masterProgram')
             ->where('sync_archive_org', true)
-            ->whereIn('archive_org_status', ['synced', 'pending'])
+            ->whereIn('archive_org_status', ['archive_verified', 'archive_pending', 'archive_pending_indexing'])
             ->whereNotNull('archive_org_remote_path')
             ->whereDate('fecha_emision', '<=', now()->toDateString())
             ->get()
@@ -64,7 +64,7 @@ class PublishArchiveCommand extends Command
 
                 RadioProgram::withoutEvents(function () use ($episode): void {
                     $episode->forceFill([
-                        'archive_org_status' => 'synced',
+                        'archive_org_status' => 'archive_verified',
                         'archive_org_metadata' => array_merge(
                             (array) ($episode->archive_org_metadata ?? []),
                             [

@@ -79,7 +79,7 @@ class ProgramScheduleServiceTest extends TestCase
             'fecha_emision' => '2026-05-18',
             'genero_musical' => 'ROCK',
             'sync_archive_org' => true,
-            'archive_org_status' => 'synced',
+            'archive_org_status' => 'archive_verified',
             'archive_org_metadata' => json_encode([
                 'identifier' => 'late-session-episode',
                 'remote_path' => 'late-session-episode.mp3',

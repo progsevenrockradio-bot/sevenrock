@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\PodcastProcessed;
 use App\Http\Controllers\Controller;
-use App\Jobs\NotifyPodcastReadyJob;
 use App\Jobs\ProcessMp3Job;
 use App\Jobs\UploadArchiveOrgJob;
 use App\Jobs\UploadRadiobossJob;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
 use App\Models\ThemeSetting;
+use App\Services\PodcastPipelineAuditService;
 use App\Services\FileUploadService;
 use Carbon\Carbon;
 use Dompdf\Dompdf;
@@ -217,9 +218,9 @@ final class PodcastUploadController extends Controller
         $shouldProcessPipeline = $pipelineAction !== 'save';
 
         $radioProgram = RadioProgram::withoutEvents(function () use ($master, $data, $rawPath, $syncArchiveOrg, $imagePath, $manualEpisodeNumber, $downloadProcessedMp3, $shouldProcessPipeline): RadioProgram {
-            $radioBossaStatus = $shouldProcessPipeline ? 'pending' : 'skipped';
-            $archiveStatus = $shouldProcessPipeline ? 'pending' : 'skipped';
-            $deliveryStatus = $shouldProcessPipeline ? 'pending' : 'skipped';
+            $radioBossaStatus = $shouldProcessPipeline ? 'radioboss_pending' : 'skipped';
+            $archiveStatus = $shouldProcessPipeline ? 'archive_pending' : 'skipped';
+            $deliveryStatus = $shouldProcessPipeline ? 'delivery_pending' : 'skipped';
             $statusMessage = $shouldProcessPipeline
                 ? 'Episodio recibido. Procesamiento en segundo plano.'
                 : 'Episodio guardado como borrador. Pendiente de procesar.';
@@ -243,6 +244,14 @@ final class PodcastUploadController extends Controller
                 'archive_org_status' => $archiveStatus,
                 'delivery_status' => $deliveryStatus,
                 'status_message' => $statusMessage,
+                'processing_started_at' => $shouldProcessPipeline ? now() : null,
+                'processing_finished_at' => null,
+                'radioboss_started_at' => null,
+                'radioboss_finished_at' => null,
+                'archive_started_at' => null,
+                'archive_finished_at' => null,
+                'radioboss_notification_sent_at' => null,
+                'archive_notification_sent_at' => null,
                 'imagen_episodio' => $imagePath,
                 'caratula_programa' => (string) $master->caratula_url,
                 'ruta_ftp_radioboss' => (string) $master->ruta_ftp,
@@ -251,11 +260,22 @@ final class PodcastUploadController extends Controller
                 'email_notificacion' => (string) ($master->email_notificacion ?? ''),
                 'delivery_metadata' => [
                     'preserve_local_copy' => $downloadProcessedMp3,
-                    'pipeline' => $shouldProcessPipeline ? 'chain' : 'save-only',
+                    'pipeline' => $shouldProcessPipeline ? 'event-driven' : 'save-only',
                     'source' => 'admin-podcast-uploads',
                 ],
             ]);
         });
+
+        app(PodcastPipelineAuditService::class)->record(
+            $radioProgram,
+            'UPLOAD_RECEIVED',
+            'El episodio fue recibido desde el panel administrativo.',
+            [
+                'source' => 'admin-podcast-uploads',
+                'should_process_pipeline' => $shouldProcessPipeline,
+                'sync_archive_org' => $syncArchiveOrg,
+            ]
+        );
 
         $message = 'Episodio guardado correctamente.';
         if ($shouldProcessPipeline) {
@@ -263,7 +283,7 @@ final class PodcastUploadController extends Controller
                 radioProgram: $radioProgram->fresh(['masterProgram']) ?? $radioProgram,
                 sourcePath: $rawPath,
                 preserveLocalCopy: $downloadProcessedMp3,
-                dispatchNextJobs: false,
+                dispatchNextJobs: true,
             );
 
             $message = $downloadProcessedMp3
@@ -301,23 +321,9 @@ final class PodcastUploadController extends Controller
                 'status_message' => 'Reintento selectivo solicitado desde el panel.',
             ])->saveQuietly();
 
-            Bus::chain($retryPlan['jobs'])
-                ->catch(function (Throwable $exception) use ($radioProgram): void {
-                    Log::error('PodcastUploadController: fallo el reintento selectivo del podcast.', [
-                        'program_id' => $radioProgram->id,
-                        'message' => $exception->getMessage(),
-                        'exception_class' => get_class($exception),
-                    ]);
-
-                    RadioProgram::withoutEvents(function () use ($radioProgram, $exception): void {
-                        $radioProgram->forceFill([
-                            'status_message' => 'El reintento selectivo del podcast falló.',
-                            'delivery_last_error' => $exception->getMessage(),
-                            'delivery_status' => 'failed',
-                        ])->saveQuietly();
-                    });
-                })
-                ->dispatch();
+            foreach ($retryPlan['jobs'] as $job) {
+                dispatch($job);
+            }
         } catch (Throwable $exception) {
             return back()->with('status', 'El reintento falló: ' . $exception->getMessage());
         }
@@ -386,36 +392,15 @@ final class PodcastUploadController extends Controller
     ): void {
         $audioSource = $radioProgram->fresh(['masterProgram']) ?? $radioProgram;
 
-        Bus::chain([
-            new ProcessMp3Job(
-                $audioSource,
-                $sourcePath,
-                $preserveLocalCopy,
-                Auth::id(),
-                Auth::user()?->name,
-                Auth::user()?->email,
-                $dispatchNextJobs,
-            ),
-            new UploadRadiobossJob($radioProgram->id),
-            new UploadArchiveOrgJob($radioProgram->id),
-            new NotifyPodcastReadyJob($radioProgram->id),
-        ])
-            ->catch(function (Throwable $exception) use ($radioProgram): void {
-                Log::error('PodcastUploadController: fallo la cadena de subida del podcast.', [
-                    'program_id' => $radioProgram->id,
-                    'message' => $exception->getMessage(),
-                    'exception_class' => get_class($exception),
-                ]);
-
-                RadioProgram::withoutEvents(function () use ($radioProgram, $exception): void {
-                    $radioProgram->forceFill([
-                        'status_message' => 'La cadena de procesamiento del podcast falló.',
-                        'delivery_last_error' => $exception->getMessage(),
-                        'delivery_status' => 'failed',
-                    ])->saveQuietly();
-                });
-            })
-            ->dispatch();
+        ProcessMp3Job::dispatch(
+            $audioSource,
+            $sourcePath,
+            $preserveLocalCopy,
+            Auth::id(),
+            Auth::user()?->name,
+            Auth::user()?->email,
+            $dispatchNextJobs,
+        );
     }
 
     /**
@@ -428,11 +413,9 @@ final class PodcastUploadController extends Controller
 
         $radiobossStatus = trim((string) ($radioProgram->radioboss_status ?? ''));
         $archiveStatus = trim((string) ($radioProgram->archive_org_status ?? ''));
-        $deliveryStatus = trim((string) ($radioProgram->delivery_status ?? ''));
 
-        $retryRadioboss = ! $radioProgram->enviado_radioboss || in_array($radiobossStatus, ['error', 'failed'], true);
-        $retryArchive = in_array($archiveStatus, ['error', 'failed', 'pending'], true);
-        $retryDelivery = in_array($deliveryStatus, ['failed', 'partial'], true);
+        $retryRadioboss = ! in_array($radiobossStatus, ['radioboss_verified'], true);
+        $retryArchive = ! in_array($archiveStatus, ['archive_verified'], true);
 
         if ($retryRadioboss) {
             $jobs[] = new UploadRadiobossJob($radioProgram->id);
@@ -442,11 +425,6 @@ final class PodcastUploadController extends Controller
         if ($retryArchive) {
             $jobs[] = new UploadArchiveOrgJob($radioProgram->id);
             $labels[] = 'Archive.org';
-        }
-
-        if ($retryRadioboss || $retryArchive || $retryDelivery) {
-            $jobs[] = new NotifyPodcastReadyJob($radioProgram->id);
-            $labels[] = 'notificación';
         }
 
         $message = $labels !== []
@@ -579,7 +557,7 @@ final class PodcastUploadController extends Controller
     private function recentPublishedUploads()
     {
         $uploads = RadioProgram::query()
-            ->where('delivery_status', 'verified')
+            ->where('delivery_status', 'delivery_verified')
             ->orderByDesc('delivery_verified_at')
             ->orderByDesc('id')
             ->limit(6)

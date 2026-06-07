@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RadioProgram extends Model
 {
@@ -31,6 +32,9 @@ class RadioProgram extends Model
         'radioboss_verified_at',
         'radioboss_last_error',
         'radioboss_metadata',
+        'radioboss_started_at',
+        'radioboss_finished_at',
+        'radioboss_notification_sent_at',
         'sync_archive_org',
         'archive_org_status',
         'archive_org_remote_path',
@@ -38,10 +42,15 @@ class RadioProgram extends Model
         'archive_org_verified_at',
         'archive_org_last_error',
         'archive_org_metadata',
+        'archive_started_at',
+        'archive_finished_at',
+        'archive_notification_sent_at',
         'delivery_status',
         'delivery_verified_at',
         'delivery_last_error',
         'delivery_metadata',
+        'processing_started_at',
+        'processing_finished_at',
         'status_message',
         'informacion_fija_programa',
         'genero_musical',
@@ -70,13 +79,21 @@ class RadioProgram extends Model
             'duration_seconds' => 'integer',
             'enviado_radioboss' => 'boolean',
             'radioboss_verified_at' => 'datetime',
+            'radioboss_started_at' => 'datetime',
+            'radioboss_finished_at' => 'datetime',
+            'radioboss_notification_sent_at' => 'datetime',
             'radioboss_metadata' => 'array',
             'sync_archive_org' => 'boolean',
             'archive_org_uploaded_at' => 'datetime',
             'archive_org_verified_at' => 'datetime',
+            'archive_started_at' => 'datetime',
+            'archive_finished_at' => 'datetime',
+            'archive_notification_sent_at' => 'datetime',
             'archive_org_metadata' => 'array',
             'delivery_verified_at' => 'datetime',
             'delivery_metadata' => 'array',
+            'processing_started_at' => 'datetime',
+            'processing_finished_at' => 'datetime',
             'live_news_ids' => 'array',
             'preview_news_ids' => 'array',
         ];
@@ -92,5 +109,10 @@ class RadioProgram extends Model
     public function masterProgram(): BelongsTo
     {
         return $this->belongsTo(MasterProgram::class);
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(RadioProgramEvent::class);
     }
 }

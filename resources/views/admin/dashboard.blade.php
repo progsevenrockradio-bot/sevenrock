@@ -76,6 +76,79 @@
         </aside>
     </div>
 
+    @php
+        $pipelineCounts = $pipeline['counts'] ?? [];
+        $recentPipelineEvents = $pipeline['recent_events'] ?? collect();
+    @endphp
+
+    <section class="mt-8 border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Podcast Pipeline</h2>
+                <p class="mt-2 max-w-3xl text-sm text-[#7b7b7b]">
+                    Estado operacional de la subida, con señales independientes para RadioBOSS, Archive.org y entrega final.
+                </p>
+            </div>
+            <div class="text-sm text-[#7b7b7b]">
+                Últimos eventos: {{ is_countable($recentPipelineEvents) ? count($recentPipelineEvents) : 0 }}
+            </div>
+        </div>
+
+        <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            @foreach ([
+                'processing' => 'Procesando',
+                'radioboss_pending' => 'RB pendiente',
+                'archive_pending' => 'Archive pendiente',
+                'delivery_partial' => 'Entrega parcial',
+                'delivery_verified' => 'Entrega verificada',
+            ] as $key => $label)
+                <div class="border border-[#2b2b2b] bg-[#151515] p-5">
+                    <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b]">{{ $label }}</div>
+                    <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ $pipelineCounts[$key] ?? 0 }}</div>
+                </div>
+            @endforeach
+        </div>
+
+        <div class="mt-6 grid gap-6 lg:grid-cols-2">
+            <div class="border border-[#2b2b2b] bg-[#151515] p-5">
+                <div class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Eventos recientes</div>
+                <div class="mt-4 space-y-3">
+                    @forelse ($recentPipelineEvents as $event)
+                        <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
+                            <div class="flex items-center justify-between gap-4">
+                                <div>
+                                    <div class="text-sm text-[#dcdcdc]">{{ $event->event_type }}</div>
+                                    <div class="text-xs text-[#7b7b7b]">{{ $event->event_message ?: 'Sin mensaje' }}</div>
+                                </div>
+                                <div class="text-xs uppercase tracking-[.14em] text-[#7b7b7b]">
+                                    {{ optional($event->created_at)->format('d/m/Y H:i') }}
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-sm text-[#7b7b7b]">No hay eventos de pipeline todavía.</p>
+                    @endforelse
+                </div>
+            </div>
+
+            <div class="border border-[#2b2b2b] bg-[#151515] p-5">
+                <div class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Programas recientes</div>
+                <div class="mt-4 space-y-3">
+                    @forelse (($pipeline['recent_programs'] ?? collect()) as $program)
+                        <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
+                            <div class="text-sm text-[#dcdcdc]">{{ $program->live_title ?: $program->titulo_programa }}</div>
+                            <div class="text-xs text-[#7b7b7b]">
+                                RB: {{ $program->radioboss_status ?? 'n/a' }} · Archive: {{ $program->archive_org_status ?? 'n/a' }} · Envío: {{ $program->delivery_status ?? 'n/a' }}
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-sm text-[#7b7b7b]">Todavía no hay programas recientes.</p>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section id="taxonomias" class="mt-8 border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>

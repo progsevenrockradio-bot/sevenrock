@@ -107,7 +107,7 @@ class ArchiveIdentifierAudit
             ])
             ->where(function ($query): void {
                 $query->where('rp.sync_archive_org', true)
-                    ->orWhereIn('rp.archive_org_status', ['synced', 'uploaded'])
+                    ->orWhereIn('rp.archive_org_status', ['archive_verified', 'archive_pending_indexing', 'archive_uploaded', 'uploaded'])
                     ->orWhereNotNull('rp.archive_org_uploaded_at')
                     ->orWhereNotNull('rp.archive_org_remote_path')
                     ->orWhereNotNull('rp.archive_org_metadata');
@@ -124,10 +124,10 @@ class ArchiveIdentifierAudit
             $masterIdentifier = trim((string) ($row->master_archive_identifier ?? ''));
             $status = trim((string) ($row->archive_org_status ?? ''));
             $reasons = [];
-            $hasCompletedSyncSignal = in_array($status, ['synced', 'uploaded'], true)
+            $hasCompletedSyncSignal = in_array($status, ['archive_verified', 'archive_pending_indexing', 'archive_uploaded', 'uploaded'], true)
                 || trim((string) ($row->archive_org_uploaded_at ?? '')) !== '';
 
-            if ($status === 'skipped') {
+            if (in_array($status, ['skipped', 'archive_skipped'], true)) {
                 continue;
             }
 
@@ -161,7 +161,7 @@ class ArchiveIdentifierAudit
                 'name' => trim((string) ($row->titulo_programa ?: $row->master_name ?: '')),
                 'identifier' => $identifier !== '' ? $identifier : $masterIdentifier,
                 'remote_path' => $remotePath,
-                'status' => $status !== '' ? $status : 'pending',
+                'status' => $status !== '' ? $status : 'archive_pending',
                 'issues' => $reasons,
                 'date' => $row->fecha_emision ?? null,
             ];

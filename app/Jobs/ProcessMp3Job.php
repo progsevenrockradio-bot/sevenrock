@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Events\PodcastProcessed;
+use App\Events\PodcastUploadFailed;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
 use App\Services\FileUploadService;
+use App\Services\PodcastPipelineAuditService;
 use App\Support\ExternalHttp;
 use App\Support\PublicMediaUrl;
 use Illuminate\Bus\Queueable;
@@ -18,7 +21,6 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Bus;
 use JamesHeinrich\GetID3\GetID3;
 use JamesHeinrich\GetID3\WriteTags as GetId3TagWriter;
 use Throwable;
@@ -55,39 +57,49 @@ class ProcessMp3Job implements ShouldQueue
         ini_set('memory_limit', '512M');
         set_time_limit(600);
 
-        $radioProgram = $this->radioProgram->fresh(['masterProgram']) ?? $this->radioProgram;
-        $master = $radioProgram->masterProgram
-            ?: MasterProgram::query()->find($radioProgram->master_program_id);
-
-        $sourceDisk = (string) $radioProgram->archivo_mp3_disk;
-        $fileUploadService = app(FileUploadService::class);
-        $sourceAbsolutePath = $fileUploadService->localPath($this->rawPath, $sourceDisk);
-
-        if ($sourceAbsolutePath === null || ! is_file($sourceAbsolutePath)) {
-            throw new \RuntimeException("No se pudo leer el MP3 local: {$this->rawPath}");
-        }
-
-        $sourcePath = $this->rawPath;
-        $workingPath = $this->buildWorkingPath($sourcePath);
-
-        $this->prepareWorkingCopy($sourceAbsolutePath, $workingPath);
-
-        RadioProgram::withoutEvents(function () use ($radioProgram): void {
-            $radioProgram->forceFill([
-                'status_message' => 'Procesando y etiquetando el MP3.',
-            ])->saveQuietly();
-        });
-
-        $episodeNumber = max(1, (int) ($radioProgram->numero_episodio ?? 0));
-        $programName = strtoupper(trim((string) ($radioProgram->titulo_programa ?: $master?->nombre ?: 'PODCAST')));
-        $fecha = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('d-m-Y') : now()->format('d-m-Y');
-        $fechaTitulo = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('d/m/Y') : now()->format('d/m/Y');
-        $anio = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('Y') : now()->format('Y');
-        $invitado = trim(strip_tags((string) $radioProgram->biografia_invitado));
-        $durationSeconds = $this->extractDurationSeconds($workingPath);
-        $finalPath = $this->buildProcessedPath($sourcePath, $episodeNumber, $programName, $fecha);
-
         try {
+            $radioProgram = $this->radioProgram->fresh(['masterProgram']) ?? $this->radioProgram;
+            $master = $radioProgram->masterProgram
+                ?: MasterProgram::query()->find($radioProgram->master_program_id);
+
+            $sourceDisk = (string) $radioProgram->archivo_mp3_disk;
+            $fileUploadService = app(FileUploadService::class);
+            $sourceAbsolutePath = $fileUploadService->localPath($this->rawPath, $sourceDisk);
+
+            if ($sourceAbsolutePath === null || ! is_file($sourceAbsolutePath)) {
+                throw new \RuntimeException("No se pudo leer el MP3 local: {$this->rawPath}");
+            }
+
+            $sourcePath = $this->rawPath;
+            $workingPath = $this->buildWorkingPath($sourcePath);
+
+            $this->prepareWorkingCopy($sourceAbsolutePath, $workingPath);
+
+            RadioProgram::withoutEvents(function () use ($radioProgram): void {
+                $radioProgram->forceFill([
+                    'processing_started_at' => $radioProgram->processing_started_at ?? now(),
+                    'status_message' => 'Procesando y etiquetando el MP3.',
+                    'delivery_status' => 'delivery_pending',
+                    'radioboss_status' => 'radioboss_pending',
+                    'archive_org_status' => 'archive_pending',
+                ])->saveQuietly();
+            });
+
+            app(PodcastPipelineAuditService::class)->record($radioProgram, 'PROCESSING_STARTED', 'El MP3 entró en la fase de procesamiento local.', [
+                'raw_path' => $this->rawPath,
+                'source_disk' => $sourceDisk,
+                'dispatch_next_jobs' => $this->dispatchNextJobs,
+            ]);
+
+            $episodeNumber = max(1, (int) ($radioProgram->numero_episodio ?? 0));
+            $programName = strtoupper(trim((string) ($radioProgram->titulo_programa ?: $master?->nombre ?: 'PODCAST')));
+            $fecha = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('d-m-Y') : now()->format('d-m-Y');
+            $fechaTitulo = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('d/m/Y') : now()->format('d/m/Y');
+            $anio = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('Y') : now()->format('Y');
+            $invitado = trim(strip_tags((string) $radioProgram->biografia_invitado));
+            $durationSeconds = $this->extractDurationSeconds($workingPath);
+            $finalPath = $this->buildProcessedPath($sourcePath, $episodeNumber, $programName, $fecha);
+
             $this->writeMetadata($workingPath, $master, $radioProgram, $programName, $invitado, $fecha, $fechaTitulo, $anio);
 
             $this->publishWorkingCopy($workingPath, $finalPath);
@@ -100,6 +112,7 @@ class ProcessMp3Job implements ShouldQueue
                 $radioProgram->forceFill([
                     'archivo_mp3' => $finalPath,
                     'archivo_mp3_disk' => 'public',
+                    'processing_finished_at' => now(),
                     'status_message' => 'MP3 procesado localmente. Preparando entregas.',
                 ])->saveQuietly();
             });
@@ -112,16 +125,45 @@ class ProcessMp3Job implements ShouldQueue
                 });
             }
 
+            app(PodcastPipelineAuditService::class)->record($radioProgram, 'PROCESSING_COMPLETED', 'El MP3 quedó listo para distribución.', [
+                'processed_path' => $finalPath,
+                'duration_seconds' => $durationSeconds,
+            ]);
+
             if ($this->dispatchNextJobs) {
-                Bus::chain([
-                    new UploadRadiobossJob($radioProgram->id),
-                    new UploadArchiveOrgJob($radioProgram->id),
-                    new NotifyPodcastReadyJob($radioProgram->id),
-                ])->dispatch();
+                PodcastProcessed::dispatch($radioProgram->id);
             }
         } finally {
-            $this->cleanupWorkingCopy($workingPath);
+            if (isset($workingPath)) {
+                $this->cleanupWorkingCopy($workingPath);
+            }
         }
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        $radioProgram = $this->radioProgram->fresh(['masterProgram']) ?? $this->radioProgram;
+        if (! $radioProgram instanceof RadioProgram) {
+            return;
+        }
+
+        RadioProgram::withoutEvents(function () use ($radioProgram, $exception): void {
+            $radioProgram->forceFill([
+                'processing_finished_at' => now(),
+                'delivery_status' => 'delivery_failed',
+                'delivery_last_error' => $exception->getMessage(),
+                'status_message' => 'El procesamiento local falló.',
+            ])->saveQuietly();
+        });
+
+        app(PodcastPipelineAuditService::class)->record($radioProgram, 'ERROR', 'Falló el procesamiento local del MP3.', [
+            'stage' => 'processing_local',
+            'exception' => $exception->getMessage(),
+        ]);
+
+        PodcastUploadFailed::dispatch($radioProgram->id, 'processing_local', $exception->getMessage(), [
+            'exception_class' => $exception::class,
+        ]);
     }
 
     private function buildProcessedPath(

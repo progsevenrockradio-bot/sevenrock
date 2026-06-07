@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs\Concerns;
 
-use App\Jobs\SendDeliveryNotification;
+use App\Mail\PodcastArchiveUploadedMail;
+use App\Mail\PodcastRadiobossUploadedMail;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
 use App\Models\ThemeSetting;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Support\ExternalHttp;
 use App\Support\PublicMediaUrl;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use JamesHeinrich\GetID3\GetID3;
@@ -45,9 +47,34 @@ trait InteractsWithPodcastUploadPipeline
         ];
     }
 
-    private function dispatchDeliveryNotification(int $radioProgramId): void
+    private function sendRadiobossUploadNotification(RadioProgram $radioProgram): void
     {
-        SendDeliveryNotification::dispatch($radioProgramId);
+        $mailer = $this->resolveNotificationMailer();
+        $recipients = $this->resolveNotificationRecipients($radioProgram->masterProgram);
+        $to = $recipients[0] ?? $this->resolveGlobalNotificationPrimaryRecipient();
+        $cc = $recipients[1] ?? $this->resolveGlobalNotificationCopyRecipient();
+
+        $message = Mail::mailer($mailer)->to($to);
+        if (is_string($cc) && $cc !== '' && $cc !== $to) {
+            $message->cc($cc);
+        }
+
+        $message->send(new PodcastRadiobossUploadedMail($radioProgram));
+    }
+
+    private function sendArchiveUploadNotification(RadioProgram $radioProgram): void
+    {
+        $mailer = $this->resolveNotificationMailer();
+        $recipients = $this->resolveNotificationRecipients($radioProgram->masterProgram);
+        $to = $recipients[0] ?? $this->resolveGlobalNotificationPrimaryRecipient();
+        $cc = $recipients[1] ?? $this->resolveGlobalNotificationCopyRecipient();
+
+        $message = Mail::mailer($mailer)->to($to);
+        if (is_string($cc) && $cc !== '' && $cc !== $to) {
+            $message->cc($cc);
+        }
+
+        $message->send(new PodcastArchiveUploadedMail($radioProgram));
     }
 
     private function resolveUploadFolder(?MasterProgram $master, RadioProgram $radioProgram): string

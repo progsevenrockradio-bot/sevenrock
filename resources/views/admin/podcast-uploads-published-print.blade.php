@@ -52,7 +52,7 @@
                 <tr>
                     <td>{{ $upload->numero_episodio }}</td>
                     <td>{{ $upload->live_title ?: $upload->titulo_programa }}</td>
-                    <td>{{ $upload->masterProgram?->name ?? 'Sin programa maestro' }}</td>
+                    <td>{{ $upload->masterProgram?->nombre ?? 'Sin programa maestro' }}</td>
                     <td>{{ optional($upload->fecha_emision)->format('d/m/Y') }}</td>
                     <td><span class="badge">Publicado</span></td>
                 </tr>

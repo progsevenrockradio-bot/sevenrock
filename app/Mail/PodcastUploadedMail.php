@@ -29,12 +29,12 @@ final class PodcastUploadedMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $programName = trim((string) ($this->episode->titulo_programa ?: $this->episode->masterProgram?->name ?: 'Seven Rock Radio'));
+        $programName = trim((string) ($this->episode->titulo_programa ?: $this->episode->masterProgram?->nombre ?: 'Seven Rock Radio'));
         $episodeNumber = (int) ($this->episode->numero_episodio ?? 0);
         $subjectPrefix = match ($this->deliveryStatus) {
-            'verified' => '✅ Entrega completa',
-            'partial' => '⚠️ Entrega parcial',
-            'failed' => '❌ Error en entrega',
+            'delivery_verified' => '✅ Entrega completa',
+            'delivery_partial' => '⚠️ Entrega parcial',
+            'delivery_failed' => '❌ Error en entrega',
             default => '⚠️ Estado de entrega',
         };
 

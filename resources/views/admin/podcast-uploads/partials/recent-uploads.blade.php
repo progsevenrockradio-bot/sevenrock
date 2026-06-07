@@ -1,26 +1,38 @@
 @php
     $badgeClasses = [
-        'verified' => 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-        'synced' => 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-        'pending' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+        'radioboss_verified' => 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+        'archive_verified' => 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+        'delivery_verified' => 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+        'radioboss_pending' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+        'archive_pending' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+        'archive_pending_indexing' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+        'delivery_pending' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+        'delivery_partial' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
         'processing' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
-        'partial' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
         'skipped' => 'border-sky-500/30 bg-sky-500/10 text-sky-300',
-        'error' => 'border-rose-500/30 bg-rose-500/10 text-rose-300',
-        'failed' => 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+        'archive_skipped' => 'border-sky-500/30 bg-sky-500/10 text-sky-300',
+        'archive_error' => 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+        'delivery_failed' => 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+        'radioboss_error' => 'border-rose-500/30 bg-rose-500/10 text-rose-300',
         'default' => 'border-[#2b2b2b] bg-[#111111] text-[#9d9d9d]',
     ];
 
     $badgeLabel = static function (?string $status, string $fallback = 'sin estado'): string {
         return match ($status) {
-            'verified' => 'Verificado',
-            'synced' => 'Sincronizado',
-            'pending' => 'Pendiente',
+            'radioboss_verified' => 'Verificado',
+            'archive_verified' => 'Verificado',
+            'delivery_verified' => 'Verificado',
+            'radioboss_pending' => 'Pendiente',
+            'archive_pending' => 'Pendiente',
+            'archive_pending_indexing' => 'Indexando',
+            'delivery_pending' => 'Pendiente',
             'processing' => 'Procesando',
-            'partial' => 'Parcial',
+            'delivery_partial' => 'Parcial',
             'skipped' => 'Borrador creado',
-            'error' => 'Error',
-            'failed' => 'Falló',
+            'archive_skipped' => 'Omitido',
+            'radioboss_error' => 'Error',
+            'archive_error' => 'Error',
+            'delivery_failed' => 'Falló',
             default => $fallback,
         };
     };
@@ -33,12 +45,12 @@
 <div class="space-y-4">
     @forelse ($recentUploads as $upload)
         @php
-            $radioStatus = $upload->enviado_radioboss ? 'verified' : (string) ($upload->radioboss_status ?? 'pending');
-            $archiveStatus = (string) ($upload->archive_org_status ?? 'pending');
-            $deliveryStatus = (string) ($upload->delivery_status ?? 'pending');
-            $hasActivePipeline = in_array($radioStatus, ['pending', 'processing', 'uploading'], true)
-                || in_array($archiveStatus, ['pending', 'processing', 'uploading'], true)
-                || in_array($deliveryStatus, ['pending', 'processing', 'uploading'], true);
+            $radioStatus = (string) ($upload->radioboss_status ?? ($upload->enviado_radioboss ? 'radioboss_verified' : 'radioboss_pending'));
+            $archiveStatus = (string) ($upload->archive_org_status ?? 'archive_pending');
+            $deliveryStatus = (string) ($upload->delivery_status ?? 'delivery_pending');
+            $hasActivePipeline = in_array($radioStatus, ['radioboss_pending', 'processing', 'uploading'], true)
+                || in_array($archiveStatus, ['archive_pending', 'archive_pending_indexing', 'processing', 'uploading'], true)
+                || in_array($deliveryStatus, ['delivery_pending', 'delivery_partial', 'processing', 'uploading'], true);
         @endphp
         <article
             class="border border-[#242424] bg-[#151515] p-4"
@@ -49,7 +61,7 @@
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <div class="font-display text-sm uppercase tracking-[.12em] text-white">{{ $upload->live_title ?: $upload->titulo_programa }}</div>
-                    <div class="mt-1 text-sm text-[#9d9d9d]">{{ $upload->masterProgram?->name ?? 'Sin programa maestro' }}</div>
+                    <div class="mt-1 text-sm text-[#9d9d9d]">{{ $upload->masterProgram?->nombre ?? 'Sin programa maestro' }}</div>
                     <div class="mt-3 flex flex-wrap gap-2 text-[10px] uppercase tracking-[.18em]">
                         <span class="inline-flex items-center rounded border px-2.5 py-1 {{ $badgeClassFor($radioStatus) }}">
                             RB · {{ $badgeLabel($radioStatus) }}

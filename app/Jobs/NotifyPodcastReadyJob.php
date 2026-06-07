@@ -44,13 +44,13 @@ class NotifyPodcastReadyJob implements ShouldQueue
         $radiobossStatus = (string) ($radioProgram->radioboss_status ?? '');
         $archiveStatus = (string) ($radioProgram->archive_org_status ?? '');
 
-        $radiobossVerified = $radiobossStatus === 'verified';
-        $archiveVerified = $archiveStatus === 'synced';
+        $radiobossVerified = $radiobossStatus === 'radioboss_verified';
+        $archiveVerified = in_array($archiveStatus, ['archive_verified', 'archive_pending_indexing'], true);
 
         $deliveryStatus = match (true) {
-            $radiobossVerified && $archiveVerified => 'verified',
-            $radiobossVerified || $archiveVerified => 'partial',
-            default => 'failed',
+            $radiobossVerified && $archiveVerified => 'delivery_verified',
+            $radiobossVerified || $archiveVerified => 'delivery_partial',
+            default => 'delivery_failed',
         };
 
         $failureReason = $this->resolveFailureReason($radioProgram);
@@ -82,7 +82,7 @@ class NotifyPodcastReadyJob implements ShouldQueue
                     'delivery_last_error' => null,
                     'delivery_metadata' => array_merge((array) ($radioProgram->delivery_metadata ?? []), [
                         'status' => $deliveryStatus,
-                        'verified' => $deliveryStatus === 'verified',
+                        'verified' => $deliveryStatus === 'delivery_verified',
                         'updated_at' => now()->toIso8601String(),
                         'radioboss_status' => $radiobossStatus,
                         'archive_org_status' => $archiveStatus,
@@ -90,7 +90,7 @@ class NotifyPodcastReadyJob implements ShouldQueue
                         'archive_verified' => $archiveVerified,
                         'preserve_local_copy' => (bool) data_get($radioProgram->delivery_metadata, 'preserve_local_copy', false),
                     ]),
-                    'status_message' => $deliveryStatus === 'verified'
+                    'status_message' => $deliveryStatus === 'delivery_verified'
                         ? 'Procesamiento finalizado correctamente.'
                         : 'Procesamiento finalizado con incidencias.',
                 ])->saveQuietly();
@@ -102,11 +102,11 @@ class NotifyPodcastReadyJob implements ShouldQueue
         } catch (Throwable $exception) {
             RadioProgram::withoutEvents(function () use ($radioProgram, $exception): void {
                 $radioProgram->forceFill([
-                    'delivery_status' => 'failed',
+                    'delivery_status' => 'delivery_failed',
                     'delivery_verified_at' => null,
                     'delivery_last_error' => $exception->getMessage(),
                     'delivery_metadata' => array_merge((array) ($radioProgram->delivery_metadata ?? []), [
-                        'status' => 'failed',
+                        'status' => 'delivery_failed',
                         'last_error' => $exception->getMessage(),
                     ]),
                     'status_message' => 'La notificación por correo falló.',

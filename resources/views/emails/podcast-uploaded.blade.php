@@ -1,5 +1,5 @@
 <x-mail::message>
-# {{ $deliveryStatus === 'verified' ? 'Entrega completa' : ($deliveryStatus === 'partial' ? 'Entrega parcial' : 'Error en la entrega') }}
+# {{ $deliveryStatus === 'delivery_verified' ? 'Entrega completa' : ($deliveryStatus === 'delivery_partial' ? 'Entrega parcial' : 'Error en la entrega') }}
 
 El episodio {{ $episode->live_title ?: $episode->titulo_programa }} del programa {{ $episode->titulo_programa }} ha completado su distribución al Cloud.
 
@@ -35,8 +35,8 @@ El episodio {{ $episode->live_title ?: $episode->titulo_programa }} del programa
 </tr>
 <tr>
 <td style="padding: 8px 0;">Estado general</td>
-<td align="center" style="padding: 8px 0;">{{ $deliveryStatus === 'verified' ? '✅' : ($deliveryStatus === 'partial' ? '⚠️' : '❌') }}</td>
-<td style="padding: 8px 0;">{{ $deliveryStatus === 'verified' ? 'Entrega completa' : ($deliveryStatus === 'partial' ? 'Entrega parcial' : 'Error en la entrega') }}</td>
+<td align="center" style="padding: 8px 0;">{{ $deliveryStatus === 'delivery_verified' ? '✅' : ($deliveryStatus === 'delivery_partial' ? '⚠️' : '❌') }}</td>
+<td style="padding: 8px 0;">{{ $deliveryStatus === 'delivery_verified' ? 'Entrega completa' : ($deliveryStatus === 'delivery_partial' ? 'Entrega parcial' : 'Error en la entrega') }}</td>
 </tr>
 </table>
 

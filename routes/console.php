@@ -352,3 +352,13 @@ Schedule::command('podcast:publish-archive')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/publish-archive.log'));
+
+// Reconcile stuck or partially completed podcast pipelines
+Schedule::command('podcast:reconcile-pipeline', [
+    '--limit' => 200,
+    '--stale-minutes' => 120,
+])
+    ->everyTenMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/podcast-reconcile.log'));

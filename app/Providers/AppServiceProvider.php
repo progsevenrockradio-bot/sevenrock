@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Contracts\ArchiveOrgPodcastServiceContract;
 use App\Services\Gateways\MercadoPagoGateway;
 use App\Services\Gateways\PayPalGateway;
 use App\Services\Gateways\StripeGateway;
 use App\Services\PaymentManager;
+use App\Services\ArchiveOrgPodcastService;
 use App\Models\ThemeSetting;
 use App\Models\RadioProgram;
 use App\Observers\RadioProgramObserver;
@@ -23,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(ArchiveOrgPodcastServiceContract::class, ArchiveOrgPodcastService::class);
+
         $this->app->singleton(PaymentManager::class, function ($app): PaymentManager {
             $manager = new PaymentManager($app);
             $manager->register('stripe', $app->make(StripeGateway::class));

@@ -195,8 +195,7 @@ final class ArchiveOrgService
                 ])
                 ->where(function ($query): void {
                     $query->where('rp.sync_archive_org', true)
-                        ->orWhere('rp.archive_org_status', 'synced')
-                        ->orWhere('rp.archive_org_status', 'uploaded')
+                        ->orWhereIn('rp.archive_org_status', ['archive_verified', 'archive_pending_indexing', 'uploaded'])
                         ->orWhereNotNull('rp.archive_org_uploaded_at');
                 })
                 ->orderByDesc('rp.fecha_emision')
