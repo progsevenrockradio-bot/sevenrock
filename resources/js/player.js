@@ -584,7 +584,19 @@ export function registerRadioPlayer(Alpine) {
                 const payload = await response.json();
 
                 if (payload?.success && payload?.data) {
-                    this.programInfo = payload.data;
+                    const nextProgramInfo = {
+                        ...this.programInfo,
+                        ...payload.data,
+                    };
+
+                    nextProgramInfo.cover = String(payload.data.cover || '').trim() || nextProgramInfo.cover || this.track.cover || this.fallbackCover;
+                    nextProgramInfo.social_links = {
+                        ...(this.programInfo?.social_links || {}),
+                        ...(payload.data.social_links || {}),
+                    };
+                    nextProgramInfo.episode = payload.data.episode ?? this.programInfo?.episode ?? null;
+
+                    this.programInfo = nextProgramInfo;
                 }
             } catch (error) {
                 // ignore program info lookup failures
