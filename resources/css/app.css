@@ -1057,6 +1057,56 @@
         transform: translateY(0);
     }
 
+    .lucille-range-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 4px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.12);
+        outline: none;
+    }
+    .lucille-range-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--color-lucille-accent, #c32720);
+        cursor: pointer;
+        transition: transform 0.15s ease;
+    }
+    .lucille-range-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.35);
+    }
+    .lucille-range-slider::-moz-range-thumb {
+        width: 12px;
+        height: 12px;
+        border: none;
+        border-radius: 50%;
+        background: var(--color-lucille-accent, #c32720);
+        cursor: pointer;
+        transition: transform 0.15s ease;
+    }
+    .lucille-range-slider::-moz-range-thumb:hover {
+        transform: scale(1.35);
+    }
+
+    .podcast-card-premium {
+        background: #0d0d0d;
+        border: 1px solid #242424;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+    }
+    .podcast-card-premium:hover {
+        transform: translateY(-4px) scale(1.015);
+        border-color: rgba(195, 39, 32, 0.25);
+        box-shadow: 0 20px 35px -10px hsla(4, 71%, 45%, 0.12),
+                    0 0 20px 1px hsla(4, 71%, 45%, 0.04);
+    }
+
     .lucille-heading {
         color: #dcdcdc;
         font-family: var(--font-display);
