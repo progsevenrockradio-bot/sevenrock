@@ -270,7 +270,7 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
 
     Route::middleware('guest:talent')->group(function (): void {
         Route::get('/register', [TalentAuthController::class, 'showRegisterForm'])->name('register');
-        Route::post('/register', [TalentAuthController::class, 'register'])->name('register.store')->middleware([\App\Http\Middleware\PreventSpamWithHoneypot::class]);
+        Route::post('/register', [TalentAuthController::class, 'register'])->name('register.store')->middleware(['throttle:5,1', \App\Http\Middleware\PreventSpamWithHoneypot::class]);
         Route::get('/login', [TalentAuthController::class, 'showLoginForm'])->name('login');
         Route::post('/login', [TalentAuthController::class, 'login'])->name('login.store')->middleware('throttle:login');
     });
