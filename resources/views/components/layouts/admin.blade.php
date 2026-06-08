@@ -20,6 +20,8 @@
 </head>
 <body
     class="antialiased"
+    x-data="{ showHelp: false }"
+    @keydown.window.escape="showHelp = false"
     style="
         --lucille-accent: {{ $theme->accent_color }};
         --lucille-nav: {{ $theme->nav_color }};
@@ -330,6 +332,17 @@
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                         <span class="hidden md:inline">Buscar sección...</span>
                         <kbd class="hidden md:inline-flex px-1.5 py-0.5 text-[9px] bg-gray-800 border border-gray-700 rounded text-gray-500 font-sans font-normal leading-3">Ctrl+K</kbd>
+                    </button>
+
+                    <!-- Help Button -->
+                    <button
+                        type="button"
+                        @click="showHelp = true"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded border border-[rgba(220,220,220,.12)] bg-[rgba(255,255,255,.02)] text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
+                        title="Ver ayuda de esta sección"
+                    >
+                        <span>💡</span>
+                        <span class="hidden sm:inline">Manual</span>
                     </button>
 
                     <a href="{{ route('home') }}" class="lucille-button py-1.5 text-xs">{{ $admin['view_site'] }}</a>
@@ -644,5 +657,8 @@
             @endauth
         })();
     </script>
+    @auth
+        @include('admin._global_help_modal')
+    @endauth
 </body>
 </html>
