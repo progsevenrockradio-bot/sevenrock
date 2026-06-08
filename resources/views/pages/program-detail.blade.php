@@ -7,13 +7,13 @@
     />
 
     <section>
-        <div class="lucille-content-box">
+        <div class="lucille-content-box mx-auto max-w-[1180px] px-5 py-12">
             @php $fallbackImage = asset('assets/lucille/logo.png'); @endphp
 
             {{-- Descripción del programa --}}
             @if (!empty($program['description']))
-                <div class="mb-10 max-w-3xl">
-                    <p class="text-sm leading-7 text-[#cbcbcb]">{{ $program['description'] }}</p>
+                <div class="mb-12 max-w-3xl border-l-2 border-lucille-accent pl-5 py-1">
+                    <p class="text-sm leading-relaxed text-[#cbcbcb]">{{ $program['description'] }}</p>
                     @if (!empty($program['schedule']))
                         <p class="mt-3 text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">
                             Horario: {{ $program['schedule'] }}
@@ -97,12 +97,13 @@
             >
                 @if (!empty($episodes))
                     <div class="mb-6 flex items-center justify-between">
-                        <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">
+                        <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] flex items-center gap-3">
+                            <span class="w-1 h-6 bg-lucille-accent rounded-full inline-block"></span>
                             Episodios · <span class="text-lucille-accent">{{ count($episodes) }}</span>
                         </h2>
                     </div>
 
-                    <div class="space-y-3">
+                    <div class="grid gap-4">
                         @foreach ($episodes as $index => $episode)
                             @php
                                 $epTitle = $episode['title'] ?? 'Episodio ' . ($index + 1);
@@ -112,45 +113,47 @@
                                 $epSize = isset($episode['size']) ? round($episode['size'] / 1048576, 1) . ' MB' : '';
                                 $epViews = $episode['views'] ?? '';
                             @endphp
-                            <div class="group flex items-center gap-4 border border-[#2b2b2b] bg-[#111] p-4 transition-all duration-300 hover:border-lucille-accent/40 hover:shadow-[0_0_20px_rgba(195,39,32,.1)] {{ $activeEpisode ?? '' ? '' : '' }}"
-                                :class="activeEpisode && activeEpisode.src === '{{ $epSrc }}' ? 'border-lucille-accent/60 bg-[#1a0a0a]' : ''">
+                            <div class="group flex items-center justify-between gap-4 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-4 sm:p-5 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04] hover:-translate-y-0.5 shadow-lg"
+                                :class="activeEpisode && activeEpisode.src === '{{ $epSrc }}' ? 'border-lucille-accent/50 bg-lucille-accent/5 shadow-[0_0_20px_rgba(195,39,32,.08)]' : ''">
 
-                                {{-- Portada miniatura --}}
-                                <div class="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded border border-[#2b2b2b] bg-[#0a0a0a]">
-                                    <img src="{{ $program['cover'] ?: $fallbackImage }}"
-                                         alt="{{ $epTitle }}"
-                                         width="256"
-                                         height="256"
-                                         class="h-full w-full object-cover"
-                                         loading="lazy"
-                                         decoding="async">
-                                </div>
+                                <div class="flex items-center gap-4 min-w-0 flex-1">
+                                    {{-- Portada miniatura --}}
+                                    <div class="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-[8px] border border-white/10 bg-[#0a0a0a]">
+                                        <img src="{{ $program['cover'] ?: $fallbackImage }}"
+                                             alt="{{ $epTitle }}"
+                                             width="256"
+                                             height="256"
+                                             class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-102"
+                                             loading="lazy"
+                                             decoding="async">
+                                    </div>
 
-                                {{-- Info del episodio --}}
-                                <div class="min-w-0 flex-1">
-                                    <h3 class="font-display text-[14px] sm:text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] group-hover:text-lucille-accent transition-colors truncate">
-                                        {{ $epTitle }}
-                                    </h3>
-                                    <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] sm:text-[11px] text-[#7b7b7b]">
-                                        @if ($epDate)
-                                            <span>{{ $epDate }}</span>
-                                        @endif
-                                        @if ($epDuration)
-                                            <span class="text-lucille-accent/70">{{ $epDuration }}</span>
-                                        @endif
-                                        @if ($epSize)
-                                            <span>{{ $epSize }}</span>
-                                        @endif
+                                    {{-- Info del episodio --}}
+                                    <div class="min-w-0 flex-1">
+                                        <h3 class="font-display text-[14px] sm:text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] group-hover:text-lucille-accent transition-colors truncate">
+                                            {{ $epTitle }}
+                                        </h3>
+                                        <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] sm:text-[11px] text-[#7b7b7b]">
+                                            @if ($epDate)
+                                                <span>{{ $epDate }}</span>
+                                            @endif
+                                            @if ($epDuration)
+                                                <span class="text-lucille-accent/70 font-mono">{{ $epDuration }}</span>
+                                            @endif
+                                            @if ($epSize)
+                                                <span class="font-mono">{{ $epSize }}</span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
 
                                 {{-- Botón Play --}}
                                 @if ($epSrc)
                                     <button type="button"
-                                        class="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition-all hover:bg-white/10 hover:border-white/30 active:scale-90 shrink-0"
+                                        class="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition-all duration-300 hover:bg-lucille-accent hover:border-lucille-accent hover:shadow-[0_0_15px_rgba(195,39,32,0.4)] hover:scale-105 active:scale-95 shrink-0"
                                         @click="play({
-                                            program: '{{ $program['title'] }}',
-                                            title: '{{ $epTitle }}',
+                                            program: '{{ addslashes($program['title']) }}',
+                                            title: '{{ addslashes($epTitle) }}',
                                             src: '{{ $epSrc }}',
                                             image: '{{ $program['cover'] ?: $fallbackImage }}'
                                         })">
@@ -161,7 +164,7 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="py-16 text-center">
+                    <div class="py-16 text-center border border-dashed border-white/10 bg-white/[0.01] rounded-[16px] p-8">
                         <p class="text-sm text-[#7b7b7b]">No hay episodios disponibles para este programa.</p>
                         <a href="{{ route('programs') }}" class="mt-4 inline-block text-[11px] uppercase tracking-[.18em] text-lucille-accent hover:underline">
                             ← Volver a programas
@@ -169,77 +172,93 @@
                     </div>
                 @endif
 
-                {{-- Reproductor flotante (igual que en programs) --}}
+                {{-- Reproductor flotante glassmorphic premium --}}
                 <div x-show="playerVisible && activeEpisode" x-cloak
-                    x-transition:enter="transition-all duration-400 ease-out"
-                    x-transition:enter-start="translate-y-full opacity-0"
-                    x-transition:enter-end="translate-y-0 opacity-100"
-                    x-transition:leave="transition-all duration-300 ease-in"
-                    x-transition:leave-start="translate-y-0 opacity-100"
-                    x-transition:leave-end="translate-y-full opacity-0"
-                    class="fixed bottom-0 left-0 right-0 z-[100] border-t border-[#2b2b2b] bg-gradient-to-t from-[#0a0a0a] via-[#0d0d0d] to-[#111] shadow-[0_-8px_40px_rgba(0,0,0,.6)]">
+                    class="fixed bottom-0 left-0 right-0 z-[100] flex justify-center p-4 sm:p-6 pointer-events-none"
+                >
+                    <div 
+                        x-transition:enter="transition-all duration-400 ease-out"
+                        x-transition:enter-start="translate-y-20 opacity-0"
+                        x-transition:enter-end="translate-y-0 opacity-100"
+                        x-transition:leave="transition-all duration-300 ease-in"
+                        x-transition:leave-start="translate-y-0 opacity-100"
+                        x-transition:leave-end="translate-y-20 opacity-0"
+                        class="w-full max-w-5xl pointer-events-auto relative bg-[#0b0b0c]/85 backdrop-blur-md border border-white/8 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.75)] overflow-hidden p-3.5 sm:p-5"
+                    >
+                        {{-- Top slim progress indicator --}}
+                        <div class="absolute top-0 left-0 right-0 h-1 bg-white/5">
+                            <div class="h-full bg-lucille-accent transition-all duration-100" :style="'width: ' + progressPct + '%'"></div>
+                        </div>
 
-                    <div class="h-0.5 w-full bg-[#2b2b2b]">
-                        <progress class="program-progress-meter" :value="progressPct" max="100" aria-label="Progreso de reproducción"></progress>
-                    </div>
-
-                    <div class="mx-auto max-w-[1180px] px-3 py-2 sm:px-6 sm:py-4">
                         <template x-if="activeEpisode">
-                            <div class="flex items-center gap-2 sm:gap-4">
-                                <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-[2] sm:flex-1">
-                                    <div class="h-9 w-9 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded border border-[#2b2b2b] bg-[#111] shadow-[0_4px_12px_rgba(0,0,0,.3)]">
+                            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                {{-- Left: Info --}}
+                                <div class="flex items-center gap-3 min-w-0 w-full sm:w-auto flex-[2] sm:flex-1">
+                                    <div class="h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#2b2b2b] bg-[#111] shadow-[0_2px_8px_rgba(0,0,0,.3)]">
                                         <img :src="activeEpisode.image || '{{ $fallbackImage }}'"
-                                            :alt="activeEpisode.program" width="640" height="480" class="h-full w-full object-cover" loading="lazy" decoding="async">
+                                            :alt="activeEpisode.program" width="256" height="256" class="h-full w-full object-cover" loading="lazy" decoding="async">
                                     </div>
                                     <div class="min-w-0">
-                                        <div class="truncate font-display text-[11px] sm:text-[14px] uppercase tracking-[.08em] text-[#dcdcdc] leading-tight"
+                                        <div class="truncate font-display text-[12px] uppercase tracking-[.08em] text-[#dcdcdc] leading-tight"
                                             x-text="activeEpisode.program"></div>
-                                        <div class="truncate text-[9px] sm:text-[11px] text-[#888] mt-0.5"
+                                        <div class="truncate text-[10px] text-[#888] mt-1"
                                             x-text="activeEpisode.title"></div>
-                                        <div class="hidden sm:block text-[9px] text-[#555] font-display tracking-[.12em] mt-0.5"
+                                        <div class="sm:hidden text-[9px] text-[#555] font-display tracking-[.12em] mt-1"
                                             x-text="timeLabel"></div>
                                     </div>
                                 </div>
 
-                                <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                                {{-- Center: Play controls & Seek bar --}}
+                                <div class="flex items-center gap-4 w-full sm:w-auto flex-[3] max-w-lg mx-auto">
+                                    {{-- Play / Pause button --}}
                                     <button type="button"
-                                        class="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition-all hover:bg-white/10 hover:border-white/30 active:scale-90"
-                                        @click="togglePlayback()">
-                                        <span class="text-sm sm:text-base leading-none ml-0.5" x-show="!playing">▶</span>
-                                        <span class="text-sm sm:text-base leading-none" x-show="playing">⏸</span>
+                                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_15px_rgba(195,39,32,0.4)] transition-all hover:bg-lucille-accent/90 hover:scale-105 active:scale-95"
+                                        @click="togglePlayback()"
+                                        aria-label="Reproducir o pausar">
+                                        <span class="text-base leading-none ml-0.5" x-show="!playing">▶</span>
+                                        <span class="text-base leading-none" x-show="playing">⏸</span>
                                     </button>
 
-                                    <div class="hidden md:flex items-center gap-2">
-                                        <div class="w-20 lg:w-28">
-                                            <input type="range" min="0" max="100" step="1"
+                                    {{-- Seek slider --}}
+                                    <div class="hidden sm:flex items-center gap-2.5 w-full">
+                                        <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-right" x-text="formatTime(elapsed)"></span>
+                                        <div class="flex-1 py-2">
+                                            <input type="range" min="0" max="100" step="0.1"
                                                 :value="progressPct"
                                                 @input="seekAudio($event.target.value)"
-                                                class="h-1 w-full cursor-pointer appearance-none rounded-full bg-[#3a3a3a] accent-lucille-accent"
-                                                aria-label="Progreso">
+                                                class="lucille-range-slider"
+                                                aria-label="Barra de progreso de audio">
                                         </div>
-                                        <span class="text-[10px] font-display tracking-[.1em] text-[#888] min-w-[60px] text-right"
-                                            x-text="timeLabel"></span>
+                                        <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-left" x-text="formatTime(duration)"></span>
                                     </div>
+                                </div>
 
+                                {{-- Right: Volume & Close controls --}}
+                                <div class="flex items-center justify-end gap-3 w-full sm:w-auto flex-1 shrink-0">
+                                    {{-- Mute / Unmute --}}
                                     <button type="button"
-                                        class="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded border border-[#2b2b2b] bg-transparent text-[11px] sm:text-[14px] text-[#aaa] transition-colors hover:text-white hover:border-white/30"
-                                        @click="muted = !muted; const a = $refs.audio; if (a) a.muted = muted">
+                                        class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#aaa] transition-colors hover:text-white hover:border-[#444]"
+                                        @click="muted = !muted; const a = $refs.audio; if (a) a.muted = muted"
+                                        aria-label="Silenciar">
                                         <span x-show="!muted">🔊</span>
                                         <span x-show="muted">🔇</span>
                                     </button>
 
-                                    <div class="hidden md:block w-14 lg:w-20">
+                                    {{-- Volume slider --}}
+                                    <div class="w-16 sm:w-20">
                                         <input type="range" min="0" max="100" step="1"
                                             :value="volume"
                                             @input="setVolume($event.target.value)"
-                                            class="h-1 w-full cursor-pointer appearance-none rounded-full bg-[#3a3a3a] accent-[#aaa]"
+                                            class="lucille-range-slider"
                                             aria-label="Volumen">
                                     </div>
 
+                                    {{-- Close --}}
                                     <button type="button"
-                                        class="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded border border-[#2b2b2b] bg-transparent text-[#666] transition-colors hover:text-white hover:border-white/30"
-                                        @click="playerVisible = false; $refs.audio?.pause()">
-                                        <span class="text-sm sm:text-base">✕</span>
+                                        class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#666] transition-colors hover:text-white hover:border-[#444]"
+                                        @click="playerVisible = false; $refs.audio?.pause()"
+                                        aria-label="Cerrar reproductor">
+                                        <span class="text-sm leading-none">✕</span>
                                     </button>
                                 </div>
                             </div>
@@ -255,9 +274,9 @@
             </div>
 
             {{-- Link de vuelta --}}
-            <div class="mt-10 text-center">
+            <div class="mt-12 text-center">
                 <a href="{{ route('programs') }}"
-                   class="inline-flex items-center gap-2 border border-[#2b2b2b] px-6 py-3 text-[10px] font-display uppercase tracking-[.18em] text-[#7b7b7b] transition-colors hover:text-lucille-accent hover:border-lucille-accent/40">
+                   class="inline-flex items-center gap-2 border border-[#2b2b2b] px-6 py-3 text-[10px] font-display uppercase tracking-[.18em] text-[#7b7b7b] transition-all duration-300 hover:text-lucille-accent hover:border-lucille-accent/40 rounded-[8px]">
                     ← Todos los programas
                 </a>
             </div>

@@ -75,7 +75,6 @@ final class ArchiveOrgService
 
         if (count($episodes) < $limit) {
             $programs = MasterProgram::query()
-                ->when($this->masterProgramHasColumn('activo'), fn ($query) => $query->where('activo', true))
                 ->whereNotNull('archive_identifier')
                 ->where('archive_identifier', '!=', '')
                 ->orderBy('nombre')

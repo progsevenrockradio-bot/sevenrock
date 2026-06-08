@@ -21,12 +21,13 @@
         @else
             {{-- Build program name → slug/identifier map --}}
             @php
-                $programSlugMap = [];
+                $localSlugMap = [];
                 foreach ($programsByDay as $dayGroup) {
                     foreach ($dayGroup['programs'] as $prog) {
-                        $programSlugMap[$prog['title']] = $prog['id'] ?? $prog['archive_identifier'] ?? Str::slug($prog['title']);
+                        $localSlugMap[$prog['title']] = $prog['id'] ?? $prog['archive_identifier'] ?? Str::slug($prog['title']);
                     }
                 }
+                $programSlugMap = array_merge($localSlugMap, $programSlugMap ?? []);
             @endphp
 
             <div

@@ -302,10 +302,22 @@ class SiteController extends Controller
                 } catch (Throwable) {
                 }
 
+                $programSlugMap = [];
+                try {
+                    $programSlugMap = MasterProgram::query()
+                        ->whereNotNull('archive_identifier')
+                        ->where('archive_identifier', '!=', '')
+                        ->get()
+                        ->pluck('archive_identifier', 'nombre')
+                        ->toArray();
+                } catch (Throwable) {
+                }
+
                 return [
                     'programsByDay' => $programsByDay,
                     'latestEpisodes' => $latestEpisodes,
                     'groupedEpisodes' => $groupedEpisodes,
+                    'programSlugMap' => $programSlugMap,
                 ];
             }
         );
@@ -314,6 +326,7 @@ class SiteController extends Controller
             'programsByDay' => $cached['programsByDay'],
             'latestEpisodes' => $cached['latestEpisodes'],
             'groupedEpisodes' => $cached['groupedEpisodes'],
+            'programSlugMap' => $cached['programSlugMap'] ?? [],
         ]);
     }
 
