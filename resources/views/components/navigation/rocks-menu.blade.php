@@ -92,42 +92,8 @@
                             {{ $item['label'] }}
                         </a>
 
-                        @if (($item['label'] ?? '') === 'Muro del Rock')
-                            <ul class="invisible absolute left-0 top-full min-w-48 bg-[rgba(8,26,36,.96)] py-3 opacity-0 shadow-[0_10px_30px_rgba(0,0,0,.22)] transition-all duration-300 group-hover:visible group-hover:opacity-100">
-                                @auth('talent')
-                                    <li>
-                                        <a href="{{ route('talents.dashboard') }}" class="block whitespace-nowrap px-5 py-2 text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent">
-                                            Mi Panel
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <form method="POST" action="{{ route('talents.logout') }}">
-                                            @csrf
-                                            <button type="submit" class="block w-full whitespace-nowrap px-5 py-2 text-left text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent">
-                                                Cerrar sesión
-                                            </button>
-                                        </form>
-                                    </li>
-                                @else
-                                    <li>
-                                        <a href="{{ route('talents.login') }}" class="block whitespace-nowrap px-5 py-2 text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent">
-                                            Acceder
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('talents.register') }}" class="block whitespace-nowrap px-5 py-2 text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent">
-                                            Registrarse
-                                        </a>
-                                    </li>
-                                @endauth
-                                <li>
-                                    <a href="{{ route('talents.explore') }}" class="block whitespace-nowrap px-5 py-2 text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent">
-                                        Índice de bandas
-                                    </a>
-                                </li>
-                            </ul>
-                        @elseif (! empty($item['children']))
-                            <ul class="invisible absolute left-0 top-full min-w-48 bg-[rgba(8,26,36,.96)] py-3 opacity-0 shadow-[0_10px_30px_rgba(0,0,0,.22)] transition-all duration-300 group-hover:visible group-hover:opacity-100">
+                        @if (! empty($item['children']))
+                            <ul class="invisible absolute left-0 top-full min-w-48 bg-[rgba(16,16,18,.96)] backdrop-blur-md border border-white/5 py-3 opacity-0 shadow-[0_10px_30px_rgba(0,0,0,.22)] transition-all duration-300 group-hover:visible group-hover:opacity-100">
                                 @foreach ($item['children'] as $child)
                                     <li>
                                         <a href="{{ $child['url'] ?? route($child['route']) }}" class="block whitespace-nowrap px-5 py-2 text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent">
@@ -147,36 +113,18 @@
         </button>
     </div>
 
-    <div x-cloak x-show="open" x-transition.opacity class="border-t border-[#003954] bg-[rgba(8,26,36,.9)] px-5 py-4 lg:hidden">
+    <div x-cloak x-show="open" x-transition.opacity class="border-t border-white/5 bg-[rgba(16,16,18,.95)] backdrop-blur-md px-5 py-4 lg:hidden">
         <nav>
-            <ul class="mx-auto max-w-[1180px] divide-y divide-[#003954]">
+            <ul class="mx-auto max-w-[1180px] divide-y divide-white/5">
                 @foreach ($items as $item)
                     <li x-data="{ childOpen: false }" class="py-1">
                         <div class="flex items-center justify-between">
                             <a href="{{ $item['url'] ?? route($item['route']) }}" class="block py-3 font-display text-sm uppercase tracking-[.08em] text-white">{{ $item['label'] }}</a>
-                            @if (($item['label'] ?? '') === 'Muro del Rock')
-                                <button type="button" class="px-4 py-3 text-white" @click.prevent="childOpen = ! childOpen" aria-label="Toggle submenu">+</button>
-                            @elseif (! empty($item['children']))
+                            @if (! empty($item['children']))
                                 <button type="button" class="px-4 py-3 text-white" @click.prevent="childOpen = ! childOpen" aria-label="Toggle submenu">+</button>
                             @endif
                         </div>
-                        @if (($item['label'] ?? '') === 'Muro del Rock')
-                            <ul x-show="childOpen" x-transition class="pb-2 pl-5">
-                                @auth('talent')
-                                    <li><a href="{{ route('talents.dashboard') }}" class="block py-2 text-[13px] text-[#b7b7b7]">Mi Panel</a></li>
-                                    <li>
-                                        <form method="POST" action="{{ route('talents.logout') }}">
-                                            @csrf
-                                            <button type="submit" class="block py-2 text-[13px] text-[#b7b7b7]">Cerrar sesión</button>
-                                        </form>
-                                    </li>
-                                @else
-                                    <li><a href="{{ route('talents.login') }}" class="block py-2 text-[13px] text-[#b7b7b7]">Acceder</a></li>
-                                    <li><a href="{{ route('talents.register') }}" class="block py-2 text-[13px] text-[#b7b7b7]">Registrarse</a></li>
-                                @endauth
-                                <li><a href="{{ route('talents.explore') }}" class="block py-2 text-[13px] text-[#b7b7b7]">Índice de bandas</a></li>
-                            </ul>
-                        @elseif (! empty($item['children']))
+                        @if (! empty($item['children']))
                             <ul x-show="childOpen" x-transition class="pb-2 pl-5">
                                 @foreach ($item['children'] as $child)
                                     <li><a href="{{ $child['url'] ?? route($child['route']) }}" class="block py-2 text-[13px] text-[#b7b7b7]">{{ $child['label'] }}</a></li>
