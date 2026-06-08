@@ -64,6 +64,13 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(30)->by($request->ip());
         });
 
+        RateLimiter::for('admin-actions', function (Request $request) {
+            $user = $request->user();
+            return $user
+                ? Limit::perMinute(60)->by($user->id)
+                : Limit::perMinute(15)->by($request->ip());
+        });
+
         if (is_file(app_path('helpers.php'))) {
             require_once app_path('helpers.php');
         }

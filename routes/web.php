@@ -84,7 +84,7 @@ Route::prefix('admin')->name('admin.')->middleware('guest')->group(function (): 
     Route::post('/login', [AdminAuthController::class, 'login'])->middleware('throttle:login')->name('login.store');
 });
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit'])->group(function (): void {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 'throttle:admin-actions'])->group(function (): void {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
 
     Route::controller(AdminPostController::class)->prefix('posts')->name('posts.')->group(function (): void {
@@ -116,14 +116,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit'])->
         Route::delete('/{event}', 'destroy')->name('destroy');
     });
 
-    Route::controller(AdminThemeSettingsController::class)->prefix('settings')->name('settings.')->group(function (): void {
-        Route::get('/', 'edit')->name('edit');
-        Route::get('/manual', 'manual')->name('manual');
-        Route::get('/manual/pdf', 'manualPdf')->name('manual.pdf');
-        Route::put('/', 'update')->name('update');
+    Route::controller(AdminThemeSettingsController::class)->prefix('settings')->name('settings.')->middleware('role:Super Admin')->group(function (): void {
+        Route::get('/', 'edit')->middleware('password.confirm')->name('edit');
+        Route::get('/manual', 'manual')->withoutMiddleware('role:Super Admin')->name('manual');
+        Route::get('/manual/pdf', 'manualPdf')->withoutMiddleware('role:Super Admin')->name('manual.pdf');
+        Route::put('/', 'update')->middleware('password.confirm')->name('update');
     });
 
-    Route::controller(AdminAuditLogController::class)->prefix('audit-logs')->name('audit-logs.')->group(function (): void {
+    Route::controller(AdminAuditLogController::class)->prefix('audit-logs')->name('audit-logs.')->middleware('role:Super Admin')->group(function (): void {
         Route::get('/', 'index')->name('index');
     });
 

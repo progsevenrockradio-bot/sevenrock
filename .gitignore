@@ -42,3 +42,4 @@ prog_srr.zip
 # Cache data files
 storage/framework/cache/data/
 *.backup_*
+composer.phar
