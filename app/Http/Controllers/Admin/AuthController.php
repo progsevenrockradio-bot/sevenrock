@@ -78,4 +78,26 @@ class AuthController extends Controller
 
         return redirect()->route('admin.login');
     }
+
+    public function showConfirmForm(): View
+    {
+        return view('admin.confirm-password');
+    }
+
+    public function confirm(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'password' => ['required', 'string'],
+        ]);
+
+        if (! \Illuminate\Support\Facades\Hash::check($request->password, $request->user()->password)) {
+            return back()->withErrors([
+                'password' => 'La contraseña es incorrecta.',
+            ]);
+        }
+
+        $request->session()->put('auth.password_confirmed_at', time());
+
+        return redirect()->intended(route('admin.dashboard'));
+    }
 }

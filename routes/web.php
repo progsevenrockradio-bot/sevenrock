@@ -84,6 +84,11 @@ Route::prefix('admin')->name('admin.')->middleware('guest')->group(function (): 
     Route::post('/login', [AdminAuthController::class, 'login'])->middleware('throttle:login')->name('login.store');
 });
 
+Route::middleware(['auth', 'admin'])->group(function (): void {
+    Route::get('/admin/confirm-password', [AdminAuthController::class, 'showConfirmForm'])->name('password.confirm');
+    Route::post('/admin/confirm-password', [AdminAuthController::class, 'confirm'])->middleware('throttle:6,1');
+});
+
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 'throttle:admin-actions'])->group(function (): void {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
 
