@@ -310,6 +310,6 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
     });
 
     Route::get('/{bandName}', [TalentPublicProfileController::class, 'show'])->name('show');
-    Route::post('/{bandName}/like', [TalentPublicProfileController::class, 'like'])->name('like');
-    Route::post('/{bandName}/comment', [TalentPublicProfileController::class, 'comment'])->name('comment');
+    Route::post('/{bandName}/like', [TalentPublicProfileController::class, 'like'])->name('like')->middleware('throttle:10,1');
+    Route::post('/{bandName}/comment', [TalentPublicProfileController::class, 'comment'])->name('comment')->middleware([\App\Http\Middleware\PreventSpamWithHoneypot::class, 'throttle:5,1']);
 });

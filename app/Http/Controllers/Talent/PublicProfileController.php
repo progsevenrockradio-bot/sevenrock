@@ -54,12 +54,19 @@ class PublicProfileController extends Controller
             'type' => 'view',
         ]);
 
+        $hasLiked = $talent->interactions()
+            ->where('visitor_ip', (string) request()->ip())
+            ->where('type', 'like')
+            ->where('created_at', '>', now()->subDay())
+            ->exists();
+
         return view('talentos.public.profile', [
             'talent' => $talent,
             'media' => $talent->media()->latest()->get(),
             'products' => $talent->products()->published()->latest()->get(),
             'likesCount' => $talent->interactions()->where('type', 'like')->count(),
             'viewsCount' => $talent->interactions()->where('type', 'view')->count(),
+            'hasLiked' => $hasLiked,
             'topComments' => $talent->interactions()
                 ->where('type', 'comment')
                 ->latest()

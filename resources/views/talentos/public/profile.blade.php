@@ -2,68 +2,152 @@
     :description="$talent->bio ? Str::limit($talent->bio, 160) : 'Perfil de ' . $talent->band_name . ' en Seven Rock Radio'"
     :og-image="$talent->logoUrl() ?? asset('assets/lucille/logo.png')">
     <section class="mx-auto max-w-7xl px-5 py-16">
-        <div class="talent-cover">
-            <div class="talent-avatar">
-                <img src="{{ $talent->logoUrl() ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" alt="{{ $talent->band_name }}" loading="lazy">
-            </div>
-            <h1 class="talent-name">{{ $talent->band_name }}</h1>
-            <div class="talent-plan-badge">
-                {{ ucfirst($talent->plan) }}
-                @if ($talent->is_featured) <span class="ml-2 text-[#ffd24d]">⭐ Destacado</span>@endif
-            </div>
-        </div>
-
-        <div class="talent-stats">
-            <div class="stat">
-                <span class="stat-number like-count">{{ $likesCount }}</span>
-                <span class="stat-label">Likes</span>
-            </div>
-            <div class="stat">
-                <span class="stat-number">{{ $media->count() }}</span>
-                <span class="stat-label">Archivos</span>
-            </div>
-            <div class="stat">
-                <span class="stat-number">{{ $viewsCount }}</span>
-                <span class="stat-label">Visitas</span>
+        <!-- Profile Header -->
+        <div class="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#10151a]/95 to-[#070a0d]/98 border border-white/10 p-8 md:p-12 text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-md">
+            <div class="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_center,var(--lucille-accent),transparent_70%)]"></div>
+            <div class="relative z-10 flex flex-col items-center">
+                <div class="relative group">
+                    <div class="absolute inset-0 rounded-full blur-[15px] opacity-60 bg-[var(--lucille-accent)] group-hover:opacity-85 transition-opacity duration-300"></div>
+                    <div class="relative h-[160px] w-[160px] overflow-hidden rounded-full border-4 border-white/15 hover:border-[var(--lucille-accent)] transition-colors duration-300 shadow-2xl">
+                        <img src="{{ $talent->logoUrl() ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" width="160" height="160">
+                    </div>
+                </div>
+                <h1 class="font-display text-4xl md:text-6xl uppercase tracking-[.18em] text-white mt-6 drop-shadow-lg">{{ $talent->band_name }}</h1>
+                <div class="mt-4 flex flex-wrap justify-center items-center gap-3">
+                    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4.5 py-1.5 text-xs font-semibold uppercase tracking-[.15em] text-gray-300">
+                        Plan: {{ ucfirst($talent->plan) }}
+                    </span>
+                    @if ($talent->is_featured)
+                        <span class="inline-flex items-center gap-1.5 rounded-full border border-[#d4af37]/30 bg-[#d4af37]/10 px-4.5 py-1.5 text-xs font-bold uppercase tracking-[.15em] text-[#d4af37] shadow-[0_0_15px_rgba(212,175,55,0.25)] animate-pulse">
+                            ⭐ Destacado
+                        </span>
+                    @endif
+                </div>
             </div>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-[1fr_.8fr]">
-            <div class="space-y-6">
-                <div class="border border-white/10 bg-[#10161b] p-6">
-                    <h3 class="font-display text-xl uppercase tracking-[.12em] text-white">Biografía</h3>
-                    <p class="mt-3 text-sm leading-7 text-[#c9c9c9]">{{ $talent->bio ?: 'Sin biografía aún' }}</p>
+        <!-- Stats Bar -->
+        <div class="flex justify-center gap-6 md:gap-12 flex-wrap rounded-[16px] border border-white/10 bg-[#10151a]/60 backdrop-blur-md px-6 py-5 shadow-lg max-w-2xl mx-auto -mt-6 relative z-20">
+            <div class="text-center px-4">
+                <span class="block font-display text-3xl font-bold text-white like-count">{{ $likesCount }}</span>
+                <span class="text-[10px] uppercase tracking-[.2em] text-gray-400">Likes</span>
+            </div>
+            <div class="h-10 w-[1px] bg-white/10 self-center hidden sm:block"></div>
+            <div class="text-center px-4">
+                <span class="block font-display text-3xl font-bold text-white">{{ $media->count() }}</span>
+                <span class="text-[10px] uppercase tracking-[.2em] text-gray-400">Archivos</span>
+            </div>
+            <div class="h-10 w-[1px] bg-white/10 self-center hidden sm:block"></div>
+            <div class="text-center px-4">
+                <span class="block font-display text-3xl font-bold text-white">{{ $viewsCount }}</span>
+                <span class="text-[10px] uppercase tracking-[.2em] text-gray-400">Visitas</span>
+            </div>
+        </div>
+
+        <!-- Main Layout Grid -->
+        <div class="grid gap-8 lg:grid-cols-[1.2fr_.8fr] mt-12">
+            <!-- Left Column: Biography, Media, Store, etc. -->
+            <div class="space-y-8">
+                <!-- Biography Panel -->
+                <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:p-8 shadow-xl">
+                    <h3 class="font-display text-xl uppercase tracking-[.18em] text-white border-b border-white/5 pb-3">Biografía</h3>
+                    <p class="mt-4 text-sm leading-8 text-gray-300 font-sans whitespace-pre-line">{{ $talent->bio ?: 'Este artista aún no ha escrito su biografía.' }}</p>
                 </div>
 
+                <!-- Social Networks Panel -->
                 @php($socialLinks = $talent->socialLinkMap())
                 @if ($socialLinks !== [])
-                    <div class="border border-white/10 bg-[#10161b] p-6">
-                        <h3 class="font-display text-xl uppercase tracking-[.12em] text-white">Sigue al artista</h3>
-                        <div class="mt-4 flex flex-wrap gap-3">
+                    <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:p-8 shadow-xl">
+                        <h3 class="font-display text-xl uppercase tracking-[.18em] text-white border-b border-white/5 pb-3">Sigue al artista</h3>
+                        <div class="mt-5 flex flex-wrap gap-3">
                             @foreach ($socialLinks as $network => $url)
-                                <a href="{{ $url }}" target="_blank" rel="noreferrer" class="lucille-button">{{ ucfirst($network) }}</a>
+                                <a href="{{ $url }}" target="_blank" rel="noreferrer" class="lucille-button flex items-center gap-2 hover:border-[var(--lucille-accent)] hover:text-white transition-all">
+                                    <span>{{ ucfirst($network) }}</span>
+                                    <span class="text-[10px]">↗</span>
+                                </a>
                             @endforeach
                         </div>
                     </div>
                 @endif
 
+                <!-- Multimedia Content Panel -->
                 @if ($media->isNotEmpty())
-                    <div class="border border-white/10 bg-[#10161b] p-6">
-                        <h3 class="font-display text-xl uppercase tracking-[.12em] text-white">Contenido</h3>
-                        <div class="mt-5 grid gap-4 md:grid-cols-2">
+                    <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:p-8 shadow-xl">
+                        <h3 class="font-display text-xl uppercase tracking-[.18em] text-white border-b border-white/5 pb-3">Contenido</h3>
+                        <div class="mt-6 grid gap-6 md:grid-cols-2">
                             @foreach ($media as $item)
-                                <article class="media-card" data-type="{{ $item->type }}">
+                                <article class="overflow-hidden rounded-[12px] bg-white/[0.02] border border-white/5 p-4 hover:border-white/15 hover:bg-white/[0.04] transition-all duration-300 group" data-type="{{ $item->type }}">
                                     @if ($item->type === 'photo')
-                                        <img src="{{ $item->url }}" alt="{{ $item->title }}" class="w-full object-cover" loading="lazy">
+                                        <div class="aspect-video w-full overflow-hidden rounded-[8px] bg-black/40 relative">
+                                            <img src="{{ $item->url }}" alt="{{ $item->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" width="400" height="225">
+                                        </div>
+                                        <p class="mt-3 text-sm font-semibold text-white truncate">{{ $item->title ?: $item->filename }}</p>
                                     @elseif ($item->type === 'mp3')
-                                        <div class="audio-player">
-                                            <p class="text-white">{{ $item->title }}</p>
-                                            <audio controls src="{{ $item->url }}" class="w-full"></audio>
+                                        <!-- Custom Styled Audio Player using Alpine.js -->
+                                        <div class="custom-audio-player-wrapper py-1" x-data="{
+                                            playing: false,
+                                            duration: 0,
+                                            currentTime: 0,
+                                            audio: null,
+                                            init() {
+                                                this.audio = new Audio('{{ $item->url }}');
+                                                this.audio.preload = 'none';
+                                                this.audio.addEventListener('durationchange', () => this.duration = this.audio.duration);
+                                                this.audio.addEventListener('timeupdate', () => this.currentTime = this.audio.currentTime);
+                                                this.audio.addEventListener('ended', () => this.playing = false);
+                                            },
+                                            togglePlay() {
+                                                if (this.playing) {
+                                                    this.audio.pause();
+                                                    this.playing = false;
+                                                } else {
+                                                    window.dispatchEvent(new CustomEvent('stop-all-audio', { detail: { except: this.audio } }));
+                                                    this.audio.play();
+                                                    this.playing = true;
+                                                }
+                                            },
+                                            formatTime(secs) {
+                                                if (isNaN(secs)) return '0:00';
+                                                const minutes = Math.floor(secs / 60);
+                                                const seconds = Math.floor(secs % 60);
+                                                return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+                                            },
+                                            seek(event) {
+                                                const percent = event.target.value / 100;
+                                                this.audio.currentTime = percent * this.duration;
+                                            }
+                                        }" @stop-all-audio.window="if (audio !== $event.detail.except) { audio.pause(); playing = false; }">
+                                            <div class="flex items-center gap-4">
+                                                <button type="button" @click="togglePlay()" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--lucille-accent)] text-white hover:scale-105 transition-transform shadow-md" aria-label="Reproducir/Pausar">
+                                                    <template x-if="!playing">
+                                                        <svg class="h-5 w-5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                                    </template>
+                                                    <template x-if="playing">
+                                                        <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                                    </template>
+                                                </button>
+                                                <div class="min-w-0 flex-1">
+                                                    <p class="truncate text-sm font-semibold text-white">{{ $item->title ?: $item->filename }}</p>
+                                                    <div class="mt-1.5 flex items-center gap-3">
+                                                        <input type="range" min="0" max="100" :value="duration ? (currentTime / duration) * 100 : 0" @input="seek($event)" class="audio-slider flex-1">
+                                                        <span class="text-[10px] text-gray-400 font-mono shrink-0" x-text="formatTime(currentTime) + ' / ' + (duration ? formatTime(duration) : '0:00')">0:00 / 0:00</span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     @elseif ($item->type === 'video')
-                                        <video controls src="{{ $item->url }}" class="w-full"></video>
+                                        <div class="aspect-video w-full overflow-hidden rounded-[8px] bg-black/40 relative">
+                                            <video controls src="{{ $item->url }}" class="h-full w-full object-cover" preload="none" width="400" height="225"></video>
+                                        </div>
+                                        <p class="mt-3 text-sm font-semibold text-white truncate">{{ $item->title ?: $item->filename }}</p>
                                     @else
-                                        <a href="{{ $item->url }}" target="_blank" class="doc-link text-white">📄 {{ $item->title ?? $item->filename }}</a>
+                                        <div class="flex items-center gap-3 p-2">
+                                            <span class="text-2xl">📄</span>
+                                            <div class="min-w-0 flex-1">
+                                                <a href="{{ $item->url }}" target="_blank" class="text-sm font-semibold text-white hover:underline truncate block">{{ $item->title ?? $item->filename }}</a>
+                                                <span class="text-[10px] text-gray-500 uppercase tracking-wider">Documento</span>
+                                            </div>
+                                        </div>
                                     @endif
                                 </article>
                             @endforeach
@@ -71,24 +155,28 @@
                     </div>
                 @endif
 
+                <!-- Store Panel -->
                 @if (($products ?? collect())->isNotEmpty())
-                    <div class="talent-store-section">
-                        <h3>🛒 Tienda de {{ $talent->band_name }}</h3>
-                        <p class="store-disclaimer">
-                            Las ventas son gestionadas directamente por la banda.
-                            Seven Rock Radio actúa solo como escaparate.
+                    <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:p-8 shadow-xl">
+                        <h3 class="font-display text-xl uppercase tracking-[.18em] text-white border-b border-white/5 pb-3">🛒 Tienda de {{ $talent->band_name }}</h3>
+                        <p class="mt-2 text-xs text-gray-400 italic">
+                            * Las ventas son gestionadas directamente por la banda. Seven Rock Radio actúa solo como escaparate.
                         </p>
-                        <div class="store-grid">
+                        <div class="mt-6 grid gap-6 sm:grid-cols-2">
                             @foreach ($products as $product)
-                                <div class="store-card">
-                                    @if ($product->image_url)
-                                        <img src="{{ $product->image_url }}" alt="{{ $product->title }}" loading="lazy">
-                                    @endif
-                                    <h4>{{ $product->title }}</h4>
-                                    <p class="price">{{ number_format((float) $product->price, 2) }} €</p>
-                                    <p class="desc">{{ \Illuminate\Support\Str::limit((string) $product->description, 100) }}</p>
+                                <div class="store-card border border-white/5 bg-white/[0.02] rounded-[12px] p-5 hover:border-[var(--lucille-accent)]/30 hover:bg-white/[0.04] transition-all duration-300 flex flex-col justify-between group">
+                                    <div>
+                                        @if ($product->image_url)
+                                            <div class="aspect-square w-full overflow-hidden rounded-[8px] bg-black/20 mb-4 relative">
+                                                <img src="{{ $product->image_url }}" alt="{{ $product->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-103" loading="lazy" width="200" height="200">
+                                            </div>
+                                        @endif
+                                        <h4 class="font-display text-lg text-white font-medium uppercase tracking-[.08em]">{{ $product->title }}</h4>
+                                        <p class="mt-1 font-display text-xl font-bold text-[var(--lucille-accent)]">{{ number_format((float) $product->price, 2) }} €</p>
+                                        <p class="mt-2 text-xs text-gray-400 leading-relaxed line-clamp-3">{{ \Illuminate\Support\Str::limit((string) $product->description, 100) }}</p>
+                                    </div>
                                     @if ($product->external_payment_url)
-                                        <a href="{{ $product->external_payment_url }}" target="_blank" rel="nofollow noopener" class="btn-external-pay">
+                                        <a href="{{ $product->external_payment_url }}" target="_blank" rel="nofollow noopener" class="mt-4 inline-flex items-center justify-center min-h-[2.4rem] rounded-full bg-[#00d165] text-white text-xs font-bold uppercase tracking-[.12em] hover:bg-[#00b959] transition-all shadow-[0_4px_15px_rgba(0,209,101,0.25)]">
                                             {{ $product->external_payment_label ?: 'Comprar' }} ↗
                                         </a>
                                     @endif
@@ -98,45 +186,65 @@
                     </div>
                 @endif
 
+                <!-- Payment Methods Panel -->
                 @php($paymentLinks = $talent->paymentLinkMap())
                 @if ($paymentLinks !== [])
-                    <div class="border border-white/10 bg-[#10161b] p-6">
-                        <h3 class="font-display text-xl uppercase tracking-[.12em] text-white">Acepto pagos vía</h3>
+                    <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:p-8 shadow-xl">
+                        <h3 class="font-display text-xl uppercase tracking-[.18em] text-white border-b border-white/5 pb-3">Acepto pagos vía</h3>
                         <div class="mt-4 flex flex-wrap gap-3">
                             @foreach ($paymentLinks as $label => $url)
-                                <a href="{{ $url }}" target="_blank" rel="nofollow noopener" class="lucille-button">{{ ucfirst($label) }}</a>
+                                <a href="{{ $url }}" target="_blank" rel="nofollow noopener" class="lucille-button flex items-center gap-2 hover:border-[var(--lucille-accent)] hover:text-white transition-all">
+                                    <span>{{ ucfirst($label) }}</span>
+                                    <span class="text-[10px]">↗</span>
+                                </a>
                             @endforeach
                         </div>
                     </div>
                 @endif
             </div>
 
-            <div class="space-y-6">
-                <div class="border border-white/10 bg-[#10161b] p-6">
-                    <button type="button" class="btn-like content-reaction-button" data-band="{{ $talent->band_name }}">
-                        <span class="content-reaction-button__icon">♥</span>
-                        <span>Like</span>
-                        <span class="like-count content-reaction-count">{{ $likesCount }}</span>
-                    </button>
-                    <form method="POST" action="{{ route('talents.comment', ['bandName' => $talent->band_name]) }}" class="comment-section mt-6">
+            <!-- Right Column: Likes, Comments -->
+            <div class="space-y-8">
+                <!-- Like Button & Comment Form Panel -->
+                <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:p-8 shadow-xl space-y-6">
+                    <div>
+                        <button type="button" class="btn-like w-full justify-center content-reaction-button flex items-center gap-3 transition-transform active:scale-97 {{ $hasLiked ? 'is-active' : '' }}" data-band="{{ $talent->band_name }}">
+                            <span class="content-reaction-button__icon text-lg">♥</span>
+                            <span class="font-display uppercase tracking-[.15em]">Me Gusta</span>
+                            <span class="like-count content-reaction-count ml-2">{{ $likesCount }}</span>
+                        </button>
+                    </div>
+
+                    <form method="POST" action="{{ route('talents.comment', ['bandName' => $talent->band_name]) }}" class="comment-section pt-5 border-t border-white/5">
                         @csrf
-                        <h4 class="font-display text-xl uppercase tracking-[.12em] text-white">Comentarios</h4>
-                        <textarea name="content" placeholder="Deja un comentario..." maxlength="500" required class="mt-4 w-full rounded-[8px] border border-white/10 bg-[#151515] p-4 text-white"></textarea>
-                        <button type="submit" class="mt-3 lucille-button-solid">Comentar</button>
+                        <div class="hidden" style="display:none !important" aria-hidden="true">
+                            <input type="text" name="user_website" tabindex="-1" autocomplete="off">
+                        </div>
+                        <h4 class="font-display text-lg uppercase tracking-[.15em] text-white">Dejar un comentario</h4>
+                        <textarea name="content" placeholder="Escribe un comentario..." maxlength="500" required class="mt-4 w-full rounded-[10px] border border-white/10 bg-black/40 p-4 text-sm text-white focus:border-[var(--lucille-accent)] focus:ring-0 outline-none transition-colors" rows="4"></textarea>
+                        <button type="submit" class="mt-3 w-full lucille-button-solid">Publicar comentario</button>
                     </form>
                 </div>
 
-                <div class="border border-white/10 bg-[#10161b] p-6">
-                    <h4 class="font-display text-xl uppercase tracking-[.12em] text-white">Comentarios recientes</h4>
-                    <div class="comments-list mt-4 space-y-3">
+                <!-- Recent Comments List Panel -->
+                <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:p-8 shadow-xl">
+                    <h4 class="font-display text-lg uppercase tracking-[.18em] text-white border-b border-white/5 pb-3">Comentarios recientes</h4>
+                    <div class="comments-list mt-5 space-y-4">
                         @forelse ($topComments as $comment)
-                            <div class="comment">
-                                <strong>Anónimo:</strong>
-                                <p>{{ $comment->content }}</p>
-                                <small>{{ $comment->created_at->diffForHumans() }}</small>
+                            <div class="comment-item bg-white/[0.02] border border-white/5 p-4 rounded-[12px] flex items-start gap-4 hover:border-white/10 transition-colors">
+                                <div class="h-9 w-9 shrink-0 rounded-full bg-white/5 flex items-center justify-center text-base border border-white/10">
+                                    🎸
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <strong class="text-white text-xs font-semibold uppercase tracking-wider">Anónimo</strong>
+                                        <small class="text-[9px] text-gray-500 font-mono">{{ $comment->created_at->diffForHumans() }}</small>
+                                    </div>
+                                    <p class="mt-2 text-sm text-gray-300 leading-relaxed whitespace-pre-line">{{ $comment->content }}</p>
+                                </div>
                             </div>
                         @empty
-                            <div class="text-sm text-[#8b8b8b]">Todavía no hay comentarios.</div>
+                            <div class="text-sm text-gray-500 text-center py-4">Todavía no hay comentarios para este artista.</div>
                         @endforelse
                     </div>
                 </div>
@@ -146,29 +254,33 @@
 
     @push('scripts')
         <script>
-            document.querySelector('.btn-like')?.addEventListener('click', function () {
-                const band = this.dataset.band;
+            const btnLike = document.querySelector('.btn-like');
+            if (btnLike) {
+                btnLike.addEventListener('click', function () {
+                    const band = this.dataset.band;
 
-                fetch(`/talentos/${encodeURIComponent(band)}/like`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                })
-                    .then((response) => response.json())
-                    .then((data) => {
-                        if (typeof data.likes !== 'undefined') {
-                            document.querySelectorAll('.like-count').forEach((node) => {
-                                node.textContent = data.likes;
-                            });
-                        }
+                    fetch(`/talentos/${encodeURIComponent(band)}/like`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                        },
+                    })
+                        .then((response) => response.json())
+                        .then((data) => {
+                            if (typeof data.likes !== 'undefined') {
+                                document.querySelectorAll('.like-count').forEach((node) => {
+                                    node.textContent = data.likes;
+                                });
+                                btnLike.classList.add('is-active');
+                            }
 
-                        if (data.error) {
-                            alert(data.error);
-                        }
-                    });
-            });
+                            if (data.error) {
+                                alert(data.error);
+                            }
+                        });
+                });
+            }
         </script>
     @endpush
 </x-layouts.site>
