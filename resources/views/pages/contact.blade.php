@@ -13,6 +13,9 @@
                     <h3 class="mb-10 mt-[30px] font-display text-[16px] font-light tracking-[.04em] text-[#dcdcdc]">{{ $contact['form_title'] }}</h3>
                     <form method="POST" action="{{ route("contact.send") }}" class="space-y-6">
                         @csrf
+                        <div class="hidden" style="display:none !important" aria-hidden="true">
+                            <input type="text" name="user_website" tabindex="-1" autocomplete="off">
+                        </div>
                         <div class="grid gap-6 md:grid-cols-3">
                             <input type="text" name="name" placeholder="{{ $ui['your_name'] }}" class="lucille-form-field w-full" required>
                             <input type="email" name="email" placeholder="{{ $ui['email_address'] }}" class="lucille-form-field w-full" required>

@@ -1003,14 +1003,18 @@
     .rocks-header-top {
         position: absolute;
         height: 90px;
-        background: var(--lucille-nav-overlay, rgba(8, 26, 36, .72));
+        background-image: linear-gradient(rgba(16, 16, 18, 0.75), rgba(16, 16, 18, 0.75)), var(--lucille-bg-image);
+        background-size: cover;
+        background-position: center;
         box-shadow: inset 0 -1px rgba(255, 255, 255, .03);
     }
 
     .rocks-header-sticky {
         position: fixed;
         height: 70px;
-        background: var(--lucille-nav-sticky, rgba(8, 26, 36, .96));
+        background-image: linear-gradient(rgba(16, 16, 18, 0.92), rgba(16, 16, 18, 0.92)), var(--lucille-bg-image);
+        background-size: cover;
+        background-position: center;
         box-shadow: 0 1px 0 rgba(255, 255, 255, .04);
     }
 
@@ -1032,6 +1036,25 @@
         max-height: 62px;
         width: auto;
         object-fit: contain;
+    }
+
+    .lucille-brand-logo-both {
+        display: block;
+        width: auto;
+        object-fit: contain;
+    }
+
+    .lucille-brand-mark-both {
+        display: inline-flex;
+        align-items: center;
+        color: var(--color-lucille-accent);
+        font-family: var(--lucille-brand-font, "Rock Salt"), "Segoe Script", cursive;
+        font-size: clamp(0.9rem, 1.6vw, 1.45rem);
+        line-height: 1;
+        letter-spacing: 0;
+        text-transform: none;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, .18);
+        transform: translateY(0);
     }
 
     .lucille-heading {
@@ -1215,6 +1238,9 @@
         position: relative;
         overflow: hidden;
         color: #fff;
+        background-image: var(--lucille-bg-image);
+        background-size: cover;
+        background-position: center;
     }
 
     .lucille-page-heading-inner {

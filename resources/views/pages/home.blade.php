@@ -80,6 +80,9 @@
             <div class="mt-[80px]">
                 <form method="POST" action="{{ route('home.contact.send') }}" class="grid gap-x-4 gap-y-8">
                 @csrf
+                    <div class="hidden" style="display:none !important" aria-hidden="true">
+                        <input type="text" name="user_website" tabindex="-1" autocomplete="off">
+                    </div>
                     <div class="grid gap-4 md:grid-cols-3">
                         <input type="text" name="name" placeholder="{{ $ui['your_name'] }}" class="lucille-home-input" required>
                         <input type="email" name="email" placeholder="{{ $ui['email_address'] }}" class="lucille-home-input" required>

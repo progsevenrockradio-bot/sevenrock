@@ -33,6 +33,7 @@
                     <select name="brand_display_mode" x-model="brandDisplayMode" class="lucille-product-field lucille-select-field w-full">
                         <option value="mark" @selected(old('brand_display_mode', $settings->brand_display_mode) === 'mark')>Wordmark</option>
                         <option value="logo" @selected(old('brand_display_mode', $settings->brand_display_mode) === 'logo')>Logo image</option>
+                        <option value="both" @selected(old('brand_display_mode', $settings->brand_display_mode) === 'both')>Logo & Wordmark</option>
                     </select>
                     <p class="mt-2 text-xs text-[#7b7b7b]">{{ $admin['brand_display_mode_help'] }}</p>
                     @error('brand_display_mode')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
@@ -42,6 +43,17 @@
                     <input type="file" name="logo" class="block w-full text-sm text-[#7b7b7b]">
                     <p class="mt-2 text-xs text-[#7b7b7b]">{{ $admin['current_label'] }}: {{ $settings->logo_path }}</p>
                     @error('logo')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Altura del Logo (Cabecera)</label>
+                    <select name="logo_height" class="lucille-product-field lucille-select-field w-full">
+                        <option value="45" @selected(old('logo_height', $settings->logo_height) == 45)>Compacto (45px)</option>
+                        <option value="62" @selected(old('logo_height', $settings->logo_height) == 62)>Estándar (62px)</option>
+                        <option value="80" @selected(old('logo_height', $settings->logo_height) == 80)>Grande (80px)</option>
+                        <option value="100" @selected(old('logo_height', $settings->logo_height) == 100)>Extra Grande (100px)</option>
+                    </select>
+                    <p class="mt-2 text-xs text-[#7b7b7b]">Selecciona el tamaño de visualización de tu logotipo en la cabecera del sitio público.</p>
+                    @error('logo_height')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['background_label'] }}</label>

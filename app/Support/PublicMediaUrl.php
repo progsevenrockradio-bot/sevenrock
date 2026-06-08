@@ -74,6 +74,20 @@ class PublicMediaUrl
                     return route("legacy-wp-uploads.show", ["path" => $relative]);
                 }
             }
+
+            // Adapt localhost/127.0.0.1 assets to the current HTTP host/port
+            try {
+                $currentHost = request()->getSchemeAndHttpHost();
+                $parsed = parse_url($value);
+                if (isset($parsed['host']) && ($parsed['host'] === 'localhost' || $parsed['host'] === '127.0.0.1')) {
+                    $path = $parsed['path'] ?? '';
+                    $query = isset($parsed['query']) ? '?' . $parsed['query'] : '';
+                    return rtrim($currentHost, '/') . '/' . ltrim($path, '/') . $query;
+                }
+            } catch (\Throwable) {
+                // Fallback to original value
+            }
+
             return $value;
         }
 

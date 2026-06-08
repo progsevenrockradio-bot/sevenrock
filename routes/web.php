@@ -27,6 +27,16 @@ use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\Talent\DashboardController as TalentDashboardController;
+use App\Http\Controllers\Talent\AuthController as TalentAuthController;
+use App\Http\Controllers\Talent\MediaController as TalentMediaController;
+use App\Http\Controllers\Talent\ProfileController as TalentProfileController;
+use App\Http\Controllers\Talent\PublicController as TalentPublicController;
+use App\Http\Controllers\Talent\ProductController as TalentProductController;
+use App\Http\Controllers\Talent\SubscriptionController as TalentSubscriptionController;
+use App\Http\Controllers\Talent\NotificationController as TalentNotificationController;
+use App\Http\Controllers\Talent\AlbumController as TalentAlbumController;
+use App\Http\Controllers\Talent\PublicProfileController as TalentPublicProfileController;
 
 Route::get('/', [SiteController::class, 'home'])->name('home');
 Route::get('/events', [SiteController::class, 'events'])->name('events');
@@ -62,11 +72,11 @@ Route::get('/{year}/{month}/{day}/{slug}', [SiteController::class, 'singlePost']
 Route::get('/shop', [SiteController::class, 'shop'])->name('shop');
 Route::get('/product/{slug}', [SiteController::class, 'productSingle'])->name('products.single');
 Route::get('/contact', [SiteController::class, 'contact'])->name('contact');
-Route::post('/contact', [SiteController::class, 'contactSend'])->middleware('throttle:contact-form')->name('contact.send');
-Route::post('/home-contact', [SiteController::class, 'homeContactSend'])->middleware('throttle:contact-form')->name('home.contact.send');
+Route::post('/contact', [SiteController::class, 'contactSend'])->middleware(['throttle:contact-form', \App\Http\Middleware\PreventSpamWithHoneypot::class])->name('contact.send');
+Route::post('/home-contact', [SiteController::class, 'homeContactSend'])->middleware(['throttle:contact-form', \App\Http\Middleware\PreventSpamWithHoneypot::class])->name('home.contact.send');
 Route::get('/player/popup', [PlayerController::class, 'show'])->name('player.popup');
 Route::get('/search', [SearchController::class, 'index'])->middleware('throttle:public-search')->name('search');
-Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:comment-submit')->name('posts.comments.store');
+Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware(['throttle:comment-submit', \App\Http\Middleware\PreventSpamWithHoneypot::class])->name('posts.comments.store');
 Route::post('/posts/{post}/like', [PostReactionController::class, 'toggle'])->middleware('throttle:60,1')->name('posts.like');
 
 Route::get("/programas", [SiteController::class, "programs"])->name("programs");
@@ -253,4 +263,54 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
     });
 
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+});
+
+Route::prefix('talentos')->name('talents.')->group(function (): void {
+    Route::get('/', [TalentPublicController::class, 'index'])->name('explore');
+
+    Route::post('/webhook/{gateway}', [TalentSubscriptionController::class, 'webhook'])->name('payment.webhook');
+
+    Route::middleware('guest:talent')->group(function (): void {
+        Route::get('/register', [TalentAuthController::class, 'showRegisterForm'])->name('register');
+        Route::post('/register', [TalentAuthController::class, 'register'])->name('register.store')->middleware([\App\Http\Middleware\PreventSpamWithHoneypot::class]);
+        Route::get('/login', [TalentAuthController::class, 'showLoginForm'])->name('login');
+        Route::post('/login', [TalentAuthController::class, 'login'])->name('login.store')->middleware('throttle:login');
+    });
+
+    Route::middleware(['talent'])->group(function (): void {
+        Route::get('/dashboard', [TalentDashboardController::class, 'index'])->name('dashboard');
+        Route::prefix('store')->name('store.')->group(function (): void {
+            Route::get('/', [TalentProductController::class, 'index'])->name('index');
+            Route::get('/create', [TalentProductController::class, 'create'])->name('create');
+            Route::post('/', [TalentProductController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [TalentProductController::class, 'edit'])->name('edit');
+            Route::post('/{id}', [TalentProductController::class, 'update'])->name('update');
+            Route::delete('/{id}', [TalentProductController::class, 'destroy'])->name('destroy');
+        });
+        Route::get('/subscriptions/plans', [TalentSubscriptionController::class, 'selectPlan'])->name('subscriptions.plans');
+        Route::post('/subscriptions/checkout', [TalentSubscriptionController::class, 'checkout'])->name('subscriptions.checkout');
+        Route::get('/subscriptions/success', [TalentSubscriptionController::class, 'success'])->name('payment.success');
+        Route::get('/subscriptions/cancel', [TalentSubscriptionController::class, 'cancel'])->name('payment.cancel');
+        Route::get('/profile', [TalentProfileController::class, 'edit'])->name('profile');
+        Route::put('/profile', [TalentProfileController::class, 'update'])->name('profile.update');
+        Route::get('/notifications', [TalentNotificationController::class, 'edit'])->name('notifications.edit');
+        Route::put('/notifications', [TalentNotificationController::class, 'update'])->name('notifications.update');
+        Route::get('/media', [TalentMediaController::class, 'index'])->name('media.index');
+        Route::post('/media/upload', [TalentMediaController::class, 'upload'])->name('media.upload');
+        Route::post('/media', [TalentMediaController::class, 'store'])->name('media.store');
+        Route::delete('/media/{id}', [TalentMediaController::class, 'destroy'])->name('media.destroy');
+        Route::prefix('albums')->name('albums.')->group(function (): void {
+            Route::get('/', [TalentAlbumController::class, 'index'])->name('index');
+            Route::get('/create', [TalentAlbumController::class, 'create'])->name('create');
+            Route::post('/', [TalentAlbumController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [TalentAlbumController::class, 'edit'])->name('edit');
+            Route::post('/{id}', [TalentAlbumController::class, 'update'])->name('update');
+            Route::delete('/{id}', [TalentAlbumController::class, 'destroy'])->name('destroy');
+        });
+        Route::post('/logout', [TalentAuthController::class, 'logout'])->name('logout');
+    });
+
+    Route::get('/{bandName}', [TalentPublicProfileController::class, 'show'])->name('show');
+    Route::post('/{bandName}/like', [TalentPublicProfileController::class, 'like'])->name('like');
+    Route::post('/{bandName}/comment', [TalentPublicProfileController::class, 'comment'])->name('comment');
 });

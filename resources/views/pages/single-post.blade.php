@@ -252,6 +252,9 @@
                                 <h3 class="lucille-comment-title">{{ $ui['leave_a_reply'] }}</h3>
                                 <form method="POST" action="{{ route('posts.comments.store', $post['id']) }}" class="mt-5 space-y-5">
                                     @csrf
+                                    <div class="hidden" style="display:none !important" aria-hidden="true">
+                                        <input type="text" name="user_website" tabindex="-1" autocomplete="off">
+                                    </div>
                                     <div class="lucille-comment-inputs">
                                         <input type="text" name="author_name" placeholder="{{ $ui['your_name'] }}" class="lucille-comment-input">
                                         <input type="email" name="author_email" placeholder="{{ $ui['email_address'] }}" class="lucille-comment-input">

@@ -55,7 +55,7 @@ class BandInfoResolverTest extends TestCase
             'source' => 'test',
         ]);
 
-        $payload = app(BandInfoResolver::class)->resolve('Metalllica');
+        $payload = app(BandInfoResolver::class)->resolve('Metallicaa');
 
         $this->assertSame('Founded in 1981 in Los Angeles.', $payload['summary']);
         $this->assertSame(1981, $payload['formed_year']);

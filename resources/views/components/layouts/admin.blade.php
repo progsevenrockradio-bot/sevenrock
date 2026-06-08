@@ -128,7 +128,7 @@
             <!-- Brand -->
             <div class="flex h-20 items-center justify-between px-6 border-b border-[rgba(220,220,220,.08)]">
                 <a href="{{ $adminHomeUrl }}" class="flex items-center gap-3">
-                    @if ($brandDisplayMode === 'logo')
+                    @if ($brandDisplayMode === 'logo' || $brandDisplayMode === 'both')
                         <img src="{{ $theme->logo_url }}" alt="{{ $theme->site_name }}" loading="lazy" class="h-8 w-auto">
                     @else
                         <span class="lucille-brand-mark text-[1.4rem]">{{ $theme->brand_mark ?: $theme->site_name }}</span>
@@ -359,7 +359,7 @@
         <!-- Guest View (Login, etc) -->
         <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
             <a href="{{ $adminHomeUrl }}" class="flex items-center gap-3">
-                @if ($brandDisplayMode === 'logo')
+                @if ($brandDisplayMode === 'logo' || $brandDisplayMode === 'both')
                     <img src="{{ $theme->logo_url }}" alt="{{ $theme->site_name }}" loading="lazy" class="h-10 w-auto">
                 @else
                     <span class="lucille-brand-mark text-[1.9rem]">{{ $theme->brand_mark ?: $theme->site_name }}</span>

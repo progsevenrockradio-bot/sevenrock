@@ -19,6 +19,7 @@ class ThemeSetting extends Model
         'home_headings' => 'array',
         'ui_texts' => 'array',
         'admin_texts' => 'array',
+        'logo_height' => 'integer',
     ];
 
     protected $fillable = [
@@ -27,6 +28,7 @@ class ThemeSetting extends Model
         'brand_mark_font',
         'brand_display_mode',
         'logo_path',
+        'logo_height',
         'background_path',
         'hero_slide_primary_path',
         'hero_slide_secondary_path',
@@ -77,6 +79,7 @@ class ThemeSetting extends Model
             'brand_mark_font' => 'Rock Salt',
             'brand_display_mode' => 'mark',
             'logo_path' => 'assets/lucille/logo.png',
+            'logo_height' => 62,
             'background_path' => 'assets/lucille/dark-background.jpg',
             'hero_slide_primary_path' => 'assets/lucille/audience_opt.jpg',
             'hero_slide_secondary_path' => 'assets/lucille/live-slider-bg.jpg',

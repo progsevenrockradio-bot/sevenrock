@@ -32,6 +32,7 @@
     $brandMark = $themeData['visual']['brand_mark'] ?? $themeData['brand_mark'] ?? $themeData['site_name'] ?? 'Seven Rock Radio';
     $brandDisplayMode = $themeData['visual']['brand_display_mode'] ?? $themeData['brand_display_mode'] ?? 'mark';
     $logoUrl = $themeData['media']['logo_url'] ?? $themeData['logo_url'] ?? $themeSettings->logo_url;
+    $logoHeight = $themeSettings->logo_height ?? 62;
 @endphp
 
 <header
@@ -40,12 +41,26 @@
     :class="sticky ? 'rocks-header-sticky' : 'rocks-header-top'"
     class="inset-x-0 top-0 z-50 transition-all duration-300"
 >
-    <div class="absolute inset-0 bg-[#0a0a0a] md:hidden" aria-hidden="true"></div>
+    <div class="absolute inset-0 bg-cover bg-center md:hidden" style="background-image: linear-gradient(rgba(16, 16, 18, 0.75), rgba(16, 16, 18, 0.75)), var(--lucille-bg-image);" aria-hidden="true"></div>
     <div class="mx-auto flex h-full max-w-[1180px] flex-col justify-center px-5 py-2 lg:px-8 md:flex-row md:items-center md:justify-between md:py-0">
         <div class="flex w-full items-center justify-between md:contents">
-            <a href="{{ route('home') }}" class="flex h-full items-center py-2 md:py-0" aria-label="{{ $brandMark }} home">
-                @if ($brandDisplayMode === 'logo' && $logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo" loading="lazy">
+            <a href="{{ route('home') }}" class="flex h-full items-center gap-3 py-2 md:py-0" aria-label="{{ $brandMark }} home">
+                @if ($brandDisplayMode === 'both' && $logoUrl)
+                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both transition-all duration-300" :style="sticky ? 'max-height: {{ max(30, min(50, $logoHeight * 0.55)) }}px;' : 'max-height: {{ max(40, min(75, $logoHeight * 0.75)) }}px;'" loading="lazy">
+                    <span 
+                        x-show="!sticky" 
+                        x-transition:enter="transition-all ease-out duration-300"
+                        x-transition:enter-start="opacity-0 translate-x-[-15px] max-w-0"
+                        x-transition:enter-end="opacity-100 translate-x-0 max-w-[300px]"
+                        x-transition:leave="transition-all ease-in duration-200"
+                        x-transition:leave-start="opacity-100 translate-x-0 max-w-[300px]"
+                        x-transition:leave-end="opacity-0 translate-x-[-15px] max-w-0"
+                        class="lucille-brand-mark-both overflow-hidden whitespace-nowrap"
+                    >
+                        {{ $brandMark }}
+                    </span>
+                @elseif ($brandDisplayMode === 'logo' && $logoUrl)
+                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo transition-all duration-300" :style="sticky ? 'max-height: {{ min(45, $logoHeight) }}px;' : 'max-height: {{ $logoHeight }}px;'" loading="lazy">
                 @else
                     <span class="lucille-brand-mark">{{ $brandMark }}</span>
                 @endif

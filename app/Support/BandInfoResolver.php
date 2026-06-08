@@ -26,13 +26,20 @@ class BandInfoResolver
             return $this->emptyPayload();
         }
 
-        $local = $this->resolveLocalProfile($artist);
+        $local = $this->resolveLocalProfile($artist, false);
         if ($local !== null) {
             return $local;
         }
 
         $payload = app(BandInfoAggregator::class)->aggregate($artist);
         $payload = is_array($payload) ? $payload : $this->emptyPayload($artist);
+
+        if (! $this->hasMeaningfulPayload($payload)) {
+            $fuzzyLocal = $this->resolveLocalProfile($artist, true);
+            if ($fuzzyLocal !== null) {
+                return $fuzzyLocal;
+            }
+        }
 
         return $payload;
     }
@@ -47,10 +54,12 @@ class BandInfoResolver
      *     facts:array<int,string>
      * }|null
      */
-    private function resolveLocalProfile(string $artist): ?array
+    private function resolveLocalProfile(string $artist, bool $allowFuzzy = false): ?array
     {
         $matcher = app(BandProfileMatcher::class);
-        $profile = $matcher->exactMatch($artist);
+        $profile = $allowFuzzy
+            ? $matcher->fuzzyMatch($artist)
+            : $matcher->exactMatch($artist);
 
         if (! $profile) {
             return null;

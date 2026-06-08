@@ -29,7 +29,7 @@ class AdminBandProfileSearchTest extends TestCase
             'source' => 'test',
         ]);
 
-        $response = $this->actingAs($admin)->getJson(route('admin.band-profiles.search', ['q' => 'metallika']));
+        $response = $this->actingAs($admin)->getJson(route('admin.radio-artists.search', ['q' => 'metallika']));
 
         $response->assertOk();
         $response->assertJsonPath('data.results.0.text', 'Metallica');

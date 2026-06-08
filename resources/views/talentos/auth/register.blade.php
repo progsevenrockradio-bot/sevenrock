@@ -9,6 +9,9 @@
 
                 <form action="{{ route('talents.register.store') }}" method="POST" class="mt-8 space-y-5">
                     @csrf
+                    <div class="hidden" style="display:none !important" aria-hidden="true">
+                        <input type="text" name="user_website" tabindex="-1" autocomplete="off">
+                    </div>
                     <div class="grid gap-5 md:grid-cols-2">
                         <div>
                             <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre de banda</label>

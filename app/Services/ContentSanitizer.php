@@ -68,7 +68,6 @@ class ContentSanitizer
         $config->set('HTML.SafeIframe', (bool) config('purify.safe_iframe', true));
         $config->set('URI.SafeIframeRegexp', (string) config('purify.safe_iframe_regexp', '%^(?:https?:)?//(?:www\.|)(?:youtube(?:-nocookie)?\.com|youtu\.be|vimeo\.com|youtube\.com)%'));
 
-        $config->set('Attr.AllowedFrameborder', (bool) config('purify.allowed_frameborder', true));
         $config->set('Attr.AllowedFrameTargets', config('purify.allowed_frame_targets', ['_blank' => true]));
         $config->set('Attr.AllowedRel', config('purify.allowed_rel', ['nofollow' => true, 'noopener' => true, 'noreferrer' => true]));
 
@@ -90,6 +89,41 @@ class ContentSanitizer
             'onclick', 'onerror', 'onload', 'onmouseover',
             'onkeydown', 'onkeyup', 'onchange', 'onsubmit'
         ]));
+
+        $config->set('HTML.DefinitionID', 'html5-definitions');
+        $config->set('HTML.DefinitionRev', 1);
+
+        if ($def = $config->maybeGetRawHTMLDefinition()) {
+            $def->addElement('figure', 'Block', 'Flow', 'Common');
+            $def->addElement('figcaption', 'Inline', 'Flow', 'Common');
+            $def->addElement('video', 'Block', 'Optional: (source, Flow) | (Flow, source) | Flow', 'Common', [
+                'src' => 'URI',
+                'type' => 'Text',
+                'width' => 'Length',
+                'height' => 'Length',
+                'poster' => 'URI',
+                'preload' => 'Enum#auto,metadata,none',
+                'controls' => 'Bool',
+            ]);
+            $def->addElement('audio', 'Block', 'Optional: (source, Flow) | (Flow, source) | Flow', 'Common', [
+                'src' => 'URI',
+                'type' => 'Text',
+                'preload' => 'Enum#auto,metadata,none',
+                'controls' => 'Bool',
+            ]);
+            $def->addElement('source', 'Inline', 'Empty', 'Common', [
+                'src' => 'URI',
+                'type' => 'Text',
+            ]);
+            $def->addElement('embed', 'Block', 'Empty', 'Common', [
+                'src' => 'URI',
+                'type' => 'Text',
+            ]);
+            $def->addAttribute('iframe', 'allow', 'Text');
+            $def->addAttribute('iframe', 'allowfullscreen', 'Bool');
+            $def->addAttribute('iframe', 'loading', 'Text');
+            $def->addAttribute('iframe', 'frameborder', 'Text');
+        }
 
         return new HTMLPurifier($config);
     }
