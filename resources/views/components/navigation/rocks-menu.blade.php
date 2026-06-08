@@ -23,7 +23,7 @@
             ['label' => 'Ver Blog', 'route' => 'blog'],
             ['label' => 'Entrada', 'url' => route('posts.single', ['year' => '2016', 'month' => '09', 'day' => '06', 'slug' => 'inspiration'])],
         ]],
-        // Muro del Rock disabled for .com
+        ['label' => 'Muro del Rock', 'route' => 'talents.explore'],
         ['label' => 'Tienda', 'route' => 'shop'],
 
         ["label" => "Programas", "route" => "programs"],
