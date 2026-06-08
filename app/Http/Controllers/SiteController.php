@@ -119,9 +119,10 @@ class SiteController extends Controller
 
     public function albumSingle(string $slug): View
     {
-        $album = $this->cachedAlbumBySlug($slug);
+        $albumData = $this->cachedAlbumBySlug($slug);
 
-        if ($album) {
+        if ($albumData) {
+            $album = (new Album())->newFromBuilder($albumData);
             return view('pages.album-single', [
                 'album' => $this->adminAlbumViewData($album),
             ]);
