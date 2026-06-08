@@ -71,8 +71,12 @@ class CleanTestDataCommand extends Command
 
         // 6. Eliminar usuarios que no sean administradores
         if (Schema::hasTable('users')) {
-            $count = DB::table('users')->where('is_admin', false)->delete();
-            $this->line("- users (no administradores): Eliminados {$count} registros.");
+            if (Schema::hasColumn('users', 'is_admin')) {
+                $count = DB::table('users')->where('is_admin', false)->delete();
+                $this->line("- users (no administradores): Eliminados {$count} registros.");
+            } else {
+                $this->line("- users: Columna 'is_admin' no existe en esta base de datos (se omitió el borrado).");
+            }
         }
 
         Schema::enableForeignKeyConstraints();
