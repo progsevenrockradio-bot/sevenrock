@@ -8,9 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('theme_settings', function (Blueprint $table): void {
-            $table->string('featured_album_slug')->nullable()->after('home_album_cover_path');
-        });
+        if (!Schema::hasColumn('theme_settings', 'featured_album_slug')) {
+            Schema::table('theme_settings', function (Blueprint $table): void {
+                $table->string('featured_album_slug')->nullable()->after('home_album_cover_path');
+            });
+        }
     }
 
     public function down(): void

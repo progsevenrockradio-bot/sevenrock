@@ -8,9 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('theme_settings', function (Blueprint $table) {
-            $table->integer('logo_height')->default(62)->after('logo_path');
-        });
+        if (!Schema::hasColumn('theme_settings', 'logo_height')) {
+            Schema::table('theme_settings', function (Blueprint $table) {
+                $table->integer('logo_height')->default(62)->after('logo_path');
+            });
+        }
     }
 
     public function down(): void
