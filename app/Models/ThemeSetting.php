@@ -96,7 +96,7 @@ class ThemeSetting extends Model
             'contact_address' => '',
             'contact_email' => 'prog.sevenrockradio@gmail.com',
             'notification_email' => 'prog.sevenrockradio@gmail.com',
-            'notification_copy_email' => 'contact@sevenrockradio.shop',
+            'notification_copy_email' => 'contact@sevenrockradio.com',
             'notification_from_email' => 'prog.sevenrockradio@gmail.com',
             'notification_reply_to_email' => 'prog.sevenrockradio@gmail.com',
             'notification_mailer' => null,

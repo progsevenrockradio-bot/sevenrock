@@ -2,7 +2,7 @@
 
     @php
         $theme = $themeAppearance;
-        $siteUrl = config('app.url', 'https://sevenrockradio.shop');
+        $siteUrl = config('app.url', 'https://sevenrockradio.com');
     @endphp
 
     <div class="relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden px-5 py-16 md:py-24">

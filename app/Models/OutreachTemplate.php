@@ -82,7 +82,7 @@ class OutreachTemplate extends Model
             '{band_genre}' => trim((string) ($artist?->genre ?: 'Rock')),
             '{band_country}' => trim((string) ($artist?->country ?: '')),
             '{website_url}' => 'https://sevenrockradio.com',
-            '{admin_url}' => 'https://sevenrockradio.shop/talentos/register',
+            '{admin_url}' => 'https://sevenrockradio.com/talentos/register',
             '{radio_name}' => 'Seven Rock Radio',
             '{contact_person}' => trim((string) ($contact?->contact_person ?: '')),
             '{year}' => Carbon::now()->year,

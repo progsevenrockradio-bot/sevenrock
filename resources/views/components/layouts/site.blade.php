@@ -9,7 +9,7 @@
 
 @php
     $theme = $themeAppearance;
-    $siteUrl = config('app.url', 'https://sevenrockradio.shop');
+    $siteUrl = config('app.url', 'https://sevenrockradio.com');
     $logoUrl = $theme['media']['logo_url'] ?? $siteUrl . '/assets/lucille/logo.png';
 
     $finalTitle = $title;

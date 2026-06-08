@@ -253,7 +253,7 @@ class BandInfoAggregator
             $title = '';
 
             foreach ($searchTerms as $searchTerm) {
-                $search = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.shop)'])->retry(1, 100)
+                $search = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.com)'])->retry(1, 100)
                     ->connectTimeout(4)
                     ->timeout(6)
                     ->get("{$baseUrl}/w/api.php", [
@@ -271,7 +271,7 @@ class BandInfoAggregator
             }
 
             if ($title === '') {
-                $query = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.shop)'])->retry(1, 100)
+                $query = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.com)'])->retry(1, 100)
                     ->connectTimeout(4)
                     ->timeout(6)
                     ->get("{$baseUrl}/w/api.php", [
@@ -289,7 +289,7 @@ class BandInfoAggregator
                 return null;
             }
 
-            $summary = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.shop)'])->retry(1, 100)
+            $summary = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.com)'])->retry(1, 100)
                 ->connectTimeout(4)
                 ->timeout(6)
                 ->get("{$baseUrl}/api/rest_v1/page/summary/" . rawurlencode($title));
@@ -333,7 +333,7 @@ class BandInfoAggregator
         }
 
         try {
-            $response = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.shop)'])->retry(1, 100)
+            $response = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.com)'])->retry(1, 100)
                 ->connectTimeout(4)
                 ->timeout(6)
                 ->get('https://ws.audioscrobbler.com/2.0/', [

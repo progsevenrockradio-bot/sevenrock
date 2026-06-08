@@ -40,7 +40,7 @@ final class OutreachMail extends Mailable
                 'bandName' => $this->bandName,
                 'contactPerson' => $this->contactPerson,
                 'websiteUrl' => 'https://sevenrockradio.com',
-                'registerUrl' => 'https://sevenrockradio.shop/talentos/register',
+                'registerUrl' => 'https://sevenrockradio.com/talentos/register',
             ],
         );
     }
