@@ -34,7 +34,7 @@
                     activeDay: (() => {
                         const days = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
                         const today = days[new Date().getDay()];
-                        const availableDays = @json(collect($programsByDay)->pluck('day')->toArray());
+                        const availableDays = [ @foreach(collect($programsByDay)->pluck('day') as $d) '{{ $d }}', @endforeach ];
                         return availableDays.includes(today) ? today : '{{ $initialDay }}';
                     })(),
                     activeEpisode: null,
