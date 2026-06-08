@@ -60,4 +60,12 @@
             <button type="button" class="h-2.5 w-2.5 rounded-full border border-white/70 transition" :class="active === {{ $index }} ? 'bg-lucille-accent border-lucille-accent' : 'bg-transparent'" @click="go({{ $index }})" aria-label="Show slide {{ $index + 1 }}"></button>
         @endforeach
     </div>
+
+    {{-- Scroll Down Indicator --}}
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 hidden md:flex flex-col items-center gap-1 pointer-events-none">
+        <span class="text-[8px] font-display text-white/30 uppercase tracking-[0.25em]">Desplazar</span>
+        <div class="w-4 h-7 border border-white/20 rounded-full flex justify-center p-0.5">
+            <div class="w-1 h-1.5 bg-lucille-accent rounded-full animate-scroll-bounce"></div>
+        </div>
+    </div>
 </section>

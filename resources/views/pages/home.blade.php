@@ -1,4 +1,16 @@
 <x-layouts.site title="Seven Rock Radio - Inicio" description="Seven Rock Radio — Musica rock, entrevistas, eventos y la mejor vibra. Tu radio rock online. Escucha en vivo, descubre nuevos talentos y disfruta del mejor rock.">
+    @push('preloads')
+        @if (!empty($themeAppearance['hero_slides']) && isset($themeAppearance['hero_slides'][0]['image']))
+            @php
+                $firstSlideImage = $themeAppearance['hero_slides'][0]['image'];
+                $firstSlideUrl = str_starts_with($firstSlideImage, 'http://') || str_starts_with($firstSlideImage, 'https://')
+                    ? $firstSlideImage
+                    : asset($firstSlideImage);
+            @endphp
+            <link rel="preload" as="image" href="{{ $firstSlideUrl }}">
+        @endif
+    @endpush
+
     @php
         $homeHeadings = $themeAppearance['home_headings'];
         $ui = $themeAppearance['ui_texts'];
@@ -7,13 +19,6 @@
     <x-sections.hero-rocks :slides="$themeAppearance['hero_slides']" :interval="$themeAppearance['hero_slides_interval']" :transition="$themeAppearance['hero_slides_transition']" />
 
     <x-home.headline-ticker :ticker="$headlineTicker" />
-
-    <x-sections.background-band class="home-section-texture home-section-gray" style="margin-top: 100px; margin-bottom: 100px;">
-        <div class="pt-[100px] pb-[80px]">
-            <x-ui.section-heading :title="$homeHeadings['featured_stories']['title']" :subtitle="$homeHeadings['featured_stories']['subtitle']" />
-            {{-- Featured talents section disabled for .com (band section excluded) --}}
-        </div>
-    </x-sections.background-band>
 
     @if ($nextProgram)
     <x-sections.background-band class="home-section-texture home-section-cool" style="margin-bottom: 100px;">

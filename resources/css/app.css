@@ -2010,9 +2010,32 @@
         width: 90px;
     }
 
+    html {
+        scroll-behavior: smooth;
+    }
+
     .home-panel {
-        border: 1px solid #2b2b2b;
-        background: rgba(16, 16, 18, .88);
+        background: rgba(13, 13, 13, 0.45);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .home-panel:hover {
+        border-color: rgba(195, 39, 32, 0.25);
+        box-shadow: 0 20px 40px -15px hsla(4, 71%, 45%, 0.12),
+                    0 0 25px 2px hsla(4, 71%, 45%, 0.03);
+    }
+
+    @keyframes scrollBounce {
+        0% { transform: translateY(0); opacity: 0; }
+        50% { opacity: 1; }
+        100% { transform: translateY(10px); opacity: 0; }
+    }
+    .animate-scroll-bounce {
+        animation: scrollBounce 2s infinite ease-in-out;
     }
 
     .home-badge {

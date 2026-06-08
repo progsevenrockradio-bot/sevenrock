@@ -57,6 +57,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="{{ $theme['google_fonts_url'] }}" rel="stylesheet">
+    @stack('preloads')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         .section-band { background: rgba(8, 26, 36, 0.2) !important; }
