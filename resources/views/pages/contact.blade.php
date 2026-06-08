@@ -16,11 +16,9 @@
                         <div class="hidden" style="display:none !important" aria-hidden="true">
                             <input type="text" name="user_website" tabindex="-1" autocomplete="off">
                         </div>
-                        <div class="grid gap-6 md:grid-cols-3">
-                            <input type="text" name="name" placeholder="{{ $ui['your_name'] }}" class="lucille-form-field w-full" required>
-                            <input type="email" name="email" placeholder="{{ $ui['email_address'] }}" class="lucille-form-field w-full" required>
-                            <input type="tel" name="phone" placeholder="{{ $ui['phone'] }}" class="lucille-form-field w-full">
-                        </div>
+                        <input type="text" name="name" placeholder="{{ $ui['your_name'] }}" class="lucille-form-field w-full" required>
+                        <input type="email" name="email" placeholder="{{ $ui['email_address'] }}" class="lucille-form-field w-full" required>
+                        <input type="tel" name="phone" placeholder="{{ $ui['phone'] }}" class="lucille-form-field w-full">
                         <textarea name="message" placeholder="{{ $ui['write_comment'] }}" rows="10" class="lucille-form-field min-h-[220px] w-full" required></textarea>
                         <div class="pt-2">
                             <button type="submit" class="lucille-button-solid">{{ $ui['send_email'] }}</button>
