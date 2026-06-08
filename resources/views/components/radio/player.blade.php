@@ -38,6 +38,7 @@
     $fallbackCover = ! empty($theme['media']['home_album_cover_url'] ?? '')
         ? $theme['media']['home_album_cover_url']
         : asset('assets/lucille/album3.jpg');
+    $logoUrl = $theme['media']['logo_url'] ?? $theme['logo_url'] ?? asset('assets/lucille/logo.png');
 @endphp
 
     <div
@@ -70,6 +71,7 @@
             playlistM3u: @js($player['streams']['m3u']),
             playlistPls: @js($player['streams']['pls']),
             fallbackCover: @js($fallbackCover),
+            logoUrl: @js($logoUrl),
             pollInterval: @js($player['poll_interval']),
             historyLimit: @js($player['history_limit']),
             defaultTitle: @js($player['defaults']['title'] ?? ''),
@@ -538,7 +540,11 @@
                                             <h4 class="radio-modal-card-title">Biografía</h4>
                                             <span x-show="biographySourceLabel" x-cloak class="radio-modal-source-badge" x-text="biographySourceLabel"></span>
                                         </div>
-                                        <p data-player-band-info class="radio-modal-text" x-text="biographyExpanded || 'No hay una biografía ampliada disponible para esta banda.'"></p>
+                                        <div class="radio-modal-text-paragraphs" data-player-band-info>
+                                            <template x-for="(paragraph, index) in (biographyExpanded || 'No hay una biografía ampliada disponible para esta banda.').split(/\r?\n\r?\n/)" :key="index">
+                                                <p class="radio-modal-text" x-text="paragraph"></p>
+                                            </template>
+                                        </div>
 
                                         <div x-show="bandWindowView.logo || bandLinks().length" class="radio-modal-links">
                                             <template x-for="link in bandLinks()" :key="link.url">

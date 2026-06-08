@@ -199,13 +199,20 @@
                             }"
                             class="space-y-3"
                         >
-                            <div class="flex flex-wrap items-center gap-3">
+                            <div class="content-reactions-wrapper">
                                 <button type="button" class="btn-like content-reaction-button" :class="{ 'is-active': liked }" @click="toggleLike()" :aria-pressed="liked" :disabled="likeBusy">
-                                    <span class="content-reaction-button__icon" x-text="liked ? '♥' : '♡'">♡</span>
                                     <span>Me gusta</span>
+                                    <span class="content-reaction-switch">
+                                        <span class="content-reaction-switch-knob"></span>
+                                    </span>
                                     <span class="like-count content-reaction-count" x-text="likeCount">0</span>
                                 </button>
-                                <button type="button" class="radio-player-popup-chip" @click="shareOpen = !shareOpen" :aria-expanded="shareOpen">{{ $ui['share'] }}</button>
+                                <button type="button" class="content-share-button" :class="{ 'is-active': shareOpen }" @click="shareOpen = !shareOpen" :aria-expanded="shareOpen">
+                                    <span>{{ str_replace(':', '', $ui['share'] ?? 'Compartir') }}</span>
+                                    <span class="content-share-icon">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742l5.26 2.868m0 0a3 3 0 110 4.924m-5.26-2.868a3 3 0 110-4.924m5.26-2.868A3 3 0 1114 8.684z"></path></svg>
+                                    </span>
+                                </button>
                                 <span class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Redes</span>
                             </div>
 

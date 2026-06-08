@@ -35,6 +35,18 @@ export function registerRadioPlayer(Alpine) {
         }
     };
 
+    const isPlaceholderImage = (url) => {
+        if (!url) return true;
+        const sUrl = String(url);
+        if (sUrl.includes('radioboss.fm/') && sUrl.includes('/artwork/')) {
+            return true;
+        }
+        if (sUrl.includes('/artwork/569.png') || sUrl.includes('/artwork/')) {
+            return true;
+        }
+        return false;
+    };
+
     Alpine.data('radioPlayer', (options = {}) => ({
         mode: options.mode || 'dock',
         statusUrl: options.statusUrl || '/api/player/status',
@@ -50,6 +62,13 @@ export function registerRadioPlayer(Alpine) {
         favoritesToggleUrl: options.favoritesToggleUrl || '/api/player/favorites/toggle',
         favoritesImportUrl: options.favoritesImportUrl || '/api/player/favorites/import',
         fallbackCover: options.fallbackCover || '',
+        logoUrl: options.logoUrl || '/assets/lucille/logo.png',
+        cleanCover(url, customFallback = null) {
+            if (isPlaceholderImage(url)) {
+                return customFallback || this.logoUrl;
+            }
+            return url || customFallback || this.logoUrl;
+        },
         pollInterval: Number(options.pollInterval || 5),
         nextTrackThresholdSeconds: Number(options.nextTrackThresholdSeconds || 20),
         historyLimit: Number(options.historyLimit || 10),
@@ -705,11 +724,11 @@ export function registerRadioPlayer(Alpine) {
         },
 
         get bandWindowBioCover() {
-            return this.bandWindowView.bioCover || this.fallbackCover;
+            return this.cleanCover(this.bandWindowView.bioCover, this.logoUrl);
         },
 
         get bandWindowTrackCover() {
-            return this.bandWindowView.trackCover || this.fallbackCover;
+            return this.cleanCover(this.bandWindowView.trackCover, this.logoUrl);
         },
 
         get bandWindowView() {
@@ -852,7 +871,7 @@ export function registerRadioPlayer(Alpine) {
 
             const nextTitle = this.normalizeTrackTitle(widgetTrack.title || this.defaultTitle || '');
             const nextArtist = this.normalizeBandArtist(widgetTrack.artist || this.defaultArtist || '');
-            const nextCover = widgetTrack.cover || this.fallbackCover;
+            const nextCover = this.cleanCover(widgetTrack.cover || this.fallbackCover, this.fallbackCover);
             const nextSignature = this.buildSignature({
                 title: nextTitle || this.defaultTitle || '',
                 artist: nextArtist || this.defaultArtist || '',
@@ -1050,7 +1069,7 @@ export function registerRadioPlayer(Alpine) {
             const nextSignature = track.signature || this.buildSignature({
                 title: widgetTitle || track.title || currentTitle || this.defaultTitle || '',
                 artist: widgetArtist || track.artist || currentArtist || this.defaultArtist || '',
-                cover: widgetCover || track.cover || this.track.cover || this.fallbackCover,
+                cover: this.cleanCover(widgetCover || track.cover || this.track.cover || this.fallbackCover, this.fallbackCover),
                 program: track.program_name || '',
             });
             const trackChanged = Boolean(previousSignature && previousSignature !== nextSignature);
@@ -1067,7 +1086,7 @@ export function registerRadioPlayer(Alpine) {
                 ...track,
                 title: this.normalizeTrackTitle(widgetTitle || track.title || currentTitle || this.defaultTitle || ''),
                 artist: this.normalizeBandArtist(widgetArtist || track.artist || currentArtist || this.defaultArtist || ''),
-                cover: widgetCover || track.cover || this.track.cover || this.fallbackCover,
+                cover: this.cleanCover(widgetCover || track.cover || this.track.cover || this.fallbackCover, this.fallbackCover),
                 lyrics: trackChanged ? nextLyrics : (nextLyrics || this.track.lyrics || ''),
                 band_info: trackChanged ? nextBandInfo : (nextBandInfo || this.track.band_info || ''),
                 band_biography: trackChanged ? nextBandBiography : (nextBandBiography || this.track.band_biography || ''),

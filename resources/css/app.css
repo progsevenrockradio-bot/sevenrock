@@ -4167,13 +4167,23 @@
         margin-top: 8px;
     }
 
+    .content-reactions-wrapper {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
     .content-reaction-button,
-    .btn-like {
+    .btn-like,
+    .content-share-button {
         display: inline-flex;
         align-items: center;
         gap: .55rem;
         min-height: 2.6rem;
-        padding: .6rem .95rem;
+        padding: .6rem 1.1rem;
         border: 1px solid rgba(184, 175, 162, .22);
         border-radius: 999px;
         background: rgba(0, 0, 0, .18);
@@ -4189,27 +4199,76 @@
 
     .content-reaction-button:hover,
     .btn-like:hover,
+    .content-share-button:hover,
     .content-reaction-button:focus-visible,
-    .btn-like:focus-visible {
+    .btn-like:focus-visible,
+    .content-share-button:focus-visible {
         border-color: rgba(214, 207, 196, .6);
         background: rgba(255, 255, 255, .06);
         color: #fff;
         transform: translateY(-1px);
     }
 
-    .content-reaction-button.is-active {
+    .content-reaction-button.is-active,
+    .content-share-button.is-active {
         border-color: rgba(214, 207, 196, .6);
         background: rgba(255, 255, 255, .06);
         color: #fff;
     }
 
-    .content-reaction-button__icon {
+    .content-reaction-switch {
+        display: inline-block;
+        position: relative;
+        width: 28px;
+        height: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(184, 175, 162, 0.3);
+        border-radius: 99px;
+        transition: background-color 0.25s, border-color 0.25s;
+        vertical-align: middle;
+        margin-left: 2px;
+    }
+
+    .content-reaction-switch-knob {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 10px;
+        height: 10px;
+        background: #a7a093;
+        border-radius: 50%;
+        transition: transform 0.25s, background-color 0.25s;
+    }
+
+    .content-reaction-button.is-active .content-reaction-switch {
+        background: rgba(195, 39, 32, 0.2);
+        border-color: #c32720;
+    }
+
+    .content-reaction-button.is-active .content-reaction-switch-knob {
+        transform: translateX(12px);
+        background: #c32720;
+    }
+
+    .content-share-icon {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 1rem;
-        font-size: 1rem;
-        line-height: 1;
+        color: inherit;
+    }
+
+    .radio-player-share-panel--post {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background: rgba(10, 10, 10, 0.6) !important;
+        border: 1px solid rgba(184, 175, 162, 0.15) !important;
+        border-radius: 12px !important;
+        margin-top: 10px !important;
+        backdrop-filter: blur(8px) !important;
+        max-width: fit-content;
     }
 
     .content-reaction-count {
@@ -4845,18 +4904,27 @@
     }
 
     .radio-modal-text {
-        margin: 0;
-        color: #d8d3ca;
-        font-size: 14px;
-        line-height: 1.8;
+        margin: 0 0 1.25rem 0;
+        color: #e2dcd0;
+        font-size: 15px;
+        line-height: 1.9;
         white-space: pre-line;
         overflow-wrap: anywhere;
+        letter-spacing: 0.01em;
+    }
+    .radio-modal-text:last-child {
+        margin-bottom: 0;
     }
 
     .radio-modal-text--lyrics {
-        color: #e7e1d6;
-        line-height: 1.9;
+        color: #f5f0e6;
+        font-size: 16px;
+        line-height: 2.1;
         white-space: pre-wrap;
+        text-align: center;
+        letter-spacing: 0.03em;
+        padding: 1rem 0;
+        font-family: inherit;
     }
 
     .radio-modal-body--band {
