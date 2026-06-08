@@ -30,7 +30,6 @@ use App\Http\Controllers\Talent\DashboardController as TalentDashboardController
 use App\Http\Controllers\Talent\AuthController as TalentAuthController;
 use App\Http\Controllers\Talent\MediaController as TalentMediaController;
 use App\Http\Controllers\Talent\ProfileController as TalentProfileController;
-use App\Http\Controllers\Talent\PublicController as TalentPublicController;
 use App\Http\Controllers\Talent\ProductController as TalentProductController;
 use App\Http\Controllers\Talent\SubscriptionController as TalentSubscriptionController;
 use App\Http\Controllers\Talent\NotificationController as TalentNotificationController;
@@ -265,7 +264,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
 });
 
 Route::prefix('talentos')->name('talents.')->group(function (): void {
-    Route::get('/', [TalentPublicController::class, 'index'])->name('explore');
+    Route::get('/', [TalentPublicProfileController::class, 'index'])->middleware('throttle:public-search')->name('explore');
 
     Route::post('/webhook/{gateway}', [TalentSubscriptionController::class, 'webhook'])->name('payment.webhook');
 

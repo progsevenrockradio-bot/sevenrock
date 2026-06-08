@@ -18,7 +18,7 @@ class PublicProfileController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Talent::query()->where('subscription_status', 'active');
+        $query = Talent::query()->where('subscription_status', 'active')->withCount('media');
 
         if ($search = trim((string) $request->input('search', ''))) {
             $query->where('band_name', 'like', '%' . $search . '%');
