@@ -38,7 +38,9 @@
             <div class="flex flex-col lg:flex-row">
                 <main class="lucille-blog-standard-main">
                     <article>
-                        <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ $post['title'] }}" class="mb-0 w-full" loading="lazy">
+                        <div class="embedded-wall-socket">
+                            <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ $post['title'] }}" class="mb-0 w-full" loading="lazy">
+                        </div>
 
                         <div class="lucille-single-post-body mt-0 space-y-5">
                             @foreach ($post['content'] as $block)
