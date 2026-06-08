@@ -35,10 +35,10 @@
         ->filter(fn (array $social): bool => in_array($social['order'], $preferredSocialOrder, true))
         ->sortBy(fn (array $social): int => array_search($social['order'], $preferredSocialOrder, true))
         ->values();
-    $fallbackCover = ! empty($theme['media']['home_album_cover_url'] ?? '')
-        ? $theme['media']['home_album_cover_url']
-        : asset('assets/lucille/album3.jpg');
     $logoUrl = $theme['media']['logo_url'] ?? $theme['logo_url'] ?? asset('assets/lucille/logo.png');
+    $fallbackCover = ! empty($theme['media']['home_album_cover_url'] ?? '') && ! str_contains($theme['media']['home_album_cover_url'], 'album3.jpg')
+        ? $theme['media']['home_album_cover_url']
+        : $logoUrl;
 @endphp
 
     <div
