@@ -95,18 +95,18 @@
                     }
                 }"
             >
-                @if (!empty($episodes))
+                @if ($episodes->isNotEmpty())
                     <div class="mb-6 flex items-center justify-between">
                         <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] flex items-center gap-3">
                             <span class="w-1 h-6 bg-lucille-accent rounded-full inline-block"></span>
-                            Episodios · <span class="text-lucille-accent">{{ count($episodes) }}</span>
+                            Episodios · <span class="text-lucille-accent">{{ $episodes->total() }}</span>
                         </h2>
                     </div>
 
                     <div class="grid gap-4">
                         @foreach ($episodes as $index => $episode)
                             @php
-                                $epTitle = $episode['title'] ?? 'Episodio ' . ($index + 1);
+                                $epTitle = $episode['title'] ?? 'Episodio ' . ($index + 1 + ($episodes->currentPage() - 1) * $episodes->perPage());
                                 $epSrc = $episode['src'] ?? '';
                                 $epDuration = $episode['duration'] ?? '';
                                 $epDate = isset($episode['published_at']) ? \Carbon\Carbon::createFromTimestamp((int)$episode['published_at'])->format('d/m/Y') : '';
@@ -163,6 +163,46 @@
                             </div>
                         @endforeach
                     </div>
+
+                    {{-- Glassmorphic Pagination Controls --}}
+                    @if ($episodes->hasPages())
+                        <div class="mt-8 flex justify-center items-center gap-2 font-mono text-sm">
+                            {{-- Previous Page Link --}}
+                            @if ($episodes->onFirstPage())
+                                <span class="px-4 py-2 border border-white/5 bg-white/[0.01] text-white/30 rounded-lg cursor-not-allowed select-none">
+                                    &larr; Anterior
+                                </span>
+                            @else
+                                <a href="{{ $episodes->previousPageUrl() }}" class="px-4 py-2 border border-white/10 bg-white/5 text-white/70 hover:text-white hover:border-lucille-accent/50 hover:bg-lucille-accent/10 rounded-lg transition-all duration-200">
+                                    &larr; Anterior
+                                </a>
+                            @endif
+
+                            {{-- Page Links --}}
+                            @foreach ($episodes->getUrlRange(max(1, $episodes->currentPage() - 2), min($episodes->lastPage(), $episodes->currentPage() + 2)) as $page => $url)
+                                @if ($page == $episodes->currentPage())
+                                    <span class="px-4 py-2 border border-lucille-accent bg-lucille-accent/10 text-lucille-accent rounded-lg font-bold select-none">
+                                        {{ $page }}
+                                    </span>
+                                @else
+                                    <a href="{{ $url }}" class="px-4 py-2 border border-white/10 bg-white/5 text-white/70 hover:text-white hover:border-lucille-accent/50 hover:bg-lucille-accent/10 rounded-lg transition-all duration-200">
+                                        {{ $page }}
+                                    </a>
+                                @endif
+                            @endforeach
+
+                            {{-- Next Page Link --}}
+                            @if ($episodes->hasMorePages())
+                                <a href="{{ $episodes->nextPageUrl() }}" class="px-4 py-2 border border-white/10 bg-white/5 text-white/70 hover:text-white hover:border-lucille-accent/50 hover:bg-lucille-accent/10 rounded-lg transition-all duration-200">
+                                    Siguiente &rarr;
+                                </a>
+                            @else
+                                <span class="px-4 py-2 border border-white/5 bg-white/[0.01] text-white/30 rounded-lg cursor-not-allowed select-none">
+                                    Siguiente &rarr;
+                                </span>
+                            @endif
+                        </div>
+                    @endif
                 @else
                     <div class="py-16 text-center border border-dashed border-white/10 bg-white/[0.01] rounded-[16px] p-8">
                         <p class="text-sm text-[#7b7b7b]">No hay episodios disponibles para este programa.</p>

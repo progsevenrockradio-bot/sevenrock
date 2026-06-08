@@ -408,9 +408,21 @@ class SiteController extends Controller
             abort(404);
         }
 
+        $page = max(1, (int) request()->integer('page', 1));
+        $perPage = 12;
+        $offset = ($page - 1) * $perPage;
+
+        $paginatedEpisodes = new \Illuminate\Pagination\LengthAwarePaginator(
+            array_slice($episodes, $offset, $perPage),
+            count($episodes),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+
         return view('pages.program-detail', [
             'program' => $program,
-            'episodes' => $episodes,
+            'episodes' => $paginatedEpisodes,
         ]);
     }
 
