@@ -122,7 +122,10 @@ class SiteController extends Controller
         $albumData = $this->cachedAlbumBySlug($slug);
 
         if ($albumData) {
-            $album = (new Album())->newFromBuilder($albumData);
+            $album = new Album();
+            $album->forceFill($albumData);
+            $album->exists = true;
+
             return view('pages.album-single', [
                 'album' => $this->adminAlbumViewData($album),
             ]);
