@@ -75,7 +75,19 @@
         method="POST"
         enctype="multipart/form-data"
         class="space-y-6"
-        x-data="{ activeTab: @js($initialTab) }"
+        x-data="{
+            activeTab: {{ Js::from($initialTab) }},
+            brandMark: {{ Js::from(old('brand_mark', $settings->brand_mark)) }},
+            brandMarkFont: {{ Js::from(old('brand_mark_font', $settings->brand_mark_font)) }},
+            brandDisplayMode: {{ Js::from(old('brand_display_mode', $settings->brand_display_mode)) }},
+            bodyFont: {{ Js::from(old('body_font', $settings->body_font)) }},
+            headingFont: {{ Js::from(old('heading_font', $settings->heading_font)) }},
+            accentColor: {{ Js::from(old('accent_color', $settings->accent_color)) }},
+            navColor: {{ Js::from(old('nav_color', $settings->nav_color)) }},
+            surfaceColor: {{ Js::from(old('surface_color', $settings->surface_color)) }},
+            bodyColor: {{ Js::from(old('body_color', $settings->body_color)) }},
+            headingColor: {{ Js::from(old('heading_color', $settings->heading_color)) }}
+        }"
     >
         @csrf
         @method('PUT')

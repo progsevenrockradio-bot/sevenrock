@@ -135,13 +135,13 @@
                         <div
                             x-data="{
                                 shareOpen: false,
-                                likeCount: @js((int) data_get($post, 'likes_count', 0)),
-                                liked: @js((bool) data_get($post, 'liked', false)),
+                                likeCount: {{ Js::from((int) data_get($post, 'likes_count', 0)) }},
+                                liked: {{ Js::from((bool) data_get($post, 'liked', false)) }},
                                 likeBusy: false,
-                                likeUrl: @js($postLikeUrl),
-                                shareTitle: @js($shareTitle),
-                                shareUrl: @js($shareUrl),
-                                shareImage: @js($shareImage),
+                                likeUrl: {{ Js::from($postLikeUrl) }},
+                                shareTitle: {{ Js::from($shareTitle) }},
+                                shareUrl: {{ Js::from($shareUrl) }},
+                                shareImage: {{ Js::from($shareImage) }},
                                 async nativeShare() {
                                     const text = `Estoy leyendo \"${this.shareTitle}\" en Seven Rock Radio.`;
                                     try {
@@ -178,7 +178,7 @@
                                                 'X-Requested-With': 'XMLHttpRequest',
                                             },
                                             body: JSON.stringify({
-                                                post_id: @js(data_get($post, 'id')),
+                                                post_id: {{ Js::from(data_get($post, 'id')) }},
                                             }),
                                         });
                                         const payload = await response.json();
