@@ -287,7 +287,9 @@
         </div>
     </main>
 
-    <x-radio.player />
+    @if (!request()->routeIs('programs*'))
+        <x-radio.player />
+    @endif
 
     <button
         type="button"
