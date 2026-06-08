@@ -11,7 +11,6 @@ use App\Http\Controllers\Admin\MasterProgramController as AdminMasterProgramCont
 use App\Http\Controllers\Admin\OutreachController as AdminOutreachController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\VideoController as AdminVideoController;
-use App\Http\Controllers\Admin\TalentController as AdminTalentController;
 use App\Http\Controllers\Admin\TalentAdminController as AdminTalentAdminController;
 use App\Http\Controllers\Admin\ThemeSettingsController as AdminThemeSettingsController;
 use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
@@ -226,8 +225,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
     });
 
     Route::prefix('talents')->name('talents.')->group(function (): void {
-        Route::get('/', [AdminTalentController::class, 'index'])->name('index');
-        Route::post('/{talent}/toggle-featured', [AdminTalentController::class, 'toggleFeatured'])->name('toggle-featured');
+        Route::get('/', [AdminTalentAdminController::class, 'index'])->name('index');
+        Route::patch('/{talent}/toggle-featured', [AdminTalentAdminController::class, 'toggleFeatured'])->name('toggle-featured');
         Route::get('/media', [AdminTalentAdminController::class, 'media'])->name('media');
         Route::delete('/media/{media}', [AdminTalentAdminController::class, 'deleteMedia'])->name('media.destroy');
         Route::get('/{talent}/edit', [AdminTalentAdminController::class, 'edit'])->name('edit');
