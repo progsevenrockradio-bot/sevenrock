@@ -114,6 +114,7 @@
                     </div>
 
                     <div class="radio-player-popup-header-actions">
+                        <button type="button" class="radio-player-popup-chip" @click="togglePanel()" :class="{ 'is-active': panelOpen }">Info</button>
                         <button type="button" class="radio-player-popup-chip" @click="toggleSharePanel()" :aria-expanded="sharePanelOpen">Share</button>
                         <button type="button" class="radio-player-popup-chip" @click="window.close()">Cerrar</button>
                     </div>
@@ -174,7 +175,7 @@
                                     onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;"
                                     loading="lazy"
                                 >
-                                <div class="radio-player-popup-wavebars">
+                                <div class="radio-player-popup-wavebars" :class="{ 'is-playing': playing }">
                                     <span class="radio-player-popup-wavebar radio-player-popup-wavebar--1"></span>
                                     <span class="radio-player-popup-wavebar radio-player-popup-wavebar--2"></span>
                                     <span class="radio-player-popup-wavebar radio-player-popup-wavebar--3"></span>
@@ -546,7 +547,7 @@
 
                                         <div x-show="bandWindowView.logo || bandLinks().length" class="radio-modal-links">
                                             <template x-for="link in bandLinks()" :key="link.url">
-                                                <a :href="link.url" target="_blank" rel="noopener" class="radio-modal-link" x-text="link.label"></a>
+                                                <a :href="link.url" target="_blank" rel="noopener noreferrer" class="radio-modal-link" x-text="link.label"></a>
                                             </template>
                                         </div>
                                     </section>
@@ -597,7 +598,10 @@
             @click.self="closeProgramWindow()"
         >
             <div class="radio-modal-container radio-modal-container--program" @click.stop>
-                <button type="button" class="radio-modal-close-btn radio-modal-close-btn--program" @click="closeProgramWindow()" aria-label="Cerrar">×</button>
+                <div class="radio-modal-header-actions">
+                    <button type="button" @click="openPopout()" class="radio-modal-header-action" aria-label="Abrir popout">Popout</button>
+                    <button type="button" class="radio-modal-close-btn radio-modal-close-btn--program" @click="closeProgramWindow()" aria-label="Cerrar">×</button>
+                </div>
 
                 <template x-if="programInfoLoading && !programInfo">
                     <div class="radio-modal-skeleton radio-modal-skeleton--program">
@@ -632,8 +636,8 @@
                                 <p class="radio-modal-program-host" x-text="programInfo.host ? 'Conduce: ' + programInfo.host : ''"></p>
                                 <p class="radio-modal-program-schedule" x-text="programInfo.schedule || ''"></p>
                                 <div x-show="programInfo.social_links && (programInfo.social_links.facebook || programInfo.social_links.instagram)" class="radio-modal-program-socials">
-                                    <a x-show="programInfo.social_links?.facebook" :href="programInfo.social_links.facebook" target="_blank" rel="noopener" class="radio-modal-program-social">Facebook</a>
-                                    <a x-show="programInfo.social_links?.instagram" :href="programInfo.social_links.instagram" target="_blank" rel="noopener" class="radio-modal-program-social">Instagram</a>
+                                    <a x-show="programInfo.social_links?.facebook" :href="programInfo.social_links.facebook" target="_blank" rel="noopener noreferrer" class="radio-modal-program-social">Facebook</a>
+                                    <a x-show="programInfo.social_links?.instagram" :href="programInfo.social_links.instagram" target="_blank" rel="noopener noreferrer" class="radio-modal-program-social">Instagram</a>
                                 </div>
                             </div>
                         </div>

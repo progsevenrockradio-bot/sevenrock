@@ -174,7 +174,7 @@ export function registerRadioPlayer(Alpine) {
             this.watchNowPlayingWidget();
             this.queueStatusRefresh(0);
 
-            this.pollHandle = setInterval(() => this.queueStatusRefresh(0), Math.max(3, this.pollInterval) * 1000);
+            this.startPolling();
             this.progressHandle = setInterval(() => this.tickProgress(), 1000);
 
             this.boundHotkeys = (event) => this.handleHotkeys(event);
@@ -187,6 +187,7 @@ export function registerRadioPlayer(Alpine) {
 
         destroy() {
             if (this.pollHandle) {
+                clearTimeout(this.pollHandle);
                 clearInterval(this.pollHandle);
             }
             if (this.progressHandle) {
@@ -221,6 +222,48 @@ export function registerRadioPlayer(Alpine) {
             }
             if (this.viewportResizeHandle) {
                 window.removeEventListener('resize', this.viewportResizeHandle);
+            }
+        },
+
+        startPolling() {
+            if (this.pollHandle) {
+                clearTimeout(this.pollHandle);
+                clearInterval(this.pollHandle);
+            }
+            const run = async () => {
+                await this.refreshStatus(true);
+                const interval = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
+                this.pollHandle = setTimeout(run, interval);
+            };
+            this.pollHandle = setTimeout(run, Math.max(3, this.pollInterval) * 1000);
+        },
+
+        adjustPollingInterval() {
+            if (this.pollHandle) {
+                clearTimeout(this.pollHandle);
+                clearInterval(this.pollHandle);
+            }
+            const run = async () => {
+                await this.refreshStatus(true);
+                const interval = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
+                this.pollHandle = setTimeout(run, interval);
+            };
+            const initialDelay = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
+            this.pollHandle = setTimeout(run, initialDelay);
+        },
+
+        updateDocumentTitle() {
+            if (this.mode !== 'popup') {
+                return;
+            }
+            const artist = this.track.artist || this.defaultArtist;
+            const title = this.track.title || this.defaultTitle;
+            const prefix = this.playing ? '▶ ' : '';
+            const brand = 'Seven Rock Radio';
+            if (artist && title) {
+                document.title = `${prefix}${artist} - ${title} | ${brand}`;
+            } else {
+                document.title = `${prefix}${brand}`;
             }
         },
 
@@ -319,10 +362,14 @@ export function registerRadioPlayer(Alpine) {
 
                 audio.addEventListener('play', () => {
                     this.playing = true;
+                    this.updateDocumentTitle();
+                    this.adjustPollingInterval();
                 });
 
                 audio.addEventListener('pause', () => {
                     this.playing = false;
+                    this.updateDocumentTitle();
+                    this.adjustPollingInterval();
                 });
 
                 audio.addEventListener('waiting', () => {
@@ -1111,6 +1158,7 @@ export function registerRadioPlayer(Alpine) {
             if (!silent && previousSignature && previousSignature !== this.track.signature) {
                 this.toastMessage(`Ahora suena: ${this.track.title}`);
             }
+            this.updateDocumentTitle();
         },
 
         formatBandText(value) {
