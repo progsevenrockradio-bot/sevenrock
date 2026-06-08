@@ -269,6 +269,83 @@
                         @endforelse
                     </div>
                 </div>
+
+                <!-- Related Bands Panel -->
+                @if ($relatedByStyle->isNotEmpty() || $relatedByName->isNotEmpty() || $recommended->isNotEmpty())
+                    <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:p-8 shadow-xl">
+                        <h4 class="font-display text-lg uppercase tracking-[.18em] text-white border-b border-white/5 pb-3">Artistas Relacionados</h4>
+                        <div class="space-y-6 mt-5">
+                            @if ($relatedByStyle->isNotEmpty())
+                                <div>
+                                    <span class="text-[9px] uppercase tracking-[.2em] text-[var(--lucille-accent)] font-semibold font-display">Mismo Estilo</span>
+                                    <div class="space-y-3 mt-2">
+                                        @foreach ($relatedByStyle as $relBand)
+                                            <a href="{{ route('talents.show', ['bandName' => $relBand->band_name]) }}" class="flex items-center gap-3 bg-white/[0.02] border border-white/5 p-2 rounded-[10px] hover:border-white/10 transition-colors">
+                                                <div class="h-10 w-10 rounded-[6px] border border-white/10 overflow-hidden bg-black/20 shrink-0">
+                                                    @if ($relBand->logoUrl())
+                                                        <img src="{{ $relBand->logoUrl() }}" class="h-full w-full object-cover" alt="{{ $relBand->band_name }}" width="40" height="40" loading="lazy">
+                                                    @else
+                                                        <div class="h-full w-full flex items-center justify-center text-[8px] text-gray-500 uppercase tracking-widest">Logo</div>
+                                                    @endif
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <strong class="text-white text-xs block truncate">{{ $relBand->band_name }}</strong>
+                                                    <span class="text-[9px] text-gray-500 uppercase tracking-wider block font-mono">Plan {{ ucfirst($relBand->plan) }}</span>
+                                                </div>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if ($relatedByName->isNotEmpty())
+                                <div class="@if($relatedByStyle->isNotEmpty()) pt-4 border-t border-white/5 @endif">
+                                    <span class="text-[9px] uppercase tracking-[.2em] text-[var(--lucille-accent)] font-semibold font-display">Nombres Similares</span>
+                                    <div class="space-y-3 mt-2">
+                                        @foreach ($relatedByName as $relBand)
+                                            <a href="{{ route('talents.show', ['bandName' => $relBand->band_name]) }}" class="flex items-center gap-3 bg-white/[0.02] border border-white/5 p-2 rounded-[10px] hover:border-white/10 transition-colors">
+                                                <div class="h-10 w-10 rounded-[6px] border border-white/10 overflow-hidden bg-black/20 shrink-0">
+                                                    @if ($relBand->logoUrl())
+                                                        <img src="{{ $relBand->logoUrl() }}" class="h-full w-full object-cover" alt="{{ $relBand->band_name }}" width="40" height="40" loading="lazy">
+                                                    @else
+                                                        <div class="h-full w-full flex items-center justify-center text-[8px] text-gray-500 uppercase tracking-widest">Logo</div>
+                                                    @endif
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <strong class="text-white text-xs block truncate">{{ $relBand->band_name }}</strong>
+                                                    <span class="text-[9px] text-gray-500 uppercase tracking-wider block font-mono">{{ $relBand->interacts }} interacciones</span>
+                                                </div>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if ($recommended->isNotEmpty())
+                                <div class="@if($relatedByStyle->isNotEmpty() || $relatedByName->isNotEmpty()) pt-4 border-t border-white/5 @endif">
+                                    <span class="text-[9px] uppercase tracking-[.2em] text-[var(--lucille-accent)] font-semibold font-display">Recomendados del Muro</span>
+                                    <div class="space-y-3 mt-2">
+                                        @foreach ($recommended as $relBand)
+                                            <a href="{{ route('talents.show', ['bandName' => $relBand->band_name]) }}" class="flex items-center gap-3 bg-white/[0.02] border border-white/5 p-2 rounded-[10px] hover:border-white/10 transition-colors">
+                                                <div class="h-10 w-10 rounded-[6px] border border-white/10 overflow-hidden bg-black/20 shrink-0">
+                                                    @if ($relBand->logoUrl())
+                                                        <img src="{{ $relBand->logoUrl() }}" class="h-full w-full object-cover" alt="{{ $relBand->band_name }}" width="40" height="40" loading="lazy">
+                                                    @else
+                                                        <div class="h-full w-full flex items-center justify-center text-[8px] text-gray-500 uppercase tracking-widest">Logo</div>
+                                                    @endif
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <strong class="text-white text-xs block truncate">{{ $relBand->band_name }}</strong>
+                                                    <span class="text-[9px] text-[#ffd24d] font-semibold uppercase tracking-wider block font-mono">★ Destacado</span>
+                                                </div>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     </section>

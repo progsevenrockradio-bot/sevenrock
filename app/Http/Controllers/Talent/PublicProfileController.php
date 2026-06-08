@@ -60,6 +60,57 @@ class PublicProfileController extends Controller
             ->where('created_at', '>', now()->subDay())
             ->exists();
 
+        $excludeIds = [$talent->id];
+
+        // 1. Related by Style (matched genre keywords in bio/name)
+        $genres = ['metal', 'grunge', 'punk', 'blues', 'indie', 'pop', 'alternative', 'alternativo', 'heavy', 'hard rock', 'rock', 'synth', 'retro', 'electronic'];
+        $matchedGenres = [];
+        $bioLower = strtolower($talent->bio ?? '');
+        $nameLower = strtolower($talent->band_name);
+
+        foreach ($genres as $genre) {
+            if (str_contains($bioLower, $genre) || str_contains($nameLower, $genre)) {
+                $matchedGenres[] = $genre;
+            }
+        }
+
+        $relatedByStyle = collect();
+        if (! empty($matchedGenres)) {
+            $relatedByStyle = Talent::query()
+                ->whereNotIn('id', $excludeIds)
+                ->where('subscription_status', 'active')
+                ->where(function ($q) use ($matchedGenres): void {
+                    foreach ($matchedGenres as $genre) {
+                        $q->orWhere('bio', 'like', '%' . $genre . '%')
+                          ->orWhere('band_name', 'like', '%' . $genre . '%');
+                    }
+                })
+                ->limit(2)
+                ->get();
+
+            $excludeIds = array_merge($excludeIds, $relatedByStyle->pluck('id')->toArray());
+        }
+
+        // 2. Related by Name (first letter match)
+        $firstLetter = substr(trim($talent->band_name), 0, 1);
+        $relatedByName = Talent::query()
+            ->whereNotIn('id', $excludeIds)
+            ->where('subscription_status', 'active')
+            ->where('band_name', 'like', $firstLetter . '%')
+            ->limit(2)
+            ->get();
+
+        $excludeIds = array_merge($excludeIds, $relatedByName->pluck('id')->toArray());
+
+        // 3. Recommended (featured or most popular active talents)
+        $recommended = Talent::query()
+            ->whereNotIn('id', $excludeIds)
+            ->where('subscription_status', 'active')
+            ->orderByDesc('is_featured')
+            ->orderByDesc('interacts')
+            ->limit(2)
+            ->get();
+
         return view('talentos.public.profile', [
             'talent' => $talent,
             'media' => $talent->media()->latest()->get(),
@@ -67,6 +118,9 @@ class PublicProfileController extends Controller
             'likesCount' => $talent->interactions()->where('type', 'like')->count(),
             'viewsCount' => $talent->interactions()->where('type', 'view')->count(),
             'hasLiked' => $hasLiked,
+            'relatedByStyle' => $relatedByStyle,
+            'relatedByName' => $relatedByName,
+            'recommended' => $recommended,
             'topComments' => $talent->interactions()
                 ->where('type', 'comment')
                 ->latest()
