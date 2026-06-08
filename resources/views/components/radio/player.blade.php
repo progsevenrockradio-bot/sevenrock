@@ -285,20 +285,15 @@
 
                         <div x-show="activeTab === 'history'">
                             <h4 class="radio-player-popup-section-title">Historial</h4>
-                            <template x-if="history.length">
-                                <div class="radio-player-popup-stack">
-                                    <template x-for="item in history" :key="`${item.title}-${item.played_at}`">
-                                        <article class="radio-player-popup-history-card">
-                                            <img :src="item.cover || fallbackCover" alt="" loading="lazy" class="radio-player-popup-history-cover">
-                                            <div class="radio-player-popup-history-copy">
-                                                <strong class="radio-player-popup-card-title" x-text="item.title"></strong>
-                                                <p class="radio-player-popup-card-text" x-text="item.artist || defaultArtist"></p>
-                                            </div>
-                                        </article>
-                                    </template>
+                            <!-- RadioBOSS Cloud Recent Tracks Widget (Start) -->
+                            <div class='rbcloud_recenttracks' id='rbcloud_recent378' data-cnt='7'>
+                                <div class='rbcloud_recent_track' style='display: flex; align-items: center; margin-bottom: 5pt;'>
+                                    <div class='rbcloud_recent_track_cover' data-size='65'></div>
+                                    <div style='margin-left: 5pt;'><div class='rbcloud_recent_artist' style='font-weight: bold'></div><div class='rbcloud_recent_title'>...</div></div>
                                 </div>
-                            </template>
-                            <p x-show="!history.length" class="radio-player-popup-section-text">Sin historial todavía.</p>
+                            </div>
+                            <script src='https://c30.radioboss.fm/w/recent.js?u=569&amp;wid=378&amp;v=2&amp;tf=1'></script>
+                            <!-- RadioBOSS Cloud Recent Tracks Widget (End) -->
                         </div>
                     </div>
                 </section>
@@ -810,20 +805,15 @@
                         </div>
                         <div x-show="activeTab === 'history'">
                             <h4>Historial</h4>
-                            <template x-if="history.length">
-                                <div class="space-y-3">
-                                    <template x-for="item in history" :key="`${item.title}-${item.played_at}`">
-                                        <article class="radio-player-history">
-                                            <img :src="item.cover || fallbackCover" alt="" loading="lazy">
-                                            <div>
-                                                <strong x-text="item.title"></strong>
-                                                <p x-text="item.artist || defaultArtist"></p>
-                                            </div>
-                                        </article>
-                                    </template>
+                            <!-- RadioBOSS Cloud Recent Tracks Widget (Start) -->
+                            <div class='rbcloud_recenttracks' id='rbcloud_recent378' data-cnt='7'>
+                                <div class='rbcloud_recent_track' style='display: flex; align-items: center; margin-bottom: 5pt;'>
+                                    <div class='rbcloud_recent_track_cover' data-size='65'></div>
+                                    <div style='margin-left: 5pt;'><div class='rbcloud_recent_artist' style='font-weight: bold'></div><div class='rbcloud_recent_title'>...</div></div>
                                 </div>
-                            </template>
-                            <p x-show="!history.length">Sin historial todavía.</p>
+                            </div>
+                            <script src='https://c30.radioboss.fm/w/recent.js?u=569&amp;wid=378&amp;v=2&amp;tf=1'></script>
+                            <!-- RadioBOSS Cloud Recent Tracks Widget (End) -->
                         </div>
                     </div>
                 </aside>

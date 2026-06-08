@@ -5532,3 +5532,63 @@
     }
 
 }
+
+/* ==========================================================================
+   RadioBOSS Cloud Recent Tracks Widget Custom Premium Styling
+   ========================================================================== */
+.rbcloud_recenttracks {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.rbcloud_recent_track {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    padding: 0.65rem !important;
+    margin-bottom: 0 !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.rbcloud_recent_track:hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+    transform: translateX(2px);
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.rbcloud_recent_track_cover {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.rbcloud_recent_track_cover img {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 8px !important;
+    object-fit: cover !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.rbcloud_recent_artist {
+    color: #fff !important;
+    font-family: var(--lucille-heading-font), var(--font-display), sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
+}
+
+.rbcloud_recent_title {
+    color: #8f887d !important;
+    font-family: var(--lucille-body-font), sans-serif !important;
+    font-size: 11px !important;
+    letter-spacing: 0.02em !important;
+    margin-top: 2px !important;
+}
