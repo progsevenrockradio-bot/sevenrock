@@ -143,7 +143,7 @@
                                 shareUrl: {{ Js::from($shareUrl) }},
                                 shareImage: {{ Js::from($shareImage) }},
                                 async nativeShare() {
-                                    const text = `Estoy leyendo \"${this.shareTitle}\" en Seven Rock Radio.`;
+                                    const text = `Estoy leyendo '${this.shareTitle}' en Seven Rock Radio.`;
                                     try {
                                         if (navigator.share) {
                                             await navigator.share({ title: this.shareTitle || 'Seven Rock Radio', text, url: this.shareUrl });
