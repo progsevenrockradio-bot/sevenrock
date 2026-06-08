@@ -103,6 +103,7 @@ class ThemeSetting extends Model
             'contact_phone_primary' => '',
             'contact_phone_secondary' => '',
             'featured_stories' => [
+                'enabled' => false,
                 'headline' => 'Historias destacadas',
                 'subtitle' => 'Perfiles con mayor impacto en los ultimos 30 dias',
                 'featured' => [

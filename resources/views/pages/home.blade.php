@@ -20,6 +20,15 @@
 
     <x-home.headline-ticker :ticker="$headlineTicker" />
 
+    @if (data_get($featuredStories, 'enabled', false))
+    <x-sections.background-band class="home-section-texture home-section-gray" style="margin-top: 100px; margin-bottom: 100px;">
+        <div class="pt-[100px] pb-[80px]">
+            <x-ui.section-heading :title="$homeHeadings['featured_stories']['title']" :subtitle="$homeHeadings['featured_stories']['subtitle']" />
+            <x-home.featured-stories :stories="$featuredStories" />
+        </div>
+    </x-sections.background-band>
+    @endif
+
     @if ($nextProgram)
     <x-sections.background-band class="home-section-texture home-section-cool" style="margin-bottom: 100px;">
         <div class="pt-[100px] pb-[80px]">
