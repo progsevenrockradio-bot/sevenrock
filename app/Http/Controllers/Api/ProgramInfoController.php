@@ -45,16 +45,28 @@ class ProgramInfoController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        $description = trim((string) ($program->informacion_fija_programa ?: $program->description ?: ''));
-        $host = trim((string) ($program->conductor ?: $program->host ?: ''));
-        $genre = trim((string) ($program->genero_musical ?? ''));
-        $facebook = trim((string) ($program->facebook_url ?? ''));
-        $instagram = trim((string) ($program->instagram_url ?? ''));
+        $masterProgram = $masterProgramId > 0
+            ? \App\Models\MasterProgram::query()->find($masterProgramId)
+            : null;
+
+        $description = trim((string) ($program->informacion_fija_programa ?: $program->description ?: ($masterProgram ? $masterProgram->description : '')));
+        $host = trim((string) ($program->conductor ?: $program->host ?: ($masterProgram ? $masterProgram->host : '')));
+        $genre = trim((string) ($program->genero_musical ?: ($masterProgram ? $masterProgram->genero : '')));
+        $facebook = trim((string) ($program->facebook_url ?: ($masterProgram ? $masterProgram->red_social1_url : '')));
+        $instagram = trim((string) ($program->instagram_url ?: ($masterProgram ? $masterProgram->red_social2_url : '')));
+        
         $cover = trim((string) ($program->caratula_programa ?: $program->cover_url ?: $program->cover_image ?: ''));
+        if ($cover === '' && $masterProgram) {
+            $cover = trim((string) ($masterProgram->cover_url ?: $masterProgram->caratula_url ?: $masterProgram->live_image_url ?: ''));
+        }
+
         $schedule = trim(implode(' · ', array_filter([
             trim((string) ($program->dia_transmision ?? '')),
             trim((string) ($program->hora_inicio ?? '')),
         ])));
+        if ($schedule === '' && $masterProgram) {
+            $schedule = trim((string) $masterProgram->schedule);
+        }
 
         return response()->json([
             'success' => true,

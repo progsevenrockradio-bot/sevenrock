@@ -57,6 +57,11 @@ class Program extends Model
         return $this->hasMany(Song::class);
     }
 
+    public function masterProgram(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(MasterProgram::class, 'master_program_id');
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         if (! Schema::hasColumn($query->getModel()->getTable(), 'is_active')) {
@@ -87,7 +92,13 @@ class Program extends Model
             return $value;
         }
 
-        return trim((string) ($this->attributes['titulo_programa'] ?? ''));
+        $legacy = trim((string) ($this->attributes['titulo_programa'] ?? ''));
+        if ($legacy !== '') {
+            return $legacy;
+        }
+
+        $master = $this->masterProgram;
+        return $master ? $master->nombre : '';
     }
 
     public function getDescriptionAttribute(mixed $value): ?string
@@ -103,8 +114,12 @@ class Program extends Model
         }
 
         $legacy = trim((string) ($this->attributes['informacion_fija_programa'] ?? ''));
+        if ($legacy !== '') {
+            return $legacy;
+        }
 
-        return $legacy !== '' ? $legacy : null;
+        $master = $this->masterProgram;
+        return $master ? $master->description : null;
     }
 
     public function getHostAttribute(mixed $value): ?string
@@ -115,8 +130,12 @@ class Program extends Model
         }
 
         $legacy = trim((string) ($this->attributes['conductor'] ?? ''));
+        if ($legacy !== '') {
+            return $legacy;
+        }
 
-        return $legacy !== '' ? $legacy : null;
+        $master = $this->masterProgram;
+        return $master ? $master->host : null;
     }
 
     public function getScheduleAttribute(mixed $value): ?string
@@ -132,17 +151,17 @@ class Program extends Model
             trim((string) ($this->attributes['hora_fin'] ?? '')),
         ]);
 
-        if ($parts === []) {
-            return null;
+        if ($parts !== []) {
+            if (count($parts) === 1) {
+                return $parts[0];
+            }
+
+            $day = array_shift($parts);
+            return trim($day . ' ' . implode(' - ', $parts));
         }
 
-        if (count($parts) === 1) {
-            return $parts[0];
-        }
-
-        $day = array_shift($parts);
-
-        return trim($day . ' ' . implode(' - ', $parts));
+        $master = $this->masterProgram;
+        return $master ? $master->schedule : null;
     }
 
     public function getSlugAttribute(mixed $value): ?string
@@ -165,8 +184,12 @@ class Program extends Model
         }
 
         $legacy = trim((string) ($this->attributes['caratula_programa'] ?? ''));
+        if ($legacy !== '') {
+            return $legacy;
+        }
 
-        return $legacy !== '' ? $legacy : null;
+        $master = $this->masterProgram;
+        return $master ? ($master->live_image_url ?: $master->caratula_url ?: null) : null;
     }
 
     public function getSortOrderAttribute(mixed $value): int
