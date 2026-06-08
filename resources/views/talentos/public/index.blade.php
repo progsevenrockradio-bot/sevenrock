@@ -2,8 +2,8 @@
     <section class="mx-auto max-w-[1180px] px-5 py-16">
         <!-- Section Header -->
         <div class="mb-8 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-8 shadow-xl">
-            <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Muro del Rock</div>
-            <h1 class="mt-2 font-display text-4xl uppercase tracking-[.12em] text-white">Explorar Talentos</h1>
+            <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Talentos</div>
+            <h1 class="mt-2 font-display text-4xl uppercase tracking-[.12em] text-white">Muro del Rock</h1>
             <p class="mt-3 max-w-3xl text-sm text-[#8b8b8b]">Descubre las bandas y artistas independientes de nuestra comunidad. Ordenados por actividad — las más activas primero.</p>
         </div>
 
