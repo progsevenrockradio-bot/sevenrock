@@ -29,7 +29,15 @@
                 @forelse ($events as $event)
                     <tr class="hover:bg-[rgba(255,255,255,.02)]">
                         <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">{{ $event->title }}</td>
-                        <td class="px-5 py-4">{{ $event->starts_at?->format('d M Y H:i') }}</td>
+                        <td class="px-5 py-4">
+                            @php
+                                $startsAt = $event->starts_at;
+                                if (is_string($startsAt)) {
+                                    $startsAt = \Illuminate\Support\Carbon::parse($startsAt);
+                                }
+                            @endphp
+                            {{ $startsAt?->format('d M Y H:i') }}
+                        </td>
                         <td class="px-5 py-4">{{ $event->location }}</td>
                         <td class="px-5 py-4">{{ $event->venue }}</td>
                         <td class="px-5 py-4">

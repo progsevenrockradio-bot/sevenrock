@@ -39,6 +39,13 @@ class Event extends Model
         'content',
     ];
 
+    protected $casts = [
+        'starts_at' => 'datetime',
+        'ends_at' => 'datetime',
+        'categories' => 'array',
+        'content' => 'array',
+    ];
+
     protected function casts(): array
     {
         return [

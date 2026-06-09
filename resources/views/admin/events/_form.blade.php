@@ -4,6 +4,15 @@
     $categoriesValue = old('categories_text', $categoriesText ?? implode(', ', $event->categories ?? []));
     $contentValue = old('content_text', $contentText ?? implode("\n\n", $event->content ?? []));
     $posterValue = old('poster', $event->poster);
+
+    $startsAt = $event->starts_at;
+    if (is_string($startsAt)) {
+        $startsAt = \Illuminate\Support\Carbon::parse($startsAt);
+    }
+    $endsAt = $event->ends_at;
+    if (is_string($endsAt)) {
+        $endsAt = \Illuminate\Support\Carbon::parse($endsAt);
+    }
 @endphp
 
 <div class="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
@@ -29,11 +38,11 @@
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['starts_at_label'] }}</label>
-                    <input type="datetime-local" name="starts_at" value="{{ old('starts_at', optional($event->starts_at)->format('Y-m-d\TH:i')) }}" class="lucille-product-field w-full">
+                    <input type="datetime-local" name="starts_at" value="{{ old('starts_at', $startsAt ? $startsAt->format('Y-m-d\TH:i') : '') }}" class="lucille-product-field w-full">
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['ends_at_label'] }}</label>
-                    <input type="datetime-local" name="ends_at" value="{{ old('ends_at', optional($event->ends_at)->format('Y-m-d\TH:i')) }}" class="lucille-product-field w-full">
+                    <input type="datetime-local" name="ends_at" value="{{ old('ends_at', $endsAt ? $endsAt->format('Y-m-d\TH:i') : '') }}" class="lucille-product-field w-full">
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['location_label'] }}</label>
@@ -146,8 +155,8 @@
 
             <div class="space-y-4">
                 <div class="flex flex-wrap gap-2">
-                    <span class="border border-[#2b2b2b] px-3 py-1 text-[11px] uppercase tracking-[.18em] text-[#dcdcdc]">{{ $event->starts_at?->format('d M Y') ?? 'Date' }}</span>
-                    <span class="border border-[#2b2b2b] px-3 py-1 text-[11px] uppercase tracking-[.18em] text-[#dcdcdc]">{{ $event->starts_at?->format('g:i a') ?? 'Time' }}</span>
+                    <span class="border border-[#2b2b2b] px-3 py-1 text-[11px] uppercase tracking-[.18em] text-[#dcdcdc]">{{ $startsAt?->format('d M Y') ?? 'Date' }}</span>
+                    <span class="border border-[#2b2b2b] px-3 py-1 text-[11px] uppercase tracking-[.18em] text-[#dcdcdc]">{{ $startsAt?->format('g:i a') ?? 'Time' }}</span>
                 </div>
                 <div class="border border-[#2b2b2b] bg-black/30 p-4 text-sm text-[#7b7b7b]">
                     <p class="font-display text-[15px] uppercase tracking-[.12em] text-[#dcdcdc]">{{ $event->title ?: 'Event title' }}</p>
