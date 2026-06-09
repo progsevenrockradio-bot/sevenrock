@@ -194,6 +194,12 @@ export function registerRadioPlayer(Alpine) {
 
             this.boundHotkeys = (event) => this.handleHotkeys(event);
             window.addEventListener('keydown', this.boundHotkeys);
+
+            // Media Session API integration
+            this.$watch('track', (value) => this.updateMediaSession(value));
+            this.$watch('playing', (value) => this.updateMediaSessionPlaybackState(value));
+            this.updateMediaSession(this.track);
+            this.updateMediaSessionPlaybackState(this.playing);
         },
 
         hasUserGesture() {
@@ -1751,6 +1757,64 @@ export function registerRadioPlayer(Alpine) {
                 this.toast.message = '';
                 this.toastHandle = null;
             }, 2200);
+        },
+
+        updateMediaSession(track) {
+            if (!('mediaSession' in navigator) || !window.MediaMetadata) {
+                return;
+            }
+
+            const title = track.title && track.title !== this.defaultTitle ? track.title : 'Seven Rock Radio';
+            const artist = track.artist && track.artist !== this.defaultArtist ? track.artist : 'En vivo';
+            const coverUrl = track.cover || track.band_thumbnail || this.bandPanel.cover || this.fallbackCover;
+            const absoluteCoverUrl = coverUrl ? (coverUrl.startsWith('http') ? coverUrl : window.location.origin + coverUrl) : '';
+
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: title,
+                artist: artist,
+                album: 'Seven Rock Radio',
+                artwork: absoluteCoverUrl ? [
+                    { src: absoluteCoverUrl, sizes: '96x96' },
+                    { src: absoluteCoverUrl, sizes: '128x128' },
+                    { src: absoluteCoverUrl, sizes: '192x192' },
+                    { src: absoluteCoverUrl, sizes: '256x256' },
+                    { src: absoluteCoverUrl, sizes: '384x384' },
+                    { src: absoluteCoverUrl, sizes: '512x512' }
+                ] : []
+            });
+
+            this.setupMediaSessionHandlers();
+        },
+
+        setupMediaSessionHandlers() {
+            if (!('mediaSession' in navigator)) {
+                return;
+            }
+
+            try {
+                navigator.mediaSession.setActionHandler('play', () => {
+                    if (!this.playing) {
+                        this.attemptPlayWithFallback();
+                    }
+                });
+                navigator.mediaSession.setActionHandler('pause', () => {
+                    if (this.playing) {
+                        this.attemptPlayWithFallback();
+                    }
+                });
+                // Explicitly disable prev/next track skip buttons on OS lock screen/notification widgets
+                navigator.mediaSession.setActionHandler('previoustrack', null);
+                navigator.mediaSession.setActionHandler('nexttrack', null);
+            } catch (error) {
+                // ignore
+            }
+        },
+
+        updateMediaSessionPlaybackState(playing) {
+            if (!('mediaSession' in navigator)) {
+                return;
+            }
+            navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
         },
 
         bandLinks() {
