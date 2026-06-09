@@ -77,6 +77,46 @@
     .radio-player-share-link-text {
         display: none !important;
     }
+
+    @media (max-width: 767px) {
+        .radio-player-dock.radio-player-mobile.is-expanded {
+            grid-template-rows: auto auto !important;
+            min-height: unset !important;
+            height: auto !important;
+            padding-bottom: 12px !important;
+        }
+        .radio-player-dock.radio-player-mobile.is-expanded .radio-player-dock-side {
+            display: flex !important;
+            grid-column: 1 / -1 !important;
+            width: 100% !important;
+            margin-top: 8px !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+            padding-top: 8px !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+        }
+        .radio-player-dock.radio-player-mobile.is-expanded .radio-player-dock-volume {
+            display: flex !important;
+            width: 100% !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            flex-grow: 1 !important;
+            align-items: center !important;
+            gap: 12px !important;
+        }
+        .radio-player-dock.radio-player-mobile.is-expanded .radio-player-dock-volume-range {
+            display: inline-block !important;
+            flex-grow: 1 !important;
+            width: 100% !important;
+            height: 24px !important;
+            margin: 0 !important;
+        }
+        .radio-player-dock.radio-player-mobile.is-expanded .radio-player-dock-volume-output {
+            display: inline-flex !important;
+            min-width: 36px !important;
+            justify-content: flex-end !important;
+        }
+    }
 </style>
 @endonce
 
