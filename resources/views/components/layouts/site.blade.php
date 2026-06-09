@@ -313,7 +313,6 @@
     </button>
 
     @php
-        $preferredSocialOrder = ['facebook', 'instagram', 'youtube'];
         $socialLinks = collect($theme['social_links'] ?? [])
             ->filter(fn (array $social): bool => trim((string) ($social['url'] ?? '')) !== '')
             ->map(static function (array $social): array {
@@ -343,8 +342,6 @@
                     'url' => trim((string) ($social['url'] ?? '')),
                 ];
             })
-            ->filter(fn (array $social): bool => in_array($social['order'], $preferredSocialOrder, true))
-            ->sortBy(fn (array $social): int => array_search($social['order'], $preferredSocialOrder, true))
             ->values();
     @endphp
 
@@ -378,6 +375,10 @@
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M4 4l11.733 16h4.267l-11.733 -16z"></path>
                                                 <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"></path>
+                                            </svg>
+                                        @elseif ($social['order'] === 'tiktok')
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path>
                                             </svg>
                                         @else
                                             {{ $social['badge'] }}
