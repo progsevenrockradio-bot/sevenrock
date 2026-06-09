@@ -37,6 +37,39 @@
 
 @once
 <style>
+    :root {
+        --logo-normal-height: {{ (int)max(40, min(75, $logoHeight * 0.75)) }}px;
+        --logo-sticky-height: {{ (int)max(30, min(50, $logoHeight * 0.55)) }}px;
+        --logo-single-normal-height: {{ (int)$logoHeight }}px;
+        --logo-single-sticky-height: {{ (int)min(45, $logoHeight) }}px;
+    }
+
+    .lucille-brand-logo-both {
+        display: block;
+        width: auto;
+        height: var(--logo-normal-height);
+        object-fit: contain;
+        flex-shrink: 0;
+        transition: height 0.95s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .rocks-header-sticky .lucille-brand-logo-both {
+        height: var(--logo-sticky-height);
+    }
+
+    .lucille-brand-logo {
+        display: block;
+        width: auto;
+        height: var(--logo-single-normal-height);
+        object-fit: contain;
+        flex-shrink: 0;
+        transition: height 0.95s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .rocks-header-sticky .lucille-brand-logo {
+        height: var(--logo-single-sticky-height);
+    }
+
     .brand-mark-container {
         position: relative;
         display: inline-block;
@@ -56,9 +89,9 @@
     }
 
     .brand-mark-container.sticky-active {
-        font-size: 9px;
-        width: 48px;
-        height: 34px;
+        font-size: 11px;
+        width: 58px;
+        height: 40px;
         transform: skewX(12deg) translateY(2px);
         text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.2);
     }
@@ -104,14 +137,14 @@
 
     .brand-mark-container.sticky-active .word-rock {
         left: 0;
-        top: 11px;
+        top: 13px;
         transform: translateY(0) rotate(-4deg);
         transition-delay: 0.09s;
     }
 
     .brand-mark-container.sticky-active .word-radio {
         left: 0;
-        top: 22px;
+        top: 26px;
         transform: translateY(0) rotate(-4deg);
         transition-delay: 0.18s;
     }
@@ -125,11 +158,14 @@
     class="inset-x-0 top-0 z-50 transition-all duration-300"
 >
     <div class="absolute inset-0 bg-cover bg-center md:hidden" style="background-image: linear-gradient(rgba(16, 16, 18, 0.75), rgba(16, 16, 18, 0.75)), var(--lucille-bg-image);" aria-hidden="true"></div>
-    <div class="mx-auto flex h-full max-w-[1180px] flex-col justify-center px-5 py-2 lg:px-8 md:flex-row md:items-center md:justify-between md:py-0">
+    <div 
+        :class="sticky ? 'py-1.5' : 'pt-4 pb-2.5'"
+        class="mx-auto flex h-full max-w-[1180px] flex-col justify-center px-5 lg:px-8 md:flex-row md:items-center md:justify-between md:py-0"
+    >
         <div class="flex w-full items-center justify-between md:contents">
             <a href="{{ route('home') }}" class="flex h-full items-center gap-3 py-2 md:py-0" aria-label="{{ $brandMark }} home">
                 @if ($brandDisplayMode === 'both' && $logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both shrink-0 transition-all duration-300" :style="sticky ? 'height: {{ max(30, min(50, $logoHeight * 0.55)) }}px; width: auto;' : 'height: {{ max(40, min(75, $logoHeight * 0.75)) }}px; width: auto;'" loading="lazy">
+                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both" loading="lazy">
                     <span class="brand-mark-container" :class="sticky ? 'sticky-active' : 'normal'">
                         @php
                             $words = explode(' ', $brandMark);
@@ -140,7 +176,7 @@
                         @endforeach
                     </span>
                 @elseif ($brandDisplayMode === 'logo' && $logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo shrink-0 transition-all duration-300" :style="sticky ? 'height: {{ min(45, $logoHeight) }}px; width: auto;' : 'height: {{ $logoHeight }}px; width: auto;'" loading="lazy">
+                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo" loading="lazy">
                 @else
                     <span class="lucille-brand-mark">{{ $brandMark }}</span>
                 @endif
