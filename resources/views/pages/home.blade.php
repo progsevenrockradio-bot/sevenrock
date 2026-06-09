@@ -21,7 +21,7 @@
     <x-home.headline-ticker :ticker="$headlineTicker" />
 
     @if (data_get($featuredStories, 'enabled', false))
-    <x-sections.background-band class="home-section-texture home-section-gray" style="margin-top: 100px; margin-bottom: 100px;">
+    <x-sections.background-band class="home-section-texture home-section-gray">
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['featured_stories']['title']" :subtitle="$homeHeadings['featured_stories']['subtitle']" />
             <x-home.featured-stories :stories="$featuredStories" />
@@ -30,7 +30,7 @@
     @endif
 
     @if ($nextProgram)
-    <x-sections.background-band class="home-section-texture home-section-cool" style="margin-bottom: 100px;">
+    <x-sections.background-band class="home-section-texture home-section-cool">
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['next_program']['title']" :subtitle="$homeHeadings['next_program']['subtitle']" />
             <x-home.next-program :program="$nextProgram" />
@@ -39,7 +39,7 @@
     @endif
 
     @if (!empty($latestPodcasts) && !empty($latestPodcasts['episodes']))
-    <x-sections.background-band class="home-section-texture home-section-black" style="margin-bottom: 100px;">
+    <x-sections.background-band class="home-section-texture home-section-black">
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['latest_podcasts']['title']" :subtitle="$homeHeadings['latest_podcasts']['subtitle']" />
             <x-home.latest-podcasts :podcasts="$latestPodcasts" />
@@ -48,7 +48,7 @@
     @endif
 
     @if (!empty($events))
-    <x-sections.background-band class="home-section-texture home-section-cool" style="margin-bottom: 100px;">
+    <x-sections.background-band class="home-section-texture home-section-cool">
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['upcoming_shows']['title']" :accent="$homeHeadings['upcoming_shows']['accent']" :subtitle="$homeHeadings['upcoming_shows']['subtitle']" />
             <x-ui.event-list :events="$events" />
@@ -57,7 +57,7 @@
     @endif
 
     @if ($album)
-    <x-sections.background-band class="home-section-texture home-section-gray" style="margin-bottom: 100px;">
+    <x-sections.background-band class="home-section-texture home-section-gray">
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['new_album_release']['title']" :accent="$homeHeadings['new_album_release']['accent']" :subtitle="$homeHeadings['new_album_release']['subtitle'] ?: (data_get($album, 'artist', '') . ' - ' . data_get($album, 'title', ''))" />
             <x-ui.album-feature :album="$album" :cover-image="$themeAppearance['home_album_cover_url']" />
@@ -66,7 +66,7 @@
     @endif
 
     @if (!empty($galleryImages))
-    <x-sections.background-band class="home-section-texture home-section-gray" style="margin-bottom: 100px;">
+    <x-sections.background-band class="home-section-texture home-section-gray">
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['featured_gallery_images']['title']" :accent="$homeHeadings['featured_gallery_images']['accent']" :subtitle="$homeHeadings['featured_gallery_images']['subtitle']" />
             <x-ui.gallery-strip :images="$galleryImages" />
@@ -80,7 +80,7 @@
     <x-sections.video-feature :video="$video" :image="$themeAppearance['home_video_image_url']" />
 
     @if (!empty($posts))
-    <x-sections.background-band class="home-section-texture home-section-gray" style="margin-bottom: 100px;">
+    <x-sections.background-band class="home-section-texture home-section-gray">
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['latest_news']['title']" :accent="$homeHeadings['latest_news']['accent']" :subtitle="$homeHeadings['latest_news']['subtitle']" />
             <x-ui.post-grid :posts="$posts" />
@@ -88,7 +88,7 @@
     </x-sections.background-band>
     @endif
 
-    <x-sections.background-band class="home-section-texture home-section-black" style="margin-bottom: 100px;">
+    <x-sections.background-band class="home-section-texture home-section-black">
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['send_message']['title']" :accent="$homeHeadings['send_message']['accent']" :subtitle="$homeHeadings['send_message']['subtitle']" />
             <div class="mt-[80px]">

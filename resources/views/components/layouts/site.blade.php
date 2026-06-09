@@ -61,7 +61,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         .section-band { background: rgba(8, 26, 36, 0.2) !important; }
-        .home-section-texture::before { opacity: 0.5; }
+        .home-section-texture::before { background-image: none !important; }
         .lucille-page-heading .lucille-card-image + div[class="absolute inset-0"] { background: rgba(21, 21, 21, 0.3) !important; }
         .social-flyout {
             position: fixed;
