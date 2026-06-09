@@ -63,6 +63,13 @@
         .section-band { background: rgba(8, 26, 36, 0.2) !important; }
         .home-section-texture::before { background-image: none !important; }
         .lucille-page-heading .lucille-card-image + div[class="absolute inset-0"] { background: rgba(21, 21, 21, 0.3) !important; }
+        @media (max-width: 767px) {
+            #site-footer {
+                padding-top: 28px !important;
+                padding-bottom: 96px !important;
+                font-size: 11px !important;
+            }
+        }
         .social-flyout {
             position: fixed;
             left: 0;
@@ -394,7 +401,7 @@
         </aside>
     @endif
 
-    <footer id="site-footer" class="bg-lucille-surface pt-7 pb-24 md:pb-7 text-center text-[11px] md:text-[13px] text-[#7b7b7b]">
+    <footer id="site-footer" class="bg-lucille-surface py-7 text-center text-[13px] text-[#7b7b7b]">
         <div class="mx-auto flex max-w-[1180px] flex-col items-center gap-3 px-5">
             <div class="flex flex-wrap items-center justify-center gap-4">
                 @foreach ($theme['social_links'] as $social)

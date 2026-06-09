@@ -149,10 +149,21 @@
         transition-delay: 0.18s;
     }
 
-    @media (max-width: 1023px) {
+    @media (max-width: 767px) {
         .rocks-header-top,
         .rocks-header-sticky {
             height: auto !important;
+        }
+        .rocks-header-top > div {
+            padding-top: 40px !important;
+            padding-bottom: 20px !important;
+        }
+        .rocks-header-sticky > div {
+            padding-top: 16px !important;
+            padding-bottom: 12px !important;
+        }
+        #site-content {
+            margin-top: 136px !important;
         }
     }
 </style>
@@ -166,7 +177,6 @@
 >
     <div class="absolute inset-0 bg-cover bg-center md:hidden" style="background-image: linear-gradient(rgba(16, 16, 18, 0.75), rgba(16, 16, 18, 0.75)), var(--lucille-bg-image);" aria-hidden="true"></div>
     <div 
-        :class="sticky ? 'pt-4 pb-3' : 'pt-10 pb-5'"
         class="relative z-10 mx-auto flex h-full max-w-[1180px] flex-col justify-center px-5 lg:px-8 md:flex-row md:items-center md:justify-between md:py-0"
     >
         <div class="flex w-full items-center justify-between md:contents">
