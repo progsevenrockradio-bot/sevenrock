@@ -37,13 +37,9 @@ export function registerRadioPlayer(Alpine) {
 
     const isPlaceholderImage = (url) => {
         if (!url) return true;
-        const sUrl = String(url);
-        if (sUrl.includes('radioboss.fm/') && sUrl.includes('/artwork/')) {
-            return true;
-        }
-        if (sUrl.includes('/artwork/569.png') || sUrl.includes('/artwork/')) {
-            return true;
-        }
+        // Do not treat RadioBOSS artwork as a placeholder, because RadioBOSS Cloud
+        // serves the actual track cover art at this URL when available, and only
+        // serves the station logo as a fallback when no track cover is found.
         return false;
     };
 
