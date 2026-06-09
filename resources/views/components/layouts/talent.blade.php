@@ -23,6 +23,7 @@
     $renewalDate = $subscription?->end_date?->format('d/m/Y') ?? ($talent?->created_at?->addMonth()->format('d/m/Y') ?? 'N/D');
     $storageLimit = (int) ($limits['storage_mb'] ?? 0);
     $storageUsed = (float) ($usage['storage_used_mb'] ?? 0);
+    $logoUrl = \App\Models\ThemeSetting::current()?->logo_url ?? asset('assets/lucille/logo.png');
 @endphp
 
 <!DOCTYPE html>
@@ -31,6 +32,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title }}</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ $logoUrl }}">
+    <link rel="apple-touch-icon" href="{{ $logoUrl }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-[#0b0f12] text-[#d8d8d8] antialiased">

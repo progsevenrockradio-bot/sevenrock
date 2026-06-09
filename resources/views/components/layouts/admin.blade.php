@@ -13,6 +13,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title }}</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ $theme->logo_url }}">
+    <link rel="apple-touch-icon" href="{{ $theme->logo_url }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="{{ $theme->google_fonts_url }}" rel="stylesheet">
