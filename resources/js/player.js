@@ -59,9 +59,14 @@ export function registerRadioPlayer(Alpine) {
         favoritesImportUrl: options.favoritesImportUrl || '/api/player/favorites/import',
         fallbackCover: options.fallbackCover || '',
         logoUrl: options.logoUrl || '/assets/lucille/logo.png',
-        cleanCover(url, customFallback = null) {
+        cleanCover(url, customFallback = null, cacheBuster = null) {
             if (isPlaceholderImage(url)) {
                 return customFallback || this.logoUrl;
+            }
+            if (url && (url.includes('radioboss.fm/') || url.includes('/w/artwork/'))) {
+                const cleanUrl = url.split('?')[0];
+                const buster = cacheBuster || this.track?.signature || Date.now();
+                return `${cleanUrl}?v=${encodeURIComponent(buster)}`;
             }
             return url || customFallback || this.logoUrl;
         },
@@ -385,12 +390,15 @@ export function registerRadioPlayer(Alpine) {
                     this.playing = true;
                     this.updateDocumentTitle();
                     this.adjustPollingInterval();
+                    this.updateMediaSession(this.track);
+                    this.updateMediaSessionPlaybackState(true);
                 });
 
                 audio.addEventListener('pause', () => {
                     this.playing = false;
                     this.updateDocumentTitle();
                     this.adjustPollingInterval();
+                    this.updateMediaSessionPlaybackState(false);
                 });
 
                 audio.addEventListener('waiting', () => {
@@ -873,7 +881,8 @@ export function registerRadioPlayer(Alpine) {
 
             const nextTitle = this.normalizeTrackTitle(widgetTrack.title || this.defaultTitle || '');
             const nextArtist = this.normalizeBandArtist(widgetTrack.artist || this.defaultArtist || '');
-            const nextCover = this.cleanCover(widgetTrack.cover || this.fallbackCover, this.fallbackCover);
+            const tempBuster = nextArtist + '|' + nextTitle;
+            const nextCover = this.cleanCover(widgetTrack.cover || this.fallbackCover, this.fallbackCover, tempBuster);
             const nextSignature = this.buildSignature({
                 title: nextTitle || this.defaultTitle || '',
                 artist: nextArtist || this.defaultArtist || '',
@@ -935,6 +944,10 @@ export function registerRadioPlayer(Alpine) {
 
             this.syncProgress();
             this.ensureAudioSource();
+
+            if (previousSignature !== nextSignature) {
+                this.updateMediaSession(this.track);
+            }
 
             if ((this.normalizeBandArtist(this.track.artist) || this.normalizeTrackTitle(this.track.title)) && this.needsBandEnrichment()) {
                 this.ensureBandInfo();
@@ -1068,10 +1081,13 @@ export function registerRadioPlayer(Alpine) {
             const widgetCover = widgetTrack?.cover || '';
             const currentTitle = this.track.title && this.track.title !== this.defaultTitle ? this.track.title : '';
             const currentArtist = this.track.artist && this.track.artist !== this.defaultArtist ? this.track.artist : '';
+            const nextTitle = this.normalizeTrackTitle(widgetTitle || track.title || currentTitle || this.defaultTitle || '');
+            const nextArtist = this.normalizeBandArtist(widgetArtist || track.artist || currentArtist || this.defaultArtist || '');
+            const tempBuster = nextArtist + '|' + nextTitle;
             const nextSignature = track.signature || this.buildSignature({
-                title: widgetTitle || track.title || currentTitle || this.defaultTitle || '',
-                artist: widgetArtist || track.artist || currentArtist || this.defaultArtist || '',
-                cover: this.cleanCover(widgetCover || track.cover || this.track.cover || this.fallbackCover, this.fallbackCover),
+                title: nextTitle,
+                artist: nextArtist,
+                cover: this.cleanCover(widgetCover || track.cover || this.track.cover || this.fallbackCover, this.fallbackCover, tempBuster),
                 program: track.program_name || '',
             });
             const trackChanged = Boolean(previousSignature && previousSignature !== nextSignature);
@@ -1086,9 +1102,9 @@ export function registerRadioPlayer(Alpine) {
             this.track = {
                 ...this.track,
                 ...track,
-                title: this.normalizeTrackTitle(widgetTitle || track.title || currentTitle || this.defaultTitle || ''),
-                artist: this.normalizeBandArtist(widgetArtist || track.artist || currentArtist || this.defaultArtist || ''),
-                cover: this.cleanCover(widgetCover || track.cover || this.track.cover || this.fallbackCover, this.fallbackCover),
+                title: nextTitle,
+                artist: nextArtist,
+                cover: this.cleanCover(widgetCover || track.cover || this.track.cover || this.fallbackCover, this.fallbackCover, tempBuster),
                 lyrics: trackChanged ? nextLyrics : (nextLyrics || this.track.lyrics || ''),
                 band_info: trackChanged ? nextBandInfo : (nextBandInfo || this.track.band_info || ''),
                 band_biography: trackChanged ? nextBandBiography : (nextBandBiography || this.track.band_biography || ''),
@@ -1180,6 +1196,9 @@ export function registerRadioPlayer(Alpine) {
                 this.toastMessage(`Ahora suena: ${this.track.title}`);
             }
             this.updateDocumentTitle();
+            if (trackChanged) {
+                this.updateMediaSession(this.track);
+            }
         },
 
         formatBandText(value) {
