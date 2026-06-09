@@ -331,6 +331,14 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
 
         return `${y}-${m}-${d}`;
     },
+    updateEpisodeNumber(event) {
+        const selectedOption = event.target.options[event.target.selectedIndex];
+        const nextEpisode = selectedOption?.getAttribute('data-next-episode');
+        const input = document.querySelector('input[name="numero_episodio"]');
+        if (input) {
+            input.value = nextEpisode || '';
+        }
+    },
     tabForField(field) {
         if (['archivo_mp3', 'imagen_episodio_url', 'imagen_episodio_file'].includes(field)) {
             return 'multimedia';

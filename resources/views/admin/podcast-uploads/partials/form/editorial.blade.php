@@ -52,10 +52,11 @@
                         name="master_program_id"
                         class="lucille-product-field lucille-select-field w-full"
                         :disabled="activeDay !== '{{ $dayKey }}'"
+                        @change="updateEpisodeNumber($event)"
                     >
                         <option value="">-- seleccionar --</option>
                         @forelse ($dayPrograms as $masterProgram)
-                            <option value="{{ $masterProgram->id }}" @selected((string) old('master_program_id') === (string) $masterProgram->id)>
+                            <option value="{{ $masterProgram->id }}" data-next-episode="{{ $masterProgram->next_episode_suggested }}" @selected((string) old('master_program_id') === (string) $masterProgram->id)>
                                 {{ $masterProgram->name }}
                             </option>
                         @empty

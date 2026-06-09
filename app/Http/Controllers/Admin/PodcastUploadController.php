@@ -69,15 +69,31 @@ final class PodcastUploadController extends Controller
             'DOMINGO' => 'Domingo',
         ];
 
+        $maxEpisodes = RadioProgram::query()
+            ->select('master_program_id')
+            ->selectRaw('MAX(numero_episodio) as max_ep')
+            ->whereNotNull('master_program_id')
+            ->groupBy('master_program_id')
+            ->pluck('max_ep', 'master_program_id')
+            ->toArray();
+
+        $masterPrograms->each(static function (MasterProgram $program) use ($maxEpisodes): void {
+            $program->next_episode_suggested = max(1, ($maxEpisodes[$program->id] ?? 0) + 1);
+        });
+
         $programsByDay = collect($dayTabs)
             ->mapWithKeys(static fn (string $label, string $day) => [
                 $day => $masterPrograms->where('dia_transmision', $day)->values(),
             ]);
 
-        $suggestedEpisodeNumber = max(
-            1,
-            ((int) RadioProgram::query()->max('numero_episodio')) + 1
-        );
+        $selectedProgramId = old('master_program_id');
+        $suggestedEpisodeNumber = '';
+        if ($selectedProgramId) {
+            $suggestedEpisodeNumber = max(
+                1,
+                ((int) RadioProgram::query()->where('master_program_id', (int) $selectedProgramId)->max('numero_episodio')) + 1
+            );
+        }
 
         return view('admin.podcast-uploads.index', [
             'dayTabs' => $dayTabs,

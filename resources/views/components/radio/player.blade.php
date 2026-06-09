@@ -646,18 +646,24 @@
                         <div class="radio-modal-divider"></div>
 
                         <div class="radio-modal-body radio-modal-body--program">
-                            <template x-if="programInfo.episode && (programInfo.episode.guest_bio || programInfo.episode.guest_image)">
+                            <template x-if="programInfo.episode">
                                 <div>
                                     <div x-show="programInfo.episode.guest_image" class="radio-modal-guest-image-wrap">
                                         <img class="radio-modal-guest-image" :src="programInfo.episode.guest_image" :alt="programInfo.episode.title || ''" onerror="this.hidden = true; this.onerror = null;" loading="lazy">
                                     </div>
                                     <h3 class="radio-modal-episode-title" x-text="programInfo.episode.title || ''"></h3>
-                                    <p class="radio-modal-episode-text" x-text="programInfo.episode.guest_bio || ''"></p>
-                                    <small x-show="programInfo.episode.episode_number" class="radio-modal-episode-meta" x-text="'Episodio ' + programInfo.episode.episode_number"></small>
+                                    <p class="radio-modal-episode-text" x-text="programInfo.episode.description || track.program_description || programInfo.description || 'Información del programa no disponible.'"></p>
+                                    
+                                    <div x-show="programInfo.episode.guest_bio" class="mt-3 border-t border-white/5 pt-2">
+                                        <span class="text-[10px] uppercase tracking-wider text-[#7b7b7b]">Invitado</span>
+                                        <p class="text-xs text-[#b4b4b4]" x-text="programInfo.episode.guest_bio"></p>
+                                    </div>
+                                    
+                                    <small x-show="programInfo.episode.episode_number" class="radio-modal-episode-meta block mt-3" x-text="'Episodio ' + programInfo.episode.episode_number"></small>
                                 </div>
                             </template>
 
-                            <template x-if="!(programInfo.episode && (programInfo.episode.guest_bio || programInfo.episode.guest_image))">
+                            <template x-if="!programInfo.episode">
                                 <div>
                                     <h3 class="radio-modal-episode-title">Acerca del programa</h3>
                                     <p class="radio-modal-episode-text" x-text="track.program_description || programInfo.description || 'Información del programa no disponible.'"></p>
