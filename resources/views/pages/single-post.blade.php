@@ -26,7 +26,6 @@
 @once
 <style>
     .radio-player-share-panel {
-        display: flex !important;
         flex-direction: row !important;
         flex-wrap: wrap !important;
         align-items: center !important;
