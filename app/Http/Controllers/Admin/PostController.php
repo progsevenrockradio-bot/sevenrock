@@ -74,7 +74,7 @@ class PostController extends Controller
 
             return back()
                 ->withInput()
-                ->withErrors(['general' => 'No se pudo crear el post. Inténtalo de nuevo.']);
+                ->withErrors(['general' => 'No se pudo crear el post: ' . $exception->getMessage()]);
         }
     }
 
@@ -118,7 +118,7 @@ class PostController extends Controller
 
             return back()
                 ->withInput()
-                ->withErrors(['general' => 'No se pudo actualizar el post. Inténtalo de nuevo.']);
+                ->withErrors(['general' => 'No se pudo actualizar el post: ' . $exception->getMessage()]);
         }
     }
 
@@ -158,6 +158,11 @@ class PostController extends Controller
 
     private function validated(Request $request, ?int $ignoreId = null): array
     {
+        $slug = $request->filled('slug')
+            ? Str::slug($request->input('slug'))
+            : Str::slug($request->input('title') ?? '');
+        $request->merge(['slug' => $slug]);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'slug' => [

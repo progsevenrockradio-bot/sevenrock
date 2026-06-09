@@ -7,6 +7,15 @@
 
     <form action="{{ route('admin.posts.store') }}" method="POST" enctype="multipart/form-data" class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
         @csrf
+        @if ($errors->any())
+            <div class="mb-6 border border-[#5a1d1a] bg-[rgba(195,39,32,.08)] px-4 py-3 text-sm text-[#f3b6b1]">
+                <ul class="list-disc list-inside space-y-1">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
         @include('admin.posts._form', ['post' => $post])
     </form>
 </x-layouts.admin>
