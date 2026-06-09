@@ -44,7 +44,7 @@
         font-family: var(--lucille-brand-font, "Rock Salt"), "Segoe Script", cursive;
         color: var(--color-lucille-accent);
         text-shadow: 0 1.5px 3px rgba(0, 0, 0, 0.3);
-        transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: all 0.95s cubic-bezier(0.16, 1, 0.3, 1);
         transform-origin: left center;
         overflow: visible;
     }
@@ -68,7 +68,7 @@
         display: inline-block;
         white-space: nowrap;
         line-height: 1;
-        transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: all 0.95s cubic-bezier(0.16, 1, 0.3, 1);
         transform-origin: left center;
     }
 
@@ -77,14 +77,14 @@
         left: 0;
         top: 50%;
         transform: translateY(-50%) rotate(0deg);
-        transition-delay: 0.12s;
+        transition-delay: 0.18s;
     }
 
     .brand-mark-container.normal .word-rock {
         left: 3.4em;
         top: 50%;
         transform: translateY(-50%) rotate(0deg);
-        transition-delay: 0.06s;
+        transition-delay: 0.09s;
     }
 
     .brand-mark-container.normal .word-radio {
@@ -106,14 +106,14 @@
         left: 0;
         top: 11px;
         transform: translateY(0) rotate(-4deg);
-        transition-delay: 0.06s;
+        transition-delay: 0.09s;
     }
 
     .brand-mark-container.sticky-active .word-radio {
         left: 0;
         top: 22px;
         transform: translateY(0) rotate(-4deg);
-        transition-delay: 0.12s;
+        transition-delay: 0.18s;
     }
 </style>
 @endonce
@@ -129,7 +129,7 @@
         <div class="flex w-full items-center justify-between md:contents">
             <a href="{{ route('home') }}" class="flex h-full items-center gap-3 py-2 md:py-0" aria-label="{{ $brandMark }} home">
                 @if ($brandDisplayMode === 'both' && $logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both transition-all duration-300" :style="sticky ? 'max-height: {{ max(30, min(50, $logoHeight * 0.55)) }}px;' : 'max-height: {{ max(40, min(75, $logoHeight * 0.75)) }}px;'" loading="lazy">
+                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both shrink-0 transition-all duration-300" :style="sticky ? 'height: {{ max(30, min(50, $logoHeight * 0.55)) }}px; width: auto;' : 'height: {{ max(40, min(75, $logoHeight * 0.75)) }}px; width: auto;'" loading="lazy">
                     <span class="brand-mark-container" :class="sticky ? 'sticky-active' : 'normal'">
                         @php
                             $words = explode(' ', $brandMark);
@@ -140,7 +140,7 @@
                         @endforeach
                     </span>
                 @elseif ($brandDisplayMode === 'logo' && $logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo transition-all duration-300" :style="sticky ? 'max-height: {{ min(45, $logoHeight) }}px;' : 'max-height: {{ $logoHeight }}px;'" loading="lazy">
+                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo shrink-0 transition-all duration-300" :style="sticky ? 'height: {{ min(45, $logoHeight) }}px; width: auto;' : 'height: {{ $logoHeight }}px; width: auto;'" loading="lazy">
                 @else
                     <span class="lucille-brand-mark">{{ $brandMark }}</span>
                 @endif
