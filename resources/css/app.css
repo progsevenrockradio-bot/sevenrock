@@ -5759,3 +5759,10 @@
 .store-card:hover img {
     transform: scale(1.02);
 }
+
+/* Dark-mode filter for native HTML5 audio controls */
+audio.dark-audio {
+    border-radius: 9999px;
+    background-color: #202022;
+    filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(1.2);
+}

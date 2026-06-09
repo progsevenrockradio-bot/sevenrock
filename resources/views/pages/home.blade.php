@@ -95,7 +95,7 @@
                                 <!-- Audio Player -->
                                 @if($release->audio_url)
                                     <div class="mt-4 border-t border-[#222] pt-4">
-                                        <audio src="{{ $release->audio_url }}" controls class="w-full h-8 accent-[#c32720]" controlsList="nodownload"></audio>
+                                        <audio src="{{ $release->audio_url }}" controls class="w-full h-8 accent-[#c32720] dark-audio" controlsList="nodownload"></audio>
                                     </div>
                                 @endif
 

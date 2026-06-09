@@ -52,7 +52,7 @@
                         @if($newRelease->audio_url)
                             <div class="mt-6 border-t border-[#222] pt-6">
                                 <span class="text-xs uppercase tracking-wider text-[#7b7b7b] block mb-2">Escuchar Pista de Audio</span>
-                                <audio src="{{ $newRelease->audio_url }}" controls class="w-full h-10 accent-[#c32720]" controlsList="nodownload"></audio>
+                                <audio src="{{ $newRelease->audio_url }}" controls class="w-full h-10 accent-[#c32720] dark-audio" controlsList="nodownload"></audio>
                             </div>
                         @endif
 
