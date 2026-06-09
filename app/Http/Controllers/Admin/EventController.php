@@ -112,6 +112,8 @@ class EventController extends Controller
 
         $validated['starts_at'] = Carbon::parse($validated['starts_at']);
         $validated['ends_at'] = ! empty($validated['ends_at']) ? Carbon::parse($validated['ends_at']) : null;
+        $validated['location'] = trim((string) ($validated['location'] ?? ''));
+        $validated['venue'] = trim((string) ($validated['venue'] ?? ''));
         $validated['categories'] = $this->splitTerms((string) ($validated['categories_text'] ?? ''));
         $validated['content'] = $this->splitParagraphs((string) ($validated['content_text'] ?? ''));
 
