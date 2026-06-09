@@ -314,3 +314,11 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
     Route::post('/{bandName}/like', [TalentPublicProfileController::class, 'like'])->name('like')->middleware('throttle:10,1');
     Route::post('/{bandName}/comment', [TalentPublicProfileController::class, 'comment'])->name('comment')->middleware([\App\Http\Middleware\PreventSpamWithHoneypot::class, 'throttle:5,1']);
 });
+
+Route::get('/debug-log-xyz', function() {
+    $path = storage_path('logs/laravel.log');
+    if (!file_exists($path)) return 'No log file found';
+    $content = file_get_contents($path);
+    $lines = explode("\n", $content);
+    return '<pre>' . implode("\n", array_slice($lines, -100)) . '</pre>';
+});
