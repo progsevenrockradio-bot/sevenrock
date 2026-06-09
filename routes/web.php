@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
 use App\Http\Controllers\Admin\ProgramCodeController as AdminProgramCodeController;
+use App\Http\Controllers\Admin\NewReleaseController as AdminNewReleaseController;
 use App\Http\Controllers\LegacyWordPressUploadController;
 use App\Http\Controllers\PostReactionController;
 use App\Http\Controllers\PlayerController;
@@ -76,6 +77,7 @@ Route::get('/player/popup', [PlayerController::class, 'show'])->name('player.pop
 Route::get('/search', [SearchController::class, 'index'])->middleware('throttle:public-search')->name('search');
 Route::view('/privacy-policy', 'pages.privacy-policy')->name('privacy-policy');
 Route::view('/copyright-policy', 'pages.copyright-policy')->name('copyright-policy');
+Route::get('/new-releases/{slug}', [SiteController::class, 'newReleaseSingle'])->name('new-releases.single');
 Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware(['throttle:comment-submit', \App\Http\Middleware\PreventSpamWithHoneypot::class])->name('posts.comments.store');
 Route::post('/posts/{post}/like', [PostReactionController::class, 'toggle'])->middleware('throttle:60,1')->name('posts.like');
 
@@ -129,6 +131,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/{event}/edit', 'edit')->name('edit');
         Route::put('/{event}', 'update')->name('update');
         Route::delete('/{event}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(AdminNewReleaseController::class)->prefix('new-releases')->name('new-releases.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{newRelease}/edit', 'edit')->name('edit');
+        Route::put('/{newRelease}', 'update')->name('update');
+        Route::delete('/{newRelease}', 'destroy')->name('destroy');
     });
 
     Route::controller(AdminThemeSettingsController::class)->prefix('settings')->name('settings.')->middleware('role:Super Admin')->group(function (): void {

@@ -14,6 +14,7 @@ use App\Models\PostTaxonomy;
 use App\Models\TalentAlbum;
 use App\Models\ThemeSetting;
 use App\Models\Video;
+use App\Models\NewRelease;
 use App\Services\ArchiveOrgService;
 use App\Support\HeadlineTickerService;
 use App\Support\PublicMediaUrl;
@@ -41,6 +42,15 @@ class SiteController extends Controller
         $events = $this->cachedEvents('home-upcoming', fn () => Event::query()->upcoming()->orderBy('starts_at')->limit(3)->get(), 10);
         $galleryImages = $this->cachedGalleryImages(7, 15);
         $latestAlbum = $this->cachedLatestAlbum(15);
+        $newReleases = $this->safeValue(
+            fn () => NewRelease::query()
+                ->where('is_active', true)
+                ->orderByDesc('released_at')
+                ->latest()
+                ->take(4)
+                ->get(),
+            collect()
+        );
 
         return view('pages.home', [
             'events' => $events,
@@ -48,6 +58,7 @@ class SiteController extends Controller
             'video' => $this->safeValue(fn () => Video::query()->latest()->first(), null),
             'galleryImages' => $galleryImages,
             'posts' => $this->latestPosts(),
+            'newReleases' => $newReleases,
             'nextProgram' => $this->safeValue(
                 fn () => app(ProgramScheduleService::class)->resolve(5),
                 app(ProgramScheduleService::class)->fallback()
@@ -105,6 +116,18 @@ class SiteController extends Controller
     {
         return view('pages.event-single', [
             'event' => $this->singleEvent($slug),
+        ]);
+    }
+
+    public function newReleaseSingle(string $slug): View
+    {
+        $newRelease = NewRelease::query()
+            ->with('radioArtist')
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        return view('pages.new-release-single', [
+            'newRelease' => $newRelease,
         ]);
     }
 

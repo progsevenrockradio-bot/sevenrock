@@ -245,6 +245,12 @@
                                 <span>Band profiles</span>
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('admin.new-releases.index') }}" class="flex items-center gap-3 px-3 py-2 text-xs rounded transition-colors {{ request()->routeIs('admin.new-releases.*') ? 'bg-[rgba(255,255,255,.05)] text-[var(--lucille-accent)] font-medium border-l-2 border-[var(--lucille-accent)]' : 'text-gray-300 hover:bg-[rgba(255,255,255,.02)] hover:text-white' }}">
+                                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                                <span>Nuevos Lanzamientos</span>
+                            </a>
+                        </li>
                     </ul>
                 </div>
 
@@ -542,6 +548,7 @@
                 { name: 'Videos', url: '{{ route("admin.videos.index") }}', category: 'Bandas' },
                 { name: 'Galería de Fotos', url: '{{ route("admin.gallery.index") }}', category: 'Bandas' },
                 { name: 'Artistas de Radio', url: '{{ route("admin.radio-artists.index") }}', category: 'Bandas' },
+                { name: 'Nuevos Lanzamientos', url: '{{ route("admin.new-releases.index") }}', category: 'Bandas' },
                 { name: 'Talentos', url: '{{ route("admin.talents.index") }}', category: 'Talento' },
                 { name: 'Media de Talentos', url: '{{ route("admin.talents.media") }}', category: 'Talento' },
                 { name: 'Programas Convocatoria', url: '{{ route("admin.programs.index") }}', category: 'Talento' },
