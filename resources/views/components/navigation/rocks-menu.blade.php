@@ -159,8 +159,8 @@
 >
     <div class="absolute inset-0 bg-cover bg-center md:hidden" style="background-image: linear-gradient(rgba(16, 16, 18, 0.75), rgba(16, 16, 18, 0.75)), var(--lucille-bg-image);" aria-hidden="true"></div>
     <div 
-        :class="sticky ? 'py-1.5' : 'pt-4 pb-2.5'"
-        class="mx-auto flex h-full max-w-[1180px] flex-col justify-center px-5 lg:px-8 md:flex-row md:items-center md:justify-between md:py-0"
+        :class="sticky ? 'py-2.5' : 'pt-7 pb-3.5'"
+        class="relative z-10 mx-auto flex h-full max-w-[1180px] flex-col justify-center px-5 lg:px-8 md:flex-row md:items-center md:justify-between md:py-0"
     >
         <div class="flex w-full items-center justify-between md:contents">
             <a href="{{ route('home') }}" class="flex h-full items-center gap-3 py-2 md:py-0" aria-label="{{ $brandMark }} home">
