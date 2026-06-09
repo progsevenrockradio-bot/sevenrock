@@ -60,6 +60,47 @@
     @stack('preloads')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
+        /* Cookie Toggles Switch Styles */
+        .cookie-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .cookie-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .cookie-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.15);
+            transition: .3s ease;
+            border-radius: 24px;
+        }
+        .cookie-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s ease;
+            border-radius: 50%;
+        }
+        input:checked + .cookie-slider {
+            background-color: var(--lucille-accent, #c32720);
+        }
+        input:checked + .cookie-slider:before {
+            transform: translateX(20px);
+        }
+
         .section-band { background: rgba(8, 26, 36, 0.2) !important; }
         .home-section-texture::before { background-image: none !important; }
         .lucille-page-heading .lucille-card-image + div[class="absolute inset-0"] { background: rgba(21, 21, 21, 0.3) !important; }
@@ -435,9 +476,197 @@
                     </a>
                 @endforeach
             </div>
-            <div>{{ $theme['site_name'] }} © {{ date('Y') }} - Creado por jmSolutions</div>
+            {{-- Menú Legal en el Footer --}}
+            <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-display uppercase tracking-[0.1em] text-[#9aa7b1] mt-1">
+                <a href="{{ route('copyright-policy') }}" class="transition hover:text-lucille-accent">Términos y Copyright</a>
+                <span class="text-white/10 hidden sm:inline">|</span>
+                <a href="{{ route('privacy-policy') }}" class="transition hover:text-lucille-accent">Política de Privacidad</a>
+                <span class="text-white/10 hidden sm:inline">|</span>
+                <button type="button" onclick="openCookieSettings()" class="transition hover:text-lucille-accent focus:outline-none">Preferencias de Cookies</button>
+            </div>
+            
+            {{-- Texto de Copyright Detallado --}}
+            <div class="text-[11px] max-w-[850px] leading-relaxed text-[#5c5c5c] mt-2 select-none">
+                © {{ date('Y') }} Seven Rock Radio. Todos los derechos reservados. Creado por jmSolutions. Queda prohibida la reproducción total o parcial de los contenidos, diseño y estructura de esta web sin autorización previa y por escrito de Seven Rock Radio.
+            </div>
         </div>
     </footer>
+
+    <!-- Banner de Cookies Estilo Ampwall -->
+    <div id="cookie-consent-banner" class="fixed bottom-6 left-6 right-6 z-[250] mx-auto max-w-4xl rounded-2xl border border-white/[0.08] bg-[#0f141c]/95 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-md transition-all duration-500 translate-y-[150%] opacity-0 md:p-8" style="display: none;">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div class="space-y-3 lg:max-w-[65%] text-left">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl select-none">🍪</span>
+                    <h4 class="font-display text-base uppercase tracking-wider text-white md:text-lg">
+                        Los banners de cookies pueden ser molestos, pero...
+                    </h4>
+                </div>
+                <p class="text-xs leading-relaxed text-[#9aa7b1] md:text-sm">
+                    En Seven Rock Radio usamos cookies para analizar nuestro tráfico, saber cuántos metaleros y rockeros nos sintonizan, y asegurarnos de que la plataforma y la transmisión funcionen al máximo nivel. Puedes leer más detalladamente en nuestra <a href="{{ route('privacy-policy') }}" class="text-lucille-accent hover:underline">Política de Privacidad</a>.
+                </p>
+            </div>
+            <div class="flex flex-col gap-2 sm:flex-row lg:flex-col lg:w-[30%] shrink-0">
+                <button type="button" onclick="acceptAllCookies()" class="w-full rounded-full bg-lucille-accent px-5 py-3 text-center text-[10px] font-display uppercase tracking-[0.15em] text-white transition-all duration-300 hover:bg-opacity-90 active:scale-98 shadow-md shadow-lucille-accent/20">
+                    Genial, ¡que suene el Rock!
+                </button>
+                <button type="button" onclick="acceptNecessaryCookies()" class="w-full rounded-full border border-white/10 bg-white/[0.02] px-5 py-3 text-center text-[10px] font-display uppercase tracking-[0.15em] text-[#dcdcdc] transition-all duration-300 hover:border-lucille-accent hover:text-lucille-accent hover:bg-lucille-accent/[0.02] active:scale-98">
+                    No, solo necesarias
+                </button>
+                <button type="button" onclick="openCookieSettingsModal()" class="w-full text-center text-[10px] font-display uppercase tracking-[0.1em] text-[#7b7b7b] hover:text-[#9aa7b1] transition-colors mt-1 focus:outline-none">
+                    Gestionar preferencias
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ajustes de Cookies (Preferencias Individuales) -->
+    <div id="cookie-settings-modal" class="fixed inset-0 z-[300] hidden items-center justify-center p-4" style="background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);">
+        <div class="relative w-full max-w-xl rounded-2xl border border-white/[0.08] bg-[#10161b] p-6 shadow-2xl md:p-8 text-left">
+            <div class="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+                <h3 class="font-display text-sm uppercase tracking-wider text-white">Preferencias de Cookies</h3>
+                <button type="button" onclick="closeCookieSettingsModal()" class="text-[#7b7b7b] hover:text-white transition-colors focus:outline-none" aria-label="Cerrar modal">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <p class="text-xs leading-relaxed text-[#9aa7b1] mb-6">
+                Personaliza cómo Seven Rock Radio recopila información. Las cookies ayudan a que la radio suene con la mejor fidelidad técnica y contenido optimizado.
+            </p>
+
+            <div class="space-y-4">
+                <!-- Cookies Necesarias -->
+                <div class="flex items-start justify-between gap-4 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-white text-xs font-display uppercase tracking-wider">Técnicas y de Transmisión</span>
+                            <span class="rounded bg-white/10 px-2 py-0.5 text-[9px] text-[#7b7b7b] uppercase">Obligatorio</span>
+                        </div>
+                        <p class="text-[11px] leading-relaxed text-[#7b7b7b]">
+                            Esenciales para cargar el reproductor de audio, mantener la reproducción activa y controlar el volumen. No se pueden desactivar.
+                        </p>
+                    </div>
+                    <div class="shrink-0 mt-1">
+                        <div class="relative inline-flex items-center cursor-not-allowed">
+                            <div class="w-11 h-6 bg-lucille-accent rounded-full opacity-60"></div>
+                            <div class="absolute left-6 top-1 bg-white w-4 h-4 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cookies Analíticas -->
+                <div class="flex items-start justify-between gap-4 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                    <div class="space-y-1">
+                        <span class="text-white text-xs font-display uppercase tracking-wider">Métrica de Oyentes (Analíticas)</span>
+                        <p class="text-[11px] leading-relaxed text-[#7b7b7b]">
+                            Nos permite saber de manera totalmente anónima cuántos oyentes (metaleros y rockeros) están sintonizados y qué programas son los preferidos.
+                        </p>
+                    </div>
+                    <label class="cookie-switch shrink-0 mt-1">
+                        <input type="checkbox" id="cookie-opt-analytics" checked>
+                        <span class="cookie-slider"></span>
+                    </label>
+                </div>
+
+                <!-- Cookies Personalización -->
+                <div class="flex items-start justify-between gap-4 rounded-xl border border-white/5 bg-white/[0.01] p-4">
+                    <div class="space-y-1">
+                        <span class="text-white text-xs font-display uppercase tracking-wider">Ajustes del Reproductor (Personalización)</span>
+                        <p class="text-[11px] leading-relaxed text-[#7b7b7b]">
+                            Guardar tu volumen preferido o si deseas silenciar la radio al cargar la página para que no tengas que configurarlo en cada visita.
+                        </p>
+                    </div>
+                    <label class="cookie-switch shrink-0 mt-1">
+                        <input type="checkbox" id="cookie-opt-personalization" checked>
+                        <span class="cookie-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="mt-8">
+                <button type="button" onclick="saveCookiePreferences()" class="w-full rounded-full bg-lucille-accent py-3 text-center text-xs font-display uppercase tracking-[0.15em] text-white transition-all duration-300 hover:bg-opacity-90 active:scale-98 shadow-md">
+                    Guardar Preferencias
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const consent = localStorage.getItem('sevenrock_cookie_consent');
+            const banner = document.getElementById('cookie-consent-banner');
+            
+            if (!consent) {
+                setTimeout(() => {
+                    banner.style.display = 'block';
+                    // Trigger reflow
+                    banner.offsetHeight;
+                    banner.classList.remove('translate-y-[150%]', 'opacity-0');
+                    banner.classList.add('translate-y-0', 'opacity-100');
+                }, 1000);
+            }
+        });
+
+        function hideCookieBanner() {
+            const banner = document.getElementById('cookie-consent-banner');
+            banner.classList.remove('translate-y-0', 'opacity-100');
+            banner.classList.add('translate-y-[150%]', 'opacity-0');
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 500);
+        }
+
+        function acceptAllCookies() {
+            const preferences = { necessary: true, analytics: true, personalization: true };
+            localStorage.setItem('sevenrock_cookie_consent', JSON.stringify(preferences));
+            applyCookiePreferences(preferences);
+            hideCookieBanner();
+        }
+
+        function acceptNecessaryCookies() {
+            const preferences = { necessary: true, analytics: false, personalization: false };
+            localStorage.setItem('sevenrock_cookie_consent', JSON.stringify(preferences));
+            applyCookiePreferences(preferences);
+            hideCookieBanner();
+        }
+
+        function openCookieSettingsModal() {
+            const modal = document.getElementById('cookie-settings-modal');
+            const consent = localStorage.getItem('sevenrock_cookie_consent');
+            if (consent) {
+                const prefs = JSON.parse(consent);
+                document.getElementById('cookie-opt-analytics').checked = !!prefs.analytics;
+                document.getElementById('cookie-opt-personalization').checked = !!prefs.personalization;
+            }
+            modal.style.display = 'flex';
+        }
+
+        function closeCookieSettingsModal() {
+            const modal = document.getElementById('cookie-settings-modal');
+            modal.style.display = 'none';
+        }
+
+        function saveCookiePreferences() {
+            const analytics = document.getElementById('cookie-opt-analytics').checked;
+            const personalization = document.getElementById('cookie-opt-personalization').checked;
+            const preferences = { necessary: true, analytics, personalization };
+            localStorage.setItem('sevenrock_cookie_consent', JSON.stringify(preferences));
+            applyCookiePreferences(preferences);
+            closeCookieSettingsModal();
+            hideCookieBanner();
+        }
+
+        function openCookieSettings() {
+            openCookieSettingsModal();
+        }
+
+        function applyCookiePreferences(prefs) {
+            console.log('Cookie preferences applied:', prefs);
+        }
+    </script>
+
     @stack('scripts')
 </body>
 </html>

@@ -74,6 +74,8 @@ Route::post('/contact', [SiteController::class, 'contactSend'])->middleware(['th
 Route::post('/home-contact', [SiteController::class, 'homeContactSend'])->middleware(['throttle:contact-form', \App\Http\Middleware\PreventSpamWithHoneypot::class])->name('home.contact.send');
 Route::get('/player/popup', [PlayerController::class, 'show'])->name('player.popup');
 Route::get('/search', [SearchController::class, 'index'])->middleware('throttle:public-search')->name('search');
+Route::view('/privacy-policy', 'pages.privacy-policy')->name('privacy-policy');
+Route::view('/copyright-policy', 'pages.copyright-policy')->name('copyright-policy');
 Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware(['throttle:comment-submit', \App\Http\Middleware\PreventSpamWithHoneypot::class])->name('posts.comments.store');
 Route::post('/posts/{post}/like', [PostReactionController::class, 'toggle'])->middleware('throttle:60,1')->name('posts.like');
 
