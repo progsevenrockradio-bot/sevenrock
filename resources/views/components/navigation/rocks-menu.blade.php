@@ -164,6 +164,9 @@
         <nav class="hidden h-full items-center lg:flex">
             <ul class="flex h-full items-center">
                 @foreach ($items as $item)
+                    @if (in_array($item['label'], ['Tienda', 'Programas', 'Programa']))
+                        @continue
+                    @endif
                     <li class="group relative flex h-full items-center">
                         <a
                             href="{{ $item['url'] ?? route($item['route']) }}"
@@ -188,9 +191,34 @@
             </ul>
         </nav>
 
-        <button type="button" class="hidden text-lg text-white transition-colors duration-300 hover:text-lucille-accent lg:block" @click="searchOpen = true" aria-label="Open search">
-            &#9906;
-        </button>
+        <div class="hidden items-center gap-6 border-l border-white/10 pl-6 lg:flex">
+            <!-- Programas Icon -->
+            <a href="{{ route('programs') }}" class="text-white transition-colors duration-300 hover:text-lucille-accent" aria-label="Programas" title="Programas">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+            </a>
+
+            <!-- Tienda Icon -->
+            <a href="{{ route('shop') }}" class="text-white transition-colors duration-300 hover:text-lucille-accent" aria-label="Tienda" title="Tienda">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <path d="M16 10a4 4 0 0 1-8 0"></path>
+                </svg>
+            </a>
+
+            <!-- Buscar Icon -->
+            <button type="button" class="text-white transition-colors duration-300 hover:text-lucille-accent" @click="searchOpen = true" aria-label="Buscar" title="Buscar">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </button>
+        </div>
     </div>
 
     <div x-cloak x-show="open" x-transition.opacity class="border-t border-white/5 bg-[rgba(16,16,18,.95)] backdrop-blur-md px-5 py-4 lg:hidden">
