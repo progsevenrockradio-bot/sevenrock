@@ -824,6 +824,7 @@ Alpine.data('postContentEditor', (options = {}) => ({
     uploading: false,
     uploadError: '',
     serialized: '',
+    serializedBlocks: '',
     init() {
         if (! this.blocks.length) {
             this.blocks = [this.createBlock('paragraph')];
@@ -902,8 +903,13 @@ Alpine.data('postContentEditor', (options = {}) => ({
             .filter((block) => block !== '')
             .join('\n\n');
 
+        this.serializedBlocks = JSON.stringify(this.blocks);
+
         if (this.$refs.contentText) {
             this.$refs.contentText.value = this.serialized;
+        }
+        if (this.$refs.contentBlocks) {
+            this.$refs.contentBlocks.value = this.serializedBlocks;
         }
     },
     async uploadImageForBlock(block, event) {
