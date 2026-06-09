@@ -35,6 +35,89 @@
     $logoHeight = $themeSettings->logo_height ?? 62;
 @endphp
 
+@once
+<style>
+    .brand-mark-container {
+        position: relative;
+        display: inline-block;
+        vertical-align: middle;
+        font-family: var(--lucille-brand-font, "Rock Salt"), "Segoe Script", cursive;
+        color: var(--color-lucille-accent);
+        text-shadow: 0 1.5px 3px rgba(0, 0, 0, 0.3);
+        transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        transform-origin: left center;
+        overflow: visible;
+    }
+
+    .brand-mark-container.normal {
+        font-size: clamp(0.9rem, 1.6vw, 1.45rem);
+        width: 10.5em;
+        height: 1.5em;
+    }
+
+    .brand-mark-container.sticky-active {
+        font-size: 9px;
+        width: 48px;
+        height: 34px;
+        transform: skewX(12deg) translateY(2px);
+        text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.2);
+    }
+
+    .brand-word {
+        position: absolute;
+        display: inline-block;
+        white-space: nowrap;
+        line-height: 1;
+        transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        transform-origin: left center;
+    }
+
+    /* Normal state positions */
+    .brand-mark-container.normal .word-seven {
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%) rotate(0deg);
+        transition-delay: 0.12s;
+    }
+
+    .brand-mark-container.normal .word-rock {
+        left: 3.4em;
+        top: 50%;
+        transform: translateY(-50%) rotate(0deg);
+        transition-delay: 0.06s;
+    }
+
+    .brand-mark-container.normal .word-radio {
+        left: 6.3em;
+        top: 50%;
+        transform: translateY(-50%) rotate(0deg);
+        transition-delay: 0s;
+    }
+
+    /* Sticky active state positions */
+    .brand-mark-container.sticky-active .word-seven {
+        left: 0;
+        top: 0;
+        transform: translateY(0) rotate(-4deg);
+        transition-delay: 0s;
+    }
+
+    .brand-mark-container.sticky-active .word-rock {
+        left: 0;
+        top: 11px;
+        transform: translateY(0) rotate(-4deg);
+        transition-delay: 0.06s;
+    }
+
+    .brand-mark-container.sticky-active .word-radio {
+        left: 0;
+        top: 22px;
+        transform: translateY(0) rotate(-4deg);
+        transition-delay: 0.12s;
+    }
+</style>
+@endonce
+
 <header
     x-data="rocksNav"
     x-init="init"
@@ -47,17 +130,14 @@
             <a href="{{ route('home') }}" class="flex h-full items-center gap-3 py-2 md:py-0" aria-label="{{ $brandMark }} home">
                 @if ($brandDisplayMode === 'both' && $logoUrl)
                     <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both transition-all duration-300" :style="sticky ? 'max-height: {{ max(30, min(50, $logoHeight * 0.55)) }}px;' : 'max-height: {{ max(40, min(75, $logoHeight * 0.75)) }}px;'" loading="lazy">
-                    <span 
-                        x-show="!sticky" 
-                        x-transition:enter="transition-all ease-out duration-300"
-                        x-transition:enter-start="opacity-0 translate-x-[-15px] max-w-0"
-                        x-transition:enter-end="opacity-100 translate-x-0 max-w-[300px]"
-                        x-transition:leave="transition-all ease-in duration-200"
-                        x-transition:leave-start="opacity-100 translate-x-0 max-w-[300px]"
-                        x-transition:leave-end="opacity-0 translate-x-[-15px] max-w-0"
-                        class="lucille-brand-mark-both overflow-hidden whitespace-nowrap"
-                    >
-                        {{ $brandMark }}
+                    <span class="brand-mark-container" :class="sticky ? 'sticky-active' : 'normal'">
+                        @php
+                            $words = explode(' ', $brandMark);
+                            $wordClasses = ['word-seven', 'word-rock', 'word-radio'];
+                        @endphp
+                        @foreach ($words as $index => $word)
+                            <span class="brand-word {{ $wordClasses[$index] ?? 'word-' . $index }}">{{ $word }}</span>
+                        @endforeach
                     </span>
                 @elseif ($brandDisplayMode === 'logo' && $logoUrl)
                     <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo transition-all duration-300" :style="sticky ? 'max-height: {{ min(45, $logoHeight) }}px;' : 'max-height: {{ $logoHeight }}px;'" loading="lazy">
