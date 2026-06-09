@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('title');
             $table->string('slug')->unique();
             $table->string('artist_name');
-            $table->foreignId('radio_artist_id')->nullable()->constrained('radio_artists')->nullOnDelete();
+            $table->unsignedBigInteger('radio_artist_id')->nullable();
             $table->date('released_at')->nullable();
             $table->string('cover_image')->nullable();
             $table->string('audio_path')->nullable();
