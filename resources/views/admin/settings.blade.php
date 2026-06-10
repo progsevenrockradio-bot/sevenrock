@@ -86,7 +86,8 @@
             navColor: {{ Js::from(old('nav_color', $settings->nav_color)) }},
             surfaceColor: {{ Js::from(old('surface_color', $settings->surface_color)) }},
             bodyColor: {{ Js::from(old('body_color', $settings->body_color)) }},
-            headingColor: {{ Js::from(old('heading_color', $settings->heading_color)) }}
+            headingColor: {{ Js::from(old('heading_color', $settings->heading_color)) }},
+            lineColor: {{ Js::from(old('line_color', $settings->line_color)) }}
         }"
     >
         @csrf
@@ -107,28 +108,32 @@
         </section>
 
         <section class="sticky top-0 z-20 border border-[#2b2b2b] bg-[rgba(10,10,11,.96)] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,.35)] backdrop-blur">
-            <div class="flex flex-wrap items-center gap-2">
-                <button type="button" class="lucille-button" :class="activeTab === 'tab1' ? 'lucille-button-solid' : ''" @click="activeTab = 'tab1'">
-                    Apariencia y Multimedia
-                    @if ($tab1HasErrors)
-                        <span class="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[#7a2b2b] bg-[rgba(195,39,32,.15)] px-1 text-[10px] text-[#ff9e9e]">!</span>
-                    @endif
-                </button>
-                <button type="button" class="lucille-button" :class="activeTab === 'tab2' ? 'lucille-button-solid' : ''" @click="activeTab = 'tab2'">
-                    Contenido y Textos
-                    @if ($tab2HasErrors)
-                        <span class="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[#7a2b2b] bg-[rgba(195,39,32,.15)] px-1 text-[10px] text-[#ff9e9e]">!</span>
-                    @endif
-                </button>
-                <button type="button" class="lucille-button" :class="activeTab === 'tab3' ? 'lucille-button-solid' : ''" @click="activeTab = 'tab3'">
-                    Comunicaciones y Redes
-                    @if ($tab3HasErrors)
-                        <span class="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[#7a2b2b] bg-[rgba(195,39,32,.15)] px-1 text-[10px] text-[#ff9e9e]">!</span>
-                    @endif
-                </button>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" class="lucille-button flex items-center gap-2" :class="activeTab === 'tab1' ? 'lucille-button-solid' : ''" @click="activeTab = 'tab1'">
+                        <span>🎨</span> Apariencia y Multimedia
+                        @if ($tab1HasErrors)
+                            <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[#7a2b2b] bg-[rgba(195,39,32,.15)] px-1 text-[10px] text-[#ff9e9e] font-bold">!</span>
+                        @endif
+                    </button>
+                    <button type="button" class="lucille-button flex items-center gap-2" :class="activeTab === 'tab2' ? 'lucille-button-solid' : ''" @click="activeTab = 'tab2'">
+                        <span>📝</span> Contenido y Textos
+                        @if ($tab2HasErrors)
+                            <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[#7a2b2b] bg-[rgba(195,39,32,.15)] px-1 text-[10px] text-[#ff9e9e] font-bold">!</span>
+                        @endif
+                    </button>
+                    <button type="button" class="lucille-button flex items-center gap-2" :class="activeTab === 'tab3' ? 'lucille-button-solid' : ''" @click="activeTab = 'tab3'">
+                        <span>📡</span> Comunicaciones y Redes
+                        @if ($tab3HasErrors)
+                            <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[#7a2b2b] bg-[rgba(195,39,32,.15)] px-1 text-[10px] text-[#ff9e9e] font-bold">!</span>
+                        @endif
+                    </button>
+                </div>
 
-                <div class="ml-auto flex flex-wrap gap-3">
-                    <button type="submit" class="lucille-button-solid">{{ $admin['save_settings'] }}</button>
+                <div class="flex gap-2">
+                    <button type="submit" class="lucille-button-solid bg-[#c32720] border-[#c32720] hover:bg-[#a61f19] hover:border-[#a61f19] transition-all">
+                        💾 {{ $admin['save_settings'] }}
+                    </button>
                 </div>
             </div>
         </section>

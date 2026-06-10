@@ -1,48 +1,57 @@
 <section class="space-y-6">
+    <!-- Encabezado de la pestaña -->
     <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-        <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Comunicaciones y Redes</h2>
-        <p class="mt-3 text-sm leading-7 text-[#7b7b7b]">Aquí se agrupan los textos de contacto, teléfonos, correos, redes sociales y el estado de notificaciones activas.</p>
+        <div class="flex items-center gap-4">
+            <div class="text-3xl">📡</div>
+            <div>
+                <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Comunicaciones, Redes y Automatización</h2>
+                <p class="mt-1 text-sm leading-7 text-[#7b7b7b]">Aquí se agrupan los textos de contacto, redes sociales, ajustes de notificaciones activas y automatización de correo por IA.</p>
+            </div>
+        </div>
     </div>
 
+    <!-- Primera Fila: Textos e Información de Contacto -->
     <div class="grid gap-6 xl:grid-cols-2">
+        <!-- SECCIÓN: TEXTOS DE CONTACTO -->
         <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-            <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Textos de contacto</h3>
-            <div class="mt-6 space-y-5">
+            <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-6">📝 Textos de la Sección de Contacto</h3>
+            <div class="space-y-5">
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['contact_form_title_label'] }}</label>
-                    <input name="contact_form_title" value="{{ old('contact_form_title', $settings->contact_form_title) }}" class="lucille-product-field w-full">
+                    <input name="contact_form_title" value="{{ old('contact_form_title', $settings->contact_form_title) }}" class="lucille-product-field w-full" placeholder="Título sobre el formulario">
                     @error('contact_form_title')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['contact_info_title_label'] }}</label>
-                    <input name="contact_info_title" value="{{ old('contact_info_title', $settings->contact_info_title) }}" class="lucille-product-field w-full">
+                    <input name="contact_info_title" value="{{ old('contact_info_title', $settings->contact_info_title) }}" class="lucille-product-field w-full" placeholder="Título sobre la información de contacto">
                     @error('contact_info_title')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['contact_description_label'] }}</label>
-                    <textarea name="contact_description" rows="4" class="lucille-product-field w-full">{{ old('contact_description', $settings->contact_description) }}</textarea>
+                    <textarea name="contact_description" rows="4" class="lucille-product-field w-full" placeholder="Descripción breve explicativa">{{ old('contact_description', $settings->contact_description) }}</textarea>
                     @error('contact_description')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
             </div>
         </section>
 
+        <!-- SECCIÓN: DATOS DE CONTACTO -->
         <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-            <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Datos de contacto</h3>
-            <div class="mt-6 space-y-5">
+            <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-6">📞 Datos de Contacto Físicos</h3>
+            <div class="space-y-5">
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['address_label'] }}</label>
-                    <textarea name="contact_address" rows="4" class="lucille-product-field w-full">{{ old('contact_address', $settings->contact_address) }}</textarea>
+                    <textarea name="contact_address" rows="4" class="lucille-product-field w-full" placeholder="Dirección de la radio">{{ old('contact_address', $settings->contact_address) }}</textarea>
                     @error('contact_address')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
                 <div class="grid gap-5 md:grid-cols-2">
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['contact_phone_primary_label'] }}</label>
-                        <input name="contact_phone_primary" value="{{ old('contact_phone_primary', $settings->contact_phone_primary) }}" class="lucille-product-field w-full">
+                        <input name="contact_phone_primary" value="{{ old('contact_phone_primary', $settings->contact_phone_primary) }}" class="lucille-product-field w-full" placeholder="+123456789">
                         @error('contact_phone_primary')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                     </div>
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['contact_phone_secondary_label'] }}</label>
-                        <input name="contact_phone_secondary" value="{{ old('contact_phone_secondary', $settings->contact_phone_secondary) }}" class="lucille-product-field w-full">
+                        <input name="contact_phone_secondary" value="{{ old('contact_phone_secondary', $settings->contact_phone_secondary) }}" class="lucille-product-field w-full" placeholder="+987654321">
                         @error('contact_phone_secondary')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                     </div>
                 </div>
@@ -50,184 +59,216 @@
         </section>
     </div>
 
+    <!-- Segunda Fila: Redes Sociales y Notificaciones -->
     <div class="grid gap-6 xl:grid-cols-2">
+        <!-- SECCIÓN: REDES SOCIALES -->
         <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-            <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Redes</h3>
-            <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-6">📱 Enlaces de Redes Sociales</h3>
+            <div class="grid gap-5 md:grid-cols-2">
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['facebook_label'] }}</label>
-                    <input name="social_facebook" value="{{ old('social_facebook', $settings->social_facebook) }}" class="lucille-product-field w-full">
+                    <input name="social_facebook" value="{{ old('social_facebook', $settings->social_facebook) }}" class="lucille-product-field w-full" placeholder="https://facebook.com/...">
                     @error('social_facebook')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['instagram_label'] }}</label>
-                    <input name="social_instagram" value="{{ old('social_instagram', $settings->social_instagram) }}" class="lucille-product-field w-full">
+                    <input name="social_instagram" value="{{ old('social_instagram', $settings->social_instagram) }}" class="lucille-product-field w-full" placeholder="https://instagram.com/...">
                     @error('social_instagram')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['youtube_label'] }}</label>
-                    <input name="social_youtube" value="{{ old('social_youtube', $settings->social_youtube) }}" class="lucille-product-field w-full">
+                    <input name="social_youtube" value="{{ old('social_youtube', $settings->social_youtube) }}" class="lucille-product-field w-full" placeholder="https://youtube.com/...">
                     @error('social_youtube')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['tiktok_label'] }}</label>
-                    <input name="social_tiktok" value="{{ old('social_tiktok', $settings->social_tiktok) }}" class="lucille-product-field w-full">
+                    <input name="social_tiktok" value="{{ old('social_tiktok', $settings->social_tiktok) }}" class="lucille-product-field w-full" placeholder="https://tiktok.com/@...">
                     @error('social_tiktok')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
-                <div class="md:col-span-2">
+                <div class="md:col-span-2 border-t border-[#2b2b2b] pt-4 mt-2">
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['x_label'] }}</label>
-                    <input name="social_x" value="{{ old('social_x', $settings->social_x) }}" class="lucille-product-field w-full">
+                    <input name="social_x" value="{{ old('social_x', $settings->social_x) }}" class="lucille-product-field w-full" placeholder="https://x.com/...">
                     @error('social_x')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
             </div>
         </section>
 
-        <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-            <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Notificaciones</h3>
-            <div class="mt-6 grid gap-5 md:grid-cols-2">
-                <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['contact_email_label'] }}</label>
-                    <input name="contact_email" value="{{ old('contact_email', $settings->contact_email) }}" class="lucille-product-field w-full">
-                    @error('contact_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
-                </div>
-                <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_email_label'] }}</label>
-                    <input name="notification_email" value="{{ old('notification_email', $settings->notification_email) }}" class="lucille-product-field w-full">
-                    @error('notification_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
-                </div>
-                <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_copy_email_label'] }}</label>
-                    <input name="notification_copy_email" value="{{ old('notification_copy_email', $settings->notification_copy_email) }}" class="lucille-product-field w-full">
-                    <p class="mt-2 text-xs text-[#7b7b7b]">Copia global usada por defecto en los programas maestros.</p>
-                    @error('notification_copy_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
-                </div>
-                <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_from_email_label'] }}</label>
-                    <input name="notification_from_email" value="{{ old('notification_from_email', $settings->notification_from_email) }}" class="lucille-product-field w-full">
-                    @error('notification_from_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
-                </div>
-                <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_reply_to_email_label'] }}</label>
-                    <input name="notification_reply_to_email" value="{{ old('notification_reply_to_email', $settings->notification_reply_to_email) }}" class="lucille-product-field w-full">
-                    @error('notification_reply_to_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
-                </div>
-                <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_mailer_label'] }}</label>
-                    <select name="notification_mailer" class="lucille-product-field lucille-select-field w-full">
-                        <option value="">Use mail defaults</option>
-                        @foreach (array_keys(config('mail.mailers', [])) as $mailerName)
-                            <option value="{{ $mailerName }}" @selected(old('notification_mailer', $settings->notification_mailer) === $mailerName)>{{ $mailerName }}</option>
-                        @endforeach
-                    </select>
-                    <p class="mt-2 text-xs text-[#7b7b7b]">Override the mailer used by upload notifications.</p>
-                    @error('notification_mailer')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+        <!-- SECCIÓN: NOTIFICACIONES -->
+        <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8 flex flex-col justify-between">
+            <div>
+                <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-6">📬 Configuración de Notificaciones (Email)</h3>
+                
+                <div class="grid gap-5 md:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['contact_email_label'] }}</label>
+                        <input name="contact_email" value="{{ old('contact_email', $settings->contact_email) }}" class="lucille-product-field w-full" placeholder="contacto@sevenrockradio.com">
+                        @error('contact_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_email_label'] }}</label>
+                        <input name="notification_email" value="{{ old('notification_email', $settings->notification_email) }}" class="lucille-product-field w-full" placeholder="notificaciones@sevenrockradio.com">
+                        @error('notification_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_copy_email_label'] }}</label>
+                        <input name="notification_copy_email" value="{{ old('notification_copy_email', $settings->notification_copy_email) }}" class="lucille-product-field w-full" placeholder="copias@sevenrockradio.com">
+                        <p class="mt-1 text-[10px] text-[#7b7b7b]">Copia global usada por defecto en los programas.</p>
+                        @error('notification_copy_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_from_email_label'] }}</label>
+                        <input name="notification_from_email" value="{{ old('notification_from_email', $settings->notification_from_email) }}" class="lucille-product-field w-full" placeholder="remitente@sevenrockradio.com">
+                        @error('notification_from_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_reply_to_email_label'] }}</label>
+                        <input name="notification_reply_to_email" value="{{ old('notification_reply_to_email', $settings->notification_reply_to_email) }}" class="lucille-product-field w-full" placeholder="reply-to@sevenrockradio.com">
+                        @error('notification_reply_to_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_mailer_label'] }}</label>
+                        <select name="notification_mailer" class="lucille-product-field lucille-select-field w-full">
+                            <option value="">Use mail defaults</option>
+                            @foreach (array_keys(config('mail.mailers', [])) as $mailerName)
+                                <option value="{{ $mailerName }}" @selected(old('notification_mailer', $settings->notification_mailer) === $mailerName)>{{ $mailerName }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-[10px] text-[#7b7b7b]">Sobrescribe el mailer predeterminado.</p>
+                        @error('notification_mailer')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                    </div>
                 </div>
             </div>
 
-            <div class="mt-6 border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] p-5">
-                <h4 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Estado activo de notificaciones</h4>
-                <div class="mt-4 grid gap-4 md:grid-cols-2">
-                    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
-                        <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Correo principal activo</dt>
-                        <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['primary'] ?? 'No definido' }}</dd>
+            <!-- Estado de notificaciones -->
+            <div class="mt-6 border border-[#2b2b2b] bg-[rgba(0,0,0,.2)] p-4 rounded-lg">
+                <h4 class="font-display text-xs uppercase tracking-[.12em] text-[#c32720] border-b border-[#2b2b2b] pb-2 mb-3">🛠️ Estado activo de notificaciones</h4>
+                <div class="grid gap-3 grid-cols-2 md:grid-cols-3 text-xs">
+                    <div class="p-2 bg-[rgba(16,16,18,.5)] border border-[#2b2b2b] rounded">
+                        <span class="block text-[9px] uppercase tracking-wider text-[#7b7b7b]">Destinatario Activo</span>
+                        <span class="font-mono text-[#e0e0e0] break-all block mt-1">{{ $activeNotificationState['primary'] ?? 'No definido' }}</span>
                     </div>
-                    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
-                        <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Correo copia activo</dt>
-                        <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['copy'] ?? 'No definido' }}</dd>
+                    <div class="p-2 bg-[rgba(16,16,18,.5)] border border-[#2b2b2b] rounded">
+                        <span class="block text-[9px] uppercase tracking-wider text-[#7b7b7b]">Copia Activa</span>
+                        <span class="font-mono text-[#e0e0e0] break-all block mt-1">{{ $activeNotificationState['copy'] ?? 'No definido' }}</span>
                     </div>
-                    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
-                        <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Remitente activo</dt>
-                        <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['from'] ?? 'No definido' }}</dd>
+                    <div class="p-2 bg-[rgba(16,16,18,.5)] border border-[#2b2b2b] rounded">
+                        <span class="block text-[9px] uppercase tracking-wider text-[#7b7b7b]">Remitente Activo</span>
+                        <span class="font-mono text-[#e0e0e0] break-all block mt-1">{{ $activeNotificationState['from'] ?? 'No definido' }}</span>
                     </div>
-                    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
-                        <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Reply-to activo</dt>
-                        <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['reply_to'] ?? 'No definido' }}</dd>
+                    <div class="p-2 bg-[rgba(16,16,18,.5)] border border-[#2b2b2b] rounded">
+                        <span class="block text-[9px] uppercase tracking-wider text-[#7b7b7b]">Reply-To Activo</span>
+                        <span class="font-mono text-[#e0e0e0] break-all block mt-1">{{ $activeNotificationState['reply_to'] ?? 'No definido' }}</span>
                     </div>
-                    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4 md:col-span-2">
-                        <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Mailer activo</dt>
-                        <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['mailer'] ?? 'No definido' }}</dd>
+                    <div class="p-2 bg-[rgba(16,16,18,.5)] border border-[#2b2b2b] rounded md:col-span-2">
+                        <span class="block text-[9px] uppercase tracking-wider text-[#7b7b7b]">Mailer Configurado</span>
+                        <span class="font-mono text-[#e0e0e0] break-all block mt-1">{{ $activeNotificationState['mailer'] ?? 'No definido' }}</span>
                     </div>
                 </div>
             </div>
         </section>
     </div>
 
+    <!-- Tercera Fila: Automatización de Publicaciones (Gmail + Gemini) -->
     <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-        <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Automatización de Publicaciones vía Correo</h3>
-        <p class="mt-2 text-sm text-[#7b7b7b]">Configura las credenciales necesarias para procesar correos recibidos y publicarlos automáticamente.</p>
+        <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-6">🤖 Automatización de Publicaciones vía Correo</h3>
+        <p class="text-sm text-[#7b7b7b] mb-6">Configura las opciones inteligentes y credenciales de IA para procesar los lanzamientos recibidos por email.</p>
         
-        <div class="mt-6 grid gap-5 md:grid-cols-2">
-            <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Procesamiento Automático de Correos</label>
-                <select name="email_processing_enabled" class="lucille-product-field lucille-select-field w-full">
-                    <option value="1" @selected(old('email_processing_enabled', $settings->email_processing_enabled) == true)>Habilitado (Procesar automáticamente)</option>
-                    <option value="0" @selected(old('email_processing_enabled', $settings->email_processing_enabled) == false)>Deshabilitado (Pausar todo el procesamiento)</option>
-                </select>
-                <p class="mt-2 text-xs text-[#7b7b7b]">Si se deshabilita, la tarea en segundo plano no se conectará a Gmail ni procesará nuevos correos.</p>
+        <!-- Toggle Switches premium -->
+        <div class="grid gap-6 md:grid-cols-2 mb-6">
+            <!-- Toggle 1: Procesamiento habilitado -->
+            <div class="flex items-center justify-between p-4 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] rounded-lg">
+                <div class="pr-4">
+                    <label class="block text-xs uppercase tracking-[.18em] text-[#dcdcdc] font-bold">Procesamiento Automático</label>
+                    <span class="text-[10px] text-[#7b7b7b] block mt-1">Habilita o pausa la lectura automática de la bandeja de entrada IMAP.</span>
+                </div>
+                <div x-data="{ enabled: {{ old('email_processing_enabled', $settings->email_processing_enabled) ? 'true' : 'false' }} }" class="flex items-center shrink-0">
+                    <input type="hidden" name="email_processing_enabled" :value="enabled ? '1' : '0'">
+                    <button type="button" @click="enabled = !enabled" 
+                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                        :class="enabled ? 'bg-[#c32720]' : 'bg-[#2b2b2b]'">
+                        <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                            :class="enabled ? 'translate-x-5' : 'translate-x-0'"></span>
+                    </button>
+                </div>
             </div>
 
-            <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Estado de Publicación de Correos</label>
-                <select name="email_auto_publish" class="lucille-product-field lucille-select-field w-full">
-                    <option value="1" @selected(old('email_auto_publish', $settings->email_auto_publish) == true)>Auto-publicar en activo</option>
-                    <option value="0" @selected(old('email_auto_publish', $settings->email_auto_publish) == false)>Guardar como borrador (Revisión manual)</option>
-                </select>
-                <p class="mt-2 text-xs text-[#7b7b7b]">Si está en borrador, podrás revisar el contenido procesado por Gemini antes de hacerlo visible en la web.</p>
+            <!-- Toggle 2: Auto publicación -->
+            <div class="flex items-center justify-between p-4 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] rounded-lg">
+                <div class="pr-4">
+                    <label class="block text-xs uppercase tracking-[.18em] text-[#dcdcdc] font-bold">Estado de Publicación</label>
+                    <span class="text-[10px] text-[#7b7b7b] block mt-1">Publica directamente en "Activo" o guarda en "Borrador" para revisión manual.</span>
+                </div>
+                <div x-data="{ enabled: {{ old('email_auto_publish', $settings->email_auto_publish) ? 'true' : 'false' }} }" class="flex items-center shrink-0">
+                    <input type="hidden" name="email_auto_publish" :value="enabled ? '1' : '0'">
+                    <button type="button" @click="enabled = !enabled" 
+                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                        :class="enabled ? 'bg-[#1e4d2b]' : 'bg-[#2b2b2b]'">
+                        <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                            :class="enabled ? 'translate-x-5' : 'translate-x-0'"></span>
+                    </button>
+                </div>
             </div>
+        </div>
 
+        <div class="grid gap-5 md:grid-cols-2">
+            <!-- Filtro de importancia -->
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Relevancia Mínima de Correo (Filtro IA)</label>
-                <select name="email_min_importance" class="lucille-product-field lucille-select-field w-full">
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Relevancia Mínima de Correo (Filtro Inteligente Gemini)</label>
+                <select name="email_min_importance" class="lucille-product-field lucille-select-field w-full text-xs">
                     <option value="1" @selected(old('email_min_importance', $settings->email_min_importance) == 1)>1 - Procesar todo (sin filtros de relevancia)</option>
                     <option value="2" @selected(old('email_min_importance', $settings->email_min_importance) == 2)>2 - Relevancia baja o superior</option>
                     <option value="3" @selected(old('email_min_importance', $settings->email_min_importance) == 3)>3 - Relevancia media o superior (Recomendado)</option>
                     <option value="4" @selected(old('email_min_importance', $settings->email_min_importance) == 4)>4 - Relevancia alta o superior</option>
                     <option value="5" @selected(old('email_min_importance', $settings->email_min_importance) == 5)>5 - Solo noticias o lanzamientos muy importantes</option>
                 </select>
-                <p class="mt-2 text-xs text-[#7b7b7b]">Filtra los correos usando la evaluación automática de importancia que realiza Gemini (1 a 5).</p>
+                <p class="mt-2 text-[10px] text-[#7b7b7b]">Elige el umbral de descarte automático que realiza Gemini IA (1 a 5).</p>
                 @error('email_min_importance')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
             </div>
 
-            <div class="md:col-span-2">
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Lista Blanca de Remitentes de Confianza (Whitelist)</label>
-                <textarea name="email_whitelist_senders" rows="3" class="lucille-product-field w-full" placeholder="ejemplo@correo.com, @dominio.com, metaldevastationpr.com">{{ old('email_whitelist_senders', $settings->email_whitelist_senders) }}</textarea>
-                <p class="mt-2 text-xs text-[#7b7b7b]">Ingresa correos completos o dominios (con o sin @) separados por comas. Los correos de estos remitentes se procesarán **siempre**, ignorando el filtro de relevancia mínima.</p>
+            <!-- Whitelist de remitentes -->
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Lista Blanca de Remitentes (Whitelist)</label>
+                <textarea name="email_whitelist_senders" rows="2" class="lucille-product-field w-full text-xs" placeholder="ejemplo@correo.com, @dominio.com, metaldevastationpr.com">{{ old('email_whitelist_senders', $settings->email_whitelist_senders) }}</textarea>
+                <p class="mt-2 text-[10px] text-[#7b7b7b]">Ingresa correos o dominios separados por comas. Evadirán el filtro de relevancia mínima.</p>
                 @error('email_whitelist_senders')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
             </div>
 
-            <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Gemini API Key</label>
-                <input type="password" name="gemini_api_key" value="{{ old('gemini_api_key', $settings->gemini_api_key) }}" class="lucille-product-field w-full" placeholder="API Key de Google Gemini">
-                <p class="mt-2 text-xs text-[#7b7b7b]">Clave de acceso de Google AI para procesar, limpiar y redactar correos.</p>
-                @error('gemini_api_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            <!-- API Keys -->
+            <div class="border-t border-[#2b2b2b] pt-5 mt-3 md:col-span-2 grid gap-5 md:grid-cols-3">
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Google Gemini API Key</label>
+                    <input type="password" name="gemini_api_key" value="{{ old('gemini_api_key', $settings->gemini_api_key) }}" class="lucille-product-field w-full text-xs font-mono" placeholder="AI API Key de Google">
+                    @error('gemini_api_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Archive.org Access Key</label>
+                    <input name="archive_access_key" value="{{ old('archive_access_key', $settings->archive_access_key) }}" class="lucille-product-field w-full text-xs font-mono" placeholder="Access Key">
+                    @error('archive_access_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Archive.org Secret Key</label>
+                    <input type="password" name="archive_secret_key" value="{{ old('archive_secret_key', $settings->archive_secret_key) }}" class="lucille-product-field w-full text-xs font-mono" placeholder="Secret Key">
+                    @error('archive_secret_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                </div>
             </div>
 
-            <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Archive.org Access Key</label>
-                <input name="archive_access_key" value="{{ old('archive_access_key', $settings->archive_access_key) }}" class="lucille-product-field w-full" placeholder="Clave de Acceso (Access Key)">
-                @error('archive_access_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
-            </div>
-
-            <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Archive.org Secret Key</label>
-                <input type="password" name="archive_secret_key" value="{{ old('archive_secret_key', $settings->archive_secret_key) }}" class="lucille-product-field w-full" placeholder="Clave Secreta (Secret Key)">
-                @error('archive_secret_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
-            </div>
-
+            <!-- Portada predeterminada de respaldo -->
             <div class="md:col-span-2 border-t border-[#2b2b2b] pt-5 mt-3">
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Portada Predeterminada de Respaldo (Backup)</label>
-                @if($settings->email_default_cover_path)
-                    <div class="mb-3 flex items-center gap-4">
-                        <img src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($settings->email_default_cover_path) }}" class="h-20 w-20 object-cover border border-[#2b2b2b]">
-                        <span class="text-xs text-[#7b7b7b]">Esta imagen se usará automáticamente cuando los correos no contengan portadas o fotos grandes.</span>
+                <div class="flex flex-col sm:flex-row gap-4 items-center p-4 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] rounded">
+                    @if($settings->email_default_cover_path)
+                        <div class="relative group shrink-0 border border-[#3b3b3b] p-2 bg-[rgba(0,0,0,.4)] rounded">
+                            <img src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($settings->email_default_cover_path) }}" class="h-16 w-16 object-cover">
+                            <div class="text-[9px] text-center mt-1 text-[#7b7b7b] font-mono truncate max-w-[64px]">{{ basename($settings->email_default_cover_path) }}</div>
+                        </div>
+                    @else
+                        <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#7b7b7b] uppercase text-center p-1 leading-tight rounded shrink-0">Sin imagen</div>
+                    @endif
+                    <div class="flex-1 w-full">
+                        <input type="file" name="email_default_cover" class="lucille-product-field w-full text-xs file:bg-[#16161a] file:border-[#2b2b2b] file:text-[#dcdcdc] file:text-xs">
+                        <p class="mt-2 text-[10px] text-[#7b7b7b]">Se usa de respaldo si el email del artista no tiene adjuntos grandes de portada. Máx 4MB.</p>
                     </div>
-                @else
-                    <div class="mb-3 flex items-center gap-4">
-                        <div class="h-20 w-20 bg-[#16161a] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#7b7b7b] uppercase text-center p-1 font-display leading-tight">Backup General</div>
-                        <span class="text-xs text-[#7b7b7b]">Actualmente usando la portada genérica de la web (assets/lucille/album3.jpg). Sube una imagen personalizada para cambiarla.</span>
-                    </div>
-                @endif
-                <input type="file" name="email_default_cover" class="lucille-product-field w-full file:bg-[#16161a] file:border-[#2b2b2b] file:text-[#dcdcdc]">
+                </div>
                 @error('email_default_cover')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
             </div>
         </div>
