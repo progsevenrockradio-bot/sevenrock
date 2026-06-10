@@ -56,8 +56,31 @@ Cuerpo del correo:
 {$body}
 PROMPT;
 
-        $model = config('services.gemini.model', 'gemini-1.5-flash');
+        $model = config('services.gemini.model', 'gemini-flash-latest');
 
+        // Primer intento con el modelo configurado
+        $result = $this->callApi($model, $prompt, $apiKey);
+
+        // Si falló por modelo no encontrado (404) o por cuota excedida con límite 0 (429 con limit: 0)
+        if ($result === null && ($this->isNotFoundError($this->lastError) || $this->isQuotaZeroError($this->lastError))) {
+            Log::warning("GeminiContentParser: El modelo '{$model}' falló (404/429). Iniciando auto-descubrimiento de modelos alternativos...");
+            
+            $discoveredModel = $this->discoverBestModel($apiKey);
+            if ($discoveredModel && $discoveredModel !== $model) {
+                Log::info("GeminiContentParser: Modelo alternativo descubierto: '{$discoveredModel}'. Reintentando análisis...");
+                $this->lastError = null;
+                $result = $this->callApi($discoveredModel, $prompt, $apiKey);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Hace la llamada HTTP a la API de Gemini.
+     */
+    protected function callApi(string $model, string $prompt, string $apiKey): ?array
+    {
         try {
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
@@ -123,24 +146,8 @@ PROMPT;
 
             if ($response->failed()) {
                 $errorMsg = "HTTP Code " . $response->status() . " - " . $response->body();
-                try {
-                    // Consultar los modelos disponibles para esta API Key para dar diagnóstico
-                    $modelsListResponse = Http::get("https://generativelanguage.googleapis.com/v1beta/models?key={$apiKey}");
-                    if ($modelsListResponse->successful()) {
-                        $modelsData = $modelsListResponse->json();
-                        $modelNames = [];
-                        foreach ($modelsData['models'] ?? [] as $m) {
-                            if (isset($m['name'])) {
-                                $modelNames[] = str_replace('models/', '', $m['name']);
-                            }
-                        }
-                        $errorMsg .= "\n  -> Modelos disponibles para tu API Key: " . implode(', ', $modelNames);
-                    }
-                } catch (\Throwable $e) {
-                    // Ignorar excepciones al listar modelos
-                }
                 $this->lastError = $errorMsg;
-                Log::error("Gemini API Error: " . $response->body());
+                Log::error("Gemini API Error for model {$model}: " . $response->body());
                 return null;
             }
 
@@ -149,23 +156,102 @@ PROMPT;
 
             if (! $text) {
                 $this->lastError = "Response does not contain text. Response candidate block: " . json_encode($result);
-                Log::error("Gemini API returned empty text candidate.");
+                Log::error("Gemini API returned empty text candidate for model {$model}.");
                 return null;
             }
 
             $parsedData = json_decode($text, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
                 $this->lastError = "JSON decode error: " . json_last_error_msg() . ". Raw text: " . $text;
-                Log::error("Failed to decode Gemini JSON response: " . json_last_error_msg());
+                Log::error("Failed to decode Gemini JSON response for model {$model}: " . json_last_error_msg());
                 return null;
             }
 
             return $parsedData;
 
         } catch (\Throwable $e) {
-            $this->lastError = "Exception in GeminiContentParser: " . $e->getMessage();
-            Log::error("Exception in GeminiContentParser: " . $e->getMessage());
+            $this->lastError = "Exception for model {$model}: " . $e->getMessage();
+            Log::error("Exception in GeminiContentParser for model {$model}: " . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Descubre el mejor modelo disponible para la API Key.
+     */
+    protected function discoverBestModel(string $apiKey): ?string
+    {
+        try {
+            $response = Http::get("https://generativelanguage.googleapis.com/v1beta/models?key={$apiKey}");
+            if ($response->successful()) {
+                $modelsData = $response->json();
+                $availableModels = [];
+                foreach ($modelsData['models'] ?? [] as $m) {
+                    if (isset($m['name'])) {
+                        $name = str_replace('models/', '', $m['name']);
+                        // Solo modelos que soporten generación de contenido
+                        if (isset($m['supportedGenerationMethods']) && in_array('generateContent', $m['supportedGenerationMethods'])) {
+                            $availableModels[] = $name;
+                        }
+                    }
+                }
+
+                // Lista de modelos preferidos en orden de prioridad (modelos Flash estables y económicos)
+                $preferredModels = [
+                    'gemini-flash-latest',
+                    'gemini-1.5-flash',
+                    'gemini-2.5-flash',
+                    'gemini-2.0-flash-lite',
+                    'gemini-3.1-flash-lite',
+                    'gemini-1.5-flash-latest',
+                ];
+
+                // 1. Buscar coincidencia exacta en nuestra lista de preferidos
+                foreach ($preferredModels as $pref) {
+                    if (in_array($pref, $availableModels, true)) {
+                        return $pref;
+                    }
+                }
+
+                // 2. Si no hay coincidencia exacta de los preferidos, buscar cualquier modelo que contenga "flash"
+                foreach ($availableModels as $modelName) {
+                    if (str_contains(strtolower($modelName), 'flash')) {
+                        return $modelName;
+                    }
+                }
+
+                // 3. Si no hay ninguno con "flash", tomar el primero disponible
+                if (!empty($availableModels)) {
+                    return $availableModels[0];
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error("GeminiContentParser: Falló el auto-descubrimiento de modelos: " . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * Verifica si el error es de tipo "No Encontrado" (404).
+     */
+    protected function isNotFoundError(?string $error): bool
+    {
+        if (!$error) {
+            return false;
+        }
+        return str_contains($error, '404') || str_contains(strtoupper($error), 'NOT_FOUND');
+    }
+
+    /**
+     * Verifica si el error es de tipo "Cuota Excedida / Límite de 0" (429 con limit: 0).
+     */
+    protected function isQuotaZeroError(?string $error): bool
+    {
+        if (!$error) {
+            return false;
+        }
+        $lowerError = strtolower($error);
+        return str_contains($lowerError, '429') && (str_contains($lowerError, 'limit: 0') || str_contains($lowerError, 'resource_exhausted'));
     }
 }
