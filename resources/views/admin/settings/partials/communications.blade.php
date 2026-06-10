@@ -158,6 +158,15 @@
         
         <div class="mt-6 grid gap-5 md:grid-cols-2">
             <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Procesamiento Automático de Correos</label>
+                <select name="email_processing_enabled" class="lucille-product-field lucille-select-field w-full">
+                    <option value="1" @selected(old('email_processing_enabled', $settings->email_processing_enabled) == true)>Habilitado (Procesar automáticamente)</option>
+                    <option value="0" @selected(old('email_processing_enabled', $settings->email_processing_enabled) == false)>Deshabilitado (Pausar todo el procesamiento)</option>
+                </select>
+                <p class="mt-2 text-xs text-[#7b7b7b]">Si se deshabilita, la tarea en segundo plano no se conectará a Gmail ni procesará nuevos correos.</p>
+            </div>
+
+            <div>
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Estado de Publicación de Correos</label>
                 <select name="email_auto_publish" class="lucille-product-field lucille-select-field w-full">
                     <option value="1" @selected(old('email_auto_publish', $settings->email_auto_publish) == true)>Auto-publicar en activo</option>

@@ -125,6 +125,7 @@ class ThemeSettingsController extends Controller
             'heading_color' => ['required', 'string', 'regex:/^#([A-Fa-f0-9]{6})$/'],
             'line_color' => ['required', 'string', 'regex:/^#([A-Fa-f0-9]{6})$/'],
             'email_auto_publish' => ['nullable', 'boolean'],
+            'email_processing_enabled' => ['nullable', 'boolean'],
             'gemini_api_key' => ['nullable', 'string', 'max:255'],
             'archive_access_key' => ['nullable', 'string', 'max:255'],
             'archive_secret_key' => ['nullable', 'string', 'max:255'],
@@ -162,6 +163,7 @@ class ThemeSettingsController extends Controller
             'admin_texts_json',
             'hero_video',
             'email_auto_publish',
+            'email_processing_enabled',
             'gemini_api_key',
             'archive_access_key',
             'archive_secret_key',
@@ -208,6 +210,7 @@ class ThemeSettingsController extends Controller
         $settings->contact_phone_primary = trim((string) ($validated['contact_phone_primary'] ?? '')) ?: null;
         $settings->contact_phone_secondary = trim((string) ($validated['contact_phone_secondary'] ?? '')) ?: null;
         $settings->email_auto_publish = $request->boolean('email_auto_publish');
+        $settings->email_processing_enabled = $request->boolean('email_processing_enabled');
         $settings->gemini_api_key = trim((string) ($validated['gemini_api_key'] ?? '')) ?: null;
         $settings->archive_access_key = trim((string) ($validated['archive_access_key'] ?? '')) ?: null;
         $settings->archive_secret_key = trim((string) ($validated['archive_secret_key'] ?? '')) ?: null;

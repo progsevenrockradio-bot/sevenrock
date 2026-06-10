@@ -37,6 +37,11 @@ class ProcessIncomingEmails extends Command
     {
         $settings = ThemeSetting::current();
 
+        if (! $settings->email_processing_enabled) {
+            $this->info('El procesamiento automático de correos está deshabilitado en los Ajustes del Tema.');
+            return 0;
+        }
+
         $geminiKey = trim((string) $settings->gemini_api_key);
         if ($geminiKey === '') {
             $this->error('La API Key de Gemini no está configurada en los Ajustes del Tema.');
