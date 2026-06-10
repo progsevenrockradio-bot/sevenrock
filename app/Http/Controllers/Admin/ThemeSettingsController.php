@@ -124,6 +124,10 @@ class ThemeSettingsController extends Controller
             'body_color' => ['required', 'string', 'regex:/^#([A-Fa-f0-9]{6})$/'],
             'heading_color' => ['required', 'string', 'regex:/^#([A-Fa-f0-9]{6})$/'],
             'line_color' => ['required', 'string', 'regex:/^#([A-Fa-f0-9]{6})$/'],
+            'email_auto_publish' => ['nullable', 'boolean'],
+            'gemini_api_key' => ['nullable', 'string', 'max:255'],
+            'archive_access_key' => ['nullable', 'string', 'max:255'],
+            'archive_secret_key' => ['nullable', 'string', 'max:255'],
         ]);
 
         $settings->fill(collect($validated)->except([
@@ -156,6 +160,10 @@ class ThemeSettingsController extends Controller
             'ui_texts_json',
             'admin_texts_json',
             'hero_video',
+            'email_auto_publish',
+            'gemini_api_key',
+            'archive_access_key',
+            'archive_secret_key',
         ])->all());
 
         foreach ([
@@ -196,6 +204,10 @@ class ThemeSettingsController extends Controller
         $settings->contact_email = trim((string) ($validated['contact_email'] ?? '')) ?: null;
         $settings->contact_phone_primary = trim((string) ($validated['contact_phone_primary'] ?? '')) ?: null;
         $settings->contact_phone_secondary = trim((string) ($validated['contact_phone_secondary'] ?? '')) ?: null;
+        $settings->email_auto_publish = $request->boolean('email_auto_publish');
+        $settings->gemini_api_key = trim((string) ($validated['gemini_api_key'] ?? '')) ?: null;
+        $settings->archive_access_key = trim((string) ($validated['archive_access_key'] ?? '')) ?: null;
+        $settings->archive_secret_key = trim((string) ($validated['archive_secret_key'] ?? '')) ?: null;
         $settings->featured_stories = $this->decodeJsonSection($validated['featured_stories_json'] ?? '', 'featured_stories_json', $settings->featuredStories());
         $settings->latest_podcasts = $this->decodeJsonSection($validated['latest_podcasts_json'] ?? '', 'latest_podcasts_json', $settings->latestPodcasts());
         $settings->home_headings = $this->decodeJsonSection($validated['home_headings_json'] ?? '', 'home_headings_json', $settings->homeHeadings());

@@ -362,3 +362,10 @@ Schedule::command('podcast:reconcile-pipeline', [
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/podcast-reconcile.log'));
+
+// Process incoming emails via IMAP every 30 minutes
+Schedule::command('emails:process')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/emails-process.log'));

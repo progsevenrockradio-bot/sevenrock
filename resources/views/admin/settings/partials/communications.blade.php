@@ -151,4 +151,39 @@
             </div>
         </section>
     </div>
+
+    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
+        <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Automatización de Publicaciones vía Correo</h3>
+        <p class="mt-2 text-sm text-[#7b7b7b]">Configura las credenciales necesarias para procesar correos recibidos y publicarlos automáticamente.</p>
+        
+        <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Estado de Publicación de Correos</label>
+                <select name="email_auto_publish" class="lucille-product-field lucille-select-field w-full">
+                    <option value="1" @selected(old('email_auto_publish', $settings->email_auto_publish) == true)>Auto-publicar en activo</option>
+                    <option value="0" @selected(old('email_auto_publish', $settings->email_auto_publish) == false)>Guardar como borrador (Revisión manual)</option>
+                </select>
+                <p class="mt-2 text-xs text-[#7b7b7b]">Si está en borrador, podrás revisar el contenido procesado por Gemini antes de hacerlo visible en la web.</p>
+            </div>
+
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Gemini API Key</label>
+                <input type="password" name="gemini_api_key" value="{{ old('gemini_api_key', $settings->gemini_api_key) }}" class="lucille-product-field w-full" placeholder="API Key de Google Gemini">
+                <p class="mt-2 text-xs text-[#7b7b7b]">Clave de acceso de Google AI para procesar, limpiar y redactar correos.</p>
+                @error('gemini_api_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Archive.org Access Key</label>
+                <input name="archive_access_key" value="{{ old('archive_access_key', $settings->archive_access_key) }}" class="lucille-product-field w-full" placeholder="Clave de Acceso (Access Key)">
+                @error('archive_access_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Archive.org Secret Key</label>
+                <input type="password" name="archive_secret_key" value="{{ old('archive_secret_key', $settings->archive_secret_key) }}" class="lucille-product-field w-full" placeholder="Clave Secreta (Secret Key)">
+                @error('archive_secret_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+        </div>
+    </div>
 </section>

@@ -20,6 +20,7 @@ class ThemeSetting extends Model
         'ui_texts' => 'array',
         'admin_texts' => 'array',
         'logo_height' => 'integer',
+        'email_auto_publish' => 'bool',
     ];
 
     protected $fillable = [
@@ -69,12 +70,20 @@ class ThemeSetting extends Model
         'body_color',
         'heading_color',
         'line_color',
+        'email_auto_publish',
+        'gemini_api_key',
+        'archive_access_key',
+        'archive_secret_key',
     ];
 
     public static function defaults(): array
     {
         return [
             'site_name' => 'Seven Rock Radio',
+            'email_auto_publish' => false,
+            'gemini_api_key' => null,
+            'archive_access_key' => null,
+            'archive_secret_key' => null,
             'brand_mark' => 'Seven Rock Radio',
             'brand_mark_font' => 'Rock Salt',
             'brand_display_mode' => 'mark',
