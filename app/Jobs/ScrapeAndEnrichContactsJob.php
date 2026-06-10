@@ -31,13 +31,6 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
     public $timeout = 600;
 
     /**
-     * The name of the queue the job should be sent to.
-     *
-     * @var string
-     */
-    public $queue = 'marketing';
-
-    /**
      * Create a new job instance.
      */
     public function __construct(
@@ -45,6 +38,7 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
         public readonly string $folderName = 'INBOX',
         public readonly int $limit = 100
     ) {
+        $this->onQueue('marketing');
     }
 
     /**

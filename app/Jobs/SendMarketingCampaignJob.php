@@ -30,19 +30,13 @@ class SendMarketingCampaignJob implements ShouldQueue
     public $timeout = 3600;
 
     /**
-     * The name of the queue the job should be sent to.
-     *
-     * @var string
-     */
-    public $queue = 'marketing';
-
-    /**
      * Create a new job instance.
      */
-    public function __construct(
-        public readonly int $campaignId
-    ) {
-    }
+     public function __construct(
+         public readonly int $campaignId
+     ) {
+         $this->onQueue('marketing');
+     }
 
     /**
      * Execute the job.
