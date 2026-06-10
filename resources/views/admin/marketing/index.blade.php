@@ -483,7 +483,7 @@
             <div class="border border-[#2b2b2b] bg-[#101012] p-8 max-w-xl w-full rounded-lg shadow-2xl space-y-6 overflow-y-auto max-h-[90vh]" @click.away="editAccountData = null">
                 <h3 class="font-display text-xl uppercase tracking-wider text-[#dcdcdc] border-b border-[#2b2b2b] pb-3">Editar Cuenta de Correo</h3>
 
-                <form :action="'{{ route('admin.marketing.accounts.update', '') }}/' + (editAccountData ? editAccountData.id : '')" method="POST" class="grid gap-4 md:grid-cols-2">
+                <form :action="'{{ route('admin.marketing.accounts.update', ['id' => 'TEMP_ID']) }}'.replace('TEMP_ID', editAccountData ? editAccountData.id : '')" method="POST" class="grid gap-4 md:grid-cols-2">
                     @csrf
                     @method('PUT')
                     <div class="md:col-span-2">
