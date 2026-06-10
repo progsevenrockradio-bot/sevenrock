@@ -372,80 +372,104 @@
         <section x-cloak x-show="activeTab === 'guide'" class="space-y-6">
             <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8 space-y-8">
                 <div>
-                    <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-4 mb-4">📖 Manual de Uso y Automatización</h2>
+                    <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-4 mb-4">📖 Manual de Uso del Módulo de Marketing</h2>
                     <p class="text-sm text-[#7b7b7b]">
-                        Guía de referencia rápida para gestionar tus listas de contactos, realizar sincronizaciones mediante Inteligencia Artificial y asegurar el correcto funcionamiento del envío de correos masivos en producción.
+                        Aprende a gestionar tus cuentas de correo, recolectar contactos mediante Inteligencia Artificial y enviar boletines informativos o campañas promocionales profesionales.
                     </p>
                 </div>
 
-                <!-- Bloque 1: Producción y Solución Rápida -->
-                <div class="border border-[#c9912c] bg-[rgba(201,145,44,.03)] p-6 space-y-4 rounded">
+                <!-- Sección 1: Cuentas de Correo -->
+                <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-6 rounded space-y-4">
                     <h3 class="font-display text-lg uppercase tracking-wider text-[#ffd580] flex items-center gap-2">
-                        🚀 ¿Cómo probarlo y solucionarlo en Producción ahora mismo?
+                        ✉️ 1. Cuentas de Correo (Remitentes)
                     </h3>
                     <div class="text-xs text-[#dcdcdc] space-y-3 leading-relaxed">
                         <p>
-                            Si acabas de desplegar la actualización y quieres verificar todo o procesar correos pendientes de inmediato, sigue estos pasos:
+                            Para poder recolectar contactos y enviar correos, primero debes configurar al menos una cuenta en la pestaña <strong>⚙️ Cuentas de Correo</strong>:
                         </p>
-                        <ol class="list-decimal pl-5 space-y-2 mt-2">
+                        <ul class="list-disc pl-5 space-y-2 mt-1">
                             <li>
-                                <strong>Actualiza el código en tu servidor de producción (Hostinger)</strong> ejecutando desde tu consola de comandos (SSH):
-                                <pre class="mt-2 p-3 bg-black border border-[#2b2b2b] font-mono text-[10px] text-[#b8e6c3] select-all rounded leading-normal">
-git pull
-php artisan config:clear
-php artisan optimize</pre>
+                                <strong>Configuración de Entrada (IMAP)</strong>: Se utiliza para leer de forma segura tu bandeja de correo e importar nuevos contactos.
                             </li>
                             <li>
-                                <strong>Entra al panel de administración</strong> en la pestaña <span class="text-[#ffd580] font-bold">Contactos</span> (o recarga esta sección).
+                                <strong>Configuración de Salida (SMTP)</strong>: Se utiliza para realizar los envíos físicos de tus boletines o campañas promocionales.
                             </li>
                             <li>
-                                Verás un <strong>nuevo banner amarillo de diagnóstico</strong> que te avisará si tienes tareas pendientes esperando en la cola (el proceso de importación de correos que hiciste anteriormente).
+                                <strong class="text-[#ff9e9e]">Contraseña de Aplicación de Google (App Password)</strong>: Si usas Gmail, no debes poner tu contraseña normal de inicio de sesión. Tienes que generar una contraseña de aplicación de 16 caracteres en la configuración de seguridad de tu cuenta de Google (verificación en dos pasos) y colocarla en los campos de contraseña IMAP y SMTP.
                             </li>
                             <li>
-                                Haz clic en el botón <strong class="text-white">⚡ Procesar Cola Manualmente</strong> que aparece en el banner. Esto procesará sincrónicamente la importación de correos y, en unos segundos, la página se recargará mostrando los contactos importados y enriquecidos por la IA en tu tabla.
+                                <strong>Prueba de Conexión</strong>: Una vez registrada la cuenta, haz clic en el botón <strong class="text-white">🔌 Probar Conexión</strong>. El sistema verificará que la cuenta esté lista para recibir y enviar mensajes sin fallas.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Sección 2: Base de Datos de Contactos e IA -->
+                <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-6 rounded space-y-4">
+                    <h3 class="font-display text-lg uppercase tracking-wider text-[#ffd580] flex items-center gap-2">
+                        👥 2. Gestión de Contactos e Inteligencia Artificial
+                    </h3>
+                    <div class="text-xs text-[#dcdcdc] space-y-3 leading-relaxed">
+                        <p>
+                            Puedes alimentar tu lista de contactos de dos maneras:
+                        </p>
+                        <ol class="list-decimal pl-5 space-y-2">
+                            <li>
+                                <strong>Carga Manual</strong>: Usando el botón <strong class="text-white">➕ Agregar Contacto</strong> para registrar de forma inmediata a un destinatario con su correo, nombre y banda.
                             </li>
                             <li>
-                                Para automatizar el proceso y que funcione en piloto automático, puedes configurar el Cron Job de Hostinger tal como se explica a continuación.
+                                <strong>Sincronización Inteligente con IA (Recomendado)</strong>:
+                                <ul class="list-disc pl-5 mt-1 space-y-1 text-[#7b7b7b]">
+                                    <li>Haz clic en el botón <strong class="text-white">🔄 Sincronizar desde Gmail</strong>.</li>
+                                    <li>Elige cuál de tus cuentas configuradas deseas analizar y la carpeta a leer (ej. <code>INBOX</code> para la bandeja de entrada o <code>[Gmail]/Papelera</code> para escanear correos borrados).</li>
+                                    <li>El sistema analizará los correos de remitentes que no tengas guardados, extraerá el contenido y usará la <strong>IA de Google Gemini</strong> para identificar automáticamente el Nombre del remitente, el Nombre de la Banda de Rock o Empresa, y su Rol/Cargo (ej. Vocalista, Manager, Prensa).</li>
+                                </ul>
                             </li>
                         </ol>
                     </div>
                 </div>
 
-                <!-- Bloque 2: Automatización automática con Cron Job -->
-                <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.2)] p-6 space-y-4 rounded">
-                    <h3 class="font-display text-lg uppercase tracking-wider text-[#dcdcdc] flex items-center gap-2">
-                        ⚙️ Configuración del Cron Job (Automatización en Hostinger)
+                <!-- Sección 3: Creación y Envío de Campañas -->
+                <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-6 rounded space-y-4">
+                    <h3 class="font-display text-lg uppercase tracking-wider text-[#ffd580] flex items-center gap-2">
+                        ✉️ 3. Redactar y Enviar Campañas
                     </h3>
                     <div class="text-xs text-[#dcdcdc] space-y-3 leading-relaxed">
                         <p>
-                            Para no tener que presionar el botón manual, debes configurar una <strong>Tarea Programada (Cron Job)</strong> en el hPanel de Hostinger para procesar la cola de marketing en segundo plano:
+                            En la pestaña <strong>✉️ Enviar Campaña</strong> puedes redactar tus comunicados:
                         </p>
-                        <ul class="list-disc pl-5 space-y-1 mt-1 text-[#7b7b7b]">
-                            <li><strong>Tipo de Tarea:</strong> Comando personalizado / Custom</li>
-                            <li><strong>Intervalo / Frecuencia:</strong> Cada 1 minuto (o cada 5 minutos) <code>* * * * *</code></li>
-                            <li><strong>Comando a colocar:</strong></li>
+                        <ul class="list-disc pl-5 space-y-2 mt-1">
+                            <li>
+                                <strong>Remitente Flexible</strong>: Si tienes varias cuentas configuradas (ej. prensa@, info@), puedes seleccionar cuál de ellas se usará como remitente para esa campaña específica.
+                            </li>
+                            <li>
+                                <strong>Plantillas de Diseño Lucille</strong>: Selecciona el estilo visual que mejor se adapte a tu mensaje:
+                                <ul class="list-disc pl-5 mt-1 space-y-1 text-[#7b7b7b]">
+                                    <li><strong class="text-[#e0e0e0]">Servicio (Dark Rock)</strong>: Diseño premium de fondo oscuro con detalles en verde bosque, ideal para destacar tu marca o servicios de radio.</li>
+                                    <li><strong class="text-[#e0e0e0]">Boletín de Noticias (Newsletter)</strong>: Formato editorial limpio de estilo prensa para resúmenes de noticias y actualizaciones.</li>
+                                    <li><strong class="text-[#e0e0e0]">Oferta Especial</strong>: Caja destacada y visual para anunciar promociones, descuentos o patrocinios.</li>
+                                    <li><strong class="text-[#e0e0e0]">Contacto Directo</strong>: Simula un correo en texto plano escrito a mano para lograr máxima cercanía y confianza con el receptor.</li>
+                                    <li><strong class="text-[#e0e0e0]">Lanzamiento o Evento</strong>: Plantilla muy vistosa y rockera, ideal para estrenos de discos o conciertos.</li>
+                                </ul>
+                            </li>
+                            <li>
+                                <strong>Llamado a la Acción (Botón CTA)</strong>: Puedes activar un botón en la parte inferior del correo ingresando el texto personalizado (ej. "Escuchar en Vivo") y la dirección web de destino.
+                            </li>
+                            <li>
+                                <strong>Envío Asíncrono Seguro</strong>: Las campañas se envían en segundo plano. El sistema procesa los envíos incorporando pausas automáticas de 3 a 5 segundos entre cada destinatario. Esto previene que los servidores de correo cataloguen tu dominio o cuenta de Gmail como emisores de spam.
+                            </li>
                         </ul>
-                        <div class="mt-2 p-3 bg-black border border-[#2b2b2b] rounded font-mono text-[10px] text-[#ffd580] select-all break-all leading-normal">
-                            /opt/alt/php84/usr/bin/php /home/u531780502/domains/sevenrockradio.com/public_html/artisan queue:work --queue=marketing --stop-when-empty --tries=3 --timeout=600 &gt;&gt; /dev/null 2&gt;&amp;1
-                        </div>
-                        <p class="text-[10px] text-[#7b7b7b] mt-1 italic">
-                            *Nota: Usamos el parámetro <code>--stop-when-empty</code> para apagar el procesador tan pronto como la cola se quede vacía, liberando memoria RAM y recursos en tu hosting compartido. El comando se volverá a iniciar automáticamente al siguiente minuto.
-                        </p>
                     </div>
                 </div>
 
-                <!-- Bloque 3: Flujo de Email Marketing -->
-                <div class="grid md:grid-cols-2 gap-6 text-xs leading-relaxed text-[#dcdcdc]">
-                    <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.1)] p-5 space-y-3">
-                        <h4 class="font-bold text-[#c32720] uppercase tracking-wider">📥 Importación Inteligente (Scraping)</h4>
+                <!-- Sección 4: Historial de Envíos -->
+                <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-6 rounded space-y-4">
+                    <h3 class="font-display text-lg uppercase tracking-wider text-[#ffd580] flex items-center gap-2">
+                        📊 4. Seguimiento e Historial
+                    </h3>
+                    <div class="text-xs text-[#dcdcdc] leading-relaxed">
                         <p>
-                            Al sincronizar desde Gmail, el sistema descarga de forma segura los emails de la bandeja o papelera, descarta automáticamente firmas y logos pequeños, y envía el asunto y cuerpo a la IA de Gemini. La IA categoriza la información extrayendo el Nombre real, la Empresa o Banda musical, y su Cargo (ej. Vocalista, Mánager, Prensa).
-                        </p>
-                    </div>
-                    <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.1)] p-5 space-y-3">
-                        <h4 class="font-bold text-[#c32720] uppercase tracking-wider">📤 Envío de Campañas (SMTP Dinámico)</h4>
-                        <p>
-                            Cuando creas una campaña y la envías, Laravel toma la cuenta configurada como remitente y reconfigura el correo SMTP en caliente. Esto asegura que cada campaña salga desde el correo específico que elegiste. Además, el sistema incorpora pausas automáticas de 3 a 5 segundos entre cada lote para cumplir con las políticas anti-spam de Google.
+                            En la pestaña <strong>📊 Historial de Envíos</strong> puedes dar seguimiento en tiempo real al estado de tus campañas: sabrás con precisión si están en proceso de despacho, finalizadas o si hubo algún error de conexión durante el envío masivo, detallando el número total de correos que se enviaron con éxito.
                         </p>
                     </div>
                 </div>
