@@ -440,7 +440,7 @@
                     </div>
                     <div class="md:col-span-2">
                         <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Contraseña de Aplicación IMAP</label>
-                        <input type="password" name="imap_password" required class="lucille-product-field w-full" placeholder="Contraseña de aplicación de 16 caracteres de Google">
+                        <input type="password" name="imap_password" required autocomplete="new-password" class="lucille-product-field w-full" placeholder="Contraseña de aplicación de 16 caracteres de Google">
                     </div>
 
                     <!-- Configuración SMTP -->
@@ -467,7 +467,7 @@
                     </div>
                     <div class="md:col-span-2">
                         <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Contraseña de Aplicación SMTP</label>
-                        <input type="password" name="smtp_password" required class="lucille-product-field w-full" placeholder="Normalmente la misma contraseña de aplicación">
+                        <input type="password" name="smtp_password" required autocomplete="new-password" class="lucille-product-field w-full" placeholder="Normalmente la misma contraseña de aplicación">
                     </div>
 
                     <div class="md:col-span-2 flex justify-end gap-3 pt-4 border-t border-[#2b2b2b] mt-4">
@@ -519,7 +519,7 @@
                     </div>
                     <div class="md:col-span-2">
                         <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nueva Contraseña de Aplicación IMAP (Dejar vacío para no cambiar)</label>
-                        <input type="password" name="imap_password" class="lucille-product-field w-full" placeholder="Omitir si no deseas cambiarla">
+                        <input type="password" name="imap_password" autocomplete="new-password" class="lucille-product-field w-full" placeholder="Omitir si no deseas cambiarla">
                     </div>
 
                     <!-- Configuración SMTP -->
@@ -546,7 +546,7 @@
                     </div>
                     <div class="md:col-span-2">
                         <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nueva Contraseña de Aplicación SMTP (Dejar vacío para no cambiar)</label>
-                        <input type="password" name="smtp_password" class="lucille-product-field w-full" placeholder="Omitir si no deseas cambiarla">
+                        <input type="password" name="smtp_password" autocomplete="new-password" class="lucille-product-field w-full" placeholder="Omitir si no deseas cambiarla">
                     </div>
 
                     <div class="md:col-span-2 mt-2 border-t border-[#2b2b2b] pt-3 flex items-center gap-2">
