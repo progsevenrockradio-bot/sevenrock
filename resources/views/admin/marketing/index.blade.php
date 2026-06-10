@@ -164,7 +164,14 @@
                                         {{ $contact->created_at->format('d/m/Y H:i') }}
                                     </td>
                                     <td class="p-4 text-right">
-                                        <form action="{{ route('admin.marketing.contacts.delete', $contact->id) }}" method="POST" onsubmit="return confirm('¿Eliminar este contacto de la lista?')">
+                                        <form 
+                                            action="{{ route('admin.marketing.contacts.delete', $contact->id) }}" 
+                                            method="POST"
+                                            data-confirm="¿Eliminar este contacto de la lista?"
+                                            data-confirm-title="Eliminar contacto"
+                                            data-confirm-action="Eliminar"
+                                            data-confirm-tone="danger"
+                                        >
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-xs text-[#ff9e9e] hover:underline">Eliminar</button>
@@ -197,7 +204,15 @@
                     <p class="text-sm">Debes agregar al menos una cuenta de correo en la pestaña de "Cuentas de Correo" antes de poder enviar campañas.</p>
                 </div>
             @else
-                <form action="{{ route('admin.marketing.campaigns.store') }}" method="POST" class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8 space-y-6">
+                <form 
+                    action="{{ route('admin.marketing.campaigns.store') }}" 
+                    method="POST" 
+                    class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8 space-y-6"
+                    data-confirm="¿Confirmas el envío de esta campaña a todos tus contactos? El proceso se ejecutará en segundo plano."
+                    data-confirm-title="Confirmar envío de campaña"
+                    data-confirm-action="Enviar"
+                    data-confirm-tone="soft"
+                >
                     @csrf
                     <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-4">Redactar Nueva Campaña</h2>
                     
@@ -251,7 +266,7 @@
                     </div>
 
                     <div class="border-t border-[#2b2b2b] pt-6 flex justify-end">
-                        <button type="submit" class="lucille-button-solid bg-[#c32720] border-[#c32720]" onclick="return confirm('¿Confirmas el envío de esta campaña a todos tus contactos? El proceso correrá en segundo plano.')">
+                        <button type="submit" class="lucille-button-solid bg-[#c32720] border-[#c32720]">
                             🚀 Despachar Campaña en Lotes
                         </button>
                     </div>
@@ -294,7 +309,15 @@
                                 <button type="button" class="lucille-button text-xs flex-1" @click="editAccountData = {{ Js::from($acc) }}">
                                     Editar
                                 </button>
-                                <form action="{{ route('admin.marketing.accounts.delete', $acc->id) }}" method="POST" onsubmit="return confirm('¿Eliminar esta cuenta de correo?')" class="inline flex-1">
+                                <form 
+                                    action="{{ route('admin.marketing.accounts.delete', $acc->id) }}" 
+                                    method="POST" 
+                                    class="inline flex-1"
+                                    data-confirm="¿Eliminar esta cuenta de correo?"
+                                    data-confirm-title="Eliminar cuenta de correo"
+                                    data-confirm-action="Eliminar"
+                                    data-confirm-tone="danger"
+                                >
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="lucille-button text-xs text-[#ff9e9e] border-[#7a2b2b] w-full">Eliminar</button>
