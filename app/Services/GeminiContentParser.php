@@ -56,10 +56,12 @@ Cuerpo del correo:
 {$body}
 PROMPT;
 
+        $model = config('services.gemini.model', 'gemini-1.5-flash');
+
         try {
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
-            ])->post("https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
+            ])->post("https://generativelanguage.googleapis.com/v1/models/{$model}:generateContent?key={$apiKey}", [
                 'contents' => [
                     [
                         'parts' => [

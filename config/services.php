@@ -53,6 +53,10 @@ return [
         'key' => env('MUSIXMATCH_API_KEY'),
     ],
 
+    'gemini' => [
+        'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
+    ],
+
     'archive_org' => [
         'access_key' => env('ARCHIVE_ORG_ACCESS_KEY'),
         'secret_key' => env('ARCHIVE_ORG_SECRET_KEY'),
