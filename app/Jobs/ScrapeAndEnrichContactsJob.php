@@ -96,7 +96,7 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
             }
 
             Log::info("ScrapeAndEnrichContactsJob: Escaneando carpeta '{$targetFolder->path}'...");
-            $messages = $targetFolder->query()->limit($this->limit)->get();
+            $messages = $targetFolder->query()->all()->limit($this->limit)->get();
 
             Log::info("ScrapeAndEnrichContactsJob: Analizando " . count($messages) . " correos...");
             $parser = app(GeminiContentParser::class);
