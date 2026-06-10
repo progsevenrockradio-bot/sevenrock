@@ -48,12 +48,15 @@ class MarketingController extends Controller
             ? \Illuminate\Support\Facades\DB::table('failed_jobs')->count()
             : 0;
 
+        $logs = $this->getLatestLogs(50);
+
         return view('admin.marketing.index', [
             'accounts' => $accounts,
             'contacts' => $contacts,
             'campaigns' => $campaigns,
             'pendingJobsCount' => $pendingJobsCount,
             'failedJobsCount' => $failedJobsCount,
+            'logs' => $logs,
             'templates' => [
                 'promo_service' => 'Promoción de Servicio (Dark Rock)',
                 'newsletter' => 'Boletín de Noticias (Newsletter)',
@@ -292,5 +295,63 @@ class MarketingController extends Controller
             return redirect()->route('admin.marketing.index', ['tab' => 'contacts'])
                 ->with('error', 'Error al ejecutar el procesador de tareas: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Read the latest lines of laravel.log
+     */
+    private function getLatestLogs(int $lineCount = 50): array
+    {
+        $logPath = storage_path('logs/laravel.log');
+        if (!file_exists($logPath)) {
+            return ['Archivo laravel.log no encontrado.'];
+        }
+
+        $file = @fopen($logPath, 'r');
+        if (!$file) {
+            return ['No se pudo abrir el archivo laravel.log.'];
+        }
+
+        $lines = [];
+        $cursor = -1;
+
+        if (@fseek($file, $cursor, SEEK_END) !== -1) {
+            $char = @fgetc($file);
+
+            if ($char === "\n" || $char === "\r") {
+                $cursor--;
+                @fseek($file, $cursor, SEEK_END);
+                $char = @fgetc($file);
+            }
+
+            $line = '';
+            while ($cursor > -1000000) { // Limit to 1MB from end
+                if (@fseek($file, $cursor, SEEK_END) === -1) {
+                    break;
+                }
+                $char = @fgetc($file);
+                if ($char === false) {
+                    break;
+                }
+                if ($char === "\n" || $char === "\r") {
+                    if ($line !== '') {
+                        $lines[] = strrev($line);
+                        $line = '';
+                        if (count($lines) >= $lineCount) {
+                            break;
+                        }
+                    }
+                } else {
+                    $line .= $char;
+                }
+                $cursor--;
+            }
+            if ($line !== '' && count($lines) < $lineCount) {
+                $lines[] = strrev($line);
+            }
+        }
+        @fclose($file);
+
+        return $lines;
     }
 }

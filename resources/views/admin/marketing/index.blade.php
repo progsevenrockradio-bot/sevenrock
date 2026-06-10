@@ -473,6 +473,25 @@
                         </p>
                     </div>
                 </div>
+
+                <!-- Sección 5: Logs de Diagnóstico -->
+                <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.2)] p-6 rounded space-y-4">
+                    <h3 class="font-display text-lg uppercase tracking-wider text-[#dcdcdc] flex items-center gap-2">
+                        📋 5. Registro de Actividad Reciente (Logs)
+                    </h3>
+                    <div class="text-xs text-[#dcdcdc] space-y-3 leading-relaxed">
+                        <p>
+                            A continuación se muestran las últimas 30 líneas del registro de actividad (logs) del sistema. Úsalas para verificar si la sincronización de contactos o envíos tuvieron éxito o si se produjo algún error con Gmail o la API de Gemini:
+                        </p>
+                        <div class="p-4 bg-black border border-[#2b2b2b] rounded font-mono text-[10px] text-[#b8e6c3] overflow-x-auto max-h-72 overflow-y-auto space-y-1 select-all">
+                            @forelse($logs as $logLine)
+                                <div class="whitespace-pre-wrap leading-normal py-0.5 border-b border-[rgba(255,255,255,.03)] hover:bg-[rgba(255,255,255,.02)]">{{ $logLine }}</div>
+                            @empty
+                                <div class="text-[#7b7b7b] italic">No hay registros de actividad recientes en laravel.log.</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
