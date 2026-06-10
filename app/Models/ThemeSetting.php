@@ -22,6 +22,7 @@ class ThemeSetting extends Model
         'logo_height' => 'integer',
         'email_auto_publish' => 'bool',
         'email_processing_enabled' => 'bool',
+        'email_min_importance' => 'integer',
     ];
 
     protected $fillable = [
@@ -77,6 +78,8 @@ class ThemeSetting extends Model
         'archive_secret_key',
         'email_default_cover_path',
         'email_processing_enabled',
+        'email_min_importance',
+        'email_whitelist_senders',
     ];
 
     public static function defaults(): array
@@ -85,6 +88,8 @@ class ThemeSetting extends Model
             'site_name' => 'Seven Rock Radio',
             'email_auto_publish' => false,
             'email_processing_enabled' => true,
+            'email_min_importance' => 1,
+            'email_whitelist_senders' => null,
             'gemini_api_key' => null,
             'archive_access_key' => null,
             'archive_secret_key' => null,

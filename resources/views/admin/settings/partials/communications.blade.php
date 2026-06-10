@@ -176,6 +176,26 @@
             </div>
 
             <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Relevancia Mínima de Correo (Filtro IA)</label>
+                <select name="email_min_importance" class="lucille-product-field lucille-select-field w-full">
+                    <option value="1" @selected(old('email_min_importance', $settings->email_min_importance) == 1)>1 - Procesar todo (sin filtros de relevancia)</option>
+                    <option value="2" @selected(old('email_min_importance', $settings->email_min_importance) == 2)>2 - Relevancia baja o superior</option>
+                    <option value="3" @selected(old('email_min_importance', $settings->email_min_importance) == 3)>3 - Relevancia media o superior (Recomendado)</option>
+                    <option value="4" @selected(old('email_min_importance', $settings->email_min_importance) == 4)>4 - Relevancia alta o superior</option>
+                    <option value="5" @selected(old('email_min_importance', $settings->email_min_importance) == 5)>5 - Solo noticias o lanzamientos muy importantes</option>
+                </select>
+                <p class="mt-2 text-xs text-[#7b7b7b]">Filtra los correos usando la evaluación automática de importancia que realiza Gemini (1 a 5).</p>
+                @error('email_min_importance')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Lista Blanca de Remitentes de Confianza (Whitelist)</label>
+                <textarea name="email_whitelist_senders" rows="3" class="lucille-product-field w-full" placeholder="ejemplo@correo.com, @dominio.com, metaldevastationpr.com">{{ old('email_whitelist_senders', $settings->email_whitelist_senders) }}</textarea>
+                <p class="mt-2 text-xs text-[#7b7b7b]">Ingresa correos completos o dominios (con o sin @) separados por comas. Los correos de estos remitentes se procesarán **siempre**, ignorando el filtro de relevancia mínima.</p>
+                @error('email_whitelist_senders')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
+            <div>
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Gemini API Key</label>
                 <input type="password" name="gemini_api_key" value="{{ old('gemini_api_key', $settings->gemini_api_key) }}" class="lucille-product-field w-full" placeholder="API Key de Google Gemini">
                 <p class="mt-2 text-xs text-[#7b7b7b]">Clave de acceso de Google AI para procesar, limpiar y redactar correos.</p>

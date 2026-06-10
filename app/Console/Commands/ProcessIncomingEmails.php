@@ -101,7 +101,25 @@ class ProcessIncomingEmails extends Command
                     continue;
                 }
 
-                $this->info("Procesando correo: {$subject}");
+                // Obtener remitente
+                $fromAttribute = $message->getFrom();
+                $senderAddress = $fromAttribute ? $fromAttribute->first() : null;
+                $senderEmail = $senderAddress instanceof \Webklex\PHPIMAP\Address ? trim((string) $senderAddress->mail) : null;
+
+                $isWhitelisted = false;
+                if ($senderEmail && $settings->email_whitelist_senders) {
+                    $whitelist = array_values(array_filter(array_map('trim', explode(',', $settings->email_whitelist_senders))));
+                    foreach ($whitelist as $allowed) {
+                        if ($allowed !== '') {
+                            if (strcasecmp($senderEmail, $allowed) === 0 || str_ends_with(strtolower($senderEmail), strtolower($allowed))) {
+                                $isWhitelisted = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                $this->info("Procesando correo de " . ($senderEmail ?: 'Remitente Desconocido') . " (Lista blanca: " . ($isWhitelisted ? 'SI' : 'NO') . "): {$subject}");
 
                 // Extraer adjuntos
                 $tempMp3Path = null;
@@ -181,6 +199,42 @@ class ProcessIncomingEmails extends Command
 
                 $type = $parsed['type'];
                 $title = $parsed['title'] ?? 'Sin título';
+                $importance = isset($parsed['importance']) ? (int) $parsed['importance'] : 1;
+
+                // 1. Filtrar si es descarte/spam
+                if ($type === 'discard') {
+                    $this->info("Correo descartado por la IA (spam/publicidad/promo): {$subject}");
+                    DB::table('processed_emails')->insert([
+                        'message_id' => $messageId,
+                        'subject' => $subject,
+                        'status' => 'discarded',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    if ($tempMp3Path && file_exists($tempMp3Path)) {
+                        @unlink($tempMp3Path);
+                    }
+                    $message->setFlag('SEEN');
+                    continue;
+                }
+
+                // 2. Filtrar por relevancia si no está en lista blanca
+                $minImportance = (int) ($settings->email_min_importance ?? 1);
+                if (! $isWhitelisted && $importance < $minImportance) {
+                    $this->info("Correo omitido por baja relevancia (Relevancia: {$importance} < Mínima: {$minImportance}): {$subject}");
+                    DB::table('processed_emails')->insert([
+                        'message_id' => $messageId,
+                        'subject' => $subject,
+                        'status' => 'skipped',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    if ($tempMp3Path && file_exists($tempMp3Path)) {
+                        @unlink($tempMp3Path);
+                    }
+                    $message->setFlag('SEEN');
+                    continue;
+                }
 
                 if ($type === 'post') {
                     // Validar límite
@@ -210,6 +264,7 @@ class ProcessIncomingEmails extends Command
                             'youtube_url' => $parsed['youtube_url'] ?? null,
                             'instagram_url' => $parsed['instagram_url'] ?? null,
                             'twitter_url' => $parsed['twitter_url'] ?? null,
+                            'author_email' => $senderEmail,
                         ]);
                         $postsCreatedToday++;
                         $this->info("Post creado con éxito en estado [{$status}]: {$title}");
@@ -242,6 +297,7 @@ class ProcessIncomingEmails extends Command
                             'cover_image' => $coverUrl,
                             'youtube_url' => $parsed['youtube_url'] ?? null,
                             'spotify_url' => $parsed['spotify_url'] ?? null,
+                            'author_email' => $senderEmail,
                         ]);
 
                         $releasesCreatedToday++;

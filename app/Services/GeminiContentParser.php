@@ -34,20 +34,22 @@ Tu tarea es analizar el correo electrónico recibido (asunto y cuerpo) y convert
 El correo puede tratar sobre un "Nuevo Lanzamiento" de un disco/sencillo/video de una banda de rock, o bien ser una noticia general/artículo para el "Blog" (Post).
 
 Sigue estas reglas estrictas:
-1. Identifica el tipo de contenido:
-   - "release": Si habla de un nuevo disco, EP, single, videoclip o canción recién lanzada por una banda/artista.
-   - "post": Si es una noticia de música, crónica de concierto, artículo de opinión o texto informativo general.
-2. Limpia el texto de firmas de correo, saludos iniciales (ej. "Hola Seven Rock Radio"), despedidas e información de contacto del email.
-3. Traduce o reescribe el contenido al español con un tono periodístico, profesional, emocionante y con alta calidad gramatical (propio de una revista de rock).
-4. Si es "release", identifica y separa el "artist_name" (Nombre de la banda/artista) y el "title" (Nombre de la canción o disco).
-5. Si es "post", identifica y separa el "title" (un titular atractivo en español para el post).
-6. Extrae los siguientes enlaces si se encuentran en el texto (deben ser URLs completas válidas):
+1. Identifica el tipo de contenido ("type"):
+   - "release": Si habla de un nuevo disco, EP, single, videoclip o canción recién lanzada por una banda/artista de rock/metal.
+   - "post": Si es una noticia de música, crónica de concierto, artículo de opinión o texto informativo general relevante sobre rock/metal.
+   - "discard": Si es correo no deseado (spam), promociones o publicidad pagada de agencias de relaciones públicas sobre sus planes/servicios, correos personales sin información musical, o cualquier otra cosa que no sea de interés periodístico sobre artistas o bandas de rock.
+2. Evalúa la importancia/relevancia del correo para la audiencia de la radio ("importance"): un número entero del 1 al 5 (donde 5 es de importancia crítica como lanzamientos o noticias de bandas muy reconocidas, 3-4 es para lanzamientos y noticias normales del género, 2 es para comunicados poco interesantes o periféricos, y 1 es para publicidad descartada o irrelevante).
+3. Limpia el texto de firmas de correo, saludos iniciales (ej. "Hola Seven Rock Radio"), despedidas e información de contacto del email.
+4. Traduce o reescribe el contenido al español con un tono periodístico, profesional, emocionante y con alta calidad gramatical (propio de una revista de rock).
+5. Si es "release", identifica y separa el "artist_name" (Nombre de la banda/artista) y el "title" (Nombre de la canción o disco).
+6. Si es "post", identifica y separa el "title" (un titular atractivo en español para el post).
+7. Extrae los siguientes enlaces si se encuentran en el texto (deben ser URLs completas válidas):
    - "youtube_url": Enlace a un video de YouTube.
    - "spotify_url": Enlace a Spotify.
    - "facebook_url": Enlace a una página o publicación de Facebook.
    - "instagram_url": Enlace a Instagram.
    - "twitter_url": Enlace a Twitter/X.
-7. Genera un "excerpt" (resumen corto de 150-180 caracteres) y el "content" (el cuerpo principal limpio y bien redactado, separado por párrafos con salto de línea doble).
+8. Genera un "excerpt" (resumen corto de 150-180 caracteres) y el "content" (el cuerpo principal limpio y bien redactado, separado por párrafos con salto de línea doble). Si el correo es "discard", puedes poner texto genérico de descarte en estos campos.
 
 Devuelve la respuesta estrictamente en formato JSON utilizando el esquema indicado.
 
@@ -99,8 +101,12 @@ PROMPT;
                         'properties' => [
                             'type' => [
                                 'type' => 'STRING',
-                                'enum' => ['post', 'release'],
+                                'enum' => ['post', 'release', 'discard'],
                                 'description' => 'El tipo de contenido clasificado.'
+                            ],
+                            'importance' => [
+                                'type' => 'INTEGER',
+                                'description' => 'Un valor del 1 al 5 que califica la importancia o relevancia.'
                             ],
                             'title' => [
                                 'type' => 'STRING',
@@ -139,7 +145,7 @@ PROMPT;
                                 'description' => 'URL de Twitter/X extraída.'
                             ]
                         ],
-                        'required' => ['type', 'title', 'excerpt', 'content']
+                        'required' => ['type', 'importance', 'title', 'excerpt', 'content']
                     ]
                 ]
             ]);
