@@ -61,7 +61,7 @@ PROMPT;
         try {
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
-            ])->post("https://generativelanguage.googleapis.com/v1/models/{$model}:generateContent?key={$apiKey}", [
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
                 'contents' => [
                     [
                         'parts' => [
@@ -69,9 +69,9 @@ PROMPT;
                         ]
                     ]
                 ],
-                'generation_config' => [
-                    'response_mime_type' => 'application/json',
-                    'response_schema' => [
+                'generationConfig' => [
+                    'responseMimeType' => 'application/json',
+                    'responseSchema' => [
                         'type' => 'OBJECT',
                         'properties' => [
                             'type' => [
@@ -122,7 +122,24 @@ PROMPT;
             ]);
 
             if ($response->failed()) {
-                $this->lastError = "HTTP Code " . $response->status() . " - " . $response->body();
+                $errorMsg = "HTTP Code " . $response->status() . " - " . $response->body();
+                try {
+                    // Consultar los modelos disponibles para esta API Key para dar diagnóstico
+                    $modelsListResponse = Http::get("https://generativelanguage.googleapis.com/v1beta/models?key={$apiKey}");
+                    if ($modelsListResponse->successful()) {
+                        $modelsData = $modelsListResponse->json();
+                        $modelNames = [];
+                        foreach ($modelsData['models'] ?? [] as $m) {
+                            if (isset($m['name'])) {
+                                $modelNames[] = str_replace('models/', '', $m['name']);
+                            }
+                        }
+                        $errorMsg .= "\n  -> Modelos disponibles para tu API Key: " . implode(', ', $modelNames);
+                    }
+                } catch (\Throwable $e) {
+                    // Ignorar excepciones al listar modelos
+                }
+                $this->lastError = $errorMsg;
                 Log::error("Gemini API Error: " . $response->body());
                 return null;
             }
