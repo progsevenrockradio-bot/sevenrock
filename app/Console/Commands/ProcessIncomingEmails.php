@@ -303,15 +303,36 @@ class ProcessIncomingEmails extends Command
                         $releasesCreatedToday++;
                         $this->info("Lanzamiento creado con éxito en estado " . ($isActive ? '[Activo]' : '[Borrador]') . ": {$title} - {$artistName}");
 
-                        // Si hay MP3 adjunto, encolar subida a Archive.org
+                        // Si hay MP3 adjunto, guardar localmente y encolar subidas a RadioBOSS y Archive.org
                         if ($tempMp3Path) {
-                            \App\Jobs\UploadMp3ToArchiveOrg::dispatch(
-                                $release->id,
-                                $tempMp3Path,
-                                $tempMp3Name
-                            );
-                            $this->info("Subida a Archive.org encolada en segundo plano para el MP3: {$tempMp3Name}");
-                            $tempMp3Path = null; // Evitar que se borre en este ciclo
+                            try {
+                                $fileContent = file_get_contents($tempMp3Path);
+                                $cleanName = Str::slug(pathinfo($tempMp3Name, PATHINFO_FILENAME)) . '.mp3';
+                                
+                                // 1. Guardar permanentemente en local/B2 para el reproductor web
+                                $uploadedAudio = app(\App\Services\FileUploadService::class)->uploadRaw(
+                                    $fileContent,
+                                    'catalog/releases/audios/' . Str::uuid()->toString() . '/' . $cleanName
+                                );
+                                
+                                $release->update([
+                                    'audio_path' => $uploadedAudio['url'],
+                                ]);
+                                
+                                $this->info("Audio del lanzamiento guardado permanentemente en la web: {$uploadedAudio['url']}");
+                                
+                                // 2. Despachar cadena de trabajos en segundo plano: RadioBOSS FTP primero, luego Archive.org como respaldo (el cual limpia el archivo temporal al final)
+                                \Illuminate\Support\Facades\Bus::chain([
+                                    new \App\Jobs\UploadMp3ToRadiobossJob($release->id, $tempMp3Path, $tempMp3Name, 'RADIO/Lanzamientos'),
+                                    new \App\Jobs\UploadMp3ToArchiveOrg($release->id, $tempMp3Path, $tempMp3Name)
+                                ])->dispatch();
+                                
+                                $this->info("Subidas a RadioBOSS y Archive.org encoladas en cadena.");
+                                $tempMp3Path = null; // Evitar que se borre en este ciclo
+                            } catch (\Throwable $e) {
+                                Log::error("ProcessIncomingEmails: Error al procesar audio adjunto: " . $e->getMessage());
+                                $this->error("Error al procesar audio: " . $e->getMessage());
+                            }
                         }
                     }
                 }
