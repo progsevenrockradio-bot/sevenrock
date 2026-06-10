@@ -86,7 +86,7 @@ return [
         'encryption' => env('IMAP_ENCRYPTION', 'ssl'),
         'username' => env('IMAP_USERNAME'),
         'password' => env('IMAP_PASSWORD'),
-        'validate_cert' => env('IMAP_VALIDATE_CERT', true),
+        'validate_cert' => env('IMAP_VALIDATE_CERT', false),
         'archive_bucket' => env('EMAIL_ARCHIVE_BUCKET'),
     ],
 
