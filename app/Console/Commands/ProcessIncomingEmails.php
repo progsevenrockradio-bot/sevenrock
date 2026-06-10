@@ -43,11 +43,11 @@ class ProcessIncomingEmails extends Command
             return 1;
         }
 
-        $imapHost = env('IMAP_HOST', 'imap.gmail.com');
-        $imapPort = (int) env('IMAP_PORT', 993);
-        $imapEncryption = env('IMAP_ENCRYPTION', 'ssl');
-        $imapUsername = env('IMAP_USERNAME', $settings->notification_email);
-        $imapPassword = env('IMAP_PASSWORD');
+        $imapHost = config('services.imap.host', 'imap.gmail.com');
+        $imapPort = (int) config('services.imap.port', 993);
+        $imapEncryption = config('services.imap.encryption', 'ssl');
+        $imapUsername = config('services.imap.username') ?: $settings->notification_email;
+        $imapPassword = config('services.imap.password');
 
         if (empty($imapPassword)) {
             $this->error('La contraseña de IMAP (IMAP_PASSWORD) no está configurada en el archivo .env.');

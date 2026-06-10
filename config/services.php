@@ -76,4 +76,12 @@ return [
         'default_sync_archive_org' => env('PODCAST_INGEST_DEFAULT_SYNC_ARCHIVE_ORG', true),
     ],
 
+    'imap' => [
+        'host' => env('IMAP_HOST', 'imap.gmail.com'),
+        'port' => env('IMAP_PORT', 993),
+        'encryption' => env('IMAP_ENCRYPTION', 'ssl'),
+        'username' => env('IMAP_USERNAME'),
+        'password' => env('IMAP_PASSWORD'),
+    ],
+
 ];
