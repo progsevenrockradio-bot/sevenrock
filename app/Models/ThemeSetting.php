@@ -74,6 +74,7 @@ class ThemeSetting extends Model
         'gemini_api_key',
         'archive_access_key',
         'archive_secret_key',
+        'email_default_cover_path',
     ];
 
     public static function defaults(): array
@@ -512,20 +513,26 @@ class ThemeSetting extends Model
         ];
     }
 
+    protected static ?self $currentSettings = null;
+
     public static function current(): self
     {
+        if (self::$currentSettings !== null) {
+            return self::$currentSettings;
+        }
+
         if (! filter_var(env('THEME_SETTINGS_FROM_DB', true), FILTER_VALIDATE_BOOLEAN)) {
-            return new static(static::defaults());
+            return self::$currentSettings = new static(static::defaults());
         }
 
         try {
             if (! Schema::hasTable('theme_settings')) {
-                return new static(static::defaults());
+                return self::$currentSettings = new static(static::defaults());
             }
 
-            return static::query()->first() ?? static::query()->create(static::defaults());
+            return self::$currentSettings = static::query()->first() ?? static::query()->create(static::defaults());
         } catch (\Throwable) {
-            return new static(static::defaults());
+            return self::$currentSettings = new static(static::defaults());
         }
     }
 

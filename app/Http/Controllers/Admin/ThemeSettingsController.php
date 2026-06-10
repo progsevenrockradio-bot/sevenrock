@@ -128,6 +128,7 @@ class ThemeSettingsController extends Controller
             'gemini_api_key' => ['nullable', 'string', 'max:255'],
             'archive_access_key' => ['nullable', 'string', 'max:255'],
             'archive_secret_key' => ['nullable', 'string', 'max:255'],
+            'email_default_cover' => ['nullable', 'image', 'max:4096'],
         ]);
 
         $settings->fill(collect($validated)->except([
@@ -164,6 +165,7 @@ class ThemeSettingsController extends Controller
             'gemini_api_key',
             'archive_access_key',
             'archive_secret_key',
+            'email_default_cover',
         ])->all());
 
         foreach ([
@@ -174,6 +176,7 @@ class ThemeSettingsController extends Controller
             'home_album_cover' => 'home_album_cover_path',
             'home_video_image' => 'home_video_image_path',
             'hero_video' => 'hero_video_path',
+            'email_default_cover' => 'email_default_cover_path',
         ] as $input => $column) {
             if ($request->hasFile($input)) {
                 $this->removeIfUploaded($settings->{$column});

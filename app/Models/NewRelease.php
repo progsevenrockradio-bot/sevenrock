@@ -106,7 +106,16 @@ class NewRelease extends Model
 
     public function getCoverImageUrlAttribute(): string
     {
-        return PublicMediaUrl::normalizePublicUrl($this->cover_image) ?: asset('assets/lucille/album3.jpg');
+        if ($this->cover_image) {
+            return PublicMediaUrl::normalizePublicUrl($this->cover_image);
+        }
+
+        $settings = ThemeSetting::current();
+        if ($settings && $settings->email_default_cover_path) {
+            return PublicMediaUrl::normalizePublicUrl($settings->email_default_cover_path);
+        }
+
+        return asset('assets/lucille/album3.jpg');
     }
 
     public function getAudioUrlAttribute(): string

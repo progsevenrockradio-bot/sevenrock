@@ -184,6 +184,23 @@
                 <input type="password" name="archive_secret_key" value="{{ old('archive_secret_key', $settings->archive_secret_key) }}" class="lucille-product-field w-full" placeholder="Clave Secreta (Secret Key)">
                 @error('archive_secret_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
             </div>
+
+            <div class="md:col-span-2 border-t border-[#2b2b2b] pt-5 mt-3">
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Portada Predeterminada de Respaldo (Backup)</label>
+                @if($settings->email_default_cover_path)
+                    <div class="mb-3 flex items-center gap-4">
+                        <img src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($settings->email_default_cover_path) }}" class="h-20 w-20 object-cover border border-[#2b2b2b]">
+                        <span class="text-xs text-[#7b7b7b]">Esta imagen se usará automáticamente cuando los correos no contengan portadas o fotos grandes.</span>
+                    </div>
+                @else
+                    <div class="mb-3 flex items-center gap-4">
+                        <div class="h-20 w-20 bg-[#16161a] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#7b7b7b] uppercase text-center p-1 font-display leading-tight">Backup General</div>
+                        <span class="text-xs text-[#7b7b7b]">Actualmente usando la portada genérica de la web (assets/lucille/album3.jpg). Sube una imagen personalizada para cambiarla.</span>
+                    </div>
+                @endif
+                <input type="file" name="email_default_cover" class="lucille-product-field w-full file:bg-[#16161a] file:border-[#2b2b2b] file:text-[#dcdcdc]">
+                @error('email_default_cover')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
         </div>
     </div>
 </section>
