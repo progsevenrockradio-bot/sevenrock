@@ -80,5 +80,15 @@ class AppServiceProvider extends ServiceProvider
         View::share('themeSettings', ThemeSetting::current());
         View::share('themeAppearance', ThemeAppearance::resolved());
         View::share('admin', ThemeAppearance::resolved()['admin_texts'] ?? []);
+
+        // Dynamic check for scheduled posts (fallback if cron is not running)
+        if (! $this->app->runningInConsole() && ! cache()->has('posts.schedule_check')) {
+            cache()->put('posts.schedule_check', true, now()->addMinute());
+            try {
+                \Illuminate\Support\Facades\Artisan::call('posts:publish-scheduled');
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Dynamic scheduled post publish failed: ' . $e->getMessage());
+            }
+        }
     }
 }

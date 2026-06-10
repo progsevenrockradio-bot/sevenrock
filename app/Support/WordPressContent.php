@@ -181,6 +181,7 @@ final class WordPressContent
         $html = self::stripWpComments($html);
         $html = preg_replace('/^\s*<p[^>]*>|<\/p>\s*$/i', '', $html) ?? $html;
         $html = preg_replace('/^\s*<div[^>]*>|<\/div>\s*$/i', '', $html) ?? $html;
+        $html = preg_replace('/<br\s*\/?>/i', "\n", $html) ?? $html;
 
         return trim($html);
     }
@@ -256,7 +257,7 @@ final class WordPressContent
             return '';
         }
 
-        $html = '<blockquote><p>'.e($text).'</p>';
+        $html = '<blockquote><p>'.nl2br(e($text)).'</p>';
         if ($cite !== '') {
             $html .= '<cite>'.e($cite).'</cite>';
         }
@@ -340,7 +341,7 @@ final class WordPressContent
 
     private static function rewriteBareUrlsInText(string $text): string
     {
-        return self::rewriteBareUrlsInHtml(e($text));
+        return nl2br(self::rewriteBareUrlsInHtml(e($text)));
     }
 
     private static function rewriteBareUrlsInHtml(string $html): string

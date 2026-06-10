@@ -31,14 +31,25 @@ class PostController extends Controller
 
     public function create(): View
     {
+        $latestPost = Post::query()
+            ->whereNotNull('author_email')
+            ->where('author_email', '!=', '')
+            ->orderByDesc('id')
+            ->first();
+
+        $post = new Post([
+            'published_at' => now(),
+            'categories' => [],
+            'tags' => [],
+            'content' => [],
+            'is_published' => true,
+            'author_email' => $latestPost?->author_email,
+            'notification_sender' => $latestPost?->notification_sender,
+            'timezone' => $latestPost?->timezone ?? 'Europe/Madrid',
+        ]);
+
         return view('admin.posts.create', [
-            'post' => new Post([
-                'published_at' => now(),
-                'categories' => [],
-                'tags' => [],
-                'content' => [],
-                'is_published' => true,
-            ]),
+            'post' => $post,
             'editorBlocks' => [
                 ['type' => 'paragraph', 'value' => ''],
             ],
@@ -80,6 +91,10 @@ class PostController extends Controller
 
     public function edit(Post $post): View
     {
+        if ($post->published_at) {
+            $post->published_at = $post->published_at->timezone($post->timezone ?? 'Europe/Madrid');
+        }
+
         return view('admin.posts.edit', [
             'post' => $post,
             'editorBlocks' => WordPressContent::toEditorBlocks($post->content ?? []),
@@ -194,12 +209,20 @@ class PostController extends Controller
             'categories_text' => ['nullable', 'string'],
             'tags_text' => ['nullable', 'string'],
             'is_published' => ['nullable', 'boolean'],
+            'author_email' => ['nullable', 'email', 'max:255'],
+            'notification_sender' => ['nullable', 'email', 'max:255'],
+            'timezone' => ['nullable', 'string', 'timezone:all'],
         ]);
 
         $validated['author'] = trim((string) ($validated['author'] ?? '')) !== ''
             ? trim((string) $validated['author'])
             : 'admin';
-        $validated['published_at'] = ! empty($validated['published_at']) ? Carbon::parse($validated['published_at']) : null;
+
+        $tz = $validated['timezone'] ?? 'Europe/Madrid';
+        $validated['published_at'] = ! empty($validated['published_at'])
+            ? Carbon::parse($validated['published_at'], $tz)->utc()
+            : null;
+
         $contentSource = $validated['content_text'] ?? $validated['content'] ?? '';
 
         // If content_blocks JSON is provided (from Alpine editor with links), use it directly
@@ -281,6 +304,10 @@ class PostController extends Controller
             'source_url',
             'meta_title',
             'meta_description',
+            'status',
+            'author_email',
+            'notification_sender',
+            'timezone',
         ] as $column) {
             if (! Schema::hasColumn($table, $column)) {
                 unset($data[$column]);

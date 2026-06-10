@@ -24,6 +24,18 @@ class Post extends Model
 
         static::saved($bumpVersion);
         static::deleted($bumpVersion);
+
+        static::saved(static function (Post $post): void {
+            $wasPublished = filter_var($post->getOriginal('is_published'), FILTER_VALIDATE_BOOLEAN);
+            $isPublishedNow = filter_var($post->is_published, FILTER_VALIDATE_BOOLEAN);
+
+            $newlyPublished = $post->wasRecentlyCreated && $isPublishedNow;
+            $updatedToPublished = ! $wasPublished && $isPublishedNow;
+
+            if ($newlyPublished || $updatedToPublished) {
+                $post->sendPublishedNotification();
+            }
+        });
     }
 
     protected $fillable = [
@@ -51,6 +63,9 @@ class Post extends Model
         'categories',
         'tags',
         'is_published',
+        'author_email',
+        'notification_sender',
+        'timezone',
     ];
 
     protected $appends = [
@@ -64,6 +79,7 @@ class Post extends Model
             'tags' => 'array',
             'published_at' => 'datetime',
             'is_published' => 'bool',
+            'timezone' => 'string',
         ];
     }
 
@@ -98,28 +114,83 @@ class Post extends Model
 
     public function scopePublished(Builder $query): Builder
     {
-        if (Schema::hasColumn($query->getModel()->getTable(), 'is_published')) {
-            return $query->where('is_published', true);
-        }
-
-        if (Schema::hasColumn($query->getModel()->getTable(), 'status')) {
-            return $query->where('status', 'published');
-        }
-
-        return $query->whereNotNull('published_at')->where('published_at', '<=', now());
+        return $query->where(function ($q) {
+            $q->where('is_published', true)
+              ->orWhere(function ($sub) {
+                  if (Schema::hasColumn($sub->getModel()->getTable(), 'status')) {
+                      $sub->where('status', 'scheduled');
+                  } else {
+                      $sub->where('is_published', false);
+                  }
+                  $sub->whereNotNull('published_at')
+                      ->where('published_at', '<=', now());
+              });
+        });
     }
 
     public function getIsPublishedAttribute(mixed $value): bool
     {
         if ($value !== null && $value !== '') {
-            return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            $isPublished = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            if ($isPublished) {
+                return true;
+            }
         }
 
-        if (Schema::hasColumn($this->getTable(), 'status')) {
-            return (string) ($this->getAttribute('status') ?? '') === 'published';
+        $status = Schema::hasColumn($this->getTable(), 'status') ? $this->getAttribute('status') : null;
+        if ($status === 'scheduled') {
+            return (bool) ($this->getAttribute('published_at') && $this->getAttribute('published_at') <= now());
+        }
+
+        if ($status === 'published') {
+            return true;
+        }
+
+        if ($status === 'draft') {
+            return false;
         }
 
         return (bool) ($this->getAttribute('published_at') && $this->getAttribute('published_at') <= now());
+    }
+
+    public function getUrlAttribute(): string
+    {
+        if (! $this->published_at || ! $this->slug) {
+            return '#';
+        }
+
+        return route('posts.single', [
+            'year' => $this->published_at->format('Y'),
+            'month' => $this->published_at->format('m'),
+            'day' => $this->published_at->format('d'),
+            'slug' => $this->slug,
+        ]);
+    }
+
+    public function sendPublishedNotification(): void
+    {
+        if (! Schema::hasColumn($this->getTable(), 'author_email')) {
+            return;
+        }
+
+        $email = trim((string) $this->author_email);
+        if ($email === '') {
+            return;
+        }
+
+        try {
+            $sender = Schema::hasColumn($this->getTable(), 'notification_sender') && $this->notification_sender
+                ? trim((string) $this->notification_sender)
+                : config('mail.from.address');
+
+            \Illuminate\Support\Facades\Mail::to($email)->send(
+                new \App\Mail\PostPublishedMail($this, $sender)
+            );
+
+            \Illuminate\Support\Facades\Log::info("Email de notificación de publicación enviado al autor para el post ID: {$this->id}");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Fallo al enviar email de notificación de publicación para post ID {$this->id}: " . $e->getMessage());
+        }
     }
 
     public function getFeaturedImageUrlAttribute(): string
