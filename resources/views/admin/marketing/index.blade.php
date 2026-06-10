@@ -18,6 +18,7 @@
             showAddContactModal: false,
             showScrapeModal: false,
             showAddAccountModal: false,
+            showCronModal: false,
             editAccountData: null
         }"
     >
@@ -57,7 +58,42 @@
         <!-- ==================== PESTAÑA: CONTACTOS ==================== -->
         <section x-cloak x-show="activeTab === 'contacts'" class="space-y-6">
             <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+                
+                <!-- Diagnóstico de Tareas de Cola -->
+                @if($pendingJobsCount > 0)
+                    <div class="mb-6 border border-[#c9912c] bg-[rgba(201,145,44,.05)] p-5 rounded shadow-lg space-y-4">
+                        <div class="flex items-start gap-3">
+                            <span class="text-xl">⚠️</span>
+                            <div>
+                                <h4 class="font-bold text-[#ffd580] text-sm uppercase tracking-wider">Tareas de Marketing Pendientes en Cola ({{ $pendingJobsCount }})</h4>
+                                <p class="text-xs text-[#dcdcdc] mt-1">
+                                    Tienes procesos de importación o envíos de campañas esperando en segundo plano. Esto sucede porque el procesador automático (Cron Job) no está activo en Hostinger para la cola de <code>marketing</code>.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3 pt-3 border-t border-[rgba(201,145,44,.15)]">
+                            <form action="{{ route('admin.marketing.run-worker') }}" method="POST" class="inline-block">
+                                @csrf
+                                <button type="submit" class="lucille-button-solid bg-[#c9912c] border-[#c9912c] hover:bg-[#b07d20] hover:border-[#b07d20] text-[#101012] font-bold text-xs uppercase tracking-wider py-1.5 px-3">
+                                    ⚡ Procesar Cola Manualmente
+                                </button>
+                            </form>
+                            <span class="text-xs text-[#7b7b7b]">o</span>
+                            <button type="button" class="text-xs text-[#ffd580] underline hover:text-white" @click="showCronModal = true">
+                                Configurar Cron Job automático en Hostinger
+                            </button>
+                        </div>
+                    </div>
+                @else
+                    <!-- Enlace discreto a la guía si no hay tareas pendientes -->
+                    <div class="flex justify-end mb-4">
+                        <button type="button" class="text-xs text-[#7b7b7b] hover:text-[#dcdcdc] flex items-center gap-1" @click="showCronModal = true">
+                            🔧 Configuración de Cron Job y Cola
+                        </button>
+                    </div>
+                @endif
+
+                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6 border-b border-[#2b2b2b] pb-4">
                     <!-- Buscador -->
                     <form action="{{ route('admin.marketing.index') }}" method="GET" class="flex items-center gap-2 w-full md:max-w-md">
                         <input type="hidden" name="tab" value="contacts">
@@ -397,6 +433,63 @@
                         <button type="submit" class="lucille-button-solid bg-[#1e4d2b] border-[#1e4d2b]">Iniciar Importación IA</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- MODAL: GUÍA DE CONFIGURACIÓN CRON JOB -->
+        <div x-cloak x-show="showCronModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+            <div class="border border-[#2b2b2b] bg-[#101012] p-8 max-w-2xl w-full rounded-lg shadow-2xl space-y-6 overflow-y-auto max-h-[90vh]" @click.away="showCronModal = false">
+                <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-3">
+                    <h3 class="font-display text-xl uppercase tracking-wider text-[#dcdcdc] flex items-center gap-2">
+                        🔧 Guía: Automatización de Cola en Hostinger
+                    </h3>
+                    <button type="button" class="text-xs text-[#7b7b7b] hover:text-white" @click="showCronModal = false">✕ Cerrar</button>
+                </div>
+
+                <div class="space-y-4 text-xs text-[#dcdcdc] leading-relaxed">
+                    <p>
+                        Para que las tareas en segundo plano (como el scraping de correos con IA y el envío de campañas de email) funcionen automáticamente en piloto automático, debes configurar una <strong>Tarea Programada (Cron Job)</strong> en el panel de Hostinger.
+                    </p>
+
+                    <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.3)] p-4 space-y-2 rounded">
+                        <h4 class="font-bold text-[#c32720] uppercase tracking-wider">Configurar el Cron Job para la cola de Marketing</h4>
+                        <p>
+                            En tu panel de Hostinger (sección de Tareas Programadas / Cron Jobs), crea una nueva tarea programada con los siguientes valores:
+                        </p>
+                        <ul class="list-disc pl-4 space-y-1 mt-1 text-[#7b7b7b]">
+                            <li><strong>Tipo:</strong> Comando personalizado / Custom</li>
+                            <li><strong>Intervalo / Frecuencia:</strong> Cada 1 minuto (o cada 5 minutos) <code>* * * * *</code></li>
+                            <li><strong>Comando:</strong> Copia y pega la siguiente línea exacta:</li>
+                        </ul>
+                        <div class="mt-3 p-3 bg-black border border-[#2b2b2b] rounded font-mono text-[10px] text-[#ffd580] select-all break-all leading-normal">
+                            /opt/alt/php84/usr/bin/php /home/u531780502/domains/sevenrockradio.com/public_html/artisan queue:work --queue=marketing --stop-when-empty --tries=3 --timeout=600 &gt;&gt; /dev/null 2&gt;&amp;1
+                        </div>
+                        <p class="text-[10px] text-[#7b7b7b] mt-1">
+                            *Nota: Usamos <code>--stop-when-empty</code> y un timeout alto de 10 minutos (<code>--timeout=600</code>) porque el scraping con Gemini tarda unos segundos por correo. De esta forma, el worker se apagará limpiamente al terminar y no consumirá recursos extra.
+                        </p>
+                    </div>
+
+                    <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.3)] p-4 space-y-2 rounded">
+                        <h4 class="font-bold text-[#ffd580] uppercase tracking-wider">¿Por qué es necesario esto?</h4>
+                        <p>
+                            Si no configuras esta tarea programada, las importaciones e emails de marketing se quedarán en la base de datos de manera indefinida. Para procesarlas, tendrás que usar el botón de <strong>⚡ Procesar Cola Manualmente</strong> que se muestra cuando hay tareas pendientes.
+                        </p>
+                    </div>
+
+                    @if($failedJobsCount > 0)
+                        <div class="border border-[#7a2b2b] bg-[rgba(195,39,32,.08)] p-4 space-y-2 rounded">
+                            <h4 class="font-bold text-[#ff9e9e] uppercase tracking-wider">⚠️ Tareas Fallidas Detectadas en el Sistema ({{ $failedJobsCount }})</h4>
+                            <p>
+                                Hay tareas que han fallado en su ejecución (probablemente por timeouts previos o credenciales SMTP/IMAP inválidas). 
+                                Puedes limpiarlas o reintentarlas ejecutando comandos artisan desde la terminal si tienes acceso SSH.
+                            </p>
+                        </div>
+                    @endif
+                </div>
+
+                <div class="flex justify-end pt-4 border-t border-[#2b2b2b]">
+                    <button type="button" class="lucille-button" @click="showCronModal = false">Entendido, cerrar</button>
+                </div>
             </div>
         </div>
 

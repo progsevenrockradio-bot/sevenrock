@@ -40,10 +40,20 @@ class MarketingController extends Controller
 
         $contacts = $contactsQuery->paginate(50)->withQueryString();
 
+        $pendingJobsCount = \Illuminate\Support\Facades\Schema::hasTable('jobs')
+            ? \Illuminate\Support\Facades\DB::table('jobs')->where('queue', 'marketing')->count()
+            : 0;
+
+        $failedJobsCount = \Illuminate\Support\Facades\Schema::hasTable('failed_jobs')
+            ? \Illuminate\Support\Facades\DB::table('failed_jobs')->count()
+            : 0;
+
         return view('admin.marketing.index', [
             'accounts' => $accounts,
             'contacts' => $contacts,
             'campaigns' => $campaigns,
+            'pendingJobsCount' => $pendingJobsCount,
+            'failedJobsCount' => $failedJobsCount,
             'templates' => [
                 'promo_service' => 'Promoción de Servicio (Dark Rock)',
                 'newsletter' => 'Boletín de Noticias (Newsletter)',
@@ -254,5 +264,33 @@ class MarketingController extends Controller
 
         return redirect()->route('admin.marketing.index', ['tab' => 'contacts'])
             ->with('status', 'Contacto eliminado.');
+    }
+
+    /**
+     * Run the queue worker manually for the marketing queue.
+     */
+    public function runQueueWorker(): RedirectResponse
+    {
+        try {
+            Log::info("Manual Queue Worker Run started.");
+            
+            // Execute the queue worker for the marketing queue synchronously
+            \Illuminate\Support\Facades\Artisan::call('queue:work', [
+                '--queue' => 'marketing',
+                '--stop-when-empty' => true,
+                '--tries' => 3,
+                '--timeout' => 600,
+            ]);
+
+            $output = \Illuminate\Support\Facades\Artisan::output();
+            Log::info("Manual Queue Worker Run Output:\n" . $output);
+
+            return redirect()->route('admin.marketing.index', ['tab' => 'contacts'])
+                ->with('status', "Procesador de tareas ejecutado con éxito.\nDetalles:\n" . ($output ?: 'No había tareas en la cola o ya fueron procesadas.'));
+        } catch (\Throwable $e) {
+            Log::error("Manual Queue Worker Run Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return redirect()->route('admin.marketing.index', ['tab' => 'contacts'])
+                ->with('error', 'Error al ejecutar el procesador de tareas: ' . $e->getMessage());
+        }
     }
 }

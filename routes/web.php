@@ -279,6 +279,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::post('/contacts', 'storeContact')->name('contacts.store');
         Route::delete('/contacts/{id}', 'deleteContact')->name('contacts.delete');
         Route::post('/contacts/scrape', 'triggerScrape')->name('contacts.scrape');
+        Route::post('/run-worker', 'runQueueWorker')->name('run-worker');
         Route::post('/accounts', 'storeAccount')->name('accounts.store');
         Route::put('/accounts/{id}', 'updateAccount')->name('accounts.update');
         Route::delete('/accounts/{id}', 'deleteAccount')->name('accounts.delete');
