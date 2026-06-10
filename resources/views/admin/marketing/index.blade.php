@@ -52,6 +52,9 @@
                 <button type="button" class="lucille-button" :class="activeTab === 'history' ? 'lucille-button-solid' : ''" @click="activeTab = 'history'">
                     📊 Historial de Envíos
                 </button>
+                <button type="button" class="lucille-button" :class="activeTab === 'guide' ? 'lucille-button-solid' : ''" @click="activeTab = 'guide'">
+                    📖 Manual de Uso
+                </button>
             </div>
         </section>
 
@@ -361,6 +364,90 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== PESTAÑA: MANUAL DE USO ==================== -->
+        <section x-cloak x-show="activeTab === 'guide'" class="space-y-6">
+            <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8 space-y-8">
+                <div>
+                    <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-4 mb-4">📖 Manual de Uso y Automatización</h2>
+                    <p class="text-sm text-[#7b7b7b]">
+                        Guía de referencia rápida para gestionar tus listas de contactos, realizar sincronizaciones mediante Inteligencia Artificial y asegurar el correcto funcionamiento del envío de correos masivos en producción.
+                    </p>
+                </div>
+
+                <!-- Bloque 1: Producción y Solución Rápida -->
+                <div class="border border-[#c9912c] bg-[rgba(201,145,44,.03)] p-6 space-y-4 rounded">
+                    <h3 class="font-display text-lg uppercase tracking-wider text-[#ffd580] flex items-center gap-2">
+                        🚀 ¿Cómo probarlo y solucionarlo en Producción ahora mismo?
+                    </h3>
+                    <div class="text-xs text-[#dcdcdc] space-y-3 leading-relaxed">
+                        <p>
+                            Si acabas de desplegar la actualización y quieres verificar todo o procesar correos pendientes de inmediato, sigue estos pasos:
+                        </p>
+                        <ol class="list-decimal pl-5 space-y-2 mt-2">
+                            <li>
+                                <strong>Actualiza el código en tu servidor de producción (Hostinger)</strong> ejecutando desde tu consola de comandos (SSH):
+                                <pre class="mt-2 p-3 bg-black border border-[#2b2b2b] font-mono text-[10px] text-[#b8e6c3] select-all rounded leading-normal">
+git pull
+php artisan config:clear
+php artisan optimize</pre>
+                            </li>
+                            <li>
+                                <strong>Entra al panel de administración</strong> en la pestaña <span class="text-[#ffd580] font-bold">Contactos</span> (o recarga esta sección).
+                            </li>
+                            <li>
+                                Verás un <strong>nuevo banner amarillo de diagnóstico</strong> que te avisará si tienes tareas pendientes esperando en la cola (el proceso de importación de correos que hiciste anteriormente).
+                            </li>
+                            <li>
+                                Haz clic en el botón <strong class="text-white">⚡ Procesar Cola Manualmente</strong> que aparece en el banner. Esto procesará sincrónicamente la importación de correos y, en unos segundos, la página se recargará mostrando los contactos importados y enriquecidos por la IA en tu tabla.
+                            </li>
+                            <li>
+                                Para automatizar el proceso y que funcione en piloto automático, puedes configurar el Cron Job de Hostinger tal como se explica a continuación.
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Bloque 2: Automatización automática con Cron Job -->
+                <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.2)] p-6 space-y-4 rounded">
+                    <h3 class="font-display text-lg uppercase tracking-wider text-[#dcdcdc] flex items-center gap-2">
+                        ⚙️ Configuración del Cron Job (Automatización en Hostinger)
+                    </h3>
+                    <div class="text-xs text-[#dcdcdc] space-y-3 leading-relaxed">
+                        <p>
+                            Para no tener que presionar el botón manual, debes configurar una <strong>Tarea Programada (Cron Job)</strong> en el hPanel de Hostinger para procesar la cola de marketing en segundo plano:
+                        </p>
+                        <ul class="list-disc pl-5 space-y-1 mt-1 text-[#7b7b7b]">
+                            <li><strong>Tipo de Tarea:</strong> Comando personalizado / Custom</li>
+                            <li><strong>Intervalo / Frecuencia:</strong> Cada 1 minuto (o cada 5 minutos) <code>* * * * *</code></li>
+                            <li><strong>Comando a colocar:</strong></li>
+                        </ul>
+                        <div class="mt-2 p-3 bg-black border border-[#2b2b2b] rounded font-mono text-[10px] text-[#ffd580] select-all break-all leading-normal">
+                            /opt/alt/php84/usr/bin/php /home/u531780502/domains/sevenrockradio.com/public_html/artisan queue:work --queue=marketing --stop-when-empty --tries=3 --timeout=600 &gt;&gt; /dev/null 2&gt;&amp;1
+                        </div>
+                        <p class="text-[10px] text-[#7b7b7b] mt-1 italic">
+                            *Nota: Usamos el parámetro <code>--stop-when-empty</code> para apagar el procesador tan pronto como la cola se quede vacía, liberando memoria RAM y recursos en tu hosting compartido. El comando se volverá a iniciar automáticamente al siguiente minuto.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Bloque 3: Flujo de Email Marketing -->
+                <div class="grid md:grid-cols-2 gap-6 text-xs leading-relaxed text-[#dcdcdc]">
+                    <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.1)] p-5 space-y-3">
+                        <h4 class="font-bold text-[#c32720] uppercase tracking-wider">📥 Importación Inteligente (Scraping)</h4>
+                        <p>
+                            Al sincronizar desde Gmail, el sistema descarga de forma segura los emails de la bandeja o papelera, descarta automáticamente firmas y logos pequeños, y envía el asunto y cuerpo a la IA de Gemini. La IA categoriza la información extrayendo el Nombre real, la Empresa o Banda musical, y su Cargo (ej. Vocalista, Mánager, Prensa).
+                        </p>
+                    </div>
+                    <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.1)] p-5 space-y-3">
+                        <h4 class="font-bold text-[#c32720] uppercase tracking-wider">📤 Envío de Campañas (SMTP Dinámico)</h4>
+                        <p>
+                            Cuando creas una campaña y la envías, Laravel toma la cuenta configurada como remitente y reconfigura el correo SMTP en caliente. Esto asegura que cada campaña salga desde el correo específico que elegiste. Además, el sistema incorpora pausas automáticas de 3 a 5 segundos entre cada lote para cumplir con las políticas anti-spam de Google.
+                        </p>
+                    </div>
                 </div>
             </div>
         </section>
