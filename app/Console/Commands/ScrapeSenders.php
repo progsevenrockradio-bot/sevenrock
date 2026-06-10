@@ -94,7 +94,7 @@ class ScrapeSenders extends Command
             $this->info("Escaneando hasta {$limit} correos en la carpeta '{$targetFolder->path}'...");
             
             // Obtener correos
-            $query = $targetFolder->query()->all();
+            $query = $targetFolder->query()->all()->setFetchOrder("desc");
             $messages = $query->limit($limit)->get();
 
             $this->info("Encontrados " . count($messages) . " correos para analizar.");
