@@ -81,6 +81,11 @@ class AppServiceProvider extends ServiceProvider
         View::share('themeAppearance', ThemeAppearance::resolved());
         View::share('admin', ThemeAppearance::resolved()['admin_texts'] ?? []);
 
+        // Register the scheduled posts command so it is available during HTTP web requests
+        $this->commands([
+            \App\Console\Commands\PublishScheduledPosts::class,
+        ]);
+
         // Dynamic check for scheduled posts (fallback if cron is not running)
         if (! $this->app->runningInConsole() && ! cache()->has('posts.schedule_check')) {
             cache()->put('posts.schedule_check', true, now()->addMinute());
