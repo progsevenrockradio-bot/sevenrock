@@ -173,8 +173,14 @@ class Post extends Model
             return;
         }
 
-        $email = trim((string) $this->author_email);
-        if ($email === '') {
+        $emailString = trim((string) $this->author_email);
+        if ($emailString === '') {
+            return;
+        }
+
+        // Split by semicolon (;) or comma (,) and trim each email
+        $emails = array_values(array_filter(array_map('trim', preg_split('/[;,]/', $emailString))));
+        if (empty($emails)) {
             return;
         }
 
@@ -183,11 +189,11 @@ class Post extends Model
                 ? trim((string) $this->notification_sender)
                 : config('mail.from.address');
 
-            \Illuminate\Support\Facades\Mail::to($email)->send(
+            \Illuminate\Support\Facades\Mail::to($emails)->send(
                 new \App\Mail\PostPublishedMail($this, $sender)
             );
 
-            \Illuminate\Support\Facades\Log::info("Email de notificación de publicación enviado al autor para el post ID: {$this->id}");
+            \Illuminate\Support\Facades\Log::info("Email de notificación de publicación enviado a los autores (" . implode(', ', $emails) . ") para el post ID: {$this->id}");
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error("Fallo al enviar email de notificación de publicación para post ID {$this->id}: " . $e->getMessage());
         }
