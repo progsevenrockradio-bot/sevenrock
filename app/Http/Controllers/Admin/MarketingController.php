@@ -131,8 +131,6 @@ class MarketingController extends Controller
     {
         $account = MarketingMailAccount::findOrFail($id);
         
-        Log::warning("testConnection: testing account {$account->email}. Length of IMAP pass: " . strlen($account->imap_password ?? "") . ", SMTP pass: " . strlen($account->smtp_password ?? "") . ". Match: " . ($account->imap_password === $account->smtp_password ? "YES" : "NO"));
-
         $imapSuccess = false;
         $imapError = '';
         $smtpSuccess = false;
