@@ -66,7 +66,7 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
                 'host'          => $account->imap_host,
                 'port'          => (int) $account->imap_port,
                 'encryption'    => $account->imap_encryption,
-                'validate_cert' => config('services.imap.validate_cert', true),
+                'validate_cert' => config('services.imap.validate_cert', false),
                 'username'      => $account->email,
                 'password'      => $account->imap_password, // Desencriptado automáticamente
                 'protocol'      => 'imap'

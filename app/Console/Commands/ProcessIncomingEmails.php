@@ -67,7 +67,7 @@ class ProcessIncomingEmails extends Command
                 'host'          => $imapHost,
                 'port'          => $imapPort,
                 'encryption'    => $imapEncryption,
-                'validate_cert' => config('services.imap.validate_cert', true),
+                'validate_cert' => config('services.imap.validate_cert', false),
                 'username'      => $imapUsername,
                 'password'      => $imapPassword,
                 'protocol'      => 'imap'
