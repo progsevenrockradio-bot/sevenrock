@@ -69,9 +69,9 @@ PROMPT;
                         ]
                     ]
                 ],
-                'generationConfig' => [
-                    'responseMimeType' => 'application/json',
-                    'responseSchema' => [
+                'generation_config' => [
+                    'response_mime_type' => 'application/json',
+                    'response_schema' => [
                         'type' => 'OBJECT',
                         'properties' => [
                             'type' => [
