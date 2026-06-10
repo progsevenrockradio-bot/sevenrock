@@ -30,10 +30,18 @@ class NewReleaseController extends Controller
 
     public function create(): View
     {
+        $lastRelease = NewRelease::query()
+            ->whereNotNull('author_email')
+            ->where('author_email', '!=', '')
+            ->orderByDesc('id')
+            ->first();
+
         return view('admin.new-releases.create', [
             'newRelease' => new NewRelease([
                 'released_at' => now(),
                 'is_active' => true,
+                'author_email' => $lastRelease?->author_email,
+                'notification_sender' => $lastRelease?->notification_sender,
             ]),
             'radioArtists' => RadioArtist::query()->orderBy('name')->get(),
         ]);
@@ -132,6 +140,8 @@ class NewReleaseController extends Controller
             'spotify_url' => ['nullable', 'url', 'max:2048'],
             'description' => ['nullable', 'string'],
             'is_active' => ['nullable', 'boolean'],
+            'author_email' => ['nullable', 'string', 'max:500'],
+            'notification_sender' => ['nullable', 'email', 'max:255'],
         ]);
 
         $validated['released_at'] = ! empty($validated['released_at']) ? Carbon::parse($validated['released_at']) : null;

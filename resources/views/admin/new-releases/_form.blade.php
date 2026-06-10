@@ -49,6 +49,18 @@
         @error('is_active') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
     </div>
 
+    <div>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Correo del Autor (Destinatario)</label>
+        <input name="author_email" value="{{ old('author_email', $newRelease->author_email) }}" class="lucille-product-field w-full" placeholder="Ej. autor@ejemplo.com (para varios usar ';')">
+        @error('author_email') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+    </div>
+
+    <div>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Remitente de la Notificación (Opcional)</label>
+        <input name="notification_sender" value="{{ old('notification_sender', $newRelease->notification_sender) }}" class="lucille-product-field w-full" placeholder="Ej. no-reply@sevenrockradio.com">
+        @error('notification_sender') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+    </div>
+
     <div class="md:col-span-2">
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Ruta / URL de la Carátula (Portada)</label>
         <input name="cover_image" value="{{ old('cover_image', $newRelease->cover_image) }}" class="lucille-product-field w-full" placeholder="Ej. catalog/releases/covers/portada.jpg o URL externa">
