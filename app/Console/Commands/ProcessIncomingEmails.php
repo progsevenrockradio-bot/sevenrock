@@ -145,6 +145,9 @@ class ProcessIncomingEmails extends Command
 
                 if (! $parsed || ! isset($parsed['type'])) {
                     $this->error("Gemini no pudo clasificar o procesar este correo.");
+                    if ($parser->lastError) {
+                        $this->error("  -> Detalle del error: " . $parser->lastError);
+                    }
                     DB::table('processed_emails')->insert([
                         'message_id' => $messageId,
                         'subject' => $subject,

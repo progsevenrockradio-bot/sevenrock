@@ -10,6 +10,13 @@ use Illuminate\Support\Facades\Log;
 class GeminiContentParser
 {
     /**
+     * Almacena el último error ocurrido durante la consulta a la API de Gemini.
+     *
+     * @var string|null
+     */
+    public ?string $lastError = null;
+
+    /**
      * Process email content using Google Gemini API to clean, translate, and structure it.
      *
      * @param string $subject
@@ -19,6 +26,7 @@ class GeminiContentParser
      */
     public function parse(string $subject, string $body, string $apiKey): ?array
     {
+        $this->lastError = null;
         $prompt = <<<PROMPT
 Eres un asistente de redacción editorial para la radio de rock "Seven Rock Radio".
 Tu tarea es analizar el correo electrónico recibido (asunto y cuerpo) y convertirlo en contenido estructurado para la web.
@@ -112,6 +120,7 @@ PROMPT;
             ]);
 
             if ($response->failed()) {
+                $this->lastError = "HTTP Code " . $response->status() . " - " . $response->body();
                 Log::error("Gemini API Error: " . $response->body());
                 return null;
             }
@@ -120,12 +129,14 @@ PROMPT;
             $text = $result['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
             if (! $text) {
+                $this->lastError = "Response does not contain text. Response candidate block: " . json_encode($result);
                 Log::error("Gemini API returned empty text candidate.");
                 return null;
             }
 
             $parsedData = json_decode($text, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
+                $this->lastError = "JSON decode error: " . json_last_error_msg() . ". Raw text: " . $text;
                 Log::error("Failed to decode Gemini JSON response: " . json_last_error_msg());
                 return null;
             }
@@ -133,6 +144,7 @@ PROMPT;
             return $parsedData;
 
         } catch (\Throwable $e) {
+            $this->lastError = "Exception in GeminiContentParser: " . $e->getMessage();
             Log::error("Exception in GeminiContentParser: " . $e->getMessage());
             return null;
         }

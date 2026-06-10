@@ -74,7 +74,9 @@ class UploadMp3ToArchiveOrg implements ShouldQueue
 
         // Construir identificador del bucket único y válido para Archive.org (minúsculas, guiones)
         $cleanSlug = Str::slug($newRelease->slug ?: ($newRelease->title . '-' . $newRelease->artist_name));
-        $bucketName = 'sevenrockradio-' . substr($cleanSlug, 0, 80);
+        $configBucket = trim((string) config('services.archive_org.bucket'));
+        
+        $bucketName = ($configBucket !== '') ? $configBucket : ('sevenrockradio-' . substr($cleanSlug, 0, 80));
         $safeFileName = $cleanSlug . '.mp3';
 
         Log::info("UploadMp3ToArchiveOrg: Iniciando subida de {$safeFileName} al bucket Archive.org: {$bucketName}");
@@ -85,16 +87,23 @@ class UploadMp3ToArchiveOrg implements ShouldQueue
                 throw new \Exception("No se pudo abrir el flujo del archivo temporal.");
             }
 
-            // Realizar petición PUT usando la API S3-like de Archive.org
-            $response = Http::withHeaders([
+            $headers = [
                 'Authorization' => "LOW {$accessKey}:{$secretKey}",
-                'x-archive-auto-make-bucket' => '1',
-                'x-archive-meta-mediatype' => 'audio',
-                'x-archive-meta-collection' => 'opensource_audio',
-                'x-archive-meta-title' => "Lanzamiento: {$newRelease->title} - {$newRelease->artist_name}",
-            ])
-            ->withBody($fileStream, 'audio/mpeg')
-            ->put("https://s3.us.archive.org/{$bucketName}/{$safeFileName}");
+            ];
+
+            // Solo enviamos metadatos de creación del bucket si estamos usando un bucket dinámico único.
+            // Si es un bucket compartido (configurado en .env), evitamos sobreescribir su título y colección.
+            if ($configBucket === '') {
+                $headers['x-archive-auto-make-bucket'] = '1';
+                $headers['x-archive-meta-mediatype'] = 'audio';
+                $headers['x-archive-meta-collection'] = 'opensource_audio';
+                $headers['x-archive-meta-title'] = "Lanzamiento: {$newRelease->title} - {$newRelease->artist_name}";
+            }
+
+            // Realizar petición PUT usando la API S3-like de Archive.org
+            $response = Http::withHeaders($headers)
+                ->withBody($fileStream, 'audio/mpeg')
+                ->put("https://s3.us.archive.org/{$bucketName}/{$safeFileName}");
 
             if (is_resource($fileStream)) {
                 fclose($fileStream);
