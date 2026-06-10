@@ -5,10 +5,33 @@
 <div style="margin-top:18px;font-size:14px;line-height:1.8;color:#d0d0d0;">
 <p>Hola,</p>
 <p>Nos complace informarte que el contenido que nos enviaste con el título <strong>"{{ $post->title }}"</strong> ya se encuentra disponible en la web de <strong>Seven Rock Radio</strong>.</p>
+
+<div style="background:#18181b;border:1px solid #2c2c2c;padding:15px;margin:20px 0;border-radius:4px;text-align:left;">
+    @if($post->featured_image_url)
+    <div style="text-align: center; margin-bottom: 12px;">
+        <img src="{{ $post->featured_image_url }}" alt="{{ $post->title }}" style="max-width: 100%; max-height: 200px; border-radius: 4px; border: 1px solid #333; display: inline-block;">
+    </div>
+    @endif
+    <div style="font-size: 13px; color: #a1a1aa; line-height: 1.6; font-style: italic;">
+        "{{ \Illuminate\Support\Str::limit(strip_tags($post->excerpt ?: $post->content), 180) }}"
+    </div>
+</div>
+
 <p>Puedes leer la entrada publicada haciendo clic en el siguiente botón:</p>
 <div style="margin: 20px 0; text-align: center;">
 <a href="{{ $postUrl }}" style="background:#c32720;color:#ffffff;text-decoration:none;padding:10px 20px;font-weight:bold;text-transform:uppercase;font-size:12px;letter-spacing:.12em;display:inline-block;">Ver entrada en la web</a>
 </div>
+
+<div style="margin-top:25px;border-top:1px solid #2c2c2c;padding-top:18px;">
+    <div style="font-size:11px;color:#8d8d8d;text-transform:uppercase;letter-spacing:.12em;margin-bottom:12px;text-align:center;">Compartir en tus redes:</div>
+    <div style="text-align:center;">
+        <a href="https://api.whatsapp.com/send?text={{ rawurlencode('¡Hola! Acabo de publicar "' . $post->title . '" en Seven Rock Radio. Léelo aquí: ' . $postUrl) }}" target="_blank" style="background:#25D366;color:#ffffff;text-decoration:none;padding:6px 12px;font-size:11px;font-weight:bold;border-radius:3px;margin: 4px;display:inline-block;">WhatsApp</a>
+        <a href="https://t.me/share/url?url={{ rawurlencode($postUrl) }}&text={{ rawurlencode('¡Hola! Acabo de publicar "' . $post->title . '" en Seven Rock Radio.') }}" target="_blank" style="background:#0088cc;color:#ffffff;text-decoration:none;padding:6px 12px;font-size:11px;font-weight:bold;border-radius:3px;margin: 4px;display:inline-block;">Telegram</a>
+        <a href="https://www.facebook.com/sharer/sharer.php?u={{ rawurlencode($postUrl) }}" target="_blank" style="background:#1877F2;color:#ffffff;text-decoration:none;padding:6px 12px;font-size:11px;font-weight:bold;border-radius:3px;margin: 4px;display:inline-block;">Facebook</a>
+        <a href="https://twitter.com/intent/tweet?url={{ rawurlencode($postUrl) }}&text={{ rawurlencode('¡Hola! Acabo de publicar "' . $post->title . '" en @SevenRockRadio:') }}" target="_blank" style="background:#000000;color:#ffffff;text-decoration:none;padding:6px 12px;font-size:11px;font-weight:bold;border-radius:3px;margin: 4px;display:inline-block;">Twitter / X</a>
+    </div>
+</div>
+
 <p>¡Muchas gracias por colaborar con nosotros!</p>
 </div>
 <div style="margin-top:22px;border-top:1px solid #2c2c2c;padding-top:14px;font-size:12px;line-height:1.7;color:#9c9c9c;">
