@@ -260,4 +260,111 @@ PROMPT;
         $lowerError = strtolower($error);
         return str_contains($lowerError, '429') && (str_contains($lowerError, 'limit: 0') || str_contains($lowerError, 'resource_exhausted'));
     }
+
+    /**
+     * Analiza el asunto y el cuerpo del correo para extraer información del remitente usando Gemini.
+     */
+    public function parseContactInfo(string $subject, string $body, string $apiKey): ?array
+    {
+        $this->lastError = null;
+        $prompt = <<<PROMPT
+Analiza el correo electrónico recibido (asunto y cuerpo) y extrae información sobre la persona de contacto, la empresa o banda de rock y su cargo/rol.
+
+Queremos identificar:
+1. "name": El nombre real de la persona que escribe o firma el correo (ej: "Brian Heason"). Si no se encuentra un nombre de pila claro, pon el nombre de pila más probable o el alias del remitente.
+2. "company_or_band": El nombre de la empresa de relaciones públicas (PR), agencia de prensa, banda de música, sello discográfico u organización que representan (ej: "HBM Promotions", "Metal Devastation PR"). Si no se menciona ninguna empresa o banda, pon "Independiente" o la banda descrita en el asunto.
+3. "role": El cargo, puesto o rol del contacto en esa empresa/banda (ej: "Music Plugger", "Publicist", "Manager", "Vocalist", "Contacto de Prensa"). Si no figura un rol explícito, dedúcelo según el tono (ej. "Representante" o "Músico").
+
+Presta especial atención a la firma al final del correo, que suele contener el nombre de la persona, su empresa, enlaces de redes sociales y su rol exacto.
+
+Devuelve la respuesta estrictamente en formato JSON utilizando el esquema indicado.
+
+Asunto del correo: {$subject}
+Cuerpo del correo:
+{$body}
+PROMPT;
+
+        $model = config('services.gemini.model', 'gemini-flash-latest');
+
+        // Primer intento
+        $result = $this->callApiForContact($model, $prompt, $apiKey);
+
+        // Auto-descubrimiento en caso de error
+        if ($result === null && ($this->isNotFoundError($this->lastError) || $this->isQuotaZeroError($this->lastError))) {
+            $discoveredModel = $this->discoverBestModel($apiKey);
+            if ($discoveredModel && $discoveredModel !== $model) {
+                $this->lastError = null;
+                $result = $this->callApiForContact($discoveredModel, $prompt, $apiKey);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Hace la llamada HTTP a la API de Gemini usando el esquema de Contactos.
+     */
+    protected function callApiForContact(string $model, string $prompt, string $apiKey): ?array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'responseMimeType' => 'application/json',
+                    'responseSchema' => [
+                        'type' => 'OBJECT',
+                        'properties' => [
+                            'name' => [
+                                'type' => 'STRING',
+                                'description' => 'Nombre completo o de pila de la persona de contacto.'
+                            ],
+                            'company_or_band' => [
+                                'type' => 'STRING',
+                                'description' => 'Nombre de la empresa de relaciones públicas, disquera, agencia o banda de rock.'
+                            ],
+                            'role' => [
+                                'type' => 'STRING',
+                                'description' => 'Cargo, puesto o descripción del rol en el correo.'
+                            ]
+                        ],
+                        'required' => ['name', 'company_or_band', 'role']
+                    ]
+                ]
+            ]);
+
+            if ($response->failed()) {
+                $errorMsg = "HTTP Code " . $response->status() . " - " . $response->body();
+                $this->lastError = $errorMsg;
+                return null;
+            }
+
+            $result = $response->json();
+            $text = $result['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+            if (! $text) {
+                $this->lastError = "Response does not contain text.";
+                return null;
+            }
+
+            $parsedData = json_decode($text, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $this->lastError = "JSON decode error: " . json_last_error_msg();
+                return null;
+            }
+
+            return $parsedData;
+
+        } catch (\Throwable $e) {
+            $this->lastError = "Exception: " . $e->getMessage();
+            return null;
+        }
+    }
 }

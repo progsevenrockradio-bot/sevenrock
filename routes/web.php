@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
 use App\Http\Controllers\Admin\ProgramCodeController as AdminProgramCodeController;
 use App\Http\Controllers\Admin\NewReleaseController as AdminNewReleaseController;
+use App\Http\Controllers\Admin\MarketingController as AdminMarketingController;
 use App\Http\Controllers\LegacyWordPressUploadController;
 use App\Http\Controllers\PostReactionController;
 use App\Http\Controllers\PlayerController;
@@ -271,6 +272,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/campaigns/create', 'campaignsCreate')->name('campaigns.create');
         Route::post('/campaigns', 'campaignsStore')->name('campaigns.store');
         Route::get('/campaigns/{campaign}', 'campaignsShow')->name('campaigns.show');
+    });
+
+    Route::controller(AdminMarketingController::class)->prefix('marketing')->name('marketing.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::post('/contacts', 'storeContact')->name('contacts.store');
+        Route::delete('/contacts/{id}', 'deleteContact')->name('contacts.delete');
+        Route::post('/contacts/scrape', 'triggerScrape')->name('contacts.scrape');
+        Route::post('/accounts', 'storeAccount')->name('accounts.store');
+        Route::put('/accounts/{id}', 'updateAccount')->name('accounts.update');
+        Route::delete('/accounts/{id}', 'deleteAccount')->name('accounts.delete');
+        Route::get('/accounts/{id}/test', 'testConnection')->name('accounts.test');
+        Route::post('/campaigns', 'storeCampaign')->name('campaigns.store');
     });
 
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');

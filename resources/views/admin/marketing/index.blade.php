@@ -1,0 +1,566 @@
+<x-layouts.admin :title="'Email Marketing & Contactos - Seven Rock Radio'">
+    @if (session('status'))
+        <div class="mb-6 border border-[#1e4d2b] bg-[rgba(16,64,30,.2)] px-4 py-3 text-sm text-[#b8e6c3]">
+            {!! nl2br(e(session('status'))) !!}
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div class="mb-6 border border-[#7a2b2b] bg-[rgba(195,39,32,.15)] px-4 py-3 text-sm text-[#ff9e9e]">
+            {!! nl2br(e(session('error'))) !!}
+        </div>
+    @endif
+
+    <div 
+        class="space-y-6" 
+        x-data="{ 
+            activeTab: '{{ request('tab', 'contacts') }}',
+            showAddContactModal: false,
+            showScrapeModal: false,
+            showAddAccountModal: false,
+            editAccountData: null
+        }"
+    >
+        <!-- Cabecera del Módulo -->
+        <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div class="max-w-3xl">
+                    <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Email Marketing & Contactos</h1>
+                    <p class="mt-3 text-sm leading-7 text-[#7b7b7b]">
+                        Administra tu base de datos de remitentes, importa contactos desde tus bandejas de Gmail enriquecidos por Inteligencia Artificial y envía campañas de correo electrónico con plantillas personalizadas.
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ route('admin.dashboard') }}" class="lucille-button">Volver al Dashboard</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Barra de Navegación de Pestañas -->
+        <section class="border border-[#2b2b2b] bg-[rgba(10,10,11,.96)] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,.35)]">
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" class="lucille-button" :class="activeTab === 'contacts' ? 'lucille-button-solid' : ''" @click="activeTab = 'contacts'">
+                    👥 Contactos ({{ $contacts->total() }})
+                </button>
+                <button type="button" class="lucille-button" :class="activeTab === 'campaigns' ? 'lucille-button-solid' : ''" @click="activeTab = 'campaigns'">
+                    ✉️ Enviar Campaña
+                </button>
+                <button type="button" class="lucille-button" :class="activeTab === 'accounts' ? 'lucille-button-solid' : ''" @click="activeTab = 'accounts'">
+                    ⚙️ Cuentas de Correo ({{ $accounts->count() }})
+                </button>
+                <button type="button" class="lucille-button" :class="activeTab === 'history' ? 'lucille-button-solid' : ''" @click="activeTab = 'history'">
+                    📊 Historial de Envíos
+                </button>
+            </div>
+        </section>
+
+        <!-- ==================== PESTAÑA: CONTACTOS ==================== -->
+        <section x-cloak x-show="activeTab === 'contacts'" class="space-y-6">
+            <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
+                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+                    <!-- Buscador -->
+                    <form action="{{ route('admin.marketing.index') }}" method="GET" class="flex items-center gap-2 w-full md:max-w-md">
+                        <input type="hidden" name="tab" value="contacts">
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Buscar por email, nombre, banda..." class="lucille-product-field w-full">
+                        <button type="submit" class="lucille-button-solid">Buscar</button>
+                        @if(request('search'))
+                            <a href="{{ route('admin.marketing.index', ['tab' => 'contacts']) }}" class="lucille-button">Limpiar</a>
+                        @endif
+                    </form>
+
+                    <!-- Acciones -->
+                    <div class="flex flex-wrap gap-2">
+                        @if($accounts->count() > 0)
+                            <button type="button" class="lucille-button-solid bg-[#1e4d2b] border-[#1e4d2b]" @click="showScrapeModal = true">
+                                🔄 Sincronizar desde Gmail
+                            </button>
+                        @else
+                            <button type="button" class="lucille-button opacity-50 cursor-not-allowed" title="Agrega una cuenta primero">
+                                🔄 Sincronizar desde Gmail
+                            </button>
+                        @endif
+                        <button type="button" class="lucille-button-solid" @click="showAddContactModal = true">
+                            ➕ Agregar Contacto
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabla de Contactos -->
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse text-left text-sm text-[#dcdcdc]">
+                        <thead>
+                            <tr class="border-b border-[#2b2b2b] bg-[rgba(0,0,0,.2)] text-xs uppercase tracking-wider text-[#7b7b7b]">
+                                <th class="p-4">Contacto</th>
+                                <th class="p-4">Empresa / Banda</th>
+                                <th class="p-4">Cargo / Rol</th>
+                                <th class="p-4">Origen</th>
+                                <th class="p-4">Fecha Importado</th>
+                                <th class="p-4 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[#2b2b2b]">
+                            @forelse($contacts as $contact)
+                                <tr class="hover:bg-[rgba(255,255,255,.02)]">
+                                    <td class="p-4">
+                                        <div class="font-bold text-[#ffffff]">{{ $contact->name ?: 'Sin Nombre' }}</div>
+                                        <div class="text-xs text-[#7b7b7b]">{{ $contact->email }}</div>
+                                    </td>
+                                    <td class="p-4">
+                                        <span class="px-2 py-1 text-xs border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] text-[#e0e0e0]">
+                                            {{ $contact->company_or_band ?: 'Independiente' }}
+                                        </span>
+                                    </td>
+                                    <td class="p-4 text-[#e0e0e0]">
+                                        {{ $contact->role ?: 'Contacto' }}
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-xs text-[#dcdcdc] font-mono">
+                                            {{ $contact->source_type }}
+                                        </div>
+                                        @if($contact->sourceAccount)
+                                            <div class="text-[10px] text-[#7b7b7b]">{{ $contact->sourceAccount->email }}</div>
+                                        @endif
+                                    </td>
+                                    <td class="p-4 text-xs text-[#7b7b7b]">
+                                        {{ $contact->created_at->format('d/m/Y H:i') }}
+                                    </td>
+                                    <td class="p-4 text-right">
+                                        <form action="{{ route('admin.marketing.contacts.delete', $contact->id) }}" method="POST" onsubmit="return confirm('¿Eliminar este contacto de la lista?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-xs text-[#ff9e9e] hover:underline">Eliminar</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="p-8 text-center text-[#7b7b7b]">
+                                        No se encontraron contactos en tu base de datos.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación -->
+                <div class="mt-6">
+                    {{ $contacts->links() }}
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== PESTAÑA: CREAR CAMPAÑA ==================== -->
+        <section x-cloak x-show="activeTab === 'campaigns'">
+            @if($accounts->count() === 0)
+                <div class="border border-[#7a2b2b] bg-[rgba(195,39,32,.15)] p-8 text-center text-[#ff9e9e]">
+                    <h3 class="font-display text-xl uppercase tracking-wider mb-2">No tienes cuentas de correo configuradas</h3>
+                    <p class="text-sm">Debes agregar al menos una cuenta de correo en la pestaña de "Cuentas de Correo" antes de poder enviar campañas.</p>
+                </div>
+            @else
+                <form action="{{ route('admin.marketing.campaigns.store') }}" method="POST" class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8 space-y-6">
+                    @csrf
+                    <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-4">Redactar Nueva Campaña</h2>
+                    
+                    <div class="grid gap-6 md:grid-cols-2">
+                        <!-- Asunto -->
+                        <div class="md:col-span-2">
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Asunto del Correo</label>
+                            <input type="text" name="subject" value="{{ old('subject') }}" required class="lucille-product-field w-full" placeholder="ej. ¡Gran lanzamiento rockero esta semana en Seven Rock Radio!">
+                            @error('subject')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                        </div>
+
+                        <!-- Remitente -->
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Cuenta Remitente</label>
+                            <select name="sender_account_id" class="lucille-product-field lucille-select-field w-full">
+                                @foreach($accounts as $acc)
+                                    <option value="{{ $acc->id }}">{{ $acc->sender_name }} ({{ $acc->email }})</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-2 text-xs text-[#7b7b7b]">Los correos se despacharán usando la configuración SMTP de esta cuenta.</p>
+                        </div>
+
+                        <!-- Plantilla -->
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Plantilla de Diseño</label>
+                            <select name="template" class="lucille-product-field lucille-select-field w-full">
+                                @foreach($templates as $key => $name)
+                                    <option value="{{ $key }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-2 text-xs text-[#7b7b7b]">Elige la estructura visual de la campaña.</p>
+                        </div>
+
+                        <!-- Contenido -->
+                        <div class="md:col-span-2">
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Mensaje / Cuerpo del Correo</label>
+                            <textarea name="body_content" rows="10" required class="lucille-product-field w-full" placeholder="Escribe el mensaje aquí. Puedes usar saltos de línea normales para estructurar los párrafos."></textarea>
+                            @error('body_content')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                        </div>
+
+                        <!-- Botón CTA (Llamado a la acción) -->
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Texto del Botón (Opcional)</label>
+                            <input type="text" name="button_text" value="{{ old('button_text') }}" class="lucille-product-field w-full" placeholder="ej. Visitar Sitio Web">
+                        </div>
+
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Enlace / URL del Botón (Opcional)</label>
+                            <input type="url" name="button_url" value="{{ old('button_url') }}" class="lucille-product-field w-full" placeholder="ej. https://sevenrockradio.com">
+                        </div>
+                    </div>
+
+                    <div class="border-t border-[#2b2b2b] pt-6 flex justify-end">
+                        <button type="submit" class="lucille-button-solid bg-[#c32720] border-[#c32720]" onclick="return confirm('¿Confirmas el envío de esta campaña a todos tus contactos? El proceso correrá en segundo plano.')">
+                            🚀 Despachar Campaña en Lotes
+                        </button>
+                    </div>
+                </form>
+            @endif
+        </section>
+
+        <!-- ==================== PESTAÑA: CUENTAS DE CORREO ==================== -->
+        <section x-cloak x-show="activeTab === 'accounts'" class="space-y-6">
+            <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
+                <div class="flex items-center justify-between mb-6 border-b border-[#2b2b2b] pb-4">
+                    <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Cuentas Configureras</h2>
+                    <button type="button" class="lucille-button-solid" @click="showAddAccountModal = true">
+                        ➕ Agregar Cuenta de Correo
+                    </button>
+                </div>
+
+                <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    @forelse($accounts as $acc)
+                        <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.2)] p-6 rounded-lg space-y-4 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="font-display text-lg text-[#ffffff] uppercase tracking-wider">{{ $acc->sender_name }}</span>
+                                    <span class="px-2 py-0.5 text-[10px] uppercase font-bold {{ $acc->is_active ? 'bg-[rgba(16,64,30,.2)] border border-[#1e4d2b] text-[#b8e6c3]' : 'bg-[rgba(195,39,32,.15)] border border-[#7a2b2b] text-[#ff9e9e]' }}">
+                                        {{ $acc->is_active ? 'Activa' : 'Inactiva' }}
+                                    </span>
+                                </div>
+                                <div class="text-sm text-[#7b7b7b] font-mono break-all">{{ $acc->email }}</div>
+
+                                <div class="mt-4 space-y-2 border-t border-[#2b2b2b] pt-3 text-xs text-[#e0e0e0]">
+                                    <div><strong>Host IMAP:</strong> {{ $acc->imap_host }}:{{ $acc->imap_port }} ({{ $acc->imap_encryption }})</div>
+                                    <div><strong>Host SMTP:</strong> {{ $acc->smtp_host }}:{{ $acc->smtp_port }} ({{ $acc->smtp_encryption }})</div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2 border-t border-[#2b2b2b] pt-4 mt-auto">
+                                <a href="{{ route('admin.marketing.accounts.test', $acc->id) }}" class="lucille-button text-xs bg-[#1a2e3a] hover:bg-[#203a4b] w-full text-center">
+                                    🔌 Probar Conexión
+                                </a>
+                                <button type="button" class="lucille-button text-xs flex-1" @click="editAccountData = {{ Js::from($acc) }}">
+                                    Editar
+                                </button>
+                                <form action="{{ route('admin.marketing.accounts.delete', $acc->id) }}" method="POST" onsubmit="return confirm('¿Eliminar esta cuenta de correo?')" class="inline flex-1">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="lucille-button text-xs text-[#ff9e9e] border-[#7a2b2b] w-full">Eliminar</button>
+                                </form>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-span-full border border-[#2b2b2b] p-8 text-center text-[#7b7b7b]">
+                            No tienes ninguna cuenta de correo agregada. ¡Configura una para poder sincronizar contactos y enviar boletines!
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== PESTAÑA: HISTORIAL DE CAMPAÑAS ==================== -->
+        <section x-cloak x-show="activeTab === 'history'">
+            <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
+                <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-4 mb-6">Campañas Enviadas</h2>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse text-left text-sm text-[#dcdcdc]">
+                        <thead>
+                            <tr class="border-b border-[#2b2b2b] bg-[rgba(0,0,0,.2)] text-xs uppercase tracking-wider text-[#7b7b7b]">
+                                <th class="p-4">Campaña / Asunto</th>
+                                <th class="p-4">Remitente</th>
+                                <th class="p-4">Plantilla</th>
+                                <th class="p-4">Estado</th>
+                                <th class="p-4">Destinatarios</th>
+                                <th class="p-4">Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[#2b2b2b]">
+                            @forelse($campaigns as $camp)
+                                <tr class="hover:bg-[rgba(255,255,255,.02)]">
+                                    <td class="p-4">
+                                        <div class="font-bold text-[#ffffff]">{{ $camp->subject }}</div>
+                                    </td>
+                                    <td class="p-4 text-xs font-mono text-[#e0e0e0]">
+                                        {{ $camp->senderAccount->email ?? 'Remitente no disponible' }}
+                                    </td>
+                                    <td class="p-4 text-xs">
+                                        {{ $templates[$camp->template] ?? $camp->template }}
+                                    </td>
+                                    <td class="p-4">
+                                        <span class="px-2 py-0.5 text-xs font-bold uppercase rounded
+                                            @if($camp->status === 'sent') bg-[rgba(16,64,30,.2)] border border-[#1e4d2b] text-[#b8e6c3]
+                                            @elseif($camp->status === 'sending') bg-[rgba(30,58,138,.3)] border border-[#1d4ed8] text-[#93c5fd]
+                                            @elseif($camp->status === 'failed') bg-[rgba(153,27,27,.2)] border border-[#991b1b] text-[#fca5a5]
+                                            @else bg-[rgba(255,255,255,.05)] border border-[#2b2b2b] text-[#dcdcdc] @endif">
+                                            {{ $camp->status }}
+                                        </span>
+                                    </td>
+                                    <td class="p-4 text-xs text-[#e0e0e0]">
+                                        <strong>{{ $camp->sent_contacts }}</strong> / {{ $camp->total_contacts }} enviados
+                                    </td>
+                                    <td class="p-4 text-xs text-[#7b7b7b]">
+                                        {{ $camp->created_at->format('d/m/Y H:i') }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="p-8 text-center text-[#7b7b7b]">
+                                        No has enviado ninguna campaña promocional aún.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== MODALES ==================== -->
+
+        <!-- MODAL: AGREGAR CONTACTO -->
+        <div x-cloak x-show="showAddContactModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+            <div class="border border-[#2b2b2b] bg-[#101012] p-8 max-w-md w-full rounded-lg shadow-2xl space-y-6" @click.away="showAddContactModal = false">
+                <h3 class="font-display text-xl uppercase tracking-wider text-[#dcdcdc]">Agregar Contacto Manual</h3>
+                
+                <form action="{{ route('admin.marketing.contacts.store') }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Correo Electrónico *</label>
+                        <input type="email" name="email" required class="lucille-product-field w-full">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nombre del Contacto</label>
+                        <input type="text" name="name" class="lucille-product-field w-full">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Empresa o Banda</label>
+                        <input type="text" name="company_or_band" class="lucille-product-field w-full">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Cargo o Rol</label>
+                        <input type="text" name="role" class="lucille-product-field w-full">
+                    </div>
+                    <div class="flex justify-end gap-3 pt-4 border-t border-[#2b2b2b]">
+                        <button type="button" class="lucille-button" @click="showAddContactModal = false">Cancelar</button>
+                        <button type="submit" class="lucille-button-solid">Guardar Contacto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: SINCRONIZAR DESDE GMAIL -->
+        <div x-cloak x-show="showScrapeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+            <div class="border border-[#2b2b2b] bg-[#101012] p-8 max-w-md w-full rounded-lg shadow-2xl space-y-6" @click.away="showScrapeModal = false">
+                <h3 class="font-display text-xl uppercase tracking-wider text-[#dcdcdc]">Sincronizar Contactos con IA</h3>
+                <p class="text-xs text-[#7b7b7b]">Esta acción leerá la bandeja IMAP seleccionada, descubrirá remitentes que no tengas en tu base de datos y usará la API de Gemini para clasificar y extraer sus cargos y bandas de rock.</p>
+
+                <form action="{{ route('admin.marketing.contacts.scrape') }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Elegir Cuenta de Correo</label>
+                        <select name="account_id" class="lucille-product-field lucille-select-field w-full">
+                            @foreach($accounts as $acc)
+                                <option value="{{ $acc->id }}">{{ $acc->sender_name }} ({{ $acc->email }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Carpeta a Escanear</label>
+                        <input type="text" name="folder" value="INBOX" required class="lucille-product-field w-full" placeholder="INBOX, [Gmail]/Papelera, Trash...">
+                        <p class="mt-1 text-[10px] text-[#7b7b7b]">Escribe "INBOX" para bandeja de entrada, o "[Gmail]/Papelera" para la papelera de Gmail.</p>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Límite de Correos a Analizar</label>
+                        <select name="limit" class="lucille-product-field lucille-select-field w-full">
+                            <option value="50">50 correos más recientes</option>
+                            <option value="100" selected>100 correos más recientes (Recomendado)</option>
+                            <option value="200">200 correos más recientes</option>
+                            <option value="500">500 correos más recientes (Lento)</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-4 border-t border-[#2b2b2b]">
+                        <button type="button" class="lucille-button" @click="showScrapeModal = false">Cancelar</button>
+                        <button type="submit" class="lucille-button-solid bg-[#1e4d2b] border-[#1e4d2b]">Iniciar Importación IA</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: AGREGAR CUENTA DE CORREO -->
+        <div x-cloak x-show="showAddAccountModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+            <div class="border border-[#2b2b2b] bg-[#101012] p-8 max-w-xl w-full rounded-lg shadow-2xl space-y-6 overflow-y-auto max-h-[90vh]" @click.away="showAddAccountModal = false">
+                <h3 class="font-display text-xl uppercase tracking-wider text-[#dcdcdc] border-b border-[#2b2b2b] pb-3">Agregar Nueva Cuenta de Correo</h3>
+
+                <form action="{{ route('admin.marketing.accounts.store') }}" method="POST" class="grid gap-4 md:grid-cols-2">
+                    @csrf
+                    <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Correo Electrónico</label>
+                        <input type="email" name="email" required class="lucille-product-field w-full" placeholder="ej. press.sevenrockradio@gmail.com">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nombre del Remitente</label>
+                        <input type="text" name="sender_name" required class="lucille-product-field w-full" placeholder="ej. Seven Rock Press">
+                    </div>
+
+                    <!-- Configuración IMAP -->
+                    <div class="md:col-span-2 mt-2 border-b border-[#2b2b2b] pb-1">
+                        <h4 class="text-xs uppercase font-bold text-[#c32720]">Configuración Entrada (IMAP)</h4>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Servidor IMAP</label>
+                        <input type="text" name="imap_host" value="imap.gmail.com" required class="lucille-product-field w-full">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Puerto</label>
+                            <input type="number" name="imap_port" value="993" required class="lucille-product-field w-full">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Cifrado</label>
+                            <select name="imap_encryption" class="lucille-product-field lucille-select-field w-full">
+                                <option value="ssl" selected>SSL</option>
+                                <option value="tls">TLS</option>
+                                <option value="none">Ninguno</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Contraseña de Aplicación IMAP</label>
+                        <input type="password" name="imap_password" required class="lucille-product-field w-full" placeholder="Contraseña de aplicación de 16 caracteres de Google">
+                    </div>
+
+                    <!-- Configuración SMTP -->
+                    <div class="md:col-span-2 mt-2 border-b border-[#2b2b2b] pb-1">
+                        <h4 class="text-xs uppercase font-bold text-[#c32720]">Configuración Salida (SMTP)</h4>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Servidor SMTP</label>
+                        <input type="text" name="smtp_host" value="smtp.gmail.com" required class="lucille-product-field w-full">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Puerto</label>
+                            <input type="number" name="smtp_port" value="465" required class="lucille-product-field w-full">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Cifrado</label>
+                            <select name="smtp_encryption" class="lucille-product-field lucille-select-field w-full">
+                                <option value="ssl" selected>SSL</option>
+                                <option value="tls">TLS</option>
+                                <option value="none">Ninguno</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Contraseña de Aplicación SMTP</label>
+                        <input type="password" name="smtp_password" required class="lucille-product-field w-full" placeholder="Normalmente la misma contraseña de aplicación">
+                    </div>
+
+                    <div class="md:col-span-2 flex justify-end gap-3 pt-4 border-t border-[#2b2b2b] mt-4">
+                        <button type="button" class="lucille-button" @click="showAddAccountModal = false">Cancelar</button>
+                        <button type="submit" class="lucille-button-solid">Guardar Cuenta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: EDITAR CUENTA DE CORREO -->
+        <div x-cloak x-show="editAccountData !== null" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+            <div class="border border-[#2b2b2b] bg-[#101012] p-8 max-w-xl w-full rounded-lg shadow-2xl space-y-6 overflow-y-auto max-h-[90vh]" @click.away="editAccountData = null">
+                <h3 class="font-display text-xl uppercase tracking-wider text-[#dcdcdc] border-b border-[#2b2b2b] pb-3">Editar Cuenta de Correo</h3>
+
+                <form :action="'{{ route('admin.marketing.accounts.update', '') }}/' + (editAccountData ? editAccountData.id : '')" method="POST" class="grid gap-4 md:grid-cols-2">
+                    @csrf
+                    @method('PUT')
+                    <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Correo Electrónico (No modificable)</label>
+                        <input type="email" disabled :value="editAccountData ? editAccountData.email : ''" class="lucille-product-field w-full opacity-60">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nombre del Remitente</label>
+                        <input type="text" name="sender_name" required :value="editAccountData ? editAccountData.sender_name : ''" class="lucille-product-field w-full">
+                    </div>
+
+                    <!-- Configuración IMAP -->
+                    <div class="md:col-span-2 mt-2 border-b border-[#2b2b2b] pb-1">
+                        <h4 class="text-xs uppercase font-bold text-[#c32720]">Configuración Entrada (IMAP)</h4>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Servidor IMAP</label>
+                        <input type="text" name="imap_host" required :value="editAccountData ? editAccountData.imap_host : ''" class="lucille-product-field w-full">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Puerto</label>
+                            <input type="number" name="imap_port" required :value="editAccountData ? editAccountData.imap_port : ''" class="lucille-product-field w-full">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Cifrado</label>
+                            <select name="imap_encryption" class="lucille-product-field lucille-select-field w-full">
+                                <option value="ssl" :selected="editAccountData && editAccountData.imap_encryption == 'ssl'">SSL</option>
+                                <option value="tls" :selected="editAccountData && editAccountData.imap_encryption == 'tls'">TLS</option>
+                                <option value="none" :selected="editAccountData && editAccountData.imap_encryption == 'none'">Ninguno</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nueva Contraseña de Aplicación IMAP (Dejar vacío para no cambiar)</label>
+                        <input type="password" name="imap_password" class="lucille-product-field w-full" placeholder="Omitir si no deseas cambiarla">
+                    </div>
+
+                    <!-- Configuración SMTP -->
+                    <div class="md:col-span-2 mt-2 border-b border-[#2b2b2b] pb-1">
+                        <h4 class="text-xs uppercase font-bold text-[#c32720]">Configuración Salida (SMTP)</h4>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Servidor SMTP</label>
+                        <input type="text" name="smtp_host" required :value="editAccountData ? editAccountData.smtp_host : ''" class="lucille-product-field w-full">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Puerto</label>
+                            <input type="number" name="smtp_port" required :value="editAccountData ? editAccountData.smtp_port : ''" class="lucille-product-field w-full">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Cifrado</label>
+                            <select name="smtp_encryption" class="lucille-product-field lucille-select-field w-full">
+                                <option value="ssl" :selected="editAccountData && editAccountData.smtp_encryption == 'ssl'">SSL</option>
+                                <option value="tls" :selected="editAccountData && editAccountData.smtp_encryption == 'tls'">TLS</option>
+                                <option value="none" :selected="editAccountData && editAccountData.smtp_encryption == 'none'">Ninguno</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nueva Contraseña de Aplicación SMTP (Dejar vacío para no cambiar)</label>
+                        <input type="password" name="smtp_password" class="lucille-product-field w-full" placeholder="Omitir si no deseas cambiarla">
+                    </div>
+
+                    <div class="md:col-span-2 mt-2 border-t border-[#2b2b2b] pt-3 flex items-center gap-2">
+                        <input type="checkbox" name="is_active" id="edit_is_active" value="1" :checked="editAccountData && editAccountData.is_active" class="rounded border-[#2b2b2b] bg-[#101012] text-[#c32720]">
+                        <label for="edit_is_active" class="text-xs uppercase tracking-wider text-[#e0e0e0]">Cuenta activa para envíos y sincronización</label>
+                    </div>
+
+                    <div class="md:col-span-2 flex justify-end gap-3 pt-4 border-t border-[#2b2b2b] mt-4">
+                        <button type="button" class="lucille-button" @click="editAccountData = null">Cancelar</button>
+                        <button type="submit" class="lucille-button-solid">Actualizar Cuenta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</x-layouts.admin>
