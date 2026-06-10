@@ -74,7 +74,10 @@ class UploadMp3ToArchiveOrg implements ShouldQueue
 
         // Construir identificador del bucket único y válido para Archive.org (minúsculas, guiones)
         $cleanSlug = Str::slug($newRelease->slug ?: ($newRelease->title . '-' . $newRelease->artist_name));
-        $configBucket = trim((string) config('services.archive_org.bucket'));
+        $configBucket = trim((string) config('services.imap.archive_bucket'));
+        if ($configBucket === '') {
+            $configBucket = trim((string) config('services.archive_org.bucket'));
+        }
         
         $bucketName = ($configBucket !== '') ? $configBucket : ('sevenrockradio-' . substr($cleanSlug, 0, 80));
         $safeFileName = $cleanSlug . '.mp3';
