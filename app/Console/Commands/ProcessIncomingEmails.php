@@ -118,15 +118,28 @@ class ProcessIncomingEmails extends Command
                         $tempMp3Name = $filename;
                         $this->info("Adjunto de audio detectado y guardado temporalmente: {$filename}");
                     } elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                        try {
-                            $uploaded = app(\App\Services\FileUploadService::class)->uploadRaw(
-                                $content,
-                                'catalog/releases/covers/' . Str::uuid()->toString() . '.' . $ext
-                            );
-                            $coverUrl = $uploaded['url'];
-                            $this->info("Adjunto de imagen detectado y subido: {$coverUrl}");
-                        } catch (\Throwable $e) {
-                            Log::error("ProcessIncomingEmails: Fallo al subir portada adjunta: " . $e->getMessage());
+                        $sizeInBytes = strlen((string) $content);
+                        
+                        // Omitir imágenes pequeñas menores a 40 KB (como firmas, logos o íconos)
+                        if ($sizeInBytes < 40960) {
+                            $this->info("Ignorando imagen pequeña (posible firma/logo): {$filename} ({$sizeInBytes} bytes)");
+                            continue;
+                        }
+
+                        // Conservar la primera imagen grande detectada como portada y evitar sobrescribirla
+                        if ($coverUrl === null) {
+                            try {
+                                $uploaded = app(\App\Services\FileUploadService::class)->uploadRaw(
+                                    $content,
+                                    'catalog/releases/covers/' . Str::uuid()->toString() . '.' . $ext
+                                );
+                                $coverUrl = $uploaded['url'];
+                                $this->info("Adjunto de imagen principal detectado y subido: {$coverUrl}");
+                            } catch (\Throwable $e) {
+                                Log::error("ProcessIncomingEmails: Fallo al subir portada adjunta: " . $e->getMessage());
+                            }
+                        } else {
+                            $this->info("Ignorando imagen extra: {$filename} (ya se asignó la portada principal)");
                         }
                     }
                 }
