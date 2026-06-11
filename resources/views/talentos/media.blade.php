@@ -39,6 +39,11 @@
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Archivo</label>
                         <input type="file" name="file" class="lucille-product-field w-full">
                     </div>
+                    <div class="flex items-center gap-2 py-1 select-none">
+                        <input type="hidden" name="is_exclusive" value="0">
+                        <input type="checkbox" name="is_exclusive" id="is_exclusive" value="1" @checked(old('is_exclusive')) class="h-4 w-4 rounded border-[#2b2b2b] bg-[#151515] text-[#c32720] focus:ring-[#c32720] cursor-pointer">
+                        <label for="is_exclusive" class="text-xs uppercase tracking-[.18em] text-[#dcdcdc] cursor-pointer">¿Exclusivo para Afiliados?</label>
+                    </div>
                     <button type="submit" class="lucille-button-solid">Subir archivo</button>
                 </form>
             </div>
@@ -52,7 +57,12 @@
                     @forelse ($media as $item)
                         <div class="border border-[#2b2b2b] bg-[#151515] p-4">
                             <div class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">{{ $item->title ?: $item->filename }}</div>
-                            <div class="mt-1 text-xs uppercase tracking-[.12em] text-[#7b7b7b]">{{ $item->type }} · {{ number_format($item->size / 1024, 1) }} KB</div>
+                            <div class="mt-1 text-xs uppercase tracking-[.12em] text-[#7b7b7b]">
+                                {{ $item->type }} · {{ number_format($item->size / 1024, 1) }} KB
+                                @if ($item->is_exclusive)
+                                    · <span class="text-[var(--lucille-accent)] font-semibold">Exclusivo</span>
+                                @endif
+                            </div>
                             @if ($item->description)
                                 <p class="mt-3 text-sm text-[#7b7b7b]">{{ $item->description }}</p>
                             @endif

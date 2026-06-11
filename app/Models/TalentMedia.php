@@ -22,12 +22,14 @@ class TalentMedia extends Model
         'description',
         'mime_type',
         'size',
+        'is_exclusive',
     ];
 
     protected function casts(): array
     {
         return [
             'size' => 'integer',
+            'is_exclusive' => 'boolean',
         ];
     }
 

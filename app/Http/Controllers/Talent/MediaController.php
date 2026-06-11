@@ -56,6 +56,7 @@ class MediaController extends Controller
             'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'file' => ['required', 'file', 'max:' . $maxFileKb],
+            'is_exclusive' => ['nullable', 'boolean'],
         ]);
 
         try {
@@ -89,6 +90,7 @@ class MediaController extends Controller
                 'description' => $validated['description'] ?? null,
                 'mime_type' => (string) $file->getMimeType(),
                 'size' => $fileSize,
+                'is_exclusive' => $request->boolean('is_exclusive'),
             ]);
         } catch (\Throwable $e) {
             return back()->withInput()->withErrors([

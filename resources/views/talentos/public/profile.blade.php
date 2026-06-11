@@ -77,98 +77,117 @@
                         <div class="mt-6 grid gap-6 md:grid-cols-2">
                             @foreach ($media as $item)
                                 <article class="overflow-hidden rounded-[12px] bg-white/[0.02] border border-white/5 p-4 hover:border-white/15 hover:bg-white/[0.04] transition-all duration-300 group" data-type="{{ $item->type }}">
-                                    @if ($item->type === 'photo')
-                                        <div class="aspect-video w-full overflow-hidden rounded-[8px] bg-black/40 relative">
-                                            <img src="{{ $item->url }}" alt="{{ $item->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" width="400" height="225">
+                                    @if ($item->is_exclusive && !Auth::guard('web')->check() && !Auth::guard('talent')->check())
+                                        <div class="p-4 bg-black/40 rounded-[8px] text-center flex flex-col justify-between items-center h-full min-h-[140px]">
+                                            <div>
+                                                <div class="h-9 w-9 mx-auto rounded-full bg-[var(--lucille-accent)]/10 border border-[var(--lucille-accent)]/20 text-[var(--lucille-accent)] flex items-center justify-center text-base">
+                                                    🔒
+                                                </div>
+                                                <h4 class="mt-3 font-display text-xs font-bold uppercase tracking-wide text-white truncate max-w-full" title="{{ $item->title ?: $item->filename }}">
+                                                    {{ $item->title ?: $item->filename }}
+                                                </h4>
+                                                <p class="mt-1 text-[10px] text-[#7b7b7b] leading-relaxed">
+                                                    Exclusivo para Afiliados
+                                                </p>
+                                            </div>
+                                            <a href="{{ route('afiliados.register') }}" class="lucille-button text-[9px] uppercase py-1 px-3 tracking-wider mt-3 rounded-[6px] w-full text-center">
+                                                Registrarse Gratis
+                                            </a>
                                         </div>
-                                        <p class="mt-3 text-sm font-semibold text-white truncate">{{ $item->title ?: $item->filename }}</p>
-                                    @elseif ($item->type === 'mp3')
-                                        <!-- Custom Styled Audio Player using Alpine.js -->
-                                        <div class="custom-audio-player-wrapper py-1" x-data="{
-                                            playing: false,
-                                            duration: 0,
-                                            currentTime: 0,
-                                            audio: null,
-                                            init() {
-                                                this.audio = new Audio('{{ $item->url }}');
-                                                this.audio.preload = 'none';
-                                                this.audio.addEventListener('durationchange', () => this.duration = this.audio.duration);
-                                                this.audio.addEventListener('timeupdate', () => this.currentTime = this.audio.currentTime);
-                                                this.audio.addEventListener('ended', () => this.playing = false);
-                                            },
-                                            togglePlay() {
-                                                if (this.playing) {
-                                                    this.audio.pause();
-                                                    this.playing = false;
-                                                } else {
-                                                    window.dispatchEvent(new CustomEvent('stop-all-audio', { detail: { except: this.audio } }));
-                                                    this.audio.play();
-                                                    this.playing = true;
+                                    @else
+                                        @if ($item->type === 'photo')
+                                            <div class="aspect-video w-full overflow-hidden rounded-[8px] bg-black/40 relative">
+                                                <img src="{{ $item->url }}" alt="{{ $item->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" width="400" height="225">
+                                            </div>
+                                            <p class="mt-3 text-sm font-semibold text-white truncate">{{ $item->title ?: $item->filename }}</p>
+                                        @elseif ($item->type === 'mp3')
+                                            <!-- Custom Styled Audio Player using Alpine.js -->
+                                            <div class="custom-audio-player-wrapper py-1" x-data="{
+                                                playing: false,
+                                                duration: 0,
+                                                currentTime: 0,
+                                                audio: null,
+                                                init() {
+                                                    this.audio = new Audio('{{ $item->url }}');
+                                                    this.audio.preload = 'none';
+                                                    this.audio.addEventListener('durationchange', () => this.duration = this.audio.duration);
+                                                    this.audio.addEventListener('timeupdate', () => this.currentTime = this.audio.currentTime);
+                                                    this.audio.addEventListener('ended', () => this.playing = false);
+                                                },
+                                                togglePlay() {
+                                                    if (this.playing) {
+                                                        this.audio.pause();
+                                                        this.playing = false;
+                                                    } else {
+                                                        window.dispatchEvent(new CustomEvent('stop-all-audio', { detail: { except: this.audio } }));
+                                                        this.audio.play();
+                                                        this.playing = true;
+                                                    }
+                                                },
+                                                formatTime(secs) {
+                                                    if (isNaN(secs)) return '0:00';
+                                                    const minutes = Math.floor(secs / 60);
+                                                    const seconds = Math.floor(secs % 60);
+                                                    return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+                                                },
+                                                seek(event) {
+                                                    const percent = event.target.value / 100;
+                                                    this.audio.currentTime = percent * this.duration;
                                                 }
-                                            },
-                                            formatTime(secs) {
-                                                if (isNaN(secs)) return '0:00';
-                                                const minutes = Math.floor(secs / 60);
-                                                const seconds = Math.floor(secs % 60);
-                                                return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-                                            },
-                                            seek(event) {
-                                                const percent = event.target.value / 100;
-                                                this.audio.currentTime = percent * this.duration;
-                                            }
-                                        }" @stop-all-audio.window="if (audio !== $event.detail.except) { audio.pause(); playing = false; }">
-                                            <div class="flex items-center gap-4">
-                                                <button type="button" @click="togglePlay()" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--lucille-accent)] text-white hover:scale-105 transition-transform shadow-md" aria-label="Reproducir/Pausar">
-                                                    <template x-if="!playing">
-                                                        <svg class="h-5 w-5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                                    </template>
-                                                    <template x-if="playing">
-                                                        <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                                                    </template>
-                                                </button>
-                                                <div class="min-w-0 flex-1">
-                                                    <p class="truncate text-sm font-semibold text-white">{{ $item->title ?: $item->filename }}</p>
-                                                    <div class="mt-1.5 flex items-center gap-3">
-                                                        <input type="range" min="0" max="100" :value="duration ? (currentTime / duration) * 100 : 0" @input="seek($event)" class="audio-slider flex-1">
-                                                        <span class="text-[10px] text-gray-400 font-mono shrink-0" x-text="formatTime(currentTime) + ' / ' + (duration ? formatTime(duration) : '0:00')">0:00 / 0:00</span>
+                                            }" x-on:stop-all-audio.window="if (audio !== $event.detail.except) { audio.pause(); playing = false; }">
+                                                <div class="flex items-center gap-4">
+                                                    <button type="button" @click="togglePlay()" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--lucille-accent)] text-white hover:scale-105 transition-transform shadow-md" aria-label="Reproducir/Pausar">
+                                                        <template x-if="!playing">
+                                                            <svg class="h-5 w-5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                                        </template>
+                                                        <template x-if="playing">
+                                                            <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                                        </template>
+                                                    </button>
+                                                    <div class="min-w-0 flex-1">
+                                                        <p class="truncate text-sm font-semibold text-white">{{ $item->title ?: $item->filename }}</p>
+                                                        <div class="mt-1.5 flex items-center gap-3">
+                                                            <input type="range" min="0" max="100" :value="duration ? (currentTime / duration) * 100 : 0" @input="seek($event)" class="audio-slider flex-1">
+                                                            <span class="text-[10px] text-gray-400 font-mono shrink-0" x-text="formatTime(currentTime) + ' / ' + (duration ? formatTime(duration) : '0:00')">0:00 / 0:00</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    @elseif ($item->type === 'video')
-                                         <div class="relative group aspect-video w-full overflow-hidden rounded-[8px] bg-black/60 border border-white/5 shadow-md" x-data="{
-                                             playing: false,
-                                             video: null,
-                                             init() {
-                                                 this.video = this.$refs.videoElement;
-                                             },
-                                             togglePlay() {
-                                                 if (this.playing) {
-                                                     this.video.pause();
-                                                 } else {
-                                                     window.dispatchEvent(new CustomEvent('stop-all-audio'));
-                                                     this.video.play();
+                                        @elseif ($item->type === 'video')
+                                             <div class="relative group aspect-video w-full overflow-hidden rounded-[8px] bg-black/60 border border-white/5 shadow-md" x-data="{
+                                                 playing: false,
+                                                 video: null,
+                                                 init() {
+                                                     this.video = this.$refs.videoElement;
+                                                 },
+                                                 togglePlay() {
+                                                     if (this.playing) {
+                                                         this.video.pause();
+                                                     } else {
+                                                         window.dispatchEvent(new CustomEvent('stop-all-audio'));
+                                                         this.video.play();
+                                                     }
                                                  }
-                                             }
-                                         }">
-                                             <video x-ref="videoElement" :controls="playing" @play="playing = true" @pause="playing = false" @ended="playing = false" src="{{ $item->url }}" class="h-full w-full object-cover" preload="none" width="400" height="225"></video>
-                                             
-                                             <!-- Premium Play Button Overlay (hides when playing) -->
-                                             <div x-show="!playing" class="absolute inset-0 flex items-center justify-center bg-black/35 group-hover:bg-black/15 transition-all duration-300">
-                                                 <button type="button" @click="togglePlay()" class="h-14 w-14 rounded-full bg-[var(--lucille-accent)] text-white flex items-center justify-center shadow-[0_6px_25px_rgba(195,39,32,0.45)] hover:scale-110 active:scale-95 transition-all duration-300" aria-label="Reproducir video">
-                                                     <svg class="h-6 w-6 fill-current ml-1" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                                 </button>
+                                             }">
+                                                 <video x-ref="videoElement" :controls="playing" @play="playing = true" @pause="playing = false" @ended="playing = false" src="{{ $item->url }}" class="h-full w-full object-cover" preload="none" width="400" height="225"></video>
+                                                 
+                                                 <!-- Premium Play Button Overlay (hides when playing) -->
+                                                 <div x-show="!playing" class="absolute inset-0 flex items-center justify-center bg-black/35 group-hover:bg-black/15 transition-all duration-300">
+                                                     <button type="button" @click="togglePlay()" class="h-14 w-14 rounded-full bg-[var(--lucille-accent)] text-white flex items-center justify-center shadow-[0_6px_25px_rgba(195,39,32,0.45)] hover:scale-110 active:scale-95 transition-all duration-300" aria-label="Reproducir video">
+                                                         <svg class="h-6 w-6 fill-current ml-1" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                                     </button>
+                                                 </div>
                                              </div>
-                                         </div>
-                                         <p class="mt-3 text-sm font-semibold text-white truncate">{{ $item->title ?: $item->filename }}</p>
-                                    @else
-                                        <div class="flex items-center gap-3 p-2">
-                                            <span class="text-2xl">📄</span>
-                                            <div class="min-w-0 flex-1">
-                                                <a href="{{ $item->url }}" target="_blank" class="text-sm font-semibold text-white hover:underline truncate block">{{ $item->title ?? $item->filename }}</a>
-                                                <span class="text-[10px] text-gray-500 uppercase tracking-wider">Documento</span>
+                                             <p class="mt-3 text-sm font-semibold text-white truncate">{{ $item->title ?: $item->filename }}</p>
+                                        @else
+                                            <div class="flex items-center gap-3 p-2">
+                                                <span class="text-2xl">📄</span>
+                                                <div class="min-w-0 flex-1">
+                                                    <a href="{{ $item->url }}" target="_blank" class="text-sm font-semibold text-white hover:underline truncate block">{{ $item->title ?? $item->filename }}</a>
+                                                    <span class="text-[10px] text-gray-400 uppercase tracking-wider">Documento</span>
+                                                </div>
                                             </div>
-                                        </div>
+                                        @endif
                                     @endif
                                 </article>
                             @endforeach

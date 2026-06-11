@@ -37,6 +37,8 @@ use App\Http\Controllers\Talent\SubscriptionController as TalentSubscriptionCont
 use App\Http\Controllers\Talent\NotificationController as TalentNotificationController;
 use App\Http\Controllers\Talent\AlbumController as TalentAlbumController;
 use App\Http\Controllers\Talent\PublicProfileController as TalentPublicProfileController;
+use App\Http\Controllers\AffiliateAuthController;
+use App\Http\Controllers\CommunityWallController;
 
 Route::get('/', [SiteController::class, 'home'])->name('home');
 Route::get('/events', [SiteController::class, 'events'])->name('events');
@@ -341,6 +343,26 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
 });
 
 Route::get('/diagnose-media', [\App\Http\Controllers\MediaDiagnosticController::class, 'show'])->name('admin.diagnose-media');
+
+// Affiliate Auth Routes
+Route::prefix('afiliados')->name('afiliados.')->group(function (): void {
+    Route::middleware('guest:web')->group(function (): void {
+        Route::get('/registro', [AffiliateAuthController::class, 'showRegisterForm'])->name('register');
+        Route::post('/registro', [AffiliateAuthController::class, 'register'])->name('register.store')->middleware([\App\Http\Middleware\PreventSpamWithHoneypot::class]);
+        Route::get('/login', [AffiliateAuthController::class, 'showLoginForm'])->name('login');
+        Route::post('/login', [AffiliateAuthController::class, 'login'])->name('login.store');
+    });
+    Route::post('/logout', [AffiliateAuthController::class, 'logout'])->name('logout')->middleware('auth:web');
+});
+
+// Community Wall & Benefits
+Route::prefix('comunidad')->name('comunidad.')->group(function (): void {
+    Route::middleware([\App\Http\Middleware\AuthenticateAnyGuard::class])->group(function (): void {
+        Route::get('/muro', [CommunityWallController::class, 'muro'])->name('muro');
+        Route::post('/muro', [CommunityWallController::class, 'post'])->name('muro.post');
+        Route::get('/exclusivos', [CommunityWallController::class, 'exclusivos'])->name('exclusivos');
+    });
+});
 
 Route::get('/storage/{path}', function (string $path) {
     $filePath = storage_path('app/public/' . $path);
