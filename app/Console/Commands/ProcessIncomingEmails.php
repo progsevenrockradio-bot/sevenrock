@@ -62,7 +62,7 @@ class ProcessIncomingEmails extends Command
         $this->info("Conectando a {$imapHost}:{$imapPort} para el usuario {$imapUsername}...");
 
         try {
-            $cm = new ClientManager();
+            $cm = app(ClientManager::class);
             $client = $cm->make([
                 'host'          => $imapHost,
                 'port'          => $imapPort,
@@ -172,6 +172,70 @@ class ProcessIncomingEmails extends Command
                 if (trim($body) === '') {
                     $this->warn("El cuerpo del correo está vacío. Saltando correo.");
                     continue;
+                }
+
+                // Si no se encontró portada en los adjuntos, intentar extraerla del cuerpo HTML
+                if ($coverUrl === null) {
+                    $htmlBody = $message->getHTMLBody() ?: '';
+                    if ($htmlBody !== '') {
+                        preg_match_all('/<img[^>]+src=["\']([^"\']+)["\']/i', $htmlBody, $matches);
+                        if (! empty($matches[1])) {
+                            $this->info("Buscando imágenes en el cuerpo HTML del correo (" . count($matches[1]) . " encontradas)...");
+                            foreach ($matches[1] as $imgUrl) {
+                                $imgUrl = html_entity_decode($imgUrl, ENT_QUOTES | ENT_HTML5);
+                                if (! filter_var($imgUrl, FILTER_VALIDATE_URL)) {
+                                    continue;
+                                }
+
+                                $lowerUrl = strtolower($imgUrl);
+                                if (str_contains($lowerUrl, 'facebook') ||
+                                    str_contains($lowerUrl, 'twitter') ||
+                                    str_contains($lowerUrl, 'instagram') ||
+                                    str_contains($lowerUrl, 'youtube') ||
+                                    str_contains($lowerUrl, 'linkedin') ||
+                                    str_contains($lowerUrl, 'pinterest') ||
+                                    str_contains($lowerUrl, 'tiktok') ||
+                                    str_contains($lowerUrl, 'spotify') ||
+                                    str_contains($lowerUrl, 'pixel') ||
+                                    str_contains($lowerUrl, 'tracker') ||
+                                    str_contains($lowerUrl, 'analytics') ||
+                                    str_contains($lowerUrl, 'logo') ||
+                                    str_contains($lowerUrl, 'icon') ||
+                                    str_contains($lowerUrl, 'avatar') ||
+                                    str_contains($lowerUrl, 'banner-mailchimp') ||
+                                    preg_match('/\b(footer|social|share|icon|badge|button)\b/i', $lowerUrl)
+                                ) {
+                                    continue;
+                                }
+
+                                try {
+                                    $this->info("Descargando imagen del cuerpo HTML: {$imgUrl}");
+                                    $response = \Illuminate\Support\Facades\Http::timeout(5)->get($imgUrl);
+                                    if ($response->successful()) {
+                                        $imgContent = $response->body();
+                                        $imgSize = strlen($imgContent);
+
+                                        if ($imgSize >= 40960) {
+                                            $ext = pathinfo(parse_url($imgUrl, PHP_URL_PATH) ?? '', PATHINFO_EXTENSION);
+                                            $ext = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp']) ? strtolower($ext) : 'jpg';
+
+                                            $uploaded = app(\App\Services\FileUploadService::class)->uploadRaw(
+                                                $imgContent,
+                                                'catalog/releases/covers/' . Str::uuid()->toString() . '.' . $ext
+                                            );
+                                            $coverUrl = $uploaded['url'];
+                                            $this->info("Imagen extraída del cuerpo HTML del correo y subida: {$coverUrl}");
+                                            break;
+                                        } else {
+                                            $this->info("Imagen ignorada por tamaño menor a 40 KB: {$imgSize} bytes");
+                                        }
+                                    }
+                                } catch (\Throwable $e) {
+                                    Log::warning("ProcessIncomingEmails: No se pudo descargar la imagen del cuerpo HTML: {$imgUrl}. Error: " . $e->getMessage());
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Llamar a Gemini API

@@ -50,7 +50,7 @@ class NewReleaseController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        $data['slug'] = $data['slug'] ?: Str::slug($data['title'] . '-' . $data['artist_name']);
+        $data['slug'] = ($data['slug'] ?? null) ?: Str::slug($data['title'] . '-' . $data['artist_name']);
         
         $data['cover_image'] = $this->resolveFile(
             $request,
@@ -84,7 +84,7 @@ class NewReleaseController extends Controller
     public function update(Request $request, NewRelease $newRelease): RedirectResponse
     {
         $data = $this->validated($request, $newRelease->id);
-        $data['slug'] = $data['slug'] ?: Str::slug($data['title'] . '-' . $data['artist_name']);
+        $data['slug'] = ($data['slug'] ?? null) ?: Str::slug($data['title'] . '-' . $data['artist_name']);
 
         $data['cover_image'] = $this->resolveFile(
             $request,
@@ -134,7 +134,7 @@ class NewReleaseController extends Controller
             'released_at' => ['nullable', 'date'],
             'cover_image' => ['nullable', 'string', 'max:2048', 'required_without:cover_image_file'],
             'cover_image_file' => ['nullable', 'image', 'max:6144'],
-            'audio_path' => ['nullable', 'string', 'max:2048', 'required_without:audio_file'],
+            'audio_path' => ['nullable', 'string', 'max:2048'],
             'audio_file' => ['nullable', 'file', 'mimes:mp3,wav,ogg,mpga,mpeg', 'max:20480'],
             'youtube_url' => ['nullable', 'url', 'max:2048'],
             'spotify_url' => ['nullable', 'url', 'max:2048'],
