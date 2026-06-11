@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('community_posts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
-            $table->foreignId('talent_id')->nullable()->constrained('talents')->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id')->nullable()->index();
+            $table->unsignedBigInteger('talent_id')->nullable()->index();
             $table->text('content');
             $table->string('youtube_url')->nullable();
             $table->timestamps();
