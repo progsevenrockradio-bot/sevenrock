@@ -2009,6 +2009,17 @@
         background: rgba(0, 0, 0, .3);
     }
 
+    /* Global Select and Options Dark Styling */
+    select {
+        color-scheme: dark !important;
+    }
+
+    select option {
+        background-color: #101012 !important;
+        color: #dcdcdc !important;
+    }
+
+    select.lucille-product-field,
     .lucille-select-field {
         appearance: none;
         color-scheme: dark;
@@ -2020,11 +2031,15 @@
         padding-right: 42px;
     }
 
+    select.lucille-product-field option,
     .lucille-select-field option {
         background: #101012;
         color: #dcdcdc;
     }
 
+    select.lucille-product-field option:checked,
+    select.lucille-product-field option:hover,
+    select.lucille-product-field option:focus,
     .lucille-select-field option:checked,
     .lucille-select-field option:hover,
     .lucille-select-field option:focus {
