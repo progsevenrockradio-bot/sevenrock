@@ -39,6 +39,8 @@ use App\Http\Controllers\Talent\AlbumController as TalentAlbumController;
 use App\Http\Controllers\Talent\PublicProfileController as TalentPublicProfileController;
 use App\Http\Controllers\AffiliateAuthController;
 use App\Http\Controllers\CommunityWallController;
+use App\Http\Controllers\Admin\ContractController as AdminContractController;
+use App\Http\Controllers\ContractSigningController;
 
 Route::get('/', [SiteController::class, 'home'])->name('home');
 Route::get('/events', [SiteController::class, 'events'])->name('events');
@@ -289,6 +291,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::post('/campaigns', 'storeCampaign')->name('campaigns.store');
     });
 
+    Route::prefix('contracts')->name('contracts.')->controller(AdminContractController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::post('/{contract}/send', 'send')->name('send');
+        Route::get('/{contract}/download', 'download')->name('download');
+    });
+
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 });
 
@@ -362,6 +372,14 @@ Route::prefix('comunidad')->name('comunidad.')->group(function (): void {
         Route::post('/muro', [CommunityWallController::class, 'post'])->name('muro.post');
         Route::get('/exclusivos', [CommunityWallController::class, 'exclusivos'])->name('exclusivos');
     });
+});
+
+// Contract Signing Routes
+Route::prefix('contratos')->name('contratos.')->controller(ContractSigningController::class)->group(function (): void {
+    Route::get('/firmar/{token}', 'show')->name('firmar');
+    Route::post('/firmar/{token}', 'sign')->name('sign');
+    Route::get('/exito/{token}', 'exito')->name('exito');
+    Route::get('/descargar/{token}', 'download')->name('download');
 });
 
 Route::get('/storage/{path}', function (string $path) {
