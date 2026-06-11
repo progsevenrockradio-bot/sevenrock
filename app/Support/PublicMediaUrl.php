@@ -76,18 +76,34 @@ class PublicMediaUrl
         if ($isUrl) {
             $normalizedUrl = str_replace(' ', '%20', $value);
 
-            // Automatically rewrite raw backblazeb2.com URLs to the custom B2 URL (Cloudflare proxy) if configured
             $b2Url = trim((string) config('filesystems.disks.backblaze.url', ''));
-            if ($b2Url !== '') {
+            $customResolves = self::customB2UrlResolves();
+            $bucketName = trim((string) config('filesystems.disks.backblaze.bucket_name', ''));
+            if ($bucketName === '') {
+                $bucketName = '7RR-DATOS';
+            }
+
+            if ($b2Url !== '' && $customResolves) {
                 $normalizedUrl = preg_replace(
                     '~https?://[a-z0-9]+\.backblazeb2\.com/file/[^/]+/~i',
                     rtrim($b2Url, '/') . '/',
                     $normalizedUrl
                 ) ?? $normalizedUrl;
             } else {
+                if ($b2Url !== '') {
+                    $customHost = parse_url($b2Url, PHP_URL_HOST);
+                    if ($customHost) {
+                        $normalizedUrl = preg_replace(
+                            '~https?://' . preg_quote($customHost, '~') . '/file/[^/]+/~i',
+                            'https://f003.backblazeb2.com/file/' . $bucketName . '/',
+                            $normalizedUrl
+                        ) ?? $normalizedUrl;
+                    }
+                }
+
                 $normalizedUrl = preg_replace(
-                    '~https?://[a-z0-9]+\.backblazeb2\.com/file/7RR-DATOS/~i',
-                    'https://media.sevenrockradio.com/file/7RR-DATOS/',
+                    '~https?://media\.sevenrockradio\.com/file/[^/]+/~i',
+                    'https://f003.backblazeb2.com/file/' . $bucketName . '/',
                     $normalizedUrl
                 ) ?? $normalizedUrl;
             }
@@ -513,5 +529,31 @@ class PublicMediaUrl
         }
 
         return substr($normalizedPath, $position + strlen($needle));
+    }
+
+    private static function customB2UrlResolves(): bool
+    {
+        $b2Url = trim((string) config('filesystems.disks.backblaze.url', ''));
+        if ($b2Url === '') {
+            return false;
+        }
+
+        $host = parse_url($b2Url, PHP_URL_HOST);
+        if (!$host) {
+            return false;
+        }
+
+        $forced = config('filesystems.disks.backblaze.custom_url_resolves');
+        if ($forced !== null) {
+            return (bool) $forced;
+        }
+
+        try {
+            return (bool) cache()->remember('b2_custom_url_resolves_' . md5($host), 3600, function () use ($host) {
+                return @gethostbyname($host) !== $host;
+            });
+        } catch (\Throwable) {
+            return @gethostbyname($host) !== $host;
+        }
     }
 }

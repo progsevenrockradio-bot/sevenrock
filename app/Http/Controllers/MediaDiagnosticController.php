@@ -136,63 +136,83 @@ class MediaDiagnosticController extends Controller
         }
 
         // 7. Audit DB Media Records
-        $themeSetting = ThemeSetting::current();
+        $themeSetting = null;
+        $dbConnected = true;
+        $dbMessage = 'Conectado con éxito.';
         $mediaAudit = [];
 
-        if ($themeSetting) {
-            $mediaColumns = [
-                'logo_path' => 'Logo',
-                'background_path' => 'Fondo',
-                'hero_slide_primary_path' => 'Hero Slide Primario',
-                'hero_slide_secondary_path' => 'Hero Slide Secundario',
-                'home_album_cover_path' => 'Portada Álbum Home',
-                'home_video_image_path' => 'Portada Video Home',
-                'hero_video_path' => 'Video Hero',
-                'email_default_cover_path' => 'Portada Email por Defecto',
-            ];
+        try {
+            \Illuminate\Support\Facades\DB::connection()->getPdo();
+            $themeSetting = ThemeSetting::current();
+        } catch (\Throwable $e) {
+            $dbConnected = false;
+            $dbMessage = 'Fallo de conexión a la Base de Datos: ' . $e->getMessage();
+        }
 
-            foreach ($mediaColumns as $col => $label) {
-                $dbVal = $themeSetting->{$col};
-                if ($dbVal) {
-                    $mediaAudit[] = $this->auditMediaItem('ThemeSetting', $label, $dbVal, $b2ConfigRaw);
+        if ($dbConnected) {
+            if ($themeSetting) {
+                $mediaColumns = [
+                    'logo_path' => 'Logo',
+                    'background_path' => 'Fondo',
+                    'hero_slide_primary_path' => 'Hero Slide Primario',
+                    'hero_slide_secondary_path' => 'Hero Slide Secundario',
+                    'home_album_cover_path' => 'Portada Álbum Home',
+                    'home_video_image_path' => 'Portada Video Home',
+                    'hero_video_path' => 'Video Hero',
+                    'email_default_cover_path' => 'Portada Email por Defecto',
+                ];
+
+                foreach ($mediaColumns as $col => $label) {
+                    $dbVal = $themeSetting->{$col};
+                    if ($dbVal) {
+                        $mediaAudit[] = $this->auditMediaItem('ThemeSetting', $label, $dbVal, $b2ConfigRaw);
+                    }
                 }
             }
-        }
 
-        // Add last 5 Posts
-        $posts = Post::query()->orderByDesc('id')->take(5)->get();
-        foreach ($posts as $post) {
-            $val = $post->featured_image ?? $post->featured_image_path ?? null;
-            if ($val) {
-                $mediaAudit[] = $this->auditMediaItem("Post (ID: {$post->id})", $post->title, $val, $b2ConfigRaw);
-            }
-        }
+            // Add last 5 Posts
+            try {
+                $posts = Post::query()->orderByDesc('id')->take(5)->get();
+                foreach ($posts as $post) {
+                    $val = $post->featured_image ?? $post->featured_image_path ?? null;
+                    if ($val) {
+                        $mediaAudit[] = $this->auditMediaItem("Post (ID: {$post->id})", $post->title, $val, $b2ConfigRaw);
+                    }
+                }
+            } catch (\Throwable $e) {}
 
-        // Add last 5 Albums
-        $albums = Album::query()->orderByDesc('id')->take(5)->get();
-        foreach ($albums as $album) {
-            $val = $album->cover_image_path ?? null;
-            if ($val) {
-                $mediaAudit[] = $this->auditMediaItem("Album (ID: {$album->id})", $album->title, $val, $b2ConfigRaw);
-            }
-        }
+            // Add last 5 Albums
+            try {
+                $albums = Album::query()->orderByDesc('id')->take(5)->get();
+                foreach ($albums as $album) {
+                    $val = $album->cover_image_path ?? null;
+                    if ($val) {
+                        $mediaAudit[] = $this->auditMediaItem("Album (ID: {$album->id})", $album->title, $val, $b2ConfigRaw);
+                    }
+                }
+            } catch (\Throwable $e) {}
 
-        // Add last 5 Products
-        $products = Product::query()->orderByDesc('id')->take(5)->get();
-        foreach ($products as $product) {
-            $val = $product->image ?? null;
-            if ($val) {
-                $mediaAudit[] = $this->auditMediaItem("Product (ID: {$product->id})", $product->title, $val, $b2ConfigRaw);
-            }
-        }
+            // Add last 5 Products
+            try {
+                $products = Product::query()->orderByDesc('id')->take(5)->get();
+                foreach ($products as $product) {
+                    $val = $product->image ?? null;
+                    if ($val) {
+                        $mediaAudit[] = $this->auditMediaItem("Product (ID: {$product->id})", $product->title, $val, $b2ConfigRaw);
+                    }
+                }
+            } catch (\Throwable $e) {}
 
-        // Add last 5 Gallery Images
-        $galleryImages = GalleryImage::query()->orderByDesc('id')->take(5)->get();
-        foreach ($galleryImages as $gi) {
-            $val = $gi->image_path ?? null;
-            if ($val) {
-                $mediaAudit[] = $this->auditMediaItem("GalleryImage (ID: {$gi->id})", $gi->caption ?? 'Imagen', $val, $b2ConfigRaw);
-            }
+            // Add last 5 Gallery Images
+            try {
+                $galleryImages = GalleryImage::query()->orderByDesc('id')->take(5)->get();
+                foreach ($galleryImages as $gi) {
+                    $val = $gi->image_path ?? null;
+                    if ($val) {
+                        $mediaAudit[] = $this->auditMediaItem("GalleryImage (ID: {$gi->id})", $gi->caption ?? 'Imagen', $val, $b2ConfigRaw);
+                    }
+                }
+            } catch (\Throwable $e) {}
         }
 
         // 8. Generate HTML report view
@@ -205,6 +225,8 @@ class MediaDiagnosticController extends Controller
             'folderResults' => $folderResults,
             'b2Connection' => $b2Connection,
             'mediaAudit' => $mediaAudit,
+            'dbConnected' => $dbConnected,
+            'dbMessage' => $dbMessage,
         ]);
     }
 

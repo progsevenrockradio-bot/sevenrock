@@ -105,9 +105,17 @@ class FileUploadService
         $disk = $this->normalizeDisk($disk);
 
         if ($disk === 'backblaze' && $this->isB2Configured()) {
-            $b2Url = config('filesystems.disks.backblaze.url');
-            if ($b2Url) {
-                return rtrim($b2Url, '/') . '/' . ltrim($key, '/');
+            $b2Url = trim((string) config('filesystems.disks.backblaze.url', ''));
+            if ($b2Url !== '') {
+                if ($this->customB2UrlResolves()) {
+                    return rtrim($b2Url, '/') . '/' . ltrim($key, '/');
+                }
+
+                $bucketName = trim((string) config('filesystems.disks.backblaze.bucket_name', ''));
+                if ($bucketName === '') {
+                    $bucketName = '7RR-DATOS';
+                }
+                return 'https://f003.backblazeb2.com/file/' . $bucketName . '/' . ltrim($key, '/');
             }
         }
 
@@ -115,6 +123,32 @@ class FileUploadService
             return Storage::disk('public')->url($key);
         } catch (Throwable) {
             return asset($key);
+        }
+    }
+
+    private function customB2UrlResolves(): bool
+    {
+        $b2Url = trim((string) config('filesystems.disks.backblaze.url', ''));
+        if ($b2Url === '') {
+            return false;
+        }
+
+        $host = parse_url($b2Url, PHP_URL_HOST);
+        if (!$host) {
+            return false;
+        }
+
+        $forced = config('filesystems.disks.backblaze.custom_url_resolves');
+        if ($forced !== null) {
+            return (bool) $forced;
+        }
+
+        try {
+            return (bool) cache()->remember('b2_custom_url_resolves_' . md5($host), 3600, function () use ($host) {
+                return @gethostbyname($host) !== $host;
+            });
+        } catch (Throwable) {
+            return @gethostbyname($host) !== $host;
         }
     }
 

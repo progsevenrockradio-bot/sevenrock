@@ -471,6 +471,26 @@
                     @endforeach
                 </div>
             </section>
+
+            <!-- DATABASE CONNECTION CARD -->
+            <section class="card" id="db-status-card">
+                <h2 class="card-title">
+                    🗄️ Base de Datos
+                    @if($dbConnected)
+                        <span class="tag-status ok">Conectado</span>
+                    @else
+                        <span class="tag-status err">Desconectado</span>
+                    @endif
+                </h2>
+                <ul class="list-info">
+                    <li style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                        <span>Estado de Conexión</span>
+                        <span style="font-family: var(--font-sans); font-size: 0.8rem; word-break: break-word; color: {{ $dbConnected ? 'var(--success-color)' : 'var(--accent-color)' }}">
+                            {{ $dbMessage }}
+                        </span>
+                    </li>
+                </ul>
+            </section>
         </div>
 
         <!-- SYMLINKS & DIRECT B2 CONNECTION -->
