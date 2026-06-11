@@ -130,7 +130,7 @@ class PublicMediaUrl
             if ($storageCandidate !== '' && self::isBackblazeConfigured()) {
                 try {
                     if (Storage::disk('backblaze')->exists($storageCandidate)) {
-                        return Storage::disk('backblaze')->url($storageCandidate);
+                        return self::getBackblazeUrl($storageCandidate);
                     }
                 } catch (\Throwable) {
                     // Ignore and keep checking other candidates.
@@ -200,7 +200,7 @@ class PublicMediaUrl
         try {
             if ($disk === 'backblaze' && self::isBackblazeConfigured()) {
                 if (Storage::disk('backblaze')->exists($key)) {
-                    return Storage::disk('backblaze')->url($key);
+                    return self::getBackblazeUrl($key);
                 }
 
                 if (Storage::disk('public')->exists($key)) {
@@ -213,7 +213,7 @@ class PublicMediaUrl
             }
 
             if ($disk !== 'public' && self::isBackblazeConfigured() && Storage::disk('backblaze')->exists($key)) {
-                return Storage::disk('backblaze')->url($key);
+                return self::getBackblazeUrl($key);
             }
         } catch (\Throwable) {
             return null;
@@ -399,6 +399,20 @@ class PublicMediaUrl
         $parts = explode('/', str_replace('\\', '/', $path));
         $encodedParts = array_map(fn($part) => rawurlencode(rawurldecode($part)), $parts);
         return asset(implode('/', $encodedParts));
+    }
+
+    private static function getBackblazeUrl(string $key): string
+    {
+        $b2Url = trim((string) config('filesystems.disks.backblaze.url', ''));
+        if ($b2Url !== '') {
+            return rtrim($b2Url, '/') . '/' . ltrim($key, '/');
+        }
+
+        try {
+            return Storage::disk('backblaze')->url($key);
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     private static function findLegacyWordPressUploadByBasename(string $basePath, string $relative): ?string
