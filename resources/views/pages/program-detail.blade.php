@@ -1,4 +1,8 @@
-<x-layouts.site title="Seven Rock Radio - {{ $program['title'] ?? 'Programa' }}">
+<x-layouts.site 
+    title="Seven Rock Radio - {{ $program['title'] ?? 'Programa' }}"
+    :og-image="$program['cover'] ?? null"
+    :description="\Illuminate\Support\Str::limit(strip_tags($program['description'] ?? 'Programa de Seven Rock Radio'), 150)"
+>
     <x-sections.page-heading
         :title="$program['title'] ?? 'Programa'"
         :subtitle="$program['host'] ? 'Conduce: ' . $program['host'] : 'Programa de radio'"

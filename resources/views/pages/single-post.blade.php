@@ -1,4 +1,3 @@
-<x-layouts.site title="Seven Rock Radio - {{ $post['title'] }}">
 @php
     $ui = $themeAppearance['ui_texts'];
     $shareBaseUrl = request()->url();
@@ -22,7 +21,14 @@
         . ($shareImage !== '' ? '&media=' . urlencode($shareImage) : '')
         . '&description=' . $shareTitleEncoded;
     $postLikeUrl = filled(data_get($post, 'id')) ? route('posts.like', ['post' => data_get($post, 'id')]) : '';
+    $postDescription = \Illuminate\Support\Str::limit(strip_tags(data_get($post, 'excerpt') ?: (isset($post['content']) && is_array($post['content']) ? implode(' ', $post['content']) : 'Artículo en Seven Rock Radio')), 150);
 @endphp
+
+<x-layouts.site 
+    title="Seven Rock Radio - {{ $post['title'] }}"
+    :og-image="$shareImage"
+    :description="$postDescription"
+>
 @once
 <style>
     .radio-player-share-panel {

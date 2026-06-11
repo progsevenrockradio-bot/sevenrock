@@ -9,14 +9,75 @@
 
 @php
     $theme = $themeAppearance;
-    $siteUrl = config('app.url', 'https://sevenrockradio.com');
+    $siteUrl = rtrim((string) config('app.url', 'https://sevenrockradio.com'), '/');
     $logoUrl = $theme['media']['logo_url'] ?? $siteUrl . '/assets/lucille/logo.png';
 
     $finalTitle = $title;
     $finalDescription = $description;
     $finalOgTitle = $ogTitle ?? $title;
     $finalOgDescription = $ogDescription ?? $description;
-    $finalOgImage = $ogImage ?? $logoUrl;
+    
+    // Automatically generate a share image with a solid dark background for OG previews (resolves WhatsApp transparency grid issues)
+    $finalOgImage = $ogImage;
+    if (!$finalOgImage) {
+        $finalOgImage = $logoUrl;
+        try {
+            $logoPath = null;
+            if (str_starts_with($logoUrl, $siteUrl)) {
+                $relative = str_replace($siteUrl, '', $logoUrl);
+                $logoPath = public_path($relative);
+            } elseif (str_starts_with($logoUrl, '/')) {
+                $logoPath = public_path($logoUrl);
+            } elseif (!str_starts_with($logoUrl, 'http')) {
+                $logoPath = public_path($logoUrl);
+            }
+            
+            if ($logoPath && file_exists($logoPath)) {
+                $dir = dirname($logoPath);
+                $filename = pathinfo($logoPath, PATHINFO_FILENAME);
+                $ext = pathinfo($logoPath, PATHINFO_EXTENSION);
+                $shareFilename = $filename . '_share.png';
+                $sharePath = $dir . DIRECTORY_SEPARATOR . $shareFilename;
+                
+                if (!file_exists($sharePath) || filemtime($logoPath) > filemtime($sharePath)) {
+                    $src = null;
+                    if (strtolower($ext) === 'png') {
+                        $src = @imagecreatefrompng($logoPath);
+                    } elseif (in_array(strtolower($ext), ['jpg', 'jpeg'])) {
+                        $src = @imagecreatefromjpeg($logoPath);
+                    } elseif (strtolower($ext) === 'webp') {
+                        $src = @imagecreatefromwebp($logoPath);
+                    }
+                    
+                    if ($src) {
+                        $w = imagesx($src);
+                        $h = imagesy($src);
+                        
+                        $dst = imagecreatetruecolor($w, $h);
+                        $bgColor = imagecolorallocate($dst, 16, 16, 18); // Solid theme background (#101012)
+                        imagefill($dst, 0, 0, $bgColor);
+                        
+                        imagealphablending($dst, true);
+                        imagecopy($dst, $src, 0, 0, 0, 0, $w, $h);
+                        
+                        imagepng($dst, $sharePath);
+                        imagedestroy($src);
+                        imagedestroy($dst);
+                    }
+                }
+                
+                if (file_exists($sharePath)) {
+                    $relativePath = str_replace(public_path(), '', $sharePath);
+                    $relativePath = str_replace('\\', '/', $relativePath);
+                    $finalOgImage = $siteUrl . '/' . ltrim($relativePath, '/');
+                }
+            }
+        } catch (\Throwable $e) {
+            // Graceful fallback to default logoUrl
+            logger()->error('Error generating og:image share logo: ' . $e->getMessage());
+        }
+    }
+    
     $finalCanonical = $canonical ?? url()->current();
 @endphp
 
@@ -37,8 +98,8 @@
 
     <!-- Open Graph -->
     <meta property="og:site_name" content="Seven Rock Radio">
-    <meta property="og:title" content="{{ $finalOgTitle }}">
-    <meta property="og:description" content="{{ $finalOgDescription }}">
+    <meta property="og:title" content="{!! htmlspecialchars(html_entity_decode($finalOgTitle, ENT_QUOTES, 'UTF-8'), ENT_COMPAT, 'UTF-8') !!}">
+    <meta property="og:description" content="{!! htmlspecialchars(html_entity_decode($finalOgDescription, ENT_QUOTES, 'UTF-8'), ENT_COMPAT, 'UTF-8') !!}">
     <meta property="og:image" content="{{ $finalOgImage }}">
     <meta property="og:url" content="{{ $finalCanonical }}">
     <meta property="og:type" content="website">
@@ -46,8 +107,8 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ $finalOgTitle }}">
-    <meta name="twitter:description" content="{{ $finalOgDescription }}">
+    <meta name="twitter:title" content="{!! htmlspecialchars(html_entity_decode($finalOgTitle, ENT_QUOTES, 'UTF-8'), ENT_COMPAT, 'UTF-8') !!}">
+    <meta name="twitter:description" content="{!! htmlspecialchars(html_entity_decode($finalOgDescription, ENT_QUOTES, 'UTF-8'), ENT_COMPAT, 'UTF-8') !!}">
     <meta name="twitter:image" content="{{ $finalOgImage }}">
 
     <!-- Favicon -->

@@ -5,7 +5,11 @@
     $facebookShareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' . rawurlencode($shareUrl);
 @endphp
 
-<x-layouts.site title="Seven Rock Radio - {{ $newRelease->title }} de {{ $newRelease->artist_name }}">
+<x-layouts.site 
+    title="Seven Rock Radio - {{ $newRelease->title }} de {{ $newRelease->artist_name }}"
+    :og-image="$newRelease->cover_image_url"
+    :description="\Illuminate\Support\Str::limit(strip_tags($newRelease->description ?? 'Nuevo lanzamiento en Seven Rock Radio'), 150)"
+>
     <section class="lucille-event-single-shell">
         <div class="mx-auto max-w-[1200px] px-6 pt-6">
             <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.62)] px-6 py-8 text-center md:px-10 md:py-10">
