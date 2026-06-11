@@ -401,7 +401,7 @@
                 </div>
                 <div class="social-flyout__panel" style="position: relative;">
                     <!-- Blood Drip Overlay at the top of the panel (non-squished aspect ratio) -->
-                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 40px; background: url('{{ asset('assets/lucille/blood_drip.png') }}') repeat-x top center; background-size: 50px 40px; pointer-events: none; opacity: 0.85; z-index: 10;"></div>
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 40px; background: url('{{ asset('assets/lucille/blood_drip.png') }}?v=1.2') repeat-x top center; background-size: 50px 40px; pointer-events: none; opacity: 0.85; z-index: 10;"></div>
                     
                     <div class="social-flyout__content" style="padding-top: 36px;">
                         <div class="social-flyout__title">Síguenos</div>
