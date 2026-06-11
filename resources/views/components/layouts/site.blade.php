@@ -12,6 +12,9 @@
     $siteUrl = rtrim((string) config('app.url', 'https://sevenrockradio.com'), '/');
     $logoUrl = $theme['media']['logo_url'] ?? $siteUrl . '/assets/lucille/logo.png';
 
+    // Normalize localhost / 127.0.0.1 in logo URL
+    $logoUrl = \App\Support\PublicMediaUrl::normalize($logoUrl) ?? $logoUrl;
+
     $finalTitle = $title;
     $finalDescription = $description;
     $finalOgTitle = $ogTitle ?? $title;
@@ -19,17 +22,24 @@
     
     // Automatically generate a share image with a solid dark background for OG previews (resolves WhatsApp transparency grid issues)
     $finalOgImage = $ogImage;
-    if (!$finalOgImage) {
+    if ($finalOgImage) {
+        $finalOgImage = \App\Support\PublicMediaUrl::normalize($finalOgImage) ?? $finalOgImage;
+    } else {
         $finalOgImage = $logoUrl;
         try {
             $logoPath = null;
-            if (str_starts_with($logoUrl, $siteUrl)) {
-                $relative = str_replace($siteUrl, '', $logoUrl);
-                $logoPath = public_path($relative);
-            } elseif (str_starts_with($logoUrl, '/')) {
-                $logoPath = public_path($logoUrl);
-            } elseif (!str_starts_with($logoUrl, 'http')) {
-                $logoPath = public_path($logoUrl);
+            $parsedLogo = parse_url($logoUrl);
+            $logoPathOnly = $parsedLogo['path'] ?? '';
+            $host = $parsedLogo['host'] ?? '';
+            $siteHost = parse_url($siteUrl, PHP_URL_HOST) ?: '';
+            
+            if ($logoPathOnly && (
+                $host === '' || 
+                $host === 'localhost' || 
+                $host === '127.0.0.1' || 
+                strcasecmp($host, $siteHost) === 0
+            )) {
+                $logoPath = public_path($logoPathOnly);
             }
             
             if ($logoPath && file_exists($logoPath)) {
@@ -79,6 +89,9 @@
     }
     
     $finalCanonical = $canonical ?? url()->current();
+    if ($finalCanonical) {
+        $finalCanonical = \App\Support\PublicMediaUrl::normalize($finalCanonical) ?? $finalCanonical;
+    }
 @endphp
 
 <!DOCTYPE html>

@@ -117,9 +117,13 @@ class PublicMediaUrl
                 }
             }
 
-            // Adapt localhost/127.0.0.1 assets to the current HTTP host/port
+            // Adapt localhost/127.0.0.1 assets to the current HTTP host/port or config('app.url')
             try {
                 $currentHost = request()->getSchemeAndHttpHost();
+                $configUrl = config('app.url');
+                if ($configUrl && !str_contains($configUrl, 'localhost') && !str_contains($configUrl, '127.0.0.1')) {
+                    $currentHost = $configUrl;
+                }
                 $parsed = parse_url($normalizedUrl);
                 if (isset($parsed['host']) && ($parsed['host'] === 'localhost' || $parsed['host'] === '127.0.0.1')) {
                     $path = $parsed['path'] ?? '';
