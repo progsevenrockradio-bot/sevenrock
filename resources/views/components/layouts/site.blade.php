@@ -341,7 +341,7 @@
         </div>
     </main>
 
-    @if (!request()->routeIs('programs*'))
+    @if (!request()->routeIs('programs*') && !request()->routeIs('contratos*'))
         <x-radio.player />
     @endif
 
