@@ -76,8 +76,19 @@
                                 </tr>
                             </table>
                             
+                            <!-- Call to Action Button to Download PDF -->
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding-bottom: 25px; padding-top: 5px;">
+                                        <a href="{{ route('contratos.download', ['token' => $contract->token]) }}" target="_blank" style="background-color: #2ecc71; color: #ffffff; text-decoration: none; padding: 14px 36px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.12em; font-size: 13px; border-radius: 30px; display: inline-block; box-shadow: 0 6px 20px rgba(46,204,113,0.3); border: 1px solid #27ae60; transition: all 0.3s ease;">
+                                            Descargar Contrato Firmado (PDF) 📥
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
                             <p style="margin: 0 0 10px 0; font-size: 14px; line-height: 1.7; color: #aaaaaa;">
-                                Hemos adjuntado a este correo electrónico una copia oficial en formato PDF del contrato firmado que contiene las cláusulas legales y los registros técnicos de auditoría.
+                                Hemos adjuntado a este correo electrónico una copia oficial en formato PDF del contrato firmado que contiene las cláusulas legales y los registros técnicos de auditoría. También puedes descargarlo directamente en cualquier momento pulsando el botón superior.
                             </p>
                             
                             <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #aaaaaa;">
