@@ -22,4 +22,15 @@ class PublicMediaUrlTest extends TestCase
 
         $this->assertSame(Storage::disk('public')->url('catalog/posts/example.jpg'), $resolved);
     }
+
+    public function test_it_rewrites_raw_backblaze_urls_to_custom_cloudflare_proxy(): void
+    {
+        $rawUrl = 'https://f003.backblazeb2.com/file/7RR-DATOS/theme/logo.png';
+        $expectedUrl = 'https://media.sevenrockradio.com/file/7RR-DATOS/theme/logo.png';
+
+        $resolved = PublicMediaUrl::normalize($rawUrl);
+
+        $this->assertSame($expectedUrl, $resolved);
+    }
 }
+

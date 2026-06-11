@@ -76,6 +76,22 @@ class PublicMediaUrl
         if ($isUrl) {
             $normalizedUrl = str_replace(' ', '%20', $value);
 
+            // Automatically rewrite raw backblazeb2.com URLs to the custom B2 URL (Cloudflare proxy) if configured
+            $b2Url = trim((string) config('filesystems.disks.backblaze.url', ''));
+            if ($b2Url !== '') {
+                $normalizedUrl = preg_replace(
+                    '~https?://[a-z0-9]+\.backblazeb2\.com/file/[^/]+/~i',
+                    rtrim($b2Url, '/') . '/',
+                    $normalizedUrl
+                ) ?? $normalizedUrl;
+            } else {
+                $normalizedUrl = preg_replace(
+                    '~https?://[a-z0-9]+\.backblazeb2\.com/file/7RR-DATOS/~i',
+                    'https://media.sevenrockradio.com/file/7RR-DATOS/',
+                    $normalizedUrl
+                ) ?? $normalizedUrl;
+            }
+
             // Fast path: convert WordPress upload URLs to local legacy-wp-uploads
             // without scanning the filesystem (avoids slow RecursiveDirectoryIterator)
             $relative = self::extractLegacyWordPressUploadRelativePath($normalizedUrl);
