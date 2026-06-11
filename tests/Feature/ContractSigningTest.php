@@ -95,6 +95,7 @@ class ContractSigningTest extends TestCase
         $response = $this->post(route('contratos.sign', ['token' => 'test-token-123']), [
             'nombre_completo' => 'Alice Cooper',
             'aceptar_terminos' => '1',
+            'confirmar_mayoria' => '1',
             'country' => 'United States',
             'city' => 'Detroit',
         ]);

@@ -53,6 +53,16 @@
                     </div>
                 </div>
 
+                {{-- Cláusula de Mayoría de Edad --}}
+                <div class="border border-white/5 bg-white/[0.01] rounded-[12px] p-5">
+                    <div class="flex items-start gap-4">
+                        <input type="checkbox" name="confirmar_mayoria" id="confirmar_mayoria" value="1" required class="mt-1 h-5 w-5 rounded border-white/10 bg-black text-[var(--lucille-accent)] focus:ring-0 focus:ring-offset-0 cursor-pointer">
+                        <label for="confirmar_mayoria" class="text-xs text-gray-400 leading-relaxed cursor-pointer select-none">
+                            <strong class="text-white">Capacidad y Mayoría de Edad:</strong> Declaro bajo juramento que soy mayor de edad legal (18 años o más) en mi país de residencia y cuento con las facultades legales necesarias para representar a la banda o proyecto musical.
+                        </label>
+                    </div>
+                </div>
+
                 {{-- Cláusula de consentimiento Clickwrap --}}
                 <div class="border border-white/5 bg-white/[0.01] rounded-[12px] p-5">
                     <div class="flex items-start gap-4">

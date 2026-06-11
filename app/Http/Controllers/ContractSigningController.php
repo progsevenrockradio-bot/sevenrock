@@ -40,6 +40,7 @@ class ContractSigningController extends Controller
 
         $request->validate([
             'aceptar_terminos' => ['required', 'accepted'],
+            'confirmar_mayoria' => ['required', 'accepted'],
             'nombre_completo' => ['required', 'string', 'max:255'],
             'country' => ['required', 'string', 'max:255'],
             'city' => ['required', 'string', 'max:255'],
