@@ -396,16 +396,14 @@
     @if ($socialLinks->isNotEmpty())
         <aside class="social-flyout" aria-label="Redes sociales">
             <div class="social-flyout__inner">
-                <div class="social-flyout__tab" style="position: relative; overflow: visible;">
-                    <!-- Blood drip hanging from the top of the Social tab -->
-                    <div style="position: absolute; top: -5px; left: 0; right: 0; height: 12px; background: url('{{ asset('assets/lucille/blood_drip.png') }}') repeat-x top center; background-size: contain; pointer-events: none; opacity: 0.9; z-index: 10;"></div>
+                <div class="social-flyout__tab">
                     Social
                 </div>
                 <div class="social-flyout__panel" style="position: relative;">
-                    <!-- Blood Drip Overlay at the top of the panel -->
-                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 28px; background: url('{{ asset('assets/lucille/blood_drip.png') }}') repeat-x top center; background-size: contain; pointer-events: none; opacity: 0.85; z-index: 10;"></div>
+                    <!-- Blood Drip Overlay at the top of the panel (non-squished aspect ratio) -->
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 40px; background: url('{{ asset('assets/lucille/blood_drip.png') }}') repeat-x top center; background-size: 50px 40px; pointer-events: none; opacity: 0.85; z-index: 10;"></div>
                     
-                    <div class="social-flyout__content" style="padding-top: 28px;">
+                    <div class="social-flyout__content" style="padding-top: 36px;">
                         <div class="social-flyout__title">Síguenos</div>
                         <div class="social-flyout__links">
                             @foreach ($socialLinks as $social)

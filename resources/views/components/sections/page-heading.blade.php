@@ -6,7 +6,7 @@
     'categories' => [],
 ])
 
-<section class="lucille-page-heading {{ $subtitle ? '' : 'no-subtitle' }} {{ ! empty($categories) ? 'has-cpt-tax' : '' }}">
+<section class="lucille-page-heading {{ $subtitle ? '' : 'no-subtitle' }} {{ ! empty($categories) ? 'has-cpt-tax' : '' }}" style="overflow: visible;">
     @if ($image)
         @php
             $pageHeadingImage = \App\Support\PublicMediaUrl::normalizePublicUrl($image)
@@ -40,6 +40,6 @@
         </div>
     @endif
 
-    <!-- Blood Drip Border hanging from the bottom of the heading -->
-    <div style="position: absolute; bottom: -18px; left: 0; right: 0; height: 20px; background: url('{{ asset('assets/lucille/blood_drip.png') }}') repeat-x top center; background-size: contain; pointer-events: none; opacity: 0.85; z-index: 15;"></div>
+    <!-- Blood Drip Border hanging from the bottom of the heading (proportional, non-squished) -->
+    <div style="position: absolute; bottom: -63px; left: 0; right: 0; height: 64px; background: url('{{ asset('assets/lucille/blood_drip.png') }}') repeat-x top center; background-size: 80px 64px; pointer-events: none; opacity: 0.9; z-index: 15;"></div>
 </section>
