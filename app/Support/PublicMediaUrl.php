@@ -109,7 +109,7 @@ class PublicMediaUrl
 
         foreach ($candidates as $candidate) {
             if ($candidate !== '' && self::localAssetExists($candidate)) {
-                return asset($candidate);
+                return self::assetUrl($candidate);
             }
 
             $storageCandidate = ltrim((string) preg_replace('#^(public/|storage/)#', '', $candidate), '/');
@@ -129,11 +129,11 @@ class PublicMediaUrl
         }
 
         if (str_contains($relative, '/wp-content/uploads/')) {
-            return self::resolveLegacyWordPressUploadUrl($relative) ?? asset($relative);
+            return self::resolveLegacyWordPressUploadUrl($relative) ?? self::assetUrl($relative);
         }
 
         if (preg_match('/\.(?:jpe?g|png|gif|webp|svg|avif|bmp|mp4|webm|mp3|pdf)(?:\?.*)?$/i', $relative)) {
-            return asset($relative);
+            return self::assetUrl($relative);
         }
 
         return null;
@@ -167,7 +167,7 @@ class PublicMediaUrl
 
     private static function localAssetExists(string $relativePath): bool
     {
-        $clean = ltrim(str_replace('\\', '/', $relativePath), '/');
+        $clean = ltrim(str_replace('\\', '/', rawurldecode($relativePath)), '/');
         if ($clean === '') {
             return false;
         }
@@ -256,7 +256,7 @@ class PublicMediaUrl
         $publicRelative = 'wp-content/uploads/' . $relative;
 
         if (self::localAssetExists($publicRelative)) {
-            return asset($publicRelative);
+            return self::assetUrl($publicRelative);
         }
 
         if ($configuredUrl !== '') {
@@ -381,7 +381,14 @@ class PublicMediaUrl
 
         $publicRelative = 'wp-content/uploads/' . $legacyRelative;
 
-        return self::localAssetExists($publicRelative) ? asset($publicRelative) : null;
+        return self::localAssetExists($publicRelative) ? self::assetUrl($publicRelative) : null;
+    }
+
+    private static function assetUrl(string $path): string
+    {
+        $parts = explode('/', str_replace('\\', '/', $path));
+        $encodedParts = array_map(fn($part) => rawurlencode(rawurldecode($part)), $parts);
+        return asset(implode('/', $encodedParts));
     }
 
     private static function findLegacyWordPressUploadByBasename(string $basePath, string $relative): ?string

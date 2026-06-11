@@ -112,6 +112,20 @@ class Post extends Model
         return [] ?: ($this->featured_image_path ?: null);
     }
 
+    public function setFeaturedImageAttribute(?string $value): void
+    {
+        try {
+            $table = $this->getTable();
+            if (Schema::hasColumn($table, 'featured_image_path') && ! Schema::hasColumn($table, 'featured_image')) {
+                $this->attributes['featured_image_path'] = $value;
+                return;
+            }
+        } catch (\Throwable) {
+        }
+        $this->attributes['featured_image'] = $value;
+    }
+
+
     public function scopePublished(Builder $query): Builder
     {
         return $query->where(function ($q) {
