@@ -21,24 +21,24 @@
         </div>
 
         @if ($errors->any())
-            <div x-data="{ showErrors: true }" x-show="showErrors" class="fixed inset-0 z-[300] flex items-center justify-center p-4" style="display: none;" x-transition>
+            <div x-data="{ showErrors: true }" x-show="showErrors" style="position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px; display: none;" x-transition>
                 <!-- Backdrop -->
-                <div class="absolute inset-0 bg-black/85 backdrop-blur-sm" @click="showErrors = false"></div>
+                <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px);" @click="showErrors = false"></div>
                 <!-- Content -->
-                <div class="relative w-full max-w-md border border-[#c32720]/40 bg-[rgba(12,12,13,.98)] p-6 shadow-2xl">
-                    <div class="h-1 w-full bg-[#c32720] absolute top-0 left-0"></div>
-                    <div class="flex items-start gap-3 mt-2">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center border border-[#c32720] bg-[rgba(195,39,32,.12)] text-[14px] font-bold text-[#ffd0d0]">!</div>
-                        <div class="flex-1">
-                            <h3 class="font-display text-base uppercase tracking-wider text-[#ffaaaa]">Errores de Validación</h3>
-                            <ul class="mt-3 list-disc list-inside space-y-1.5 text-xs text-[#dcdcdc]/80 leading-relaxed">
+                <div style="position: relative; width: 100%; max-width: 460px; border: 1px solid rgba(195, 39, 32, 0.4); background: rgba(12, 12, 13, 0.98); padding: 24px; box-shadow: 0 30px 60px rgba(0,0,0,0.6);">
+                    <div style="height: 4px; width: 100%; background: #c32720; position: absolute; top: 0; left: 0;"></div>
+                    <div style="display: flex; align-items: start; gap: 12px; margin-top: 8px;">
+                        <div style="display: flex; height: 40px; width: 40px; flex-shrink: 0; align-items: center; justify-content: center; border: 1px solid #c32720; background: rgba(195,39,32,0.12); font-size: 14px; font-weight: bold; color: #ffd0d0;">!</div>
+                        <div style="flex: 1; min-width: 0;">
+                            <h3 style="font-family: var(--font-display); font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #ffaaaa; margin: 0 0 8px 0;">Errores de Validación</h3>
+                            <ul style="list-style-type: disc; padding-left: 16px; margin: 0; font-size: 12px; color: rgba(220,220,220,0.85); line-height: 1.6;">
                                 @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
+                                    <li style="margin-bottom: 6px;">{{ $error }}</li>
                                 @endforeach
                             </ul>
                         </div>
                     </div>
-                    <div class="mt-6 flex justify-end">
+                    <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
                         <button type="button" @click="showErrors = false" class="lucille-button-solid">Cerrar</button>
                     </div>
                 </div>
