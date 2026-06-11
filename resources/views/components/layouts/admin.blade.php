@@ -677,5 +677,6 @@
     @auth
         @include('admin._global_help_modal')
     @endauth
+    @stack('scripts')
 </body>
 </html>
