@@ -138,4 +138,35 @@ class ContractSigningTest extends TestCase
         $response->assertStatus(200);
         $response->assertHeader('content-disposition', 'attachment; filename=Contrato_de_Alquiler_de_Espacio_Digital_firmado.pdf');
     }
+
+    public function test_admin_can_delete_contract_and_its_pdf_file(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        Storage::disk('local')->put('contracts/test_delete.pdf', 'fake-content');
+
+        $contract = Contract::query()->create([
+            'token' => 'test-delete-token',
+            'signer_name' => 'John Doe',
+            'signer_email' => 'john@doe.com',
+            'title' => 'Contrato a Eliminar',
+            'content' => 'Texto',
+            'status' => 'signed',
+            'pdf_path' => 'contracts/test_delete.pdf',
+        ]);
+
+        Storage::disk('local')->assertExists('contracts/test_delete.pdf');
+
+        $response = $this->actingAs($admin)->delete(route('admin.contracts.destroy', $contract));
+        $response->assertRedirect(route('admin.contracts.index'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('contracts', [
+            'id' => $contract->id,
+        ]);
+
+        Storage::disk('local')->assertMissing('contracts/test_delete.pdf');
+    }
 }

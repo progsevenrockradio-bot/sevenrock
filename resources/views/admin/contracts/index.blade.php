@@ -109,6 +109,15 @@
                                 @else
                                     <a href="{{ route('admin.contracts.download', $contract) }}" class="lucille-button-solid bg-[#1e4d2b] hover:bg-[#153a20] border-[#1e4d2b] text-white text-xs py-1 px-3">PDF</a>
                                 @endif
+                                <form action="{{ route('admin.contracts.destroy', $contract) }}" method="POST" class="inline"
+                                      data-confirm="¿Estás seguro de que deseas eliminar permanentemente este contrato y su archivo PDF asociado?"
+                                      data-confirm-title="Eliminar Contrato"
+                                      data-confirm-action="Eliminar"
+                                      data-confirm-tone="danger">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="lucille-button border-[#c32720]/30 hover:border-[#c32720]/80 text-[#ff7875] text-xs py-1 px-3">Eliminar</button>
+                                </form>
                             </div>
                         </td>
                     </tr>

@@ -116,4 +116,17 @@ class ContractController extends Controller
     {
         return view('admin.contracts.show', compact('contract'));
     }
+
+    public function destroy(Contract $contract): RedirectResponse
+    {
+        if ($contract->pdf_path && Storage::disk('local')->exists($contract->pdf_path)) {
+            Storage::disk('local')->delete($contract->pdf_path);
+        }
+
+        $contract->delete();
+
+        return redirect()
+            ->route('admin.contracts.index')
+            ->with('success', 'Contrato y su archivo asociado eliminados con éxito.');
+    }
 }
