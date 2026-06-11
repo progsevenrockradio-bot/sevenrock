@@ -41,6 +41,7 @@ class ContractSigningTest extends TestCase
             'signer_name' => 'Alice Cooper',
             'signer_email' => 'alice@cooper.com',
             'title' => 'Contrato de Alquiler de Espacio Digital',
+            'band_name' => 'The Alice Cooper Group',
             'content' => '<p>Este es el texto del acuerdo promocional.</p>',
         ]);
 
@@ -51,6 +52,7 @@ class ContractSigningTest extends TestCase
             'signer_name' => 'Alice Cooper',
             'signer_email' => 'alice@cooper.com',
             'title' => 'Contrato de Alquiler de Espacio Digital',
+            'band_name' => 'The Alice Cooper Group',
             'status' => 'pending',
         ]);
 

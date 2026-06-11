@@ -65,6 +65,7 @@ class ContractController extends Controller
             'signer_name' => ['required', 'string', 'max:255'],
             'signer_email' => ['required', 'email', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
+            'band_name' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
         ]);
 
@@ -73,6 +74,7 @@ class ContractController extends Controller
             'signer_name' => $validated['signer_name'],
             'signer_email' => $validated['signer_email'],
             'title' => $validated['title'],
+            'band_name' => $validated['band_name'],
             'content' => $validated['content'],
             'status' => 'pending',
         ]);

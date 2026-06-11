@@ -31,12 +31,16 @@
                     </select>
                 </div>
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre del Firmante</label>
-                    <input name="signer_name" value="{{ old('signer_name') }}" class="lucille-product-field w-full" placeholder="Ej. Juan Pérez / Representante de Banda" required>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre del Firmante / Representante Legal</label>
+                    <input name="signer_name" value="{{ old('signer_name') }}" class="lucille-product-field w-full" placeholder="Ej. Juan Pérez" required>
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Correo Electrónico del Firmante</label>
                     <input type="email" name="signer_email" value="{{ old('signer_email') }}" class="lucille-product-field w-full" placeholder="Ej. juan@correo.com" required>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre de la Banda / Artista</label>
+                    <input name="band_name" value="{{ old('band_name') }}" class="lucille-product-field w-full" placeholder="Ej. Foo Fighters / Artista Solista" required>
                 </div>
                 <div class="md:col-span-2">
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Título del Contrato</label>

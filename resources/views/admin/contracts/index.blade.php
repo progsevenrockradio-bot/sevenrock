@@ -76,6 +76,9 @@
                         </td>
                         <td class="px-5 py-4">
                             <strong class="text-[#dcdcdc]">{{ $contract->signer_name }}</strong>
+                            @if($contract->band_name)
+                                <div class="text-xs text-[var(--lucille-accent)] font-semibold uppercase tracking-wider">{{ $contract->band_name }}</div>
+                            @endif
                             <div class="text-xs text-[#7b7b7b]">{{ $contract->signer_email }}</div>
                         </td>
                         <td class="px-5 py-4 font-display text-xs uppercase tracking-wider text-[#dcdcdc]">

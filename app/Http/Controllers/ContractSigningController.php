@@ -56,6 +56,34 @@ class ContractSigningController extends Controller
         $contract->save();
 
         // 2. Generate PDF using DomPDF
+        $logoBase64 = null;
+        try {
+            $theme = \App\Models\ThemeSetting::current();
+            $logoPath = null;
+            if (str_contains($theme->logo_url, 'assets/lucille/logo.png')) {
+                $logoPath = public_path('assets/lucille/logo.png');
+            } elseif (str_starts_with($theme->logo_url, asset(''))) {
+                $relative = str_replace(asset(''), '', $theme->logo_url);
+                $logoPath = public_path($relative);
+            }
+            
+            if ($logoPath && file_exists($logoPath)) {
+                $logoData = file_get_contents($logoPath);
+                $mime = mime_content_type($logoPath) ?: 'image/png';
+                $logoBase64 = 'data:' . $mime . ';base64,' . base64_encode($logoData);
+            } else {
+                $ctx = stream_context_create([
+                    'http' => ['timeout' => 5]
+                ]);
+                $logoData = @file_get_contents($theme->logo_url, false, $ctx);
+                if ($logoData) {
+                    $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+                }
+            }
+        } catch (\Exception $e) {
+            logger()->error('Error encoding logo for contract PDF: ' . $e->getMessage());
+        }
+
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isRemoteEnabled', true);
@@ -67,6 +95,7 @@ class ContractSigningController extends Controller
             'fecha' => $contract->signed_at->format('d/m/Y'),
             'fecha_hora' => $contract->signed_at->toDateTimeString(),
             'ip' => $contract->signing_ip,
+            'logo_base64' => $logoBase64,
         ])->render();
 
         $dompdf->loadHtml($html);

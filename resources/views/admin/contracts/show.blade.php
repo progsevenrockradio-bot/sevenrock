@@ -36,6 +36,10 @@
                 <h3 class="font-display text-sm uppercase tracking-wider text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-4 font-semibold">Datos del Firmante</h3>
                 <div class="space-y-3.5 text-xs text-[#7b7b7b]">
                     <div>
+                        <span class="block text-[10px] uppercase text-gray-500 font-mono mb-0.5">Banda / Artista</span>
+                        <strong class="text-[var(--lucille-accent)] text-sm font-sans font-semibold uppercase tracking-wider">{{ $contract->band_name ?? '-' }}</strong>
+                    </div>
+                    <div>
                         <span class="block text-[10px] uppercase text-gray-500 font-mono mb-0.5">Nombre Completo</span>
                         <strong class="text-[#dcdcdc] text-sm font-sans font-medium">{{ $contract->signer_name }}</strong>
                     </div>

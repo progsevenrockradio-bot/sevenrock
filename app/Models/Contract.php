@@ -15,6 +15,7 @@ class Contract extends Model
         'country',
         'city',
         'title',
+        'band_name',
         'content',
         'status',
         'signed_at',
@@ -33,9 +34,17 @@ class Contract extends Model
 
     public function getFormattedContentAttribute(): string
     {
-        if (preg_match('/<[a-z]/i', $this->content)) {
-            return $this->content;
+        $text = $this->content;
+
+        // Reemplazar marcadores por los datos reales del contrato
+        $text = str_replace('[Nombre de la Banda/Artista]', $this->band_name ?? '[Nombre de la Banda/Artista]', $text);
+        $text = str_replace('[Nombre del Firmante]', $this->signer_name ?? '[Nombre del Firmante]', $text);
+        $text = str_replace('[Ciudad]', $this->city ?? '[Ciudad]', $text);
+        $text = str_replace('[País]', $this->country ?? '[País]', $text);
+
+        if (preg_match('/<[a-z]/i', $text)) {
+            return $text;
         }
-        return nl2br(e($this->content));
+        return nl2br(e($text));
     }
 }
