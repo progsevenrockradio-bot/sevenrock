@@ -77,8 +77,10 @@ class VideoController extends Controller
             'image_file' => ['nullable', 'image', 'max:6144'],
             'youtube_url' => ['nullable', 'url', 'max:2048'],
             'summary' => ['nullable', 'string'],
+            'is_featured' => ['nullable', 'boolean'],
         ]), function (array &$validated): void {
             unset($validated['image_file']);
+            $validated['is_featured'] = (bool) ($validated['is_featured'] ?? false);
         });
     }
 

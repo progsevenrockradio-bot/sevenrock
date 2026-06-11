@@ -149,7 +149,7 @@
     </x-sections.background-band>
     @endif
 
-    <x-sections.video-feature :video="$video" :image="$themeAppearance['home_video_image_url']" />
+    <x-sections.video-feature :videos="$featuredVideos" :image="$themeAppearance['home_video_image_url']" />
 
     @if (!empty($posts))
     <x-sections.background-band class="home-section-texture home-section-gray">

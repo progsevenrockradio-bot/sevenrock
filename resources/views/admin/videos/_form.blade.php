@@ -28,6 +28,11 @@
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['summary_label'] }}</label>
         <textarea name="summary" rows="5" class="lucille-product-field w-full">{{ old('summary', $video->summary) }}</textarea>
     </div>
+    <div class="md:col-span-2 mt-2 flex items-center gap-3">
+        <input type="hidden" name="is_featured" value="0">
+        <input type="checkbox" name="is_featured" id="is_featured" value="1" @checked(old('is_featured', $video->is_featured)) class="h-4 w-4 rounded border-[#2b2b2b] bg-[#151515] text-[#c32720] focus:ring-[#c32720]">
+        <label for="is_featured" class="font-display text-xs uppercase tracking-[.18em] text-[#dcdcdc]">{{ $admin['featured_label'] ?? 'Destacado (Mostrar en Inicio)' }}</label>
+    </div>
 </div>
 
 <div class="mt-6 flex flex-wrap gap-3">

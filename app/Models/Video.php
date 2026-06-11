@@ -15,6 +15,11 @@ class Video extends Model
         'image',
         'youtube_url',
         'summary',
+        'is_featured',
+    ];
+
+    protected $casts = [
+        'is_featured' => 'boolean',
     ];
 
     public function getImageUrlAttribute(): string

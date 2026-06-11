@@ -21,6 +21,7 @@
                     <th class="px-5 py-4">{{ $admin['table_title'] }}</th>
                     <th class="px-5 py-4">{{ $admin['table_slug'] }}</th>
                     <th class="px-5 py-4">{{ $admin['table_youtube_url'] }}</th>
+                    <th class="px-5 py-4">{{ $admin['table_featured'] ?? 'Destacado' }}</th>
                     <th class="px-5 py-4">{{ $admin['table_actions'] }}</th>
                 </tr>
             </thead>
@@ -30,6 +31,13 @@
                         <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">{{ $video->title }}</td>
                         <td class="px-5 py-4">{{ $video->slug }}</td>
                         <td class="px-5 py-4">{{ $video->youtube_url }}</td>
+                        <td class="px-5 py-4">
+                            @if ($video->is_featured)
+                                <span class="rounded border border-[#1e4d2b] bg-[rgba(16,64,30,.2)] px-2 py-1 text-xs text-[#b8e6c3]">Destacado</span>
+                            @else
+                                <span class="rounded border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] px-2 py-1 text-xs text-[#7b7b7b]">Normal</span>
+                            @endif
+                        </td>
                         <td class="px-5 py-4">
                             <div class="flex flex-wrap gap-2">
                                 <a href="{{ route('admin.videos.edit', $video) }}" class="lucille-button">{{ $admin['edit'] }}</a>
@@ -50,7 +58,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="px-5 py-10 text-center text-[#7b7b7b]">{{ $admin['no_videos'] }}</td>
+                        <td colspan="5" class="px-5 py-10 text-center text-[#7b7b7b]">{{ $admin['no_videos'] }}</td>
                     </tr>
                 @endforelse
             </tbody>

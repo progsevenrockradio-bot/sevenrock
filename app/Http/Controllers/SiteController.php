@@ -55,7 +55,7 @@ class SiteController extends Controller
         return view('pages.home', [
             'events' => $events,
             'album' => $latestAlbum,
-            'video' => $this->safeValue(fn () => Video::query()->latest()->first(), null),
+            'featuredVideos' => $this->safeValue(fn () => Video::query()->where('is_featured', true)->latest()->take(3)->get(), collect()),
             'galleryImages' => $galleryImages,
             'posts' => $this->latestPosts(),
             'newReleases' => $newReleases,
