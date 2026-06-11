@@ -2,7 +2,7 @@
     @php $planDefinitions = \App\Support\TalentPlan::definitions(); @endphp
 
     <section class="mx-auto max-w-[1180px] px-5 py-16">
-        <div class="grid gap-8 lg:grid-cols-[1fr_360px]" x-data="{ selectedPlan: '{{ old('plan', 'free') }}' }">
+        <div class="grid gap-8 lg:grid-cols-[1fr_360px]" x-data="{ selectedPlan: '{{ request()->query('plan', old('plan', 'free')) }}' }">
             
             {{-- Formulario Principal --}}
             <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-8 shadow-xl">

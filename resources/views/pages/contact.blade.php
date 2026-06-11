@@ -11,7 +11,7 @@
             <div class="grid gap-12 lg:grid-cols-2">
                 <div class="md:pr-[15px]">
                     <h3 class="mb-10 mt-[30px] font-display text-[16px] font-light tracking-[.04em] text-[#dcdcdc]">{{ $contact['form_title'] }}</h3>
-                    <form method="POST" action="{{ route("contact.send") }}" class="space-y-6">
+                    <form method="POST" action="{{ route("contact.send") }}" class="space-y-6" x-data="{ subject: 'general' }">
                         @csrf
                         <div class="hidden" style="display:none !important" aria-hidden="true">
                             <input type="text" name="user_website" tabindex="-1" autocomplete="off">
@@ -19,6 +19,18 @@
                         <input type="text" name="name" placeholder="{{ $ui['your_name'] }}" class="lucille-form-field w-full" required>
                         <input type="email" name="email" placeholder="{{ $ui['email_address'] }}" class="lucille-form-field w-full" required>
                         <input type="tel" name="phone" placeholder="{{ $ui['phone'] }}" class="lucille-form-field w-full">
+                        
+                        <div>
+                            <select name="subject" x-model="subject" class="lucille-form-field w-full" style="color: #dcdcdc; background-color: #1a1a1e; cursor: pointer; height: 50px;">
+                                <option value="general" style="background-color: #141416; color: #dcdcdc;">Consulta general / Otro</option>
+                                <option value="join_radio" style="background-color: #141416; color: #dcdcdc;">Quiero pertenecer a la radio (Banda / Artista)</option>
+                            </select>
+                        </div>
+
+                        <div x-show="subject === 'join_radio'" x-cloak x-transition.opacity>
+                            <input type="text" name="band_name" placeholder="Nombre de la banda o artista" class="lucille-form-field w-full" :required="subject === 'join_radio'">
+                        </div>
+
                         <textarea name="message" placeholder="{{ $ui['write_comment'] }}" rows="10" class="lucille-form-field min-h-[220px] w-full" required></textarea>
                         <div class="pt-2">
                             <button type="submit" class="lucille-button-solid">{{ $ui['send_email'] }}</button>

@@ -27,7 +27,9 @@
         ['label' => 'Tienda', 'route' => 'shop'],
 
         ["label" => "Programas", "route" => "programs"],
+        ['label' => 'Registrar Banda', 'route' => 'talents.register'],
         ['label' => 'Contacto', 'route' => 'contact'],
+        ['label' => 'Iniciar Sesión', 'route' => 'talents.login'],
     ];
     $brandMark = $themeData['visual']['brand_mark'] ?? $themeData['brand_mark'] ?? $themeData['site_name'] ?? 'Seven Rock Radio';
     $brandDisplayMode = $themeData['visual']['brand_display_mode'] ?? $themeData['brand_display_mode'] ?? 'mark';
@@ -217,7 +219,7 @@
         <nav class="hidden h-full items-center lg:flex">
             <ul class="flex h-full items-center">
                 @foreach ($items as $item)
-                    @if (in_array($item['label'], ['Tienda', 'Programas', 'Programa']))
+                    @if (in_array($item['label'], ['Tienda', 'Programas', 'Programa', 'Iniciar Sesión']))
                         @continue
                     @endif
                     <li class="group relative flex h-full items-center">
@@ -271,6 +273,24 @@
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
             </button>
+
+            <!-- Iniciar Sesión / Mi Cuenta Icon -->
+            @auth('talent')
+                <a href="{{ route('talents.dashboard') }}" class="text-white transition-colors duration-300 hover:text-lucille-accent" aria-label="Mi Cuenta" title="Mi Cuenta (Talentos)">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </a>
+            @else
+                <a href="{{ route('talents.login') }}" class="text-white transition-colors duration-300 hover:text-lucille-accent" aria-label="Iniciar Sesión" title="Iniciar Sesión (Talentos)">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                        <polyline points="10 17 15 12 10 7"></polyline>
+                        <line x1="15" y1="12" x2="3" y2="12"></line>
+                    </svg>
+                </a>
+            @endauth
         </div>
     </div>
 

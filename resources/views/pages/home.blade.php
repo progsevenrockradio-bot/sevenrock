@@ -164,7 +164,7 @@
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['send_message']['title']" :accent="$homeHeadings['send_message']['accent']" :subtitle="$homeHeadings['send_message']['subtitle']" />
             <div class="mt-[80px]">
-                <form method="POST" action="{{ route('home.contact.send') }}" class="grid gap-x-4 gap-y-8">
+                <form method="POST" action="{{ route('home.contact.send') }}" class="grid gap-x-4 gap-y-8" x-data="{ subject: 'general' }">
                 @csrf
                     <div class="hidden" style="display:none !important" aria-hidden="true">
                         <input type="text" name="user_website" tabindex="-1" autocomplete="off">
@@ -174,6 +174,19 @@
                         <input type="email" name="email" placeholder="{{ $ui['email_address'] }}" class="lucille-home-input" required>
                         <input type="tel" name="phone" placeholder="{{ $ui['phone'] }}" class="lucille-home-input">
                     </div>
+                    
+                    <div class="grid gap-4" :class="subject === 'join_radio' ? 'md:grid-cols-2' : 'md:grid-cols-1'">
+                        <div>
+                            <select name="subject" x-model="subject" class="lucille-home-input w-full" style="color: #dcdcdc; background-color: #111113; cursor: pointer; height: 50px; border: 1px solid rgba(255,255,255,0.06);">
+                                <option value="general" style="background-color: #111113; color: #dcdcdc;">Consulta general / Otro</option>
+                                <option value="join_radio" style="background-color: #111113; color: #dcdcdc;">Quiero pertenecer a la radio (Banda / Artista)</option>
+                            </select>
+                        </div>
+                        <div x-show="subject === 'join_radio'" x-cloak x-transition.opacity>
+                            <input type="text" name="band_name" placeholder="Nombre de la banda o artista" class="lucille-home-input w-full" :required="subject === 'join_radio'">
+                        </div>
+                    </div>
+
                     <textarea name="message" placeholder="{{ $ui['write_comment'] }}" rows="7" class="lucille-home-input lucille-home-textarea" required></textarea>
                     <div>
                         <button type="submit" class="lucille-button-solid">{{ $ui['send_email'] }}</button>

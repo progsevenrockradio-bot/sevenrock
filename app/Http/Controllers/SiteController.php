@@ -1203,33 +1203,54 @@ class SiteController extends Controller
     {
         $validated = $request->validated();
 
-        Mail::to('prog.sevenrockradio@gmail.com')->send(new ContactMail(
-            senderName: $validated['name'],
-            senderEmail: $validated['email'],
-            senderPhone: $validated['phone'] ?? '',
-            messageBody: $validated['message'],
-            source: 'Contacto',
-        ));
+        try {
+            Mail::to(config('mail.from.address', 'prog.sevenrockradio@gmail.com'))->send(new ContactMail(
+                senderName: $validated['name'],
+                senderEmail: $validated['email'],
+                senderPhone: $validated['phone'] ?? '',
+                messageBody: $validated['message'],
+                source: 'Contacto',
+                bandName: $validated['band_name'] ?? null,
+            ));
 
-        return redirect()->back()->with('success', '¡Mensaje enviado correctamente!');
+            if (($validated['subject'] ?? '') === 'join_radio') {
+                Mail::to($validated['email'])->send(new \App\Mail\TalentProspectMail(
+                    senderName: $validated['name'],
+                    bandName: $validated['band_name'] ?? '',
+                ));
+                return redirect()->back()->with('success', '¡Mensaje enviado correctamente! Te hemos enviado un correo con la información de nuestros planes.');
+            }
+
+            return redirect()->back()->with('success', '¡Mensaje enviado correctamente!');
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Error al enviar el mensaje. Intenta de nuevo más tarde.');
+        }
     }
     public function homeContactSend(ContactFormRequest $request): RedirectResponse
     {
         $validated = $request->validated();
 
         try {
-            \Illuminate\Support\Facades\Mail::to(config('mail.from.address', 'prog.sevenrockradio@gmail.com'))
-                ->send(new \App\Mail\ContactMail(
+            Mail::to(config('mail.from.address', 'prog.sevenrockradio@gmail.com'))->send(new ContactMail(
+                senderName: $validated['name'],
+                senderEmail: $validated['email'],
+                senderPhone: $validated['phone'] ?? '',
+                messageBody: $validated['message'],
+                source: 'Inicio',
+                bandName: $validated['band_name'] ?? null,
+            ));
+
+            if (($validated['subject'] ?? '') === 'join_radio') {
+                Mail::to($validated['email'])->send(new \App\Mail\TalentProspectMail(
                     senderName: $validated['name'],
-                    senderEmail: $validated['email'],
-                    senderPhone: $validated['phone'] ?? '',
-                    messageBody: $validated['message'],
-                    source: 'Inicio',
+                    bandName: $validated['band_name'] ?? '',
                 ));
+                return redirect()->route('home')->with('success', 'Mensaje enviado correctamente. Te hemos enviado un correo con la información de nuestros planes.');
+            }
 
             return redirect()->route('home')->with('success', 'Mensaje enviado correctamente. Nos pondremos en contacto pronto.');
         } catch (\Throwable $e) {
-            return redirect()->route('home')->with('error', 'Error al enviar el mensaje. Intenta de nuevo m\u00e1s tarde.');
+            return redirect()->route('home')->with('error', 'Error al enviar el mensaje. Intenta de nuevo más tarde.');
         }
     }
 

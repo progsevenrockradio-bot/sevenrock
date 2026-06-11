@@ -8,6 +8,9 @@ Has recibido un nuevo mensaje a través del formulario de **{{ $source }}** de S
 **Nombre:** {{ $senderName }}
 **Email:** {{ $senderEmail }}
 **Teléfono:** {{ $senderPhone ?: "No indicado" }}
+@if(!empty($bandName))
+**Banda / Artista:** {{ $bandName }}
+@endif
 
 **Mensaje:**
 

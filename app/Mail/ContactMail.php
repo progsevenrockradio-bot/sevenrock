@@ -22,6 +22,7 @@ final class ContactMail extends Mailable
         public readonly string $senderPhone,
         public readonly string $messageBody,
         public readonly string $source,
+        public readonly ?string $bandName = null,
     ) {
     }
 
@@ -49,6 +50,7 @@ final class ContactMail extends Mailable
                 'senderPhone' => $this->senderPhone,
                 'messageBody' => $this->messageBody,
                 'source' => $this->source,
+                'bandName' => $this->bandName,
             ],
         );
     }
