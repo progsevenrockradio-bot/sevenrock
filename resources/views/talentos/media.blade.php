@@ -10,10 +10,30 @@
             <div class="border border-white/10 bg-[#10161b] p-8">
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Media</h1>
                 <p class="mt-2 text-sm text-[#7b7b7b]">Sube fotos, MP3, documentos o videos al almacenamiento de Backblaze B2.</p>
-                <div class="mt-4 text-sm text-[#c7d0d8]">
-                    Has usado {{ number_format((float) ($usage['storage_used_mb'] ?? 0), 2) }} MB de {{ (int) ($limits['storage_mb'] ?? 0) }} MB /
-                    {{ ($usage['photos'] ?? 0) + ($usage['songs'] ?? 0) + ($usage['documents'] ?? 0) + ($usage['videos'] ?? 0) }}
-                    de {{ (int) ($limits['photos'] ?? 0) + (int) ($limits['songs'] ?? 0) + (int) ($limits['documents'] ?? 0) + (int) ($limits['videos'] ?? 0) }} archivos
+                <div class="mt-6 border border-white/5 bg-white/[0.02] p-5 rounded-[8px] text-xs space-y-3 text-[#7b7b7b] font-sans">
+                    <div class="font-display uppercase tracking-wider text-[#dcdcdc] font-semibold text-xs border-b border-white/5 pb-2 mb-1">
+                        Resumen de Límites (Plan: {{ strtoupper($talent->plan) }})
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Canciones (MP3):</span>
+                        <span class="text-[#dcdcdc] font-mono">{{ $usage['songs'] }} / {{ $limits['songs'] ?? 0 }} <span class="text-[10px] text-gray-500 font-sans ml-1">(Máx. {{ $talent->plan === 'free' ? '12MB' : ($talent->plan === 'basic' ? '15MB' : ($talent->plan === 'pro' ? '20MB' : '25MB')) }} c/u)</span></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Fotografías:</span>
+                        <span class="text-[#dcdcdc] font-mono">{{ $usage['photos'] }} / {{ $limits['photos'] ?? 0 }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Documentos:</span>
+                        <span class="text-[#dcdcdc] font-mono">{{ $usage['documents'] }} / {{ $limits['documents'] ?? 0 }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Videos:</span>
+                        <span class="text-[#dcdcdc] font-mono">{{ $usage['videos'] }} / {{ $limits['videos'] ?? 0 }}</span>
+                    </div>
+                    <div class="flex justify-between items-center border-t border-white/5 pt-2 mt-1 font-semibold">
+                        <span>Almacenamiento Total Usado:</span>
+                        <span class="text-[#dcdcdc] font-mono">{{ number_format((float) ($usage['storage_used_mb'] ?? 0), 2) }} MB / {{ (int) ($limits['storage_mb'] ?? 0) }} MB</span>
+                    </div>
                 </div>
 
                 <form action="{{ route('talents.media.upload') }}" method="POST" enctype="multipart/form-data" class="mt-8 space-y-5">

@@ -117,11 +117,32 @@ class Talent extends Authenticatable
     public function planLimits(): array
     {
         return match ($this->plan) {
-            'free' => ['photos' => 1, 'songs' => 1, 'documents' => 0, 'videos' => 0, 'storage_mb' => 50],
-            'basic' => ['photos' => 10, 'songs' => 5, 'documents' => 0, 'videos' => 0, 'storage_mb' => 200],
-            'pro' => ['photos' => 50, 'songs' => 20, 'documents' => 10, 'videos' => 5, 'storage_mb' => 1000],
-            'premium' => ['photos' => 999, 'songs' => 999, 'documents' => 999, 'videos' => 999, 'storage_mb' => 5000],
-            default => ['photos' => 1, 'songs' => 1, 'documents' => 0, 'videos' => 0, 'storage_mb' => 50],
+            'free' => ['photos' => 1, 'songs' => 3, 'documents' => 0, 'videos' => 0, 'storage_mb' => 50],
+            'basic' => ['photos' => 3, 'songs' => 7, 'documents' => 0, 'videos' => 0, 'storage_mb' => 120],
+            'pro' => ['photos' => 50, 'songs' => 15, 'documents' => 10, 'videos' => 5, 'storage_mb' => 400],
+            'premium' => ['photos' => 999, 'songs' => 50, 'documents' => 999, 'videos' => 999, 'storage_mb' => 20480],
+            default => ['photos' => 1, 'songs' => 3, 'documents' => 0, 'videos' => 0, 'storage_mb' => 50],
+        };
+    }
+
+    public function maxFileSizeKb(string $type): int
+    {
+        if (trim($type) === 'mp3' || trim($type) === 'song' || trim($type) === 'songs') {
+            $maxMb = match ($this->plan) {
+                'free' => 12,
+                'basic' => 15,
+                'pro' => 20,
+                'premium' => 25,
+                default => 12,
+            };
+            return $maxMb * 1024;
+        }
+
+        return match (trim($type)) {
+            'photo', 'photos' => 10 * 1024,
+            'document', 'documents' => 10 * 1024,
+            'video', 'videos' => 100 * 1024,
+            default => 10 * 1024,
         };
     }
 

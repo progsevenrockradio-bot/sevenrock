@@ -48,8 +48,8 @@ class MediaController extends Controller
             ]);
         }
 
-        $limits = $talent->planLimits();
-        $maxFileKb = max(1, (int) ($limits['storage_mb'] ?? 50) * 1024);
+        $type = $request->input('type', 'photo');
+        $maxFileKb = $talent->maxFileSizeKb((string) $type);
 
         $validated = $request->validate([
             'type' => ['required', 'in:photo,mp3,document,video'],
