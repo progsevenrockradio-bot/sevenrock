@@ -15,77 +15,7 @@
     }
 @endphp
 
-<div x-data="{
-    tab: 'general',
-    title: {!! json_encode(old('title', $event->title)) !!},
-    slug: {!! json_encode(old('slug', $event->slug)) !!},
-    ticket_label: {!! json_encode(old('ticket_label', $event->ticket_label ?? 'Tickets')) !!},
-    starts_at: {!! json_encode(old('starts_at', $startsAt ? $startsAt->format('Y-m-d\TH:i') : '')) !!},
-    ends_at: {!! json_encode(old('ends_at', $endsAt ? $endsAt->format('Y-m-d\TH:i') : '')) !!},
-    location: {!! json_encode(old('location', $event->location)) !!},
-    venue: {!! json_encode(old('venue', $event->venue)) !!},
-    categories: {!! json_encode($categoriesValue) !!},
-    content: {!! json_encode($contentValue) !!},
-    poster: {!! json_encode(old('poster', $event->poster)) !!},
-    embed_url: {!! json_encode(old('embed_url', $event->embed_url)) !!},
-    map_url: {!! json_encode(old('map_url', $event->map_url)) !!},
-    ticket_url: {!! json_encode(old('ticket_url', $event->ticket_url)) !!},
-    venue_url: {!! json_encode(old('venue_url', $event->venue_url)) !!},
-    facebook_url: {!! json_encode(old('facebook_url', $event->facebook_url)) !!},
-    slugManuallyEdited: false,
-    localPosterPreview: {!! json_encode($posterPreview) !!},
-
-    slugify(text) {
-        if (!text) return '';
-        return text.toString().toLowerCase().trim()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove accents
-            .replace(/\s+/g, '-')
-            .replace(/[^\w\-]+/g, '')
-            .replace(/\-\-+/g, '-')
-            .replace(/^-+/, '')
-            .replace(/-+$/, '');
-    },
-    updateSlug() {
-        if (!this.slugManuallyEdited) {
-            this.slug = this.slugify(this.title);
-        }
-    },
-    handlePosterUpload(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                this.localPosterPreview = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-    },
-    get categoriesArray() {
-        if (!this.categories) return [];
-        return this.categories.split(/[\r\n,]+/).map(c => c.trim()).filter(c => c.length > 0);
-    },
-    get contentParagraphs() {
-        if (!this.content) return [];
-        return this.content.split(/\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);
-    },
-    get formattedDate() {
-        if (!this.starts_at) return 'Date';
-        const d = new Date(this.starts_at);
-        const options = { month: 'long', day: 'numeric', year: 'numeric' };
-        return d.toLocaleDateString('en-US', options);
-    },
-    get formattedTime() {
-        if (!this.starts_at) return 'Time';
-        const d = new Date(this.starts_at);
-        let hours = d.getHours();
-        let minutes = d.getMinutes();
-        const ampm = hours >= 12 ? 'pm' : 'am';
-        hours = hours % 12;
-        hours = hours ? hours : 12;
-        minutes = minutes < 10 ? '0'+minutes : minutes;
-        return hours + ':' + minutes + ' ' + ampm;
-    }
-}" class="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
+<div x-data="eventForm" class="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
     
     <!-- Left Column: Form Editor -->
     <div class="space-y-6">
@@ -321,22 +251,22 @@
                 <!-- Info & Content -->
                 <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 space-y-4">
                     <!-- Venue details -->
-                    <div class="grid gap-2.5 text-xs text-[#7b7b7b]">
-                        <div class="flex items-center gap-2">
-                            <span class="text-[var(--lucille-accent)] shrink-0">📅</span>
+                    <div class="grid gap-2 text-[11px] text-[#7b7b7b] border-l border-[#2b2b2b]/60 pl-3.5 space-y-1">
+                        <div>
+                            <span class="text-[9px] uppercase tracking-[.08em] text-[#dcdcdc] font-display block">Fecha:</span>
                             <span class="text-[#bcbcbc]" x-text="formattedDate"></span>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[var(--lucille-accent)] shrink-0">🕒</span>
+                        <div>
+                            <span class="text-[9px] uppercase tracking-[.08em] text-[#dcdcdc] font-display block">Hora:</span>
                             <span class="text-[#bcbcbc]" x-text="formattedTime"></span>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[var(--lucille-accent)] shrink-0">📍</span>
-                            <span class="text-[#bcbcbc] truncate" x-text="location || 'Ubicación no especificada'"></span>
+                        <div>
+                            <span class="text-[9px] uppercase tracking-[.08em] text-[#dcdcdc] font-display block">Ubicación:</span>
+                            <span class="text-[#bcbcbc]" x-text="location || 'Ubicación no especificada'"></span>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[var(--lucille-accent)] shrink-0">🏢</span>
-                            <span class="text-[#bcbcbc] truncate" x-text="venue || 'Lugar no especificado'"></span>
+                        <div>
+                            <span class="text-[9px] uppercase tracking-[.08em] text-[#dcdcdc] font-display block">Lugar:</span>
+                            <span class="text-[#bcbcbc]" x-text="venue || 'Lugar no especificado'"></span>
                         </div>
                     </div>
 
@@ -415,3 +345,89 @@
         </a>
     </div>
 </div>
+
+<script>
+(function() {
+    function initEventForm() {
+        if (window.Alpine.components && window.Alpine.components['eventForm']) return;
+        
+        window.Alpine.data('eventForm', () => ({
+            tab: 'general',
+            title: {!! json_encode(old('title', $event->title)) !!},
+            slug: {!! json_encode(old('slug', $event->slug)) !!},
+            ticket_label: {!! json_encode(old('ticket_label', $event->ticket_label ?? 'Tickets')) !!},
+            starts_at: {!! json_encode(old('starts_at', $startsAt ? $startsAt->format('Y-m-d\TH:i') : '')) !!},
+            ends_at: {!! json_encode(old('ends_at', $endsAt ? $endsAt->format('Y-m-d\TH:i') : '')) !!},
+            location: {!! json_encode(old('location', $event->location)) !!},
+            venue: {!! json_encode(old('venue', $event->venue)) !!},
+            categories: {!! json_encode($categoriesValue) !!},
+            content: {!! json_encode($contentValue) !!},
+            poster: {!! json_encode(old('poster', $event->poster)) !!},
+            embed_url: {!! json_encode(old('embed_url', $event->embed_url)) !!},
+            map_url: {!! json_encode(old('map_url', $event->map_url)) !!},
+            ticket_url: {!! json_encode(old('ticket_url', $event->ticket_url)) !!},
+            venue_url: {!! json_encode(old('venue_url', $event->venue_url)) !!},
+            facebook_url: {!! json_encode(old('facebook_url', $event->facebook_url)) !!},
+            slugManuallyEdited: {!! json_encode($isEdit) !!},
+            localPosterPreview: {!! json_encode($posterPreview) !!},
+
+            slugify(text) {
+                if (!text) return '';
+                return text.toString().toLowerCase().trim()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove accents
+                    .replace(/\s+/g, '-')
+                    .replace(/[^\w\-]+/g, '')
+                    .replace(/\-\-+/g, '-')
+                    .replace(/^-+/, '')
+                    .replace(/-+$/, '');
+            },
+            updateSlug() {
+                if (!this.slugManuallyEdited) {
+                    this.slug = this.slugify(this.title);
+                }
+            },
+            handlePosterUpload(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.localPosterPreview = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            },
+            get categoriesArray() {
+                if (!this.categories) return [];
+                return this.categories.split(/[\r\n,]+/).map(c => c.trim()).filter(c => c.length > 0);
+            },
+            get contentParagraphs() {
+                if (!this.content) return [];
+                return this.content.split(/\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);
+            },
+            get formattedDate() {
+                if (!this.starts_at) return 'Date';
+                const d = new Date(this.starts_at);
+                const options = { month: 'long', day: 'numeric', year: 'numeric' };
+                return d.toLocaleDateString('en-US', options);
+            },
+            get formattedTime() {
+                if (!this.starts_at) return 'Time';
+                const d = new Date(this.starts_at);
+                let hours = d.getHours();
+                let minutes = d.getMinutes();
+                const ampm = hours >= 12 ? 'pm' : 'am';
+                hours = hours % 12;
+                hours = hours ? hours : 12;
+                minutes = minutes < 10 ? '0'+minutes : minutes;
+                return hours + ':' + minutes + ' ' + ampm;
+            }
+        }));
+    }
+
+    if (window.Alpine) {
+        initEventForm();
+    } else {
+        document.addEventListener('alpine:init', initEventForm);
+    }
+})();
+</script>
