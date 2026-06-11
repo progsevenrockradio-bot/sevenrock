@@ -340,6 +340,8 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
     Route::post('/{bandName}/comment', [TalentPublicProfileController::class, 'comment'])->name('comment')->middleware([\App\Http\Middleware\PreventSpamWithHoneypot::class, 'throttle:5,1']);
 });
 
+Route::get('/diagnose-media', [\App\Http\Controllers\MediaDiagnosticController::class, 'show'])->name('admin.diagnose-media');
+
 Route::get('/storage/{path}', function (string $path) {
     $filePath = storage_path('app/public/' . $path);
     if (!file_exists($filePath)) {
