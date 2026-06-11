@@ -194,7 +194,7 @@
                 <div class="grid gap-5">
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Video Embed URL</label>
-                        <input name="embed_url" x-model="embed_url" class="lucille-product-field w-full @error('embed_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://www.youtube.com/embed/...">
+                        <input name="embed_url" x-model="embed_url" @input="embed_url = cleanIframeSrc(embed_url)" class="lucille-product-field w-full @error('embed_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://www.youtube.com/embed/...">
                         @error('embed_url')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
                         @enderror
@@ -202,7 +202,7 @@
 
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Google Maps Embed URL</label>
-                        <input name="map_url" x-model="map_url" class="lucille-product-field w-full @error('map_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://www.google.com/maps/embed?...">
+                        <input name="map_url" x-model="map_url" @input="map_url = cleanIframeSrc(map_url)" class="lucille-product-field w-full @error('map_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://www.google.com/maps/embed?...">
                         @error('map_url')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
                         @enderror
@@ -385,6 +385,17 @@
                 if (!this.slugManuallyEdited) {
                     this.slug = this.slugify(this.title);
                 }
+            },
+            cleanIframeSrc(value) {
+                if (!value) return '';
+                const trimmed = value.trim();
+                if (trimmed.startsWith('<iframe')) {
+                    const match = trimmed.match(/src=["']([^"']+)["']/i);
+                    if (match && match[1]) {
+                        return match[1];
+                    }
+                }
+                return value;
             },
             handlePosterUpload(event) {
                 const file = event.target.files[0];
