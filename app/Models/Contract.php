@@ -12,6 +12,8 @@ class Contract extends Model
         'token',
         'signer_name',
         'signer_email',
+        'country',
+        'city',
         'title',
         'content',
         'status',
@@ -27,5 +29,13 @@ class Contract extends Model
     public function getSigningUrl(): string
     {
         return route('contratos.firmar', ['token' => $this->token]);
+    }
+
+    public function getFormattedContentAttribute(): string
+    {
+        if (preg_match('/<[a-z]/i', $this->content)) {
+            return $this->content;
+        }
+        return nl2br(e($this->content));
     }
 }

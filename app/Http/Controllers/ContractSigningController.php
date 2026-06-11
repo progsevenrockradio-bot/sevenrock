@@ -41,12 +41,18 @@ class ContractSigningController extends Controller
         $request->validate([
             'aceptar_terminos' => ['required', 'accepted'],
             'nombre_completo' => ['required', 'string', 'max:255'],
+            'country' => ['required', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:255'],
         ]);
 
-        // 1. Update status and audit data
+        // 1. Update status and audit data, including user-provided location
         $contract->status = 'signed';
         $contract->signed_at = Carbon::now();
         $contract->signing_ip = $request->ip();
+        $contract->signer_name = $request->input('nombre_completo');
+        $contract->country = $request->input('country');
+        $contract->city = $request->input('city');
+        $contract->save();
 
         // 2. Generate PDF using DomPDF
         $options = new Options();
@@ -56,7 +62,7 @@ class ContractSigningController extends Controller
         $dompdf = new Dompdf($options);
         $html = view('contratos.pdf_template', [
             'contract' => $contract,
-            'nombre' => $request->input('nombre_completo'),
+            'nombre' => $contract->signer_name,
             'fecha' => $contract->signed_at->format('d/m/Y'),
             'fecha_hora' => $contract->signed_at->toDateTimeString(),
             'ip' => $contract->signing_ip,

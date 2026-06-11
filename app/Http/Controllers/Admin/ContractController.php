@@ -17,24 +17,46 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ContractController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $contracts = Contract::query()->latest()->paginate(15);
-        return view('admin.contracts.index', compact('contracts'));
+        $query = Contract::query();
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('signer_name', 'like', "%{$search}%")
+                  ->orWhere('signer_email', 'like', "%{$search}%")
+                  ->orWhere('title', 'like', "%{$search}%")
+                  ->orWhere('country', 'like', "%{$search}%")
+                  ->orWhere('city', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('country')) {
+            $query->where('country', $request->input('country'));
+        }
+
+        $contracts = $query->latest()->paginate(15)->withQueryString();
+
+        $countries = Contract::query()
+            ->whereNotNull('country')
+            ->where('country', '!=', '')
+            ->distinct()
+            ->pluck('country');
+
+        return view('admin.contracts.index', compact('contracts', 'countries'));
     }
 
     public function create(): View
     {
-        $defaultTemplate = '<p><strong>CONTRATO DE ALQUILER DE ESPACIO DIGITAL Y DIFUSIÓN MULTIMEDIA</strong></p>
-<p>Reunidos por una parte, <strong>SEVEN ROCK RADIO</strong> (en adelante, el "Proveedor"), y por la otra parte, el firmante cuyos datos figuran en el formulario de aceptación (en adelante, el "Arrendatario" o "Artista").</p>
-<p>Ambas partes declaran tener y reconocerse mutuamente la capacidad legal necesaria para el otorgamiento del presente contrato, de conformidad con las siguientes:</p>
-<p><strong>CLÁUSULAS</strong></p>
-<p><strong>PRIMERA. Objeto del Contrato.</strong> El Proveedor concede al Artista un espacio digital de almacenamiento en la plataforma web de Seven Rock Radio para alojar archivos multimedia (audios en formato MP3, imágenes promocionales, notas de prensa y material audiovisual). Asimismo, se autoriza la difusión de dichos contenidos a través de los canales de la emisora.</p>
-<p><strong>SEGUNDA. Gratuidad del Servicio.</strong> El presente acuerdo se establece con carácter de apoyo cultural y promoción mutua, por lo que no conlleva ninguna contraprestación económica por el espacio digital otorgado por el Proveedor ni por la cesión de contenidos promocionales del Artista.</p>
-<p><strong>TERCERA. Propiedad Intelectual y Responsabilidad.</strong> El Artista declara bajo su total responsabilidad ser el autor legítimo de las obras subidas a la plataforma o poseer todos los derechos, licencias y autorizaciones necesarias. El Artista conserva la propiedad intelectual de sus obras y cede de manera no exclusiva y temporal los derechos de reproducción y comunicación pública al Proveedor para fines de difusión en la radio.</p>
-<p><strong>CUARTA. Validez Legal de la Firma Clickwrap.</strong> De conformidad con la legislación internacional de comercio electrónico y firma digital, ambas partes aceptan de mutuo propio que el consentimiento expresado electrónicamente mediante el marcado de la casilla de aceptación y el envío del formulario constituye una firma electrónica vinculante con plena validez legal y probatoria.</p>';
+        $templates = config('contracts.templates', []);
+        $defaultTemplate = config('contracts.templates.free.body', '');
 
-        return view('admin.contracts.create', compact('defaultTemplate'));
+        return view('admin.contracts.create', compact('templates', 'defaultTemplate'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -88,5 +110,10 @@ class ContractController extends Controller
         }
 
         return Storage::disk('local')->download($contract->pdf_path, str_replace(' ', '_', $contract->title) . '_firmado.pdf');
+    }
+
+    public function show(Contract $contract): View
+    {
+        return view('admin.contracts.show', compact('contract'));
     }
 }

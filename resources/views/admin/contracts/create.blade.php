@@ -17,10 +17,19 @@
     </div>
 
     <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6 md:p-8 rounded-[8px]">
-        <form action="{{ route('admin.contracts.store') }}" method="POST">
+        <form action="{{ route('admin.contracts.store') }}" method="POST" x-data="contractTemplateCreator()" x-init="init()">
             @csrf
 
             <div class="grid gap-5 md:grid-cols-2">
+                <div class="md:col-span-2">
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b] font-semibold">Seleccionar Plantilla de Contrato</label>
+                    <select @change="changeTemplate($event.target.value)" class="lucille-product-field w-full">
+                        @foreach($templates as $key => $tpl)
+                            <option value="{{ $key }}">{{ $tpl['name'] }}</option>
+                        @endforeach
+                        <option value="custom">Personalizado / Vacío</option>
+                    </select>
+                </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre del Firmante</label>
                     <input name="signer_name" value="{{ old('signer_name') }}" class="lucille-product-field w-full" placeholder="Ej. Juan Pérez / Representante de Banda" required>
@@ -31,12 +40,12 @@
                 </div>
                 <div class="md:col-span-2">
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Título del Contrato</label>
-                    <input name="title" value="{{ old('title', 'Contrato de Alquiler de Espacio Digital y Difusión') }}" class="lucille-product-field w-full" required>
+                    <input name="title" x-model="title" class="lucille-product-field w-full" required>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Cuerpo del Contrato (Cláusulas en HTML o Texto Plano)</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Cuerpo del Contrato (Cláusulas)</label>
                     <p class="mb-2 text-xs text-gray-500 italic">* Puedes editar este texto para personalizarlo según el acuerdo.</p>
-                    <textarea name="content" rows="15" class="lucille-product-field w-full font-mono text-sm leading-relaxed" required>{{ old('content', $defaultTemplate) }}</textarea>
+                    <textarea name="content" x-model="content" rows="15" class="lucille-product-field w-full font-mono text-sm leading-relaxed" required></textarea>
                 </div>
             </div>
 
@@ -46,4 +55,27 @@
             </div>
         </form>
     </div>
+
+    @push('scripts')
+    <script>
+        function contractTemplateCreator() {
+            return {
+                title: '',
+                content: '',
+                templates: @js($templates),
+                init() {
+                    this.templates['custom'] = { title: '', body: '' };
+                    this.title = @js(old('title', 'Contrato de Alquiler de Espacio Digital y Difusión - Plan FREE (Gratuito)'));
+                    this.content = @js(old('content', $defaultTemplate));
+                },
+                changeTemplate(val) {
+                    if (this.templates[val]) {
+                        this.title = this.templates[val].title;
+                        this.content = this.templates[val].body;
+                    }
+                }
+            };
+        }
+    </script>
+    @endpush
 </x-layouts.admin>

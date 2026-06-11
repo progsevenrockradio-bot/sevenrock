@@ -21,7 +21,7 @@
             {{-- Contenedor del cuerpo del contrato --}}
             <div class="mb-8 border border-white/10 bg-black/45 rounded-[12px] p-6 max-h-[350px] overflow-y-auto text-sm leading-relaxed text-gray-300 scrollbar-thin scrollbar-thumb-white/10">
                 <div class="prose prose-invert max-w-none">
-                    {!! $contract->content !!}
+                    {!! $contract->formatted_content !!}
                 </div>
             </div>
 
@@ -39,6 +39,17 @@
                         <div class="p-3 bg-white/5 border border-white/10 rounded-[8px] font-mono text-xs text-gray-300 text-center select-none">
                             {{ request()->ip() }}
                         </div>
+                    </div>
+                </div>
+
+                <div class="grid gap-5 md:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b] font-semibold">País de Residencia / Origen</label>
+                        <input name="country" value="{{ old('country') }}" class="lucille-product-field w-full rounded-[8px]" required placeholder="Ej. Colombia, España, México">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b] font-semibold">Ciudad</label>
+                        <input name="city" value="{{ old('city') }}" class="lucille-product-field w-full rounded-[8px]" required placeholder="Ej. Bogotá, Madrid, CDMX">
                     </div>
                 </div>
 

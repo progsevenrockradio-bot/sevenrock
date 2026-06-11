@@ -34,14 +34,18 @@
                 <td style="padding-bottom: 8px;"><span class="bold">Email Firmante:</span> {{ $contract->signer_email }}</td>
             </tr>
             <tr>
-                <td><span class="bold">Fecha de Emisión:</span> {{ $fecha }}</td>
-                <td><span class="bold">Estado:</span> Firmado Electrónicamente</td>
+                <td style="padding-bottom: 8px;"><span class="bold">Fecha de Emisión:</span> {{ $fecha }}</td>
+                <td style="padding-bottom: 8px;"><span class="bold">Ubicación:</span> {{ $contract->city }}, {{ $contract->country }}</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td style="padding-bottom: 8px;"><span class="bold">Estado:</span> Firmado Electrónicamente</td>
             </tr>
         </table>
     </div>
 
     <div class="cuerpo-contrato">
-        {!! $contract->content !!}
+        {!! $contract->formatted_content !!}
     </div>
 
     <!-- Bloque de Firma y Auditoría Técnica -->

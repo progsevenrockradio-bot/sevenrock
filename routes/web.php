@@ -297,6 +297,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::post('/', 'store')->name('store');
         Route::post('/{contract}/send', 'send')->name('send');
         Route::get('/{contract}/download', 'download')->name('download');
+        Route::get('/{contract}', 'show')->name('show');
     });
 
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');

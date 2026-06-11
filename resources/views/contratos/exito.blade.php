@@ -25,6 +25,10 @@
                     <span class="text-gray-300 font-mono">{{ $contract->signer_email }}</span>
                 </div>
                 <div class="flex justify-between">
+                    <span class="text-gray-500">Ubicación Declarada:</span>
+                    <span class="text-gray-300 font-semibold">{{ $contract->city }}, {{ $contract->country }}</span>
+                </div>
+                <div class="flex justify-between">
                     <span class="text-gray-500">Fecha y Hora de Firma (UTC):</span>
                     <span class="text-gray-300 font-mono">{{ $contract->signed_at ? $contract->signed_at->format('d/m/Y H:i:s') : '-' }}</span>
                 </div>

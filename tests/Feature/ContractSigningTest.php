@@ -95,6 +95,8 @@ class ContractSigningTest extends TestCase
         $response = $this->post(route('contratos.sign', ['token' => 'test-token-123']), [
             'nombre_completo' => 'Alice Cooper',
             'aceptar_terminos' => '1',
+            'country' => 'United States',
+            'city' => 'Detroit',
         ]);
 
         $response->assertRedirect(route('contratos.exito', ['token' => 'test-token-123']));
@@ -103,6 +105,8 @@ class ContractSigningTest extends TestCase
         $contract->refresh();
 
         $this->assertEquals('signed', $contract->status);
+        $this->assertEquals('United States', $contract->country);
+        $this->assertEquals('Detroit', $contract->city);
         $this->assertNotNull($contract->signed_at);
         $this->assertNotNull($contract->signing_ip);
         $this->assertNotNull($contract->pdf_path);
