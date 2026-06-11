@@ -7,8 +7,6 @@
     $items ??= [
         ['label' => 'Inicio', 'route' => 'home'],
         ['label' => 'Multimedia', 'route' => 'discography', 'children' => [
-            ['label' => 'Discografía', 'route' => 'discography'],
-            ['label' => 'Álbum', 'url' => $featuredAlbumUrl],
             ['label' => 'Galería', 'route' => 'gallery'],
             ['label' => 'Álbum de fotos', 'route' => 'gallery.green-day'],
             ['label' => 'Video', 'url' => route('videos.single', ['slug' => 'gold-on-the-ceiling'])],
@@ -23,11 +21,14 @@
             ['label' => 'Ver Blog', 'route' => 'blog'],
             ['label' => 'Entrada', 'url' => route('posts.single', ['year' => '2016', 'month' => '09', 'day' => '06', 'slug' => 'inspiration'])],
         ]],
-        ['label' => 'Muro del Rock', 'route' => 'talents.explore'],
+        ['label' => 'Muro del Rock', 'route' => 'talents.explore', 'children' => [
+            ['label' => 'Discografía', 'route' => 'discography'],
+            ['label' => 'Álbum', 'url' => $featuredAlbumUrl],
+            ['label' => 'Registrar Banda', 'route' => 'talents.register'],
+        ]],
         ['label' => 'Tienda', 'route' => 'shop'],
 
         ["label" => "Programas", "route" => "programs"],
-        ['label' => 'Registrar Banda', 'route' => 'talents.register'],
         ['label' => 'Contacto', 'route' => 'contact'],
         ['label' => 'Iniciar Sesión', 'route' => 'talents.login'],
     ];
