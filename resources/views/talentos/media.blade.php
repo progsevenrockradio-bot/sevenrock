@@ -38,14 +38,53 @@
 
                 <form action="{{ route('talents.media.upload') }}" method="POST" enctype="multipart/form-data" class="mt-8 space-y-5">
                     @csrf
-                    <div>
+                    <div x-data="{ dropdownOpen: false, selectedType: '{{ old('type', 'photo') }}', selectedLabel: '{{ old('type') === 'mp3' ? 'MP3' : (old('type') === 'document' ? 'Documento' : (old('type') === 'video' ? 'Video' : 'Foto')) }}' }">
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Tipo</label>
-                        <select name="type" class="lucille-product-field w-full">
-                            <option value="photo" @selected(old('type') === 'photo')>Foto</option>
-                            <option value="mp3" @selected(old('type') === 'mp3')>MP3</option>
-                            <option value="document" @selected(old('type') === 'document')>Documento</option>
-                            <option value="video" @selected(old('type') === 'video')>Video</option>
-                        </select>
+                        <div class="relative w-full">
+                            <input type="hidden" name="type" :value="selectedType">
+                            
+                            <button type="button" @click="dropdownOpen = !dropdownOpen" @click.away="dropdownOpen = false" 
+                                class="lucille-product-field w-full flex items-center justify-between text-left rounded-[8px]" 
+                                style="color: #dcdcdc; background-color: rgba(0, 0, 0, .22); cursor: pointer; height: 50px; border: 1px solid rgba(255,255,255,0.06); padding: 0 16px; font-size: 14px;">
+                                <span x-text="selectedLabel"></span>
+                                <svg class="w-4 h-4 ml-2 transition-transform duration-200" :class="dropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            
+                            <ul x-show="dropdownOpen" x-cloak x-transition.opacity 
+                                class="absolute left-0 z-30 mt-1 w-full border border-white/10 bg-[#141416] rounded-[8px] py-1 shadow-2xl" 
+                                style="max-height: 250px; overflow-y: auto; list-style: none; padding: 0; margin: 0;">
+                                <li>
+                                    <button type="button" @click="selectedType = 'photo'; selectedLabel = 'Foto'; dropdownOpen = false" 
+                                        class="w-full text-left px-4 py-3 text-sm transition-colors duration-150"
+                                        :class="selectedType === 'photo' ? 'bg-[var(--lucille-accent)] text-white' : 'text-[#dcdcdc] hover:bg-white/5'">
+                                        Foto
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" @click="selectedType = 'mp3'; selectedLabel = 'MP3'; dropdownOpen = false" 
+                                        class="w-full text-left px-4 py-3 text-sm transition-colors duration-150"
+                                        :class="selectedType === 'mp3' ? 'bg-[var(--lucille-accent)] text-white' : 'text-[#dcdcdc] hover:bg-white/5'">
+                                        MP3
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" @click="selectedType = 'document'; selectedLabel = 'Documento'; dropdownOpen = false" 
+                                        class="w-full text-left px-4 py-3 text-sm transition-colors duration-150"
+                                        :class="selectedType === 'document' ? 'bg-[var(--lucille-accent)] text-white' : 'text-[#dcdcdc] hover:bg-white/5'">
+                                        Documento
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" @click="selectedType = 'video'; selectedLabel = 'Video'; dropdownOpen = false" 
+                                        class="w-full text-left px-4 py-3 text-sm transition-colors duration-150"
+                                        :class="selectedType === 'video' ? 'bg-[var(--lucille-accent)] text-white' : 'text-[#dcdcdc] hover:bg-white/5'">
+                                        Video
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Título</label>

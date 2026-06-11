@@ -8,14 +8,43 @@
         </div>
 
         <!-- Filter Form -->
-        <form method="GET" action="{{ route('talents.explore') }}" class="grid gap-4 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:grid-cols-[1.5fr_1fr_auto] shadow-lg">
+        <form method="GET" action="{{ route('talents.explore') }}" class="grid gap-4 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:grid-cols-[1.5fr_1fr_auto] shadow-lg" x-data="{ dropdownOpen: false, selectedPlan: '{{ $selectedPlan }}', selectedLabel: '{{ $selectedPlan ? ($plans[$selectedPlan]['label'] ?? ucfirst($selectedPlan)) : 'Todos los planes' }}' }">
             <input type="search" name="search" value="{{ $search }}" placeholder="Buscar talento..." class="lucille-product-field w-full rounded-[8px]">
-            <select name="plan" class="lucille-product-field lucille-select-field w-full rounded-[8px]">
-                <option value="">Todos los planes</option>
-                @foreach ($plans as $key => $plan)
-                    <option value="{{ $key }}" @selected($selectedPlan === $key)>{{ $plan['label'] ?? ucfirst($key) }}</option>
-                @endforeach
-            </select>
+            
+            <div class="relative w-full">
+                <input type="hidden" name="plan" :value="selectedPlan">
+                
+                <button type="button" @click="dropdownOpen = !dropdownOpen" @click.away="dropdownOpen = false" 
+                    class="lucille-product-field w-full flex items-center justify-between text-left rounded-[8px]" 
+                    style="color: #dcdcdc; background-color: rgba(0, 0, 0, .22); cursor: pointer; height: 50px; border: 1px solid rgba(255,255,255,0.06); padding: 0 16px; font-size: 14px;">
+                    <span x-text="selectedLabel"></span>
+                    <svg class="w-4 h-4 ml-2 transition-transform duration-200" :class="dropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                
+                <ul x-show="dropdownOpen" x-cloak x-transition.opacity 
+                    class="absolute left-0 z-30 mt-1 w-full border border-white/10 bg-[#141416] rounded-[8px] py-1 shadow-2xl" 
+                    style="max-height: 250px; overflow-y: auto; list-style: none; padding: 0; margin: 0;">
+                    <li>
+                        <button type="button" @click="selectedPlan = ''; selectedLabel = 'Todos los planes'; dropdownOpen = false" 
+                            class="w-full text-left px-4 py-3 text-sm transition-colors duration-150"
+                            :class="selectedPlan === '' ? 'bg-[var(--lucille-accent)] text-white' : 'text-[#dcdcdc] hover:bg-white/5'">
+                            Todos los planes
+                        </button>
+                    </li>
+                    @foreach ($plans as $key => $plan)
+                        <li>
+                            <button type="button" @click="selectedPlan = '{{ $key }}'; selectedLabel = '{{ $plan['label'] ?? ucfirst($key) }}'; dropdownOpen = false" 
+                                class="w-full text-left px-4 py-3 text-sm transition-colors duration-150"
+                                :class="selectedPlan === '{{ $key }}' ? 'bg-[var(--lucille-accent)] text-white' : 'text-[#dcdcdc] hover:bg-white/5'">
+                                {{ $plan['label'] ?? ucfirst($key) }}
+                            </button>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
             <button type="submit" class="lucille-button-solid rounded-[8px] px-8">Filtrar</button>
         </form>
 

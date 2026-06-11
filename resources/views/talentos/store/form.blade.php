@@ -55,23 +55,50 @@
                 <input type="url" name="external_payment_url" value="{{ old('external_payment_url', $product->external_payment_url) }}" class="lucille-product-field w-full" placeholder="https://paypal.me/tubanda" required>
             </div>
 
-            <div>
+            <div x-data="{ dropdownOpen: false, selectedLabelVal: '{{ old('external_payment_label', $product->external_payment_label) }}', selectedLabelText: '{{ old('external_payment_label', $product->external_payment_label) ?: 'Usar texto por defecto' }}' }">
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Etiqueta del botón</label>
-                <select name="external_payment_label" class="lucille-product-field w-full">
-                    @php
-                        $labels = [
-                            'Comprar con PayPal',
-                            'Pagar con MercadoPago',
-                            'Contratar',
-                            'Donar',
-                            'Comprar ahora',
-                        ];
-                    @endphp
-                    <option value="">Usar texto por defecto</option>
-                    @foreach ($labels as $label)
-                        <option value="{{ $label }}" @selected(old('external_payment_label', $product->external_payment_label) === $label)>{{ $label }}</option>
-                    @endforeach
-                </select>
+                <div class="relative w-full">
+                    <input type="hidden" name="external_payment_label" :value="selectedLabelVal">
+                    
+                    <button type="button" @click="dropdownOpen = !dropdownOpen" @click.away="dropdownOpen = false" 
+                        class="lucille-product-field w-full flex items-center justify-between text-left rounded-[8px]" 
+                        style="color: #dcdcdc; background-color: rgba(0, 0, 0, .22); cursor: pointer; height: 50px; border: 1px solid rgba(255,255,255,0.06); padding: 0 16px; font-size: 14px;">
+                        <span x-text="selectedLabelText"></span>
+                        <svg class="w-4 h-4 ml-2 transition-transform duration-200" :class="dropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    
+                    <ul x-show="dropdownOpen" x-cloak x-transition.opacity 
+                        class="absolute left-0 z-30 mt-1 w-full border border-white/10 bg-[#141416] rounded-[8px] py-1 shadow-2xl" 
+                        style="max-height: 250px; overflow-y: auto; list-style: none; padding: 0; margin: 0;">
+                        <li>
+                            <button type="button" @click="selectedLabelVal = ''; selectedLabelText = 'Usar texto por defecto'; dropdownOpen = false" 
+                                class="w-full text-left px-4 py-3 text-sm transition-colors duration-150"
+                                :class="selectedLabelVal === '' ? 'bg-[var(--lucille-accent)] text-white' : 'text-[#dcdcdc] hover:bg-white/5'">
+                                Usar texto por defecto
+                            </button>
+                        </li>
+                        @php
+                            $labels = [
+                                'Comprar con PayPal',
+                                'Pagar con MercadoPago',
+                                'Contratar',
+                                'Donar',
+                                'Comprar ahora',
+                            ];
+                        @endphp
+                        @foreach ($labels as $label)
+                            <li>
+                                <button type="button" @click="selectedLabelVal = '{{ $label }}'; selectedLabelText = '{{ $label }}'; dropdownOpen = false" 
+                                    class="w-full text-left px-4 py-3 text-sm transition-colors duration-150"
+                                    :class="selectedLabelVal === '{{ $label }}' ? 'bg-[var(--lucille-accent)] text-white' : 'text-[#dcdcdc] hover:bg-white/5'">
+                                    {{ $label }}
+                                </button>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
             </div>
 
             <div class="rounded border border-white/10 bg-[rgba(255,255,255,.03)] p-4 text-sm text-[#c9c9c9]">

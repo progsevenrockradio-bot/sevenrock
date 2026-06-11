@@ -164,7 +164,7 @@
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['send_message']['title']" :accent="$homeHeadings['send_message']['accent']" :subtitle="$homeHeadings['send_message']['subtitle']" />
             <div class="mt-[80px]">
-                <form method="POST" action="{{ route('home.contact.send') }}" class="grid gap-x-4 gap-y-8" x-data="{ subject: 'general' }">
+                <form method="POST" action="{{ route('home.contact.send') }}" class="grid gap-x-4 gap-y-8" x-data="{ subject: 'general', dropdownOpen: false, selectedLabel: 'Consulta general / Otro' }">
                 @csrf
                     <div class="hidden" style="display:none !important" aria-hidden="true">
                         <input type="text" name="user_website" tabindex="-1" autocomplete="off">
@@ -176,11 +176,36 @@
                     </div>
                     
                     <div class="grid gap-4" :class="subject === 'join_radio' ? 'md:grid-cols-2' : 'md:grid-cols-1'">
-                        <div>
-                            <select name="subject" x-model="subject" class="lucille-home-input w-full" style="color: #dcdcdc; background-color: #111113; cursor: pointer; height: 50px; border: 1px solid rgba(255,255,255,0.06);">
-                                <option value="general" style="background-color: #111113; color: #dcdcdc;">Consulta general / Otro</option>
-                                <option value="join_radio" style="background-color: #111113; color: #dcdcdc;">Quiero pertenecer a la radio (Banda / Artista)</option>
-                            </select>
+                        <div class="relative w-full">
+                            <input type="hidden" name="subject" :value="subject">
+                            
+                            <button type="button" @click="dropdownOpen = !dropdownOpen" @click.away="dropdownOpen = false" 
+                                class="lucille-home-input w-full flex items-center justify-between text-left" 
+                                style="color: #dcdcdc; background-color: #111113; cursor: pointer; height: 50px; border: 1px solid rgba(255,255,255,0.06); padding: 0 16px; font-size: 14px;">
+                                <span x-text="selectedLabel"></span>
+                                <svg class="w-4 h-4 ml-2 transition-transform duration-200" :class="dropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            
+                            <ul x-show="dropdownOpen" x-cloak x-transition.opacity 
+                                class="absolute left-0 z-30 mt-1 w-full border border-white/10 bg-[#111113] rounded-[8px] py-1 shadow-2xl" 
+                                style="max-height: 250px; overflow-y: auto; list-style: none; padding: 0; margin: 0;">
+                                <li>
+                                    <button type="button" @click="subject = 'general'; selectedLabel = 'Consulta general / Otro'; dropdownOpen = false" 
+                                        class="w-full text-left px-4 py-3 text-sm transition-colors duration-150"
+                                        :class="subject === 'general' ? 'bg-[var(--lucille-accent)] text-white' : 'text-[#dcdcdc] hover:bg-white/5'">
+                                        Consulta general / Otro
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" @click="subject = 'join_radio'; selectedLabel = 'Quiero pertenecer a la radio (Banda / Artista)'; dropdownOpen = false" 
+                                        class="w-full text-left px-4 py-3 text-sm transition-colors duration-150"
+                                        :class="subject === 'join_radio' ? 'bg-[var(--lucille-accent)] text-white' : 'text-[#dcdcdc] hover:bg-white/5'">
+                                        Quiero pertenecer a la radio (Banda / Artista)
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
                         <div x-show="subject === 'join_radio'" x-cloak x-transition.opacity>
                             <input type="text" name="band_name" placeholder="Nombre de la banda o artista" class="lucille-home-input w-full" :required="subject === 'join_radio'">
