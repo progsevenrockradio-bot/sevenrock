@@ -65,10 +65,20 @@ class PublicMediaUrl
             return null;
         }
 
-        if (filter_var($value, FILTER_VALIDATE_URL)) {
+        $isUrl = false;
+        try {
+            $isUrl = filter_var($value, FILTER_VALIDATE_URL)
+                || str_starts_with(strtolower($value), 'http://')
+                || str_starts_with(strtolower($value), 'https://');
+        } catch (\Throwable) {
+        }
+
+        if ($isUrl) {
+            $normalizedUrl = str_replace(' ', '%20', $value);
+
             // Fast path: convert WordPress upload URLs to local legacy-wp-uploads
             // without scanning the filesystem (avoids slow RecursiveDirectoryIterator)
-            $relative = self::extractLegacyWordPressUploadRelativePath($value);
+            $relative = self::extractLegacyWordPressUploadRelativePath($normalizedUrl);
             if ($relative !== null) {
                 if (Route::has("legacy-wp-uploads.show")) {
                     return route("legacy-wp-uploads.show", ["path" => $relative]);
@@ -78,7 +88,7 @@ class PublicMediaUrl
             // Adapt localhost/127.0.0.1 assets to the current HTTP host/port
             try {
                 $currentHost = request()->getSchemeAndHttpHost();
-                $parsed = parse_url($value);
+                $parsed = parse_url($normalizedUrl);
                 if (isset($parsed['host']) && ($parsed['host'] === 'localhost' || $parsed['host'] === '127.0.0.1')) {
                     $path = $parsed['path'] ?? '';
                     $query = isset($parsed['query']) ? '?' . $parsed['query'] : '';
@@ -88,7 +98,7 @@ class PublicMediaUrl
                 // Fallback to original value
             }
 
-            return $value;
+            return $normalizedUrl;
         }
 
         if (str_starts_with($value, '//')) {
