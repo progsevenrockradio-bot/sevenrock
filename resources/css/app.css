@@ -1796,8 +1796,8 @@
         font-family: var(--font-display);
     }
 
-    .lucille-event-row:first-child .lucille-event-date,
-    .lucille-event-row:first-child .lucille-event-buy {
+    .lucille-event-date,
+    .lucille-event-buy {
         text-align: center;
     }
 
@@ -5620,7 +5620,7 @@
         .lucille-event-link {
             grid-template-columns: 1fr;
             gap: 10px;
-            text-align: left;
+            text-align: center;
         }
 
         .lucille-event-row:first-child {
@@ -5635,7 +5635,7 @@
         .lucille-event-venue,
         .lucille-event-buy,
         .lucille-event-row:first-child .lucille-event-buy {
-            text-align: left;
+            text-align: center;
         }
     }
 

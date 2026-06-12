@@ -521,7 +521,11 @@
         </aside>
     @endif
 
-    <footer id="site-footer" class="bg-lucille-surface py-7 text-center text-[13px] text-[#7b7b7b]">
+    <footer id="site-footer" class="bg-lucille-surface py-7 text-center text-[13px] text-[#7b7b7b]"
+        @if (!request()->routeIs('programs*') && !request()->routeIs('contratos*'))
+            style="padding-bottom: calc(var(--radio-player-offset, 108px) + env(safe-area-inset-bottom, 0px) + 28px);"
+        @endif
+    >
         <div class="mx-auto flex max-w-[1180px] flex-col items-center gap-3 px-5">
             <div class="flex flex-wrap items-center justify-center gap-4">
                 @foreach ($theme['social_links'] as $social)
@@ -556,12 +560,12 @@
                 @endforeach
             </div>
             {{-- Menú Legal en el Footer --}}
-            <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-display uppercase tracking-[0.1em] text-[#9aa7b1] mt-1">
-                <a href="{{ route('copyright-policy') }}" class="transition hover:text-lucille-accent">Términos y Copyright</a>
+            <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-display tracking-[0.1em] text-[#9aa7b1] mt-1">
+                <a href="{{ route('copyright-policy') }}" class="transition hover:text-lucille-accent">Términos y copyright</a>
                 <span class="text-white/10 hidden sm:inline">|</span>
-                <a href="{{ route('privacy-policy') }}" class="transition hover:text-lucille-accent">Política de Privacidad</a>
+                <a href="{{ route('privacy-policy') }}" class="transition hover:text-lucille-accent">Política de privacidad</a>
                 <span class="text-white/10 hidden sm:inline">|</span>
-                <button type="button" onclick="openCookieSettings()" class="transition hover:text-lucille-accent focus:outline-none">Preferencias de Cookies</button>
+                <button type="button" onclick="openCookieSettings()" class="transition hover:text-lucille-accent focus:outline-none">Preferencias de cookies</button>
             </div>
             
             {{-- Texto de Copyright Detallado --}}
