@@ -415,7 +415,7 @@
         </div>
     </main>
 
-    @if (!request()->routeIs('programs*') && !request()->routeIs('contratos*') && !request()->routeIs('new-releases*') && !request()->routeIs('lanzamientos*') && !request()->routeIs('nuevos-lanzamientos*'))
+    @if (!request()->routeIs('programs*') && !request()->routeIs('contratos*') && !request()->routeIs('new-releases*') && !request()->routeIs('lanzamientos*') && !request()->routeIs('nuevos-lanzamientos*') && !request()->routeIs('colaboradores*'))
         <x-radio.player />
     @endif
 
