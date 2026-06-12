@@ -1705,10 +1705,6 @@ export function registerRadioPlayer(Alpine) {
                 textParts.push(`Programa: ${program}.`);
             }
 
-            if (cover) {
-                textParts.push(`Carátula: ${cover}.`);
-            }
-
             textParts.push(url);
             const text = textParts.join(' ').replace(/\s{2,}/g, ' ').trim();
 
