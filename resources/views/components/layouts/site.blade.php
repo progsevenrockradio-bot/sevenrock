@@ -61,6 +61,9 @@
     $finalOgImage = $ogImage;
     if ($finalOgImage) {
         $finalOgImage = \App\Support\PublicMediaUrl::normalize($finalOgImage) ?? $finalOgImage;
+        if ($finalOgImage && !str_starts_with(strtolower($finalOgImage), 'http://') && !str_starts_with(strtolower($finalOgImage), 'https://')) {
+            $finalOgImage = $siteUrl . '/' . ltrim($finalOgImage, '/');
+        }
     } else {
         $finalOgImage = $logoUrl;
         try {
