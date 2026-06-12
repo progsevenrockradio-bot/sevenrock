@@ -1694,7 +1694,7 @@ export function registerRadioPlayer(Alpine) {
             const artist = this.track.artist || this.defaultArtist || '';
             const program = this.track.program_name || '';
             const cover = this.track.cover || this.fallbackCover || '';
-            const baseUrl = document.referrer || window.location.href;
+            const baseUrl = window.location.origin + '/';
             const version = this.track.signature || this.track.audio_url || this.track.program_id || '';
             const url = version ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}v=${encodeURIComponent(String(version))}` : baseUrl;
             const textParts = [
