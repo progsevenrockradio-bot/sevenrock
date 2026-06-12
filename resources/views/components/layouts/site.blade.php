@@ -389,22 +389,22 @@
         gtag('js', new Date());
         gtag('config', '{{ env('GOOGLE_ANALYTICS_ID') }}');
     </script>
+    <style>
+        :root {
+            --lucille-accent: {{ $theme['visual']['accent_color'] }};
+            --lucille-nav: {{ $theme['visual']['nav_color'] }};
+            --lucille-surface: {{ $theme['visual']['surface_color'] }};
+            --lucille-body: {{ $theme['visual']['body_color'] }};
+            --lucille-heading: {{ $theme['visual']['heading_color'] }};
+            --lucille-line: {{ $theme['visual']['line_color'] }};
+            --lucille-body-font: '{{ $theme['brand_font'] }}';
+            --lucille-heading-font: '{{ $theme['heading_font'] }}';
+            --lucille-brand-font: '{{ $theme['brand_mark_font'] }}';
+            --lucille-bg-image: url('{{ $theme['media']['background_url'] }}');
+        }
+    </style>
 </head>
-<body
-    class="antialiased"
-    style="
-        --lucille-accent: {{ $theme['visual']['accent_color'] }};
-        --lucille-nav: {{ $theme['visual']['nav_color'] }};
-        --lucille-surface: {{ $theme['visual']['surface_color'] }};
-        --lucille-body: {{ $theme['visual']['body_color'] }};
-        --lucille-heading: {{ $theme['visual']['heading_color'] }};
-        --lucille-line: {{ $theme['visual']['line_color'] }};
-        --lucille-body-font: '{{ $theme['brand_font'] }}';
-        --lucille-heading-font: '{{ $theme['heading_font'] }}';
-        --lucille-brand-font: '{{ $theme['brand_mark_font'] }}';
-        --lucille-bg-image: url('{{ $theme['media']['background_url'] }}');
-    "
->
+<body class="antialiased">
     <div class="lucille-fixed-bg" aria-hidden="true"></div>
 
     <x-navigation.rocks-menu :theme="$theme" />

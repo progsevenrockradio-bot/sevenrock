@@ -20,23 +20,25 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="{{ $theme->google_fonts_url }}" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        :root {
+            --lucille-accent: {{ $theme->accent_color }};
+            --lucille-nav: {{ $theme->nav_color }};
+            --lucille-surface: {{ $theme->surface_color }};
+            --lucille-body: {{ $theme->body_color }};
+            --lucille-heading: {{ $theme->heading_color }};
+            --lucille-line: {{ $theme->line_color }};
+            --lucille-body-font: '{{ $theme->body_font }}';
+            --lucille-heading-font: '{{ $theme->heading_font }}';
+            --lucille-brand-font: '{{ $theme->brand_mark_font }}';
+            --lucille-bg-image: url('{{ $theme->background_url }}');
+        }
+    </style>
 </head>
 <body
     class="antialiased"
     x-data="{ showHelp: false }"
     @keydown.window.escape="showHelp = false"
-    style="
-        --lucille-accent: {{ $theme->accent_color }};
-        --lucille-nav: {{ $theme->nav_color }};
-        --lucille-surface: {{ $theme->surface_color }};
-        --lucille-body: {{ $theme->body_color }};
-        --lucille-heading: {{ $theme->heading_color }};
-        --lucille-line: {{ $theme->line_color }};
-        --lucille-body-font: '{{ $theme->body_font }}';
-        --lucille-heading-font: '{{ $theme->heading_font }}';
-        --lucille-brand-font: '{{ $theme->brand_mark_font }}';
-        --lucille-bg-image: url('{{ $theme->background_url }}');
-    "
     >
     <div class="lucille-fixed-bg" aria-hidden="true"></div>
 
