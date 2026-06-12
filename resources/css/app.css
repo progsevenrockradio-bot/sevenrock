@@ -561,8 +561,11 @@
 }
 
 .radio-player-popup-social-link {
-    gap: .5rem;
-    padding: .55rem .8rem;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
     border-radius: 9999px;
     color: #fff;
     text-decoration: none;
@@ -5513,7 +5516,11 @@
         }
 
         .radio-player-popup-social-link {
-            padding: .45rem .65rem;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            min-height: 32px;
         }
 
         .radio-player-popup-social-badge {
