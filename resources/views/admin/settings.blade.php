@@ -70,6 +70,17 @@
         </div>
     @endif
 
+    @if ($errors->any())
+        <div class="mb-6 border border-[#7a2b2b] bg-[rgba(195,39,32,.15)] px-4 py-3 text-sm text-[#ff9e9e] rounded">
+            <strong class="block mb-2">⚠️ Hubo un problema al guardar los cambios:</strong>
+            <ul class="list-disc list-inside space-y-1 text-xs">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <form
         action="{{ route('admin.settings.update') }}"
         method="POST"
