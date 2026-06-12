@@ -19,7 +19,7 @@
             <span class="text-[#a855f7]">💡 Google Drive y Dropbox se convierten solos al pegar</span>
         </div>
         <div x-show="url" class="mt-2" style="display: none;">
-            <img :src="url" loading="lazy" class="h-16 w-auto object-contain border border-white/10" alt="Vista previa" @error="$el.style.display='none'">
+            <img :src="url" loading="lazy" class="h-16 w-auto object-contain border border-white/10" alt="Vista previa" x-on:error="$el.style.display='none'">
         </div>
     </div>
     <div>
@@ -40,7 +40,7 @@
             <span class="text-[#a855f7]">💡 Google Drive y Dropbox se convierten solos al pegar</span>
         </div>
         <div x-show="url" class="mt-2" style="display: none;">
-            <img :src="url" loading="lazy" class="h-16 w-auto object-contain border border-white/10" alt="Vista previa" @error="$el.style.display='none'">
+            <img :src="url" loading="lazy" class="h-16 w-auto object-contain border border-white/10" alt="Vista previa" x-on:error="$el.style.display='none'">
         </div>
     </div>
     <div>
