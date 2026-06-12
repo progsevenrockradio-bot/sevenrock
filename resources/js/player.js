@@ -92,6 +92,7 @@ export function registerRadioPlayer(Alpine) {
         defaultTitle: options.defaultTitle || '',
         panelOpen: false,
         sharePanelOpen: false,
+        shareKey: '',
         bandWindowOpen: false,
         programWindowOpen: false,
         bandWindowTab: 'bio',
@@ -218,8 +219,10 @@ export function registerRadioPlayer(Alpine) {
             // Media Session API integration
             this.$watch('track', (value) => this.updateMediaSession(value));
             this.$watch('playing', (value) => this.updateMediaSessionPlaybackState(value));
+            this.$watch('track.signature', () => this.updateShareKey());
             this.updateMediaSession(this.track);
             this.updateMediaSessionPlaybackState(this.playing);
+            this.updateShareKey();
         },
 
         hasUserGesture() {
@@ -1689,24 +1692,51 @@ export function registerRadioPlayer(Alpine) {
             this.sharePanelOpen = !this.sharePanelOpen;
         },
 
+        async updateShareKey() {
+            const title = this.track.title || this.defaultTitle || 'Seven Rock Radio';
+            const artist = this.track.artist || this.defaultArtist || '';
+            const program = this.track.program_name || '';
+            const cover = this.track.cover || this.fallbackCover || '';
+
+            try {
+                const response = await fetch('/api/player/share-track', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title, artist, cover, program }),
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.key) {
+                        this.shareKey = data.key;
+                        return;
+                    }
+                }
+            } catch (err) {
+                // Fail silently, fallback is used
+            }
+            this.shareKey = '';
+        },
+
         shareContext() {
             const title = this.track.title || this.defaultTitle || 'Seven Rock Radio';
             const artist = this.track.artist || this.defaultArtist || '';
             const program = this.track.program_name || '';
             const cover = this.track.cover || this.fallbackCover || '';
             const baseUrl = window.location.origin + '/';
-            const version = this.track.signature || this.track.audio_url || this.track.program_id || '';
-            const url = version ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}v=${encodeURIComponent(String(version))}` : baseUrl;
-            const textParts = [
-                `Estoy escuchando "${title}"${artist ? ` de ${artist}` : ''} en Seven Rock Radio.`,
-            ];
 
-            if (program) {
-                textParts.push(`Programa: ${program}.`);
+            let url = baseUrl;
+            if (this.shareKey) {
+                url = `${baseUrl}?v=${encodeURIComponent(String(this.shareKey))}`;
+            } else {
+                const version = this.track.signature || this.track.audio_url || this.track.program_id || '';
+                if (version) {
+                    url = `${baseUrl}?v=${encodeURIComponent(String(version))}`;
+                }
             }
 
-            textParts.push(url);
-            const text = textParts.join(' ').replace(/\s{2,}/g, ' ').trim();
+            const text = `Escuchando Seven Rock Radio 🤘: ${url}`;
 
             return {
                 title,

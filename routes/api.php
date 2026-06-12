@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\PlayerStatusController;
 use App\Http\Controllers\Api\RadioWebhookController;
 
 Route::get('/player/status', [PlayerStatusController::class, 'show'])->middleware('throttle:60,1')->name('api.player.status');
+Route::post('/player/share-track', [\App\Http\Controllers\PlayerController::class, 'registerShare'])->name('api.player.share-track');
 Route::get('/player/band-info', [BandInfoController::class, 'show'])->name('api.player.band-info');
 Route::get('/player/program-info', [ProgramInfoController::class, 'show'])->middleware('throttle:60,1')->name('api.player.program-info');
 Route::get('/player/favorites', [PlayerFavoriteController::class, 'index'])->middleware('throttle:60,1')->name('api.player.favorites.index');

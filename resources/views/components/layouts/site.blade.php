@@ -11,12 +11,29 @@
 @php
     // Detect track share context (signature) via query string "v"
     $vParam = request()->query('v');
-    if ($vParam && str_contains(urldecode($vParam), '|')) {
-        $parts = explode('|', urldecode($vParam));
-        $vTitle = trim($parts[0] ?? '');
-        $vArtist = trim($parts[1] ?? '');
-        $vCover = trim($parts[2] ?? '');
-        $vProgram = trim($parts[3] ?? '');
+    if ($vParam) {
+        $vDecoded = urldecode($vParam);
+        $vTitle = '';
+        $vArtist = '';
+        $vCover = '';
+        $vProgram = '';
+
+        if (str_contains($vDecoded, '|')) {
+            $parts = explode('|', $vDecoded);
+            $vTitle = trim($parts[0] ?? '');
+            $vArtist = trim($parts[1] ?? '');
+            $vCover = trim($parts[2] ?? '');
+            $vProgram = trim($parts[3] ?? '');
+        } else {
+            // Short key format from Cache
+            $cached = \Illuminate\Support\Facades\Cache::get("share_track_{$vDecoded}");
+            if ($cached) {
+                $vTitle = trim($cached['title'] ?? '');
+                $vArtist = trim($cached['artist'] ?? '');
+                $vCover = trim($cached['cover'] ?? '');
+                $vProgram = trim($cached['program'] ?? '');
+            }
+        }
 
         if ($vTitle !== '') {
             $trackLabel = $vArtist !== '' ? "{$vTitle} - {$vArtist}" : $vTitle;
