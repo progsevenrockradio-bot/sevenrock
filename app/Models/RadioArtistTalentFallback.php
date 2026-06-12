@@ -7,41 +7,8 @@ namespace App\Models;
 use App\Support\PublicMediaUrl;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class RadioArtistTalentFallback extends Talent
+class RadioArtistTalentFallback extends RadioArtist
 {
-    protected $table = 'radio_artists';
-
-    protected $fillable = [
-        'name',
-        'agency_id',
-        'biography',
-        'editorial_summary',
-        'image_path',
-        'founded_date',
-        'logo_path',
-        'country',
-        'genre',
-        'members_count',
-        'status',
-        'labels',
-        'featured_facts',
-        'milestones',
-        'related_artists',
-        'official_links',
-        'last_verified_at',
-        'source',
-    ];
-
-    protected $casts = [
-        'founded_date' => 'date',
-        'members_count' => 'integer',
-        'featured_facts' => 'array',
-        'milestones' => 'array',
-        'related_artists' => 'array',
-        'official_links' => 'array',
-        'last_verified_at' => 'datetime',
-    ];
-
     public function getBandNameAttribute(): string
     {
         return (string) $this->name;
@@ -90,6 +57,11 @@ class RadioArtistTalentFallback extends Talent
             }
         }
         return $map;
+    }
+
+    public function paymentLinkMap(): array
+    {
+        return [];
     }
 
     public function media(): HasMany
