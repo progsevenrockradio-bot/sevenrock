@@ -125,7 +125,7 @@
         }
     }
     
-    $finalCanonical = $canonical ?? url()->current();
+    $finalCanonical = $canonical ?? (request()->has('v') ? request()->fullUrl() : url()->current());
     if ($finalCanonical) {
         $finalCanonical = \App\Support\PublicMediaUrl::normalize($finalCanonical) ?? $finalCanonical;
     }
