@@ -582,7 +582,7 @@ export function registerRadioPlayer(Alpine) {
                 return;
             }
 
-            const esBloqueDePrograma = Boolean(this.track.es_bloque_programa);
+            const esBloqueDePrograma = Boolean(this.track.es_bloque_programa) || (this.track.program_id !== null && Number(this.track.program_id) > 0);
 
             if (esBloqueDePrograma) {
                 if (this.programWindowOpen) {
@@ -1177,7 +1177,7 @@ export function registerRadioPlayer(Alpine) {
                 program_host: track.program_host || '',
                 program_schedule: track.program_schedule || '',
                 program_id: track.program_id || data.program_id || null,
-                es_bloque_programa: track.es_bloque_programa ?? data.es_bloque_programa ?? false,
+                es_bloque_programa: Boolean(track.es_bloque_programa ?? data.es_bloque_programa ?? (track.program_id || data.program_id || false)),
             };
 
             if ((trackChanged || !this.favoriteSyncReady) && this.track.signature) {
