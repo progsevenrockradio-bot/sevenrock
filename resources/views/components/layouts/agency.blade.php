@@ -57,6 +57,13 @@
                         <a href="{{ $agency->website_url }}" target="_blank" rel="noreferrer" class="text-[var(--lucille-accent)] hover:underline">{{ $agency->website_url }}</a>
                     </div>
                 @endif
+                @if($agency)
+                    <div class="pt-4 border-t border-white/5">
+                        <a href="{{ route('agency.public-profile', $agency->slug) }}" target="_blank" class="w-full text-center block border border-white/10 hover:border-[var(--lucille-accent)] hover:text-white py-2 text-xs font-display uppercase tracking-wider rounded-[6px] transition-all">
+                            🔗 Ver Página Pública
+                        </a>
+                    </div>
+                @endif
             </div>
         </aside>
 

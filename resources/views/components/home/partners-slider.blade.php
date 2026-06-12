@@ -18,9 +18,7 @@
                 <div class="flex gap-16 items-center animate-marquee">
                     <!-- Duplicamos los logos para lograr un scroll infinito fluido -->
                     @foreach($agencies->concat($agencies) as $agency)
-                        <a href="{{ $agency->website_url ?: '#' }}" 
-                           target="{{ $agency->website_url ? '_blank' : '_self' }}" 
-                           rel="noreferrer" 
+                        <a href="{{ route('agency.public-profile', $agency->slug) }}" 
                            class="flex shrink-0 items-center justify-center h-16 w-36 px-4 group transition-all duration-300"
                            title="{{ $agency->name }}">
                             <img src="{{ $agency->logo_url }}" 

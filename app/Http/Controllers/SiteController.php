@@ -15,6 +15,7 @@ use App\Models\TalentAlbum;
 use App\Models\ThemeSetting;
 use App\Models\Video;
 use App\Models\NewRelease;
+use App\Models\Agency;
 use App\Services\ArchiveOrgService;
 use App\Support\HeadlineTickerService;
 use App\Support\PublicMediaUrl;
@@ -139,6 +140,21 @@ class SiteController extends Controller
 
         return view('pages.new-releases-index', [
             'newReleases' => $newReleases,
+        ]);
+    }
+
+    public function agencyPublicProfile(string $slug): View
+    {
+        $agency = Agency::query()
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        $bands = $agency->radioArtists()->orderBy('name')->get();
+
+        return view('pages.agency-public', [
+            'agency' => $agency,
+            'bands' => $bands,
         ]);
     }
 
