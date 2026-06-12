@@ -1,6 +1,7 @@
 <x-layouts.site 
     title="Seven Rock Radio - {{ $agency->name }}" 
     description="Perfil público de {{ $agency->name }} en Seven Rock Radio. Bandas representadas, lanzamientos destacados y novedades."
+    :show-player="false"
 >
     <!-- Cabecera de la Agencia -->
     <section class="relative py-20 bg-[#0c0c0e] border-b border-white/5 overflow-hidden">

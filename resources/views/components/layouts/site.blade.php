@@ -5,6 +5,7 @@
     'ogDescription' => null,
     'ogImage' => null,
     'canonical' => null,
+    'showPlayer' => true,
 ])
 
 @php
@@ -415,7 +416,7 @@
         </div>
     </main>
 
-    @if (!request()->routeIs('programs*') && !request()->routeIs('contratos*') && !request()->routeIs('new-releases*') && !request()->routeIs('lanzamientos*') && !request()->routeIs('nuevos-lanzamientos*') && !request()->routeIs('colaboradores*'))
+    @if ($showPlayer && !request()->routeIs('programs*') && !request()->routeIs('contratos*') && !request()->routeIs('new-releases*') && !request()->routeIs('lanzamientos*') && !request()->routeIs('nuevos-lanzamientos*') && !request()->routeIs('colaboradores*') && !request()->routeIs('agency.public-profile'))
         <x-radio.player />
     @endif
 

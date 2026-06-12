@@ -44,15 +44,23 @@ class PublicProfileController extends Controller
     {
         $talent = Talent::query()
             ->where('band_name', urldecode($bandName))
-            ->firstOrFail();
+            ->first();
 
-        $talent->increment('interacts');
+        if (! $talent) {
+            $talent = \App\Models\RadioArtistTalentFallback::query()
+                ->where('name', urldecode($bandName))
+                ->firstOrFail();
+        }
 
-        TalentInteraction::query()->create([
-            'talent_id' => $talent->id,
-            'visitor_ip' => (string) request()->ip(),
-            'type' => 'view',
-        ]);
+        if ($talent->exists && ! ($talent instanceof \App\Models\RadioArtistTalentFallback)) {
+            $talent->increment('interacts');
+
+            TalentInteraction::query()->create([
+                'talent_id' => $talent->id,
+                'visitor_ip' => (string) request()->ip(),
+                'type' => 'view',
+            ]);
+        }
 
         $hasLiked = $talent->interactions()
             ->where('visitor_ip', (string) request()->ip())
