@@ -370,6 +370,26 @@ Route::prefix('afiliados')->name('afiliados.')->group(function (): void {
     Route::post('/logout', [AffiliateAuthController::class, 'logout'])->name('logout')->middleware('auth:web');
 });
 
+// Agency Auth & Dashboard Routes
+Route::prefix('agencias')->name('agency.')->group(function (): void {
+    Route::middleware('guest:agency')->group(function (): void {
+        Route::get('/login', [\App\Http\Controllers\Agency\AuthController::class, 'showLoginForm'])->name('login');
+        Route::post('/login', [\App\Http\Controllers\Agency\AuthController::class, 'login'])->name('login.store');
+    });
+
+    Route::middleware('auth:agency')->group(function (): void {
+        Route::get('/dashboard', [\App\Http\Controllers\Agency\DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/profile', [\App\Http\Controllers\Agency\DashboardController::class, 'profile'])->name('profile');
+        Route::put('/profile', [\App\Http\Controllers\Agency\DashboardController::class, 'updateProfile'])->name('profile.update');
+        Route::get('/bands', [\App\Http\Controllers\Agency\DashboardController::class, 'bands'])->name('bands');
+        Route::get('/bands/create', [\App\Http\Controllers\Agency\DashboardController::class, 'createBand'])->name('bands.create');
+        Route::post('/bands', [\App\Http\Controllers\Agency\DashboardController::class, 'storeBand'])->name('bands.store');
+        Route::get('/bands/{band}/edit', [\App\Http\Controllers\Agency\DashboardController::class, 'editBand'])->name('bands.edit');
+        Route::put('/bands/{band}', [\App\Http\Controllers\Agency\DashboardController::class, 'updateBand'])->name('bands.update');
+        Route::post('/logout', [\App\Http\Controllers\Agency\AuthController::class, 'logout'])->name('logout');
+    });
+});
+
 // Community Wall & Benefits
 Route::prefix('comunidad')->name('comunidad.')->group(function (): void {
     Route::middleware([\App\Http\Middleware\AuthenticateAnyGuard::class])->group(function (): void {

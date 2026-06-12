@@ -13,7 +13,7 @@ class AuthenticateAnyGuard
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::guard('web')->check() || Auth::guard('talent')->check()) {
+        if (Auth::guard('web')->check() || Auth::guard('talent')->check() || Auth::guard('agency')->check()) {
             return $next($request);
         }
 

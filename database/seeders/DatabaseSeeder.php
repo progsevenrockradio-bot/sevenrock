@@ -41,6 +41,7 @@ class DatabaseSeeder extends Seeder
         $this->call(MasterProgramsSeeder::class);
         $this->call(OutreachTemplateSeeder::class);
         $this->call(PostTaxonomySeeder::class);
+        $this->call(AgencySeeder::class);
 
         Event::query()->delete();
         Album::query()->delete();

@@ -156,6 +156,7 @@ class BandProfileController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('radio_artists', 'name')->ignore($ignoreId)],
+            'agency_id' => ['nullable', 'integer', 'exists:agencies,id'],
             'biography' => ['nullable', 'string'],
             'editorial_summary' => ['nullable', 'string'],
             'image_path' => ['nullable', 'string', 'max:2048'],

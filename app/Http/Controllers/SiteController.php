@@ -52,6 +52,15 @@ class SiteController extends Controller
             collect()
         );
 
+        $agencies = $this->safeValue(
+            fn () => \App\Models\Agency::query()
+                ->where('is_active', true)
+                ->whereNotNull('logo_path')
+                ->orderBy('sort_order')
+                ->get(),
+            collect()
+        );
+
         return view('pages.home', [
             'events' => $events,
             'album' => $latestAlbum,
@@ -69,6 +78,7 @@ class SiteController extends Controller
                 ThemeSetting::defaults()['featured_stories'] ?? []
             ),
             'latestPodcasts' => $latestPodcasts,
+            'agencies' => $agencies,
         ]);
     }
 

@@ -46,6 +46,10 @@ return [
             'driver' => 'session',
             'provider' => 'talents',
         ],
+        'agency' => [
+            'driver' => 'session',
+            'provider' => 'agencies',
+        ],
     ],
 
     /*
@@ -74,6 +78,11 @@ return [
         'talents' => [
             'driver' => 'eloquent',
             'model' => App\Models\Talent::class,
+        ],
+
+        'agencies' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Agency::class,
         ],
 
         // 'users' => [
@@ -110,6 +119,12 @@ return [
         ],
         'talents' => [
             'provider' => 'talents',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+        'agencies' => [
+            'provider' => 'agencies',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
             'throttle' => 60,

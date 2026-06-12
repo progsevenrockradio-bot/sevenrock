@@ -42,6 +42,20 @@
             <option value="unknown" {{ old('status', $bandProfile->status) === 'unknown' ? 'selected' : '' }}>Unknown</option>
         </select>
     </div>
+    @php
+        $agencies = \App\Models\Agency::query()->orderBy('name')->get();
+    @endphp
+    <div>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Agency (Colaborador)</label>
+        <select name="agency_id" class="lucille-product-field w-full">
+            <option value="">None / Ninguna</option>
+            @foreach($agencies as $agency)
+                <option value="{{ $agency->id }}" {{ old('agency_id', $bandProfile->agency_id) == $agency->id ? 'selected' : '' }}>
+                    {{ $agency->name }}
+                </option>
+            @endforeach
+        </select>
+    </div>
     <div class="md:col-span-2">
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Biography</label>
         <textarea name="biography" rows="6" class="lucille-product-field w-full">{{ old('biography', $bandProfile->biography) }}</textarea>

@@ -44,6 +44,20 @@
                                 </div>
                             @endif
                             
+                            @if($newRelease->radioArtist && $newRelease->radioArtist->agency)
+                                <div class="lucille-event-detail-entry mb-0">
+                                    <span class="text-xs uppercase tracking-wider text-[#555] block">Representante</span>
+                                    <span class="text-white text-sm font-semibold">
+                                        @if($newRelease->radioArtist->agency->website_url)
+                                            <a href="{{ $newRelease->radioArtist->agency->website_url }}" target="_blank" class="hover:text-[var(--lucille-accent)] transition-colors underline">
+                                                {{ $newRelease->radioArtist->agency->name }}
+                                            </a>
+                                        @else
+                                            {{ $newRelease->radioArtist->agency->name }}
+                                        @endif
+                                    </span>
+                                </div>
+                            @endif
                             @if($newRelease->released_at)
                                 <div class="lucille-event-detail-entry mb-0">
                                     <span class="text-xs uppercase tracking-wider text-[#555] block">Fecha</span>
