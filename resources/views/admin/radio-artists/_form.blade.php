@@ -5,9 +5,22 @@
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Name</label>
         <input name="name" value="{{ old('name', $bandProfile->name) }}" class="lucille-product-field w-full">
     </div>
-    <div>
+    <div x-data="imageHelper('{{ old('image_path', $bandProfile->image_path) }}')">
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Image Path</label>
-        <input name="image_path" value="{{ old('image_path', $bandProfile->image_path) }}" class="lucille-product-field w-full">
+        <input 
+            name="image_path" 
+            x-model="url"
+            @input="convert()"
+            class="lucille-product-field w-full" 
+            placeholder="Ej: catalog/releases/covers/foto.jpg o enlace directo"
+        >
+        <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#8f877d]">
+            <span>Formatos: <strong>.png, .jpg, .webp</strong></span>
+            <span class="text-[#a855f7]">💡 Google Drive y Dropbox se convierten solos al pegar</span>
+        </div>
+        <div x-show="url" class="mt-2" style="display: none;">
+            <img :src="url" loading="lazy" class="h-16 w-auto object-contain border border-white/10" alt="Vista previa" @error="$el.style.display='none'">
+        </div>
     </div>
     <div>
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Founded Date</label>
