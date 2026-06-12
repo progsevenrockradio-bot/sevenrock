@@ -4,8 +4,12 @@
     <section class="py-12 bg-[#08080a] border-t border-white/5 overflow-hidden relative">
         <!-- Título de Sección -->
         <div class="mx-auto max-w-[1200px] px-6 mb-8 text-center">
-            <span class="text-[10px] uppercase tracking-[.25em] text-[#7b7b7b] font-semibold font-display">Alianzas y Representaciones</span>
-            <h2 class="font-display text-2xl uppercase tracking-[.15em] text-[#dcdcdc] mt-1">Agencias Colaboradoras</h2>
+            <h2 class="font-display text-[1.65rem] uppercase tracking-[.06em] text-white">
+                AGENCIAS <span class="text-[var(--lucille-accent)]">COLABORADORAS</span>
+            </h2>
+            <p class="mt-2 text-[9px] uppercase tracking-[.3em] text-[#8a8a8a]">
+                ALIANZAS Y REPRESENTACIONES
+            </p>
         </div>
 
         <!-- Contenedor del Marquee -->
