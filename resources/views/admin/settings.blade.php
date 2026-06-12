@@ -87,7 +87,15 @@
             surfaceColor: {{ Js::from(old('surface_color', $settings->surface_color)) }},
             bodyColor: {{ Js::from(old('body_color', $settings->body_color)) }},
             headingColor: {{ Js::from(old('heading_color', $settings->heading_color)) }},
-            lineColor: {{ Js::from(old('line_color', $settings->line_color)) }}
+            lineColor: {{ Js::from(old('line_color', $settings->line_color)) }},
+            resetToDefaults() {
+                this.accentColor = '#c32720';
+                this.navColor = '#081a24';
+                this.surfaceColor = '#101012';
+                this.bodyColor = '#7b7b7b';
+                this.headingColor = '#dcdcdc';
+                this.lineColor = '#757575';
+            }
         }"
     >
         @csrf

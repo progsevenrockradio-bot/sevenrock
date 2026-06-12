@@ -163,14 +163,23 @@
 
         <!-- PALETA DE COLORES -->
         <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-            <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-6">🎨 Paleta de Colores</h3>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-[#2b2b2b] pb-3 mb-6 gap-4">
+                <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">🎨 Paleta de Colores</h3>
+                <button type="button" @click="resetToDefaults()" class="lucille-button text-[10px] uppercase tracking-wider py-1.5 px-3 bg-[#1e1e24] border-[#3a3a4a] text-[#ffffff] hover:bg-[#c32720] hover:border-[#c32720] hover:text-white transition-all shrink-0">
+                    🔄 Restablecer paleta original
+                </button>
+            </div>
+            
             <div class="grid gap-5 grid-cols-2 md:grid-cols-3">
                 <!-- Acentuado -->
-                <div class="space-y-1">
-                    <label class="block text-[11px] uppercase tracking-[.12em] text-[#7b7b7b]">{{ $admin['accent_color_label'] }}</label>
+                <div class="space-y-1 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-3 rounded">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[11px] uppercase tracking-[.12em] text-[#9b9b9b] font-medium">{{ $admin['accent_color_label'] }}</label>
+                        <button type="button" @click="accentColor = '#c32720'" class="text-[9px] text-[#c32720] hover:underline uppercase tracking-wider">Default</button>
+                    </div>
                     <div class="flex items-center gap-2">
-                        <div class="relative w-9 h-9 overflow-hidden border border-[#2b2b2b] rounded shrink-0">
-                            <input type="color" name="accent_color" value="{{ old('accent_color', $settings->accent_color) }}" x-model="accentColor" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
+                        <div class="relative w-9 h-9 overflow-hidden border border-[#3b3b3b] rounded shrink-0">
+                            <input type="color" name="accent_color" :value="accentColor" @input="accentColor = $event.target.value" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
                         </div>
                         <input type="text" x-model="accentColor" class="lucille-product-field uppercase font-mono text-center w-full px-2 py-1.5 text-[11px]" pattern="^#[A-Fa-f0-9]{6}$" placeholder="#FFFFFF">
                     </div>
@@ -178,11 +187,14 @@
                 </div>
 
                 <!-- Nav -->
-                <div class="space-y-1">
-                    <label class="block text-[11px] uppercase tracking-[.12em] text-[#7b7b7b]">{{ $admin['nav_color_label'] }}</label>
+                <div class="space-y-1 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-3 rounded">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[11px] uppercase tracking-[.12em] text-[#9b9b9b] font-medium">{{ $admin['nav_color_label'] }}</label>
+                        <button type="button" @click="navColor = '#081a24'" class="text-[9px] text-[#c32720] hover:underline uppercase tracking-wider">Default</button>
+                    </div>
                     <div class="flex items-center gap-2">
-                        <div class="relative w-9 h-9 overflow-hidden border border-[#2b2b2b] rounded shrink-0">
-                            <input type="color" name="nav_color" value="{{ old('nav_color', $settings->nav_color) }}" x-model="navColor" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
+                        <div class="relative w-9 h-9 overflow-hidden border border-[#3b3b3b] rounded shrink-0">
+                            <input type="color" name="nav_color" :value="navColor" @input="navColor = $event.target.value" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
                         </div>
                         <input type="text" x-model="navColor" class="lucille-product-field uppercase font-mono text-center w-full px-2 py-1.5 text-[11px]" pattern="^#[A-Fa-f0-9]{6}$" placeholder="#FFFFFF">
                     </div>
@@ -190,11 +202,14 @@
                 </div>
 
                 <!-- Superficie -->
-                <div class="space-y-1">
-                    <label class="block text-[11px] uppercase tracking-[.12em] text-[#7b7b7b]">{{ $admin['surface_label'] }}</label>
+                <div class="space-y-1 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-3 rounded">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[11px] uppercase tracking-[.12em] text-[#9b9b9b] font-medium">{{ $admin['surface_label'] }}</label>
+                        <button type="button" @click="surfaceColor = '#101012'" class="text-[9px] text-[#c32720] hover:underline uppercase tracking-wider">Default</button>
+                    </div>
                     <div class="flex items-center gap-2">
-                        <div class="relative w-9 h-9 overflow-hidden border border-[#2b2b2b] rounded shrink-0">
-                            <input type="color" name="surface_color" value="{{ old('surface_color', $settings->surface_color) }}" x-model="surfaceColor" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
+                        <div class="relative w-9 h-9 overflow-hidden border border-[#3b3b3b] rounded shrink-0">
+                            <input type="color" name="surface_color" :value="surfaceColor" @input="surfaceColor = $event.target.value" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
                         </div>
                         <input type="text" x-model="surfaceColor" class="lucille-product-field uppercase font-mono text-center w-full px-2 py-1.5 text-[11px]" pattern="^#[A-Fa-f0-9]{6}$" placeholder="#FFFFFF">
                     </div>
@@ -202,11 +217,14 @@
                 </div>
 
                 <!-- Texto base -->
-                <div class="space-y-1">
-                    <label class="block text-[11px] uppercase tracking-[.12em] text-[#7b7b7b]">{{ $admin['body_text_label'] }}</label>
+                <div class="space-y-1 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-3 rounded">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[11px] uppercase tracking-[.12em] text-[#9b9b9b] font-medium">{{ $admin['body_text_label'] }}</label>
+                        <button type="button" @click="bodyColor = '#7b7b7b'" class="text-[9px] text-[#c32720] hover:underline uppercase tracking-wider">Default</button>
+                    </div>
                     <div class="flex items-center gap-2">
-                        <div class="relative w-9 h-9 overflow-hidden border border-[#2b2b2b] rounded shrink-0">
-                            <input type="color" name="body_color" value="{{ old('body_color', $settings->body_color) }}" x-model="bodyColor" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
+                        <div class="relative w-9 h-9 overflow-hidden border border-[#3b3b3b] rounded shrink-0">
+                            <input type="color" name="body_color" :value="bodyColor" @input="bodyColor = $event.target.value" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
                         </div>
                         <input type="text" x-model="bodyColor" class="lucille-product-field uppercase font-mono text-center w-full px-2 py-1.5 text-[11px]" pattern="^#[A-Fa-f0-9]{6}$" placeholder="#FFFFFF">
                     </div>
@@ -214,11 +232,14 @@
                 </div>
 
                 <!-- Texto títulos -->
-                <div class="space-y-1">
-                    <label class="block text-[11px] uppercase tracking-[.12em] text-[#7b7b7b]">{{ $admin['heading_text_label'] }}</label>
+                <div class="space-y-1 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-3 rounded">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[11px] uppercase tracking-[.12em] text-[#9b9b9b] font-medium">{{ $admin['heading_text_label'] }}</label>
+                        <button type="button" @click="headingColor = '#dcdcdc'" class="text-[9px] text-[#c32720] hover:underline uppercase tracking-wider">Default</button>
+                    </div>
                     <div class="flex items-center gap-2">
-                        <div class="relative w-9 h-9 overflow-hidden border border-[#2b2b2b] rounded shrink-0">
-                            <input type="color" name="heading_color" value="{{ old('heading_color', $settings->heading_color) }}" x-model="headingColor" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
+                        <div class="relative w-9 h-9 overflow-hidden border border-[#3b3b3b] rounded shrink-0">
+                            <input type="color" name="heading_color" :value="headingColor" @input="headingColor = $event.target.value" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
                         </div>
                         <input type="text" x-model="headingColor" class="lucille-product-field uppercase font-mono text-center w-full px-2 py-1.5 text-[11px]" pattern="^#[A-Fa-f0-9]{6}$" placeholder="#FFFFFF">
                     </div>
@@ -226,11 +247,14 @@
                 </div>
 
                 <!-- Línea de división -->
-                <div class="space-y-1">
-                    <label class="block text-[11px] uppercase tracking-[.12em] text-[#7b7b7b]">Líneas de división</label>
+                <div class="space-y-1 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-3 rounded">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-[11px] uppercase tracking-[.12em] text-[#9b9b9b] font-medium">Líneas de división</label>
+                        <button type="button" @click="lineColor = '#757575'" class="text-[9px] text-[#c32720] hover:underline uppercase tracking-wider">Default</button>
+                    </div>
                     <div class="flex items-center gap-2">
-                        <div class="relative w-9 h-9 overflow-hidden border border-[#2b2b2b] rounded shrink-0">
-                            <input type="color" name="line_color" value="{{ old('line_color', $settings->line_color) }}" x-model="lineColor" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
+                        <div class="relative w-9 h-9 overflow-hidden border border-[#3b3b3b] rounded shrink-0">
+                            <input type="color" name="line_color" :value="lineColor" @input="lineColor = $event.target.value" class="absolute inset-0 cursor-pointer w-[200%] h-[200%] translate-x-[-25%] translate-y-[-25%] border-0 p-0 bg-transparent">
                         </div>
                         <input type="text" x-model="lineColor" class="lucille-product-field uppercase font-mono text-center w-full px-2 py-1.5 text-[11px]" pattern="^#[A-Fa-f0-9]{6}$" placeholder="#FFFFFF">
                     </div>
