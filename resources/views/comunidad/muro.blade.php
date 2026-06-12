@@ -1,5 +1,5 @@
 <x-layouts.site :title="'Muro de la Comunidad'">
-    <section class="mx-auto max-w-[1200px] px-5 py-12">
+    <section class="mx-auto max-w-[1400px] px-5 py-12">
         
         {{-- Cabecera de la Sección --}}
         <div class="mb-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-6">
@@ -95,8 +95,10 @@
                                 $postAuthor = $post->user->name;
                                 $avatarLetter = strtoupper(substr($postAuthor, 0, 1));
                             } else {
-                                $postAuthor = 'Anónimo';
-                                $avatarLetter = 'A';
+                                $postAuthor = 'Seven Rock Radio';
+                                $badgeText = 'Radio';
+                                $badgeClass = 'border-[#c32720]/25 bg-[#c32720]/15 text-[#c32720] font-bold';
+                                $avatarLetter = 'S';
                             }
 
                             // YouTube URL Parsing

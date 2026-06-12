@@ -34,6 +34,17 @@ class NewRelease extends Model
 
             if ($newlyActive || $updatedToActive) {
                 $newRelease->sendPublishedNotification();
+
+                try {
+                    \App\Models\CommunityPost::query()->create([
+                        'user_id' => null,
+                        'talent_id' => null,
+                        'content' => "📢 ¡Nuevo Lanzamiento en la señal de Seven Rock Radio! 🎸\n\nEscucha \"{$newRelease->title}\" de {$newRelease->artist_name}. Descubre la reseña completa, su música y redes sociales ingresando al enlace:\n" . route('new-releases.single', $newRelease->slug),
+                        'youtube_url' => $newRelease->youtube_url ?: null,
+                    ]);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error("Fallo al crear post automático en Muro para lanzamiento ID {$newRelease->id}: " . $e->getMessage());
+                }
             }
         });
     }

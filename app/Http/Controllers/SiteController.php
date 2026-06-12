@@ -119,6 +119,19 @@ class SiteController extends Controller
         ]);
     }
 
+    public function newReleases(): View
+    {
+        $newReleases = NewRelease::query()
+            ->where('is_active', true)
+            ->orderByDesc('released_at')
+            ->latest()
+            ->paginate(12);
+
+        return view('pages.new-releases-index', [
+            'newReleases' => $newReleases,
+        ]);
+    }
+
     public function newReleaseSingle(string $slug): View
     {
         $newRelease = NewRelease::query()

@@ -82,6 +82,9 @@ Route::get('/player/popup', [PlayerController::class, 'show'])->name('player.pop
 Route::get('/search', [SearchController::class, 'index'])->middleware('throttle:public-search')->name('search');
 Route::view('/privacy-policy', 'pages.privacy-policy')->name('privacy-policy');
 Route::view('/copyright-policy', 'pages.copyright-policy')->name('copyright-policy');
+Route::get('/new-releases', [SiteController::class, 'newReleases'])->name('new-releases.index');
+Route::redirect('/lanzamientos', '/new-releases');
+Route::redirect('/nuevos-lanzamientos', '/new-releases');
 Route::get('/new-releases/{slug}', [SiteController::class, 'newReleaseSingle'])->name('new-releases.single');
 Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware(['throttle:comment-submit', \App\Http\Middleware\PreventSpamWithHoneypot::class])->name('posts.comments.store');
 Route::post('/posts/{post}/like', [PostReactionController::class, 'toggle'])->middleware('throttle:60,1')->name('posts.like');

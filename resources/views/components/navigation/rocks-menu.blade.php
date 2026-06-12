@@ -22,8 +22,9 @@
             ['label' => 'Entrada', 'url' => route('posts.single', ['year' => '2016', 'month' => '09', 'day' => '06', 'slug' => 'inspiration'])],
         ]],
         ['label' => 'Muro del Rock', 'route' => 'talents.explore', 'children' => [
-            ['label' => 'Discografía', 'route' => 'discography'],
-            ['label' => 'Álbum', 'url' => $featuredAlbumUrl],
+            ['label' => 'Explorar Bandas', 'route' => 'talents.explore'],
+            ['label' => 'Muro de la Comunidad', 'route' => 'comunidad.muro'],
+            ['label' => 'Nuevos Lanzamientos', 'route' => 'new-releases.index'],
             ['label' => 'Registrar Banda', 'route' => 'talents.register'],
         ]],
         ['label' => 'Tienda', 'route' => 'shop'],
