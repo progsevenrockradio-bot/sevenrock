@@ -1,5 +1,19 @@
-<x-layouts.site :title="$talent->band_name . ' - Seven Rock Radio'"
-    :description="$talent->bio ? Str::limit($talent->bio, 160) : 'Perfil de ' . $talent->band_name . ' en Seven Rock Radio'"
+@php
+    $shareTitle = $talent->band_name . ' - Seven Rock Radio';
+    $shareDesc = $talent->bio ? Str::limit($talent->bio, 160) : 'Perfil de ' . $talent->band_name . ' en Seven Rock Radio';
+
+    // If it belongs to an agency, prepend agency name to sharing preview
+    if ($talent instanceof \App\Models\RadioArtistTalentFallback && $talent->agency_id) {
+        $agency = $talent->agency;
+        if ($agency) {
+            $shareTitle = $agency->name . ' presenta: ' . $talent->band_name . ' - Seven Rock Radio';
+            $shareDesc = 'Perfil de ' . $talent->band_name . ' (representado por ' . $agency->name . ') en Seven Rock Radio. ' . ($talent->bio ? Str::limit($talent->bio, 100) : '');
+        }
+    }
+@endphp
+
+<x-layouts.site :title="$shareTitle"
+    :description="$shareDesc"
     :og-image="$talent->logoUrl() ?? asset('assets/lucille/logo.png')">
     <section class="mx-auto max-w-7xl px-5 py-16">
         <!-- Profile Header -->

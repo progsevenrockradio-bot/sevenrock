@@ -111,4 +111,9 @@ class RadioArtist extends Model
             ->values()
             ->all();
     }
+
+    public function agency(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Agency::class, 'agency_id');
+    }
 }
