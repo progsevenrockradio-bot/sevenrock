@@ -523,7 +523,7 @@
 
     <footer id="site-footer" class="bg-lucille-surface py-7 text-center text-[13px] text-[#7b7b7b]"
         @if (!request()->routeIs('programs*') && !request()->routeIs('contratos*'))
-            style="padding-bottom: calc(var(--radio-player-offset, 80px) + env(safe-area-inset-bottom, 0px) - 4px);"
+            style="padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));"
         @endif
     >
         <div class="mx-auto flex max-w-[1180px] flex-col items-center gap-3 px-5">

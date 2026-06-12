@@ -760,6 +760,19 @@
     text-transform: uppercase;
 }
 
+.radio-player-popup-chip--icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border-radius: 9999px;
+}
+
+.radio-player-popup-chip--close:hover {
+    background: #c32720 !important;
+    border-color: #c32720 !important;
+    color: #fff !important;
+}
+
 .radio-player-popup-control {
     flex-shrink: 0;
     color: var(--player-btn-color);
@@ -2869,7 +2882,7 @@
 
     .radio-player-dock-social-link--icon {
         width: 34px;
-        height: 35px;
+        height: 34px;
         justify-content: center;
         gap: 0;
         padding: 0;
