@@ -16,12 +16,22 @@
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Fecha de Fundación</label>
         <input type="date" name="founded_date" value="{{ old('founded_date', $bandProfile->founded_date?->format('Y-m-d')) }}" class="lucille-product-field w-full">
     </div>
-    <div>
+    <div x-data="imageHelper('{{ old('logo_path', $bandProfile->logo_path) }}')">
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">URL del Logotipo</label>
-        <input name="logo_path" value="{{ old('logo_path', $bandProfile->logo_path) }}" class="lucille-product-field w-full" placeholder="https://example.com/logo.png">
-        @if($bandProfile->logo_path)
-            <div class="mt-2"><img src="{{ $bandProfile->logo_path }}" loading="lazy" class="h-16 w-auto object-contain border border-white/10" alt="logo"></div>
-        @endif
+        <input 
+            name="logo_path" 
+            x-model="url"
+            @input="convert()"
+            class="lucille-product-field w-full" 
+            placeholder="https://example.com/logo.png"
+        >
+        <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#8f877d]">
+            <span>Formatos: <strong>.png, .jpg, .webp</strong></span>
+            <span class="text-[#a855f7]">💡 Google Drive y Dropbox se convierten solos al pegar</span>
+        </div>
+        <div x-show="url" class="mt-2" style="display: none;">
+            <img :src="url" loading="lazy" class="h-16 w-auto object-contain border border-white/10" alt="Vista previa" @error="$el.style.display='none'">
+        </div>
     </div>
     <div>
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">País de Origen</label>
@@ -229,6 +239,38 @@ document.addEventListener('alpine:init', () => {
                     return this.customGenre.trim();
                 }
                 return this.selectedGenre;
+            }
+        }));
+     }
+
+    if (!Alpine.data('imageHelper')) {
+        Alpine.data('imageHelper', (initialValue) => ({
+            url: initialValue || '',
+            convert() {
+                if (!this.url) return;
+                let val = this.url.trim();
+
+                // Google Drive View Link to Direct Image Link Conversion
+                if (val.includes('drive.google.com')) {
+                    let id = '';
+                    const fileDMatch = val.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+                    const idParamMatch = val.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                    
+                    if (fileDMatch && fileDMatch[1]) {
+                        id = fileDMatch[1];
+                    } else if (idParamMatch && idParamMatch[1]) {
+                        id = idParamMatch[1];
+                    }
+                    
+                    if (id) {
+                        this.url = `https://drive.google.com/uc?export=view&id=${id}`;
+                    }
+                }
+
+                // Dropbox Link to Direct Link Conversion
+                if (val.includes('dropbox.com')) {
+                    this.url = val.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace(/[?&]dl=[01]/, '');
+                }
             }
         }));
     }
