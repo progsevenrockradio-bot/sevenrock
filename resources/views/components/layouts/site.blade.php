@@ -9,6 +9,25 @@
 ])
 
 @php
+    // Detect track share context (signature) via query string "v"
+    $vParam = request()->query('v');
+    if ($vParam && str_contains(urldecode($vParam), '|')) {
+        $parts = explode('|', urldecode($vParam));
+        $vTitle = trim($parts[0] ?? '');
+        $vArtist = trim($parts[1] ?? '');
+        $vCover = trim($parts[2] ?? '');
+        $vProgram = trim($parts[3] ?? '');
+
+        if ($vTitle !== '') {
+            $trackLabel = $vArtist !== '' ? "{$vTitle} - {$vArtist}" : $vTitle;
+            $title = "Escuchando: {$trackLabel} | Seven Rock Radio";
+            $description = "Estoy escuchando a través de Seven Rock Radio" . ($vProgram !== '' ? " el programa {$vProgram}" : "") . ". ¡Sintoniza ahora!";
+            if ($vCover !== '') {
+                $ogImage = $vCover;
+            }
+        }
+    }
+
     $theme = $themeAppearance;
     $siteUrl = rtrim((string) config('app.url', 'https://sevenrockradio.com'), '/');
     $logoUrl = $theme['media']['logo_url'] ?? $siteUrl . '/assets/lucille/logo.png';
