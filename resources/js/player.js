@@ -675,22 +675,23 @@ export function registerRadioPlayer(Alpine) {
                 const payload = await response.json();
 
                 if (payload?.success && payload?.data) {
-                    const nextProgramInfo = {
-                        ...this.programInfo,
-                        ...payload.data,
-                    };
-
                     let nextCoverCandidate = String(payload.data.cover || '').trim();
                     if (isFallbackImage(nextCoverCandidate, this.fallbackCover, this.logoUrl)) {
                         nextCoverCandidate = '';
                     }
 
-                    nextProgramInfo.cover = nextCoverCandidate || nextProgramInfo.cover || this.track.cover || this.fallbackCover;
-                    nextProgramInfo.social_links = {
-                        ...(this.programInfo?.social_links || {}),
-                        ...(payload.data.social_links || {}),
+                    const finalCover = nextCoverCandidate || this.programInfo.cover || this.track.cover || this.fallbackCover;
+
+                    const nextProgramInfo = {
+                        ...this.programInfo,
+                        ...payload.data,
+                        cover: finalCover,
+                        social_links: {
+                            ...(this.programInfo?.social_links || {}),
+                            ...(payload.data.social_links || {}),
+                        },
+                        episode: payload.data.episode ?? this.programInfo?.episode ?? null,
                     };
-                    nextProgramInfo.episode = payload.data.episode ?? this.programInfo?.episode ?? null;
 
                     this.programInfo = nextProgramInfo;
                 }
