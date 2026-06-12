@@ -1134,7 +1134,7 @@
     }
 
     .lucille-heading {
-        color: #dcdcdc;
+        color: var(--color-lucille-heading);
         font-family: var(--font-display);
         font-weight: 400;
         letter-spacing: 0;
@@ -1142,7 +1142,7 @@
     }
 
     .lucille-subtitle {
-        color: #7b7b7b;
+        color: var(--color-lucille-body);
         font-family: var(--font-display);
         font-weight: 300;
         letter-spacing: .5em;
@@ -2472,7 +2472,7 @@
 
     .lucille-single-post-body p {
         margin-bottom: 0;
-        color: #7b7b7b;
+        color: var(--color-lucille-body);
         font-size: 14px;
         line-height: 26px;
     }

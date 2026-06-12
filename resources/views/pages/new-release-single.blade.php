@@ -63,7 +63,7 @@
                         <!-- Reseña / Contenido -->
                         <div class="mt-6 border-t border-[#222] pt-6">
                             <span class="text-xs uppercase tracking-wider text-[#7b7b7b] block mb-3">Reseña del Lanzamiento</span>
-                            <div class="space-y-4 text-[14px] leading-6 text-[#7b7b7b] whitespace-pre-line">
+                            <div class="space-y-4 text-[14px] leading-6 text-lucille-body whitespace-pre-line">
                                 @if($newRelease->description)
                                     {{ $newRelease->description }}
                                 @else
