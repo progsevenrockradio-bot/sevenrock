@@ -1736,7 +1736,7 @@ export function registerRadioPlayer(Alpine) {
                 }
             }
 
-            const text = `Escuchando Seven Rock Radio 🤘 ¡Todas las épocas del rock, están aquí!: ${url}`;
+            const text = `¡Todas las épocas del rock, están aquí! en Seven Rock Radio 🤘\nEscuchanos!!: ${url}`;
 
             return {
                 title,
