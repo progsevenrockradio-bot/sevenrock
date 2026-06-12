@@ -680,7 +680,12 @@ export function registerRadioPlayer(Alpine) {
                         ...payload.data,
                     };
 
-                    nextProgramInfo.cover = String(payload.data.cover || '').trim() || nextProgramInfo.cover || this.track.cover || this.fallbackCover;
+                    let nextCoverCandidate = String(payload.data.cover || '').trim();
+                    if (isFallbackImage(nextCoverCandidate, this.fallbackCover, this.logoUrl)) {
+                        nextCoverCandidate = '';
+                    }
+
+                    nextProgramInfo.cover = nextCoverCandidate || nextProgramInfo.cover || this.track.cover || this.fallbackCover;
                     nextProgramInfo.social_links = {
                         ...(this.programInfo?.social_links || {}),
                         ...(payload.data.social_links || {}),
@@ -726,13 +731,23 @@ export function registerRadioPlayer(Alpine) {
         buildBandWindowSnapshot(sourceTrack = null) {
             const track = sourceTrack || this.track;
 
+            let bioCoverCandidate = track.band_thumbnail;
+            if (isFallbackImage(bioCoverCandidate, this.fallbackCover, this.logoUrl)) {
+                bioCoverCandidate = '';
+            }
+
+            let panelCoverCandidate = this.bandPanel.cover;
+            if (isFallbackImage(panelCoverCandidate, this.fallbackCover, this.logoUrl)) {
+                panelCoverCandidate = '';
+            }
+
             return {
                 title: track.title || this.bandPanel.title || '',
                 artist: track.artist || this.bandPanel.artist || '',
                 info: track.band_info || this.bandPanel.info || track.comment || '',
                 biography: track.band_biography || this.bandPanel.biography || '',
                 biographySource: track.band_biography_source || this.bandPanel.biographySource || '',
-                bioCover: track.band_thumbnail || this.bandPanel.cover || track.cover || this.fallbackCover,
+                bioCover: bioCoverCandidate || panelCoverCandidate || track.cover || this.fallbackCover,
                 trackCover: track.cover || this.fallbackCover,
                 foundedLabel: track.band_founded_label || this.bandPanel.foundedLabel || '',
                 facts: Array.isArray(track.band_facts) ? track.band_facts : (this.bandPanel.facts || []),
