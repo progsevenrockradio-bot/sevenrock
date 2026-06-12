@@ -5,7 +5,7 @@
     <x-sections.page-heading
         title="Nuevos Lanzamientos"
         subtitle="Música fresca de la escena independiente"
-        image="assets/lucille/album3.jpg"
+        image="assets/lucille/guitar-1758005_1920.jpg"
         overlay="rgba(16,16,18,.85)"
     />
 
