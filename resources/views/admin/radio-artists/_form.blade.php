@@ -94,7 +94,8 @@
             </div>
 
             <div>
-                <template x-if="selectedCountry && selectedCountry !== 'Otro / Personalizado'">
+                <!-- Si el país seleccionado tiene lista predefinida de estados -->
+                <template x-if="selectedCountry && selectedCountry !== 'Otro / Personalizado' && hasPredefinedStates()">
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">State / Province</label>
                         <div class="relative" @click.away="openState = false">
@@ -132,6 +133,19 @@
                         </div>
                     </div>
                 </template>
+
+                <!-- Si el país seleccionado NO tiene lista predefinida de estados -->
+                <template x-if="selectedCountry && selectedCountry !== 'Otro / Personalizado' && !hasPredefinedStates()">
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">State / Province</label>
+                        <input 
+                            type="text" 
+                            class="lucille-product-field w-full" 
+                            placeholder="Ej: Liverpool, Baviera, etc."
+                            x-model="selectedState"
+                        >
+                    </div>
+                </template>
             </div>
         </div>
 
@@ -155,6 +169,25 @@
                 >
             </div>
         </div>
+
+        <!-- Información contextual sobre el país seleccionado -->
+        <template x-if="selectedCountry && selectedCountry !== 'Otro / Personalizado' && countryDetails[selectedCountry]">
+            <div class="mt-3 p-3 rounded-md bg-[#16161a] border border-[#a855f7]/20 text-xs text-[#8f877d] transition-all duration-150">
+                <div class="flex items-start gap-2">
+                    <span class="text-[#a855f7] text-base">💡</span>
+                    <div>
+                        <p class="text-white font-medium mb-1">
+                            <span x-text="selectedCountry"></span>: 
+                            <span class="text-[#b5a796] font-normal" x-text="countryDetails[selectedCountry].desc"></span>
+                        </p>
+                        <p class="text-[11px] leading-relaxed">
+                            <strong class="text-[#a855f7]/90 uppercase tracking-wider text-[9px]">Exponentes notables:</strong> 
+                            <span class="text-[#b7ad9f]" x-text="countryDetails[selectedCountry].exponents"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
     <div x-data="genreSelector('{{ old('genre', $bandProfile->genre) }}')" class="relative">
         <input type="hidden" name="genre" :value="getFinalGenre()">
@@ -430,7 +463,58 @@ document.addEventListener('alpine:init', () => {
             customCountry: '',
             customState: '',
 
-            countries: ['España', 'Venezuela', 'Colombia', 'Estados Unidos', 'México', 'Argentina', 'Chile'],
+            countries: [
+                'Estados Unidos', 'Canadá', 'México', 'Reino Unido', 'Alemania', 'Francia', 
+                'Países Bajos', 'Bélgica', 'Suiza', 'Austria', 'Finlandia', 'Suecia', 
+                'Noruega', 'Islandia', 'Dinamarca', 'España', 'Italia', 'Portugal', 
+                'Grecia', 'Polonia', 'República Checa', 'Hungría', 'Rusia', 'Ucrania', 
+                'Argentina', 'Brasil', 'Chile', 'Colombia', 'Perú', 'Uruguay', 
+                'Venezuela', 'Panamá', 'Japón', 'Corea del Sur', 'Indonesia', 'India', 
+                'Israel', 'Taiwán', 'Australia', 'Nueva Zelanda'
+            ],
+
+            countryDetails: {
+                'Estados Unidos': { desc: 'Cuna del género', exponents: 'Metallica, Nirvana, Guns N\' Roses, Foo Fighters' },
+                'Canadá': { desc: 'Grandes referentes del rock progresivo y alternativo', exponents: 'Rush, Arcade Fire, Nickelback, Three Days Grace' },
+                'México': { desc: 'Líder histórico del rock en español', exponents: 'Caifanes, Maná, Molotov, Café Tacvba' },
+                'Reino Unido': { desc: 'El mayor exportador de leyendas del rock', exponents: 'The Beatles, Queen, Led Zeppelin, Pink Floyd' },
+                'Alemania': { desc: 'Potencia mundial en hard rock e industrial', exponents: 'Scorpions, Rammstein, Helloween' },
+                'Francia': { desc: 'Fuerte escena de metal moderno y rock alternativo', exponents: 'Gojira, Phoenix, Noir Désir' },
+                'Países Bajos': { desc: 'Destaca en el rock/metal sinfónico', exponents: 'Within Temptation, Epica, Shocking Blue' },
+                'Bélgica': { desc: 'Reconocido por el rock alternativo e indie', exponents: 'dEUS, Soulwax, Triggerfinger' },
+                'Suiza': { desc: 'Pioneros en el metal extremo y hard rock', exponents: 'Gotthard, Celtic Frost, Eluveitie' },
+                'Austria': { desc: 'Escena creciente de rock alternativo y metal', exponents: 'Opus, Belphegor, Bilderbuch' },
+                'Finlandia': { desc: 'El país más rockero/metalero del mundo per cápita', exponents: 'Nightwish, HIM, Children of Bodom, Apocalyptica' },
+                'Suecia': { desc: 'Gigante de la industria musical y el death metal melódico', exponents: 'Europe, Ghost, Opeth, Arch Enemy' },
+                'Noruega': { desc: 'Famoso mundialmente por su escena de black metal y rock', exponents: 'A-ha, Mayhem, Dimmu Borgir, Leprous' },
+                'Islandia': { desc: 'Rock experimental, indie y de atmósfera única', exponents: 'Sigur Rós, Of Monsters and Men, Sólstafir' },
+                'Dinamarca': { desc: 'Tradición en heavy metal y rock alternativo', exponents: 'Volbeat, Mercyful Fate, Mew' },
+                'España': { desc: 'Gran escena de rock urbano, punk y metal', exponents: 'Héroes del Silencio, Mago de Oz, Ska-P, Extremoduro' },
+                'Italia': { desc: 'Famosos por el metal sinfónico y rock clásico', exponents: 'Måneskin, Lacuna Coil, Rhapsody of Fire' },
+                'Portugal': { desc: 'Fuerte presencia de metal gótico y rock alternativo', exponents: 'Moonspell, The Gift, Xutos & Pontapés' },
+                'Grecia': { desc: 'Alta densidad de bandas de metal extremo en el Mediterráneo', exponents: 'Rotting Christ, Septicflesh, Firewind' },
+                'Polonia': { desc: 'Epicentro de géneros de metal extremo y progresivo', exponents: 'Vader, Behemoth, Riverside' },
+                'República Checa': { desc: 'Escena muy activa en festivales de rock', exponents: 'Kabát, Olympic, Master\'s Hammer' },
+                'Hungría': { desc: 'Historia rica en rock progresivo clásico y metal moderno', exponents: 'Omega, AWS, Ektomorf' },
+                'Rusia': { desc: 'Histórica escena de rock soviético y folk metal', exponents: 'Kino, Aria, Arkona' },
+                'Ucrania': { desc: 'Reconocido internacionalmente por el metal moderno', exponents: 'Jinjer, Okean Elzy, Nokturnal Mortum' },
+                'Argentina': { desc: 'Pilar fundamental del movimiento "Rock en tu idioma"', exponents: 'Soda Stereo, Patricio Rey y sus Redonditos de Ricota, Rata Blanca, Babasónicos' },
+                'Brasil': { desc: 'Mayor exponente de metal pesado e indie de la región', exponents: 'Sepultura, Angra, Os Mutantes, Skank' },
+                'Chile': { desc: 'Alta densidad de bandas y de los públicos más rockeros del mundo', exponents: 'Los Prisioneros, Los Tres, La Ley, Lucybell' },
+                'Colombia': { desc: 'Escena diversa que mezcla rock con sonidos locales', exponents: 'Aterciopelados, Kraken, Juanes (en sus inicios con Ekhymosis)' },
+                'Perú': { desc: 'Pioneros del punk y rock alternativo sudamericano', exponents: 'Los Saicos, Libido, Pedro Suárez-Vértiz' },
+                'Uruguay': { desc: 'Rock con una fuerte identidad rioplatense', exponents: 'El Cuarteto de Nos, La Vela Puerca, No Te Va Gustar' },
+                'Venezuela': { desc: 'Destacada presencia en rock alternativo y progresivo', exponents: 'Los Amigos Invisibles, Zapato 3, La Vida Bohème' },
+                'Panamá': { desc: 'Referente del rock en Centroamérica', exponents: 'Los Rabanes, Los 33' },
+                'Japón': { desc: 'Una escena masiva e independiente (J-Rock / Visual Kei)', exponents: 'X Japan, ONE OK ROCK, BABYMETAL, Dir En Grey' },
+                'Corea del Sur': { desc: 'Creciente escena de rock alternativo e indie (K-Rock)', exponents: 'Nell, FTISLAND, The Rose, Silica Gel' },
+                'Indonesia': { desc: 'El rock y el metal gozan de una popularidad masiva e institucional', exponents: 'Burgerkill, Slank, Voice of Baceprot' },
+                'India': { desc: 'Fusión de rock clásico, progresivo y folk local', exponents: 'Indus Creed, Avial, Bloodywood' },
+                'Israel': { desc: 'Escena muy fuerte de metal oriental y rock alternativo', exponents: 'Orphaned Land, Teapacks, Stella Maris' },
+                'Taiwán': { desc: 'Fuerte escena indie y metal con identidad política', exponents: 'ChthoniC, Mayday, No Party For Cao Dong' },
+                'Australia': { desc: 'Creadores de riffs icónicos y potentes', exponents: 'AC/DC, Tame Impala, INXS, Parkway Drive' },
+                'Nueva Zelanda': { desc: 'Famosos por su indie rock y raíces alternativas', exponents: 'Crowded House, Shihad, Alien Weaponry' }
+            },
 
             states: {
                 'España': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza', 'Málaga', 'Murcia', 'Palma', 'Las Palmas', 'Bilbao', 'Alicante', 'Córdoba', 'Valladolid', 'Vigo', 'Gijón', 'L\'Hospitalet', 'Vitoria', 'A Coruña', 'Elche', 'Granada', 'Terrassa', 'Badalona', 'Oviedo', 'Cartagena', 'Sabadell', 'Jerez', 'Móstoles', 'Santa Cruz de Tenerife', 'Pamplona', 'Almería'],
@@ -471,6 +555,10 @@ document.addEventListener('alpine:init', () => {
                         }
                     }
                 }
+            },
+
+            hasPredefinedStates() {
+                return ['España', 'Venezuela', 'Colombia', 'Estados Unidos', 'México', 'Argentina', 'Chile'].includes(this.selectedCountry);
             },
 
             getStates() {
