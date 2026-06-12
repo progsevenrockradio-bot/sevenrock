@@ -43,9 +43,118 @@
             <img :src="url" loading="lazy" class="h-16 w-auto object-contain border border-white/10" alt="Vista previa" x-on:error="$el.style.display='none'">
         </div>
     </div>
-    <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Country</label>
-        <input name="country" value="{{ old('country', $bandProfile->country) }}" class="lucille-product-field w-full" placeholder="Ej: Germany">
+    <div x-data="countrySelector('{{ old('country', $bandProfile->country) }}')" class="relative md:col-span-2">
+        <input type="hidden" name="country" :value="getFinalCountry()">
+        <div class="grid gap-5 md:grid-cols-2">
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Country</label>
+                <div class="relative" @click.away="openCountry = false">
+                    <input 
+                        type="text" 
+                        class="lucille-product-field w-full pr-10 cursor-pointer" 
+                        placeholder="Search or select country..."
+                        x-model="searchCountry"
+                        @focus="openCountry = true"
+                        @input="openCountry = true"
+                    >
+                    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#7b7b7b]">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+
+                    <div 
+                        x-show="openCountry" 
+                        x-transition 
+                        class="absolute left-0 z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-white/10 bg-[#141416] p-1 shadow-lg"
+                        style="display: none;"
+                    >
+                        <template x-for="c in countries" :key="c">
+                            <button 
+                                type="button" 
+                                class="w-full text-left px-3 py-1.5 text-sm rounded-sm hover:bg-[#a855f7]/20 text-white transition-colors duration-150"
+                                x-show="matchesCountry(c)"
+                                @click="selectCountry(c)"
+                            >
+                                <span x-text="c"></span>
+                            </button>
+                        </template>
+                        <div class="border-t border-white/5 mt-1 pt-1">
+                            <button 
+                                type="button" 
+                                class="w-full text-left px-3 py-1.5 text-sm rounded-sm hover:bg-[#a855f7]/20 text-[#a855f7] font-semibold transition-colors duration-150"
+                                x-show="matchesCountry('Otro / Personalizado')"
+                                @click="selectCountry('Otro / Personalizado')"
+                            >
+                                <span>➕ Otro / Personalizado</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <template x-if="selectedCountry && selectedCountry !== 'Otro / Personalizado'">
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">State / Province</label>
+                        <div class="relative" @click.away="openState = false">
+                            <input 
+                                type="text" 
+                                class="lucille-product-field w-full pr-10 cursor-pointer" 
+                                placeholder="Select state..."
+                                x-model="searchState"
+                                @focus="openState = true"
+                                @input="openState = true"
+                            >
+                            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#7b7b7b]">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+
+                            <div 
+                                x-show="openState" 
+                                x-transition 
+                                class="absolute left-0 z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-white/10 bg-[#141416] p-1 shadow-lg"
+                                style="display: none;"
+                            >
+                                <template x-for="st in getStates()" :key="st">
+                                    <button 
+                                        type="button" 
+                                        class="w-full text-left px-3 py-1.5 text-sm rounded-sm hover:bg-[#a855f7]/20 text-white transition-colors duration-150"
+                                        x-show="matchesState(st)"
+                                        @click="selectState(st)"
+                                    >
+                                        <span x-text="st"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <div x-show="selectedCountry === 'Otro / Personalizado'" x-transition class="mt-3 grid gap-3 grid-cols-2 p-3 bg-[#1a1a1e] rounded-md border border-white/5">
+            <div>
+                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#7b7b7b]">País Personalizado</label>
+                <input 
+                    type="text" 
+                    class="lucille-product-field w-full text-sm" 
+                    placeholder="Ej: Italia"
+                    x-model="customCountry"
+                >
+            </div>
+            <div>
+                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#7b7b7b]">Estado / Provincia</label>
+                <input 
+                    type="text" 
+                    class="lucille-product-field w-full text-sm" 
+                    placeholder="Ej: Roma"
+                    x-model="customState"
+                >
+            </div>
+        </div>
     </div>
     <div x-data="genreSelector('{{ old('genre', $bandProfile->genre) }}')" class="relative">
         <input type="hidden" name="genre" :value="getFinalGenre()">
@@ -306,6 +415,103 @@ document.addEventListener('alpine:init', () => {
                 if (val.includes('dropbox.com')) {
                     this.url = val.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace(/[?&]dl=[01]/, '');
                 }
+            }
+        }));
+    }
+
+    if (!Alpine.data('countrySelector')) {
+        Alpine.data('countrySelector', (initialValue) => ({
+            openCountry: false,
+            openState: false,
+            searchCountry: '',
+            searchState: '',
+            selectedCountry: '',
+            selectedState: '',
+            customCountry: '',
+            customState: '',
+
+            countries: ['España', 'Venezuela', 'Colombia', 'Estados Unidos', 'México', 'Argentina', 'Chile'],
+
+            states: {
+                'España': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza', 'Málaga', 'Murcia', 'Palma', 'Las Palmas', 'Bilbao', 'Alicante', 'Córdoba', 'Valladolid', 'Vigo', 'Gijón', 'L\'Hospitalet', 'Vitoria', 'A Coruña', 'Elche', 'Granada', 'Terrassa', 'Badalona', 'Oviedo', 'Cartagena', 'Sabadell', 'Jerez', 'Móstoles', 'Santa Cruz de Tenerife', 'Pamplona', 'Almería'],
+                'Venezuela': ['Caracas', 'Zulia', 'Miranda', 'Carabobo', 'Lara', 'Aragua', 'Bolívar', 'Anzoátegui', 'Táchira', 'Monagas', 'Falcón', 'Sucre', 'Portuguesa', 'Mérida', 'Yaracuy', 'Barinas', 'Guárico', 'Trujillo', 'Nueva Esparta', 'Apure', 'Cojedes', 'Amazonas', 'Delta Amacuro', 'Vargas (La Guaira)'],
+                'Colombia': ['Bogotá', 'Medellín (Antioquia)', 'Cali (Valle del Cauca)', 'Barranquilla (Atlántico)', 'Cartagena (Bolívar)', 'Bucaramanga (Santander)', 'Ibagué (Tolima)', 'Manizales (Caldas)', 'Pereira (Risaralda)', 'Neiva (Huila)', 'Armenia (Quindío)', 'Cúcuta (Norte de Santander)'],
+                'Estados Unidos': ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'],
+                'México': ['Aguascalientes', 'Baja California', 'Baja California Sur', 'Campeche', 'Chiapas', 'Chihuahua', 'Coahuila', 'Colima', 'Ciudad de México', 'Durango', 'Guanajuato', 'Guerrero', 'Hidalgo', 'Jalisco', 'Estado de México', 'Michoacán', 'Morelos', 'Nayarit', 'Nuevo León', 'Oaxaca', 'Puebla', 'Querétaro', 'Quintana Roo', 'San Luis Potosí', 'Sinaloa', 'Sonora', 'Tabasco', 'Tamaulipas', 'Tlaxcala', 'Veracruz', 'Yucatán', 'Zacatecas'],
+                'Argentina': ['Buenos Aires', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'],
+                'Chile': ['Santiago', 'Valparaíso', 'Concepción', 'Coquimbo', 'Antofagasta', 'Temuco', 'Rancagua', 'Iquique', 'Talca', 'Puerto Montt', 'Chillán', 'Arica', 'Valdivia', 'Punta Arenas', 'Copiapó', 'Curicó', 'Osorno']
+            },
+
+            init() {
+                if (initialValue) {
+                    if (initialValue.includes(' - ')) {
+                        const parts = initialValue.split(' - ');
+                        const countryPart = parts[0].trim();
+                        const statePart = parts[1].trim();
+
+                        if (this.countries.includes(countryPart)) {
+                            this.selectedCountry = countryPart;
+                            this.searchCountry = countryPart;
+                            this.selectedState = statePart;
+                            this.searchState = statePart;
+                        } else {
+                            this.selectedCountry = 'Otro / Personalizado';
+                            this.searchCountry = 'Otro / Personalizado';
+                            this.customCountry = countryPart;
+                            this.customState = statePart;
+                        }
+                    } else {
+                        if (this.countries.includes(initialValue.trim())) {
+                            this.selectedCountry = initialValue.trim();
+                            this.searchCountry = initialValue.trim();
+                        } else {
+                            this.selectedCountry = 'Otro / Personalizado';
+                            this.searchCountry = 'Otro / Personalizado';
+                            this.customCountry = initialValue.trim();
+                        }
+                    }
+                }
+            },
+
+            getStates() {
+                return this.states[this.selectedCountry] || [];
+            },
+
+            matchesCountry(name) {
+                if (!this.searchCountry || this.searchCountry === this.selectedCountry) return true;
+                return name.toLowerCase().includes(this.searchCountry.toLowerCase());
+            },
+
+            matchesState(name) {
+                if (!this.searchState || this.searchState === this.selectedState) return true;
+                return name.toLowerCase().includes(this.searchState.toLowerCase());
+            },
+
+            selectCountry(country) {
+                this.selectedCountry = country;
+                this.searchCountry = country;
+                this.selectedState = '';
+                this.searchState = '';
+                this.openCountry = false;
+            },
+
+            selectState(state) {
+                this.selectedState = state;
+                this.searchState = state;
+                this.openState = false;
+            },
+
+            getFinalCountry() {
+                if (this.selectedCountry === 'Otro / Personalizado') {
+                    if (this.customCountry && this.customState) {
+                        return `${this.customCountry.trim()} - ${this.customState.trim()}`;
+                    }
+                    return this.customCountry.trim();
+                }
+                if (this.selectedCountry && this.selectedState) {
+                    return `${this.selectedCountry} - ${this.selectedState}`;
+                }
+                return this.selectedCountry;
             }
         }));
     }
