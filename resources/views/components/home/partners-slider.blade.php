@@ -3,13 +3,8 @@
 @if($agencies && $agencies->isNotEmpty())
     <section class="py-12 bg-[#08080a] border-t border-white/5 overflow-hidden relative">
         <!-- Título de Sección -->
-        <div class="mx-auto max-w-[1200px] px-6 mb-8 text-center">
-            <h2 class="font-display text-[1.65rem] uppercase tracking-[.06em] text-white">
-                AGENCIAS <span class="text-[var(--lucille-accent)]">COLABORADORAS</span>
-            </h2>
-            <p class="mt-2 text-[9px] uppercase tracking-[.3em] text-[#8a8a8a]">
-                ALIANZAS Y REPRESENTACIONES
-            </p>
+        <div class="mb-10">
+            <x-ui.section-heading title="Agencias" accent="Colaboradoras" subtitle="Alianzas y Representaciones" />
         </div>
 
         <!-- Contenedor del Marquee -->
