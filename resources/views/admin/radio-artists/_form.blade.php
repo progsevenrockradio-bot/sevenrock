@@ -24,9 +24,84 @@
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Country</label>
         <input name="country" value="{{ old('country', $bandProfile->country) }}" class="lucille-product-field w-full" placeholder="Ej: Germany">
     </div>
-    <div>
+    <div x-data="genreSelector('{{ old('genre', $bandProfile->genre) }}')" class="relative">
+        <input type="hidden" name="genre" :value="getFinalGenre()">
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Genre</label>
-        <input name="genre" value="{{ old('genre', $bandProfile->genre) }}" class="lucille-product-field w-full" placeholder="Ej: Heavy Metal">
+        
+        <div class="relative" @click.away="open = false">
+            <div class="flex items-center">
+                <input 
+                    type="text" 
+                    class="lucille-product-field w-full pr-10 cursor-pointer" 
+                    placeholder="Search or select genre..." 
+                    x-model="search"
+                    @focus="open = true"
+                    @input="open = true"
+                >
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#7b7b7b]">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Dropdown -->
+            <div 
+                x-show="open" 
+                x-transition 
+                class="absolute left-0 z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-white/10 bg-[#141416] p-1 shadow-lg"
+                style="display: none;"
+            >
+                <template x-for="(options, group) in groupedGenres" :key="group">
+                    <div>
+                        <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-[.1em] text-[#7b7b7b] bg-white/5 rounded-sm my-1" x-text="group"></div>
+                        <template x-for="opt in options" :key="opt">
+                            <button 
+                                type="button" 
+                                class="w-full text-left px-3 py-1.5 text-sm rounded-sm hover:bg-[#a855f7]/20 text-white transition-colors duration-150"
+                                x-show="matches(opt)"
+                                @click="selectGenre(opt)"
+                            >
+                                <span x-text="opt"></span>
+                            </button>
+                        </template>
+                    </div>
+                </template>
+
+                <div class="border-t border-white/5 mt-1 pt-1">
+                    <button 
+                        type="button" 
+                        class="w-full text-left px-3 py-1.5 text-sm rounded-sm hover:bg-[#a855f7]/20 text-[#a855f7] font-semibold transition-colors duration-150"
+                        x-show="matches('Otro / Personalizado')"
+                        @click="selectGenre('Otro / Personalizado')"
+                    >
+                        <span>➕ Otro / Personalizado</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom inputs -->
+        <div x-show="selectedGenre === 'Otro / Personalizado'" x-transition class="mt-3 grid gap-3 grid-cols-2 p-3 bg-[#1a1a1e] rounded-md border border-white/5">
+            <div>
+                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#7b7b7b]">Género Personalizado</label>
+                <input 
+                    type="text" 
+                    class="lucille-product-field w-full text-sm" 
+                    placeholder="Ej: Gothic"
+                    x-model="customGenre"
+                >
+            </div>
+            <div>
+                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#7b7b7b]">Subgénero Personalizado</label>
+                <input 
+                    type="text" 
+                    class="lucille-product-field w-full text-sm" 
+                    placeholder="Ej: Symphonic"
+                    x-model="customSubgenre"
+                >
+            </div>
+        </div>
     </div>
     <div>
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Members Count</label>
@@ -97,3 +172,88 @@
     <button type="submit" class="lucille-button-solid">{{ $isEdit ? 'Update Radio Artist' : 'Create Radio Artist' }}</button>
     <a href="{{ route('admin.radio-artists.index') }}" class="lucille-button">Back to Radio Artists</a>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('alpine:init', () => {
+    if (!Alpine.data('genreSelector')) {
+        Alpine.data('genreSelector', (initialValue) => ({
+            open: false,
+            search: '',
+            selectedGenre: '',
+            customGenre: '',
+            customSubgenre: '',
+            
+            genres: {
+                'Rock': [
+                    'Rock and Roll',
+                    'Rock Clásico',
+                    'Hard Rock',
+                    'Rock Psicodélico',
+                    'Punk Rock',
+                    'Rock Progresivo',
+                    'Grunge',
+                    'Rock Alternativo / Indie'
+                ],
+                'Metal': [
+                    'Heavy Metal',
+                    'Thrash Metal',
+                    'Death Metal',
+                    'Black Metal',
+                    'Power Metal',
+                    'Doom Metal',
+                    'Nu Metal',
+                    'Metal Progresivo'
+                ]
+            },
+
+            init() {
+                const allStandard = Object.values(this.genres).flat();
+                if (initialValue) {
+                    if (allStandard.includes(initialValue)) {
+                        this.selectedGenre = initialValue;
+                        this.search = initialValue;
+                    } else if (initialValue.includes(' - ')) {
+                        this.selectedGenre = 'Otro / Personalizado';
+                        this.search = 'Otro / Personalizado';
+                        const parts = initialValue.split(' - ');
+                        this.customGenre = parts[0] ? parts[0].trim() : '';
+                        this.customSubgenre = parts[1] ? parts[1].trim() : '';
+                    } else {
+                        this.selectedGenre = 'Otro / Personalizado';
+                        this.search = 'Otro / Personalizado';
+                        this.customGenre = initialValue.trim();
+                        this.customSubgenre = '';
+                    }
+                }
+            },
+
+            get groupedGenres() {
+                return this.genres;
+            },
+
+            matches(name) {
+                if (!this.search || this.search === this.selectedGenre) return true;
+                return name.toLowerCase().includes(this.search.toLowerCase());
+            },
+
+            selectGenre(genre) {
+                this.selectedGenre = genre;
+                this.search = genre;
+                this.open = false;
+            },
+
+            getFinalGenre() {
+                if (this.selectedGenre === 'Otro / Personalizado') {
+                    if (this.customGenre && this.customSubgenre) {
+                        return `${this.customGenre.trim()} - ${this.customSubgenre.trim()}`;
+                    }
+                    return this.customGenre.trim();
+                }
+                return this.selectedGenre;
+            }
+        }));
+    }
+});
+</script>
+@endpush
