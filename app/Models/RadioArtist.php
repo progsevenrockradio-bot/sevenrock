@@ -19,6 +19,7 @@ class RadioArtist extends Model
 
     protected $fillable = [
         'name',
+        'agency_id',
         'biography',
         'editorial_summary',
         'image_path',
