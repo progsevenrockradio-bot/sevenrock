@@ -73,7 +73,7 @@
 }
 
 :root {
-    --player-height: 72px;
+    --player-height: 64px;
     --player-height-expanded: 84px;
     --player-bg: rgba(16, 16, 18, .96);
     --player-btn-color: #dcd7cc;
@@ -2614,7 +2614,7 @@
         align-items: center;
         gap: 8px;
         width: min(1100px, calc(100vw - 24px));
-        min-height: 72px;
+        min-height: var(--player-height);
         padding: 6px 12px 6px 10px;
         transform: translateX(-50%);
         border: 1px solid #2b2b2b;
@@ -2627,7 +2627,7 @@
         grid-template-columns: 76px minmax(0, 1fr) auto minmax(140px, 200px);
         gap: 8px;
         width: min(1100px, calc(100vw - 24px));
-        min-height: 72px;
+        min-height: var(--player-height);
         padding: 6px 12px 6px 10px;
     }
 
@@ -2635,7 +2635,7 @@
         grid-template-columns: 96px minmax(0, 1fr) auto minmax(180px, 280px);
         gap: 16px;
         width: min(1160px, calc(100vw - 24px));
-        min-height: 84px;
+        min-height: var(--player-height-expanded);
         padding: 10px 16px;
     }
 
@@ -2817,16 +2817,13 @@
         gap: 0;
         flex: 0 0 auto;
         width: 34px;
-        height: 35px;
+        height: 34px;
         min-width: 34px;
-        min-height: 35px;
+        min-height: 34px;
         padding: 0;
         border: 1px solid rgba(184, 175, 162, .22);
         background: rgba(0, 0, 0, .18);
         color: #dcd7cb;
-        font-size: 7px;
-        letter-spacing: .06em;
-        line-height: 1;
         cursor: pointer;
         border-radius: 4px;
         transition: border-color .2s ease, background-color .2s ease, color .2s ease, transform .2s ease;
@@ -5354,10 +5351,12 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            white-space: nowrap;
-            line-height: 1;
-            padding: 0 8px;
-            min-height: 28px;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
+            min-height: 30px;
+            border-radius: 4px;
         }
 
         .radio-player-dock.radio-player-mobile .radio-player-mobile-actions {

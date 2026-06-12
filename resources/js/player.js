@@ -43,6 +43,21 @@ export function registerRadioPlayer(Alpine) {
         return false;
     };
 
+    const isFallbackImage = (url, fallbackCover, logoUrl) => {
+        if (!url) return true;
+        try {
+            const lowerUrl = url.toLowerCase();
+            if (fallbackCover && lowerUrl.includes(fallbackCover.toLowerCase())) return true;
+            if (logoUrl && lowerUrl.includes(logoUrl.toLowerCase())) return true;
+            if (lowerUrl.includes('logo.png')) return true;
+            if (lowerUrl.includes('album3.jpg')) return true;
+            if (lowerUrl.includes('artwork/569')) return true;
+        } catch (e) {
+            // safe catch
+        }
+        return false;
+    };
+
     Alpine.data('radioPlayer', (options = {}) => ({
         mode: options.mode || 'dock',
         statusUrl: options.statusUrl || '/api/player/status',
@@ -882,7 +897,17 @@ export function registerRadioPlayer(Alpine) {
             const nextTitle = this.normalizeTrackTitle(widgetTrack.title || this.defaultTitle || '');
             const nextArtist = this.normalizeBandArtist(widgetTrack.artist || this.defaultArtist || '');
             const tempBuster = nextArtist + '|' + nextTitle;
-            const nextCover = this.cleanCover(widgetTrack.cover || this.fallbackCover, this.fallbackCover, tempBuster);
+            
+            let nextCoverCandidate = widgetTrack.cover || this.fallbackCover;
+            if (this.track && this.track.cover && !isFallbackImage(this.track.cover, this.fallbackCover, this.logoUrl)) {
+                if (nextArtist === this.track.artist && nextTitle === this.track.title) {
+                    if (isFallbackImage(nextCoverCandidate, this.fallbackCover, this.logoUrl)) {
+                        nextCoverCandidate = this.track.cover;
+                    }
+                }
+            }
+            const nextCover = this.cleanCover(nextCoverCandidate, this.fallbackCover, tempBuster);
+
             const nextSignature = this.buildSignature({
                 title: nextTitle || this.defaultTitle || '',
                 artist: nextArtist || this.defaultArtist || '',
@@ -1084,10 +1109,23 @@ export function registerRadioPlayer(Alpine) {
             const nextTitle = this.normalizeTrackTitle(widgetTitle || track.title || currentTitle || this.defaultTitle || '');
             const nextArtist = this.normalizeBandArtist(widgetArtist || track.artist || currentArtist || this.defaultArtist || '');
             const tempBuster = nextArtist + '|' + nextTitle;
+
+            let nextCoverCandidate = this.fallbackCover;
+            if (track.cover && !isFallbackImage(track.cover, this.fallbackCover, this.logoUrl)) {
+                nextCoverCandidate = track.cover;
+            } else if (this.track && this.track.cover && !isFallbackImage(this.track.cover, this.fallbackCover, this.logoUrl) && nextArtist === this.track.artist && nextTitle === this.track.title) {
+                nextCoverCandidate = this.track.cover;
+            } else if (widgetCover && !isFallbackImage(widgetCover, this.fallbackCover, this.logoUrl)) {
+                nextCoverCandidate = widgetCover;
+            } else {
+                nextCoverCandidate = widgetCover || track.cover || this.track.cover || this.fallbackCover;
+            }
+            const nextCover = this.cleanCover(nextCoverCandidate, this.fallbackCover, tempBuster);
+
             const nextSignature = track.signature || this.buildSignature({
                 title: nextTitle,
                 artist: nextArtist,
-                cover: this.cleanCover(widgetCover || track.cover || this.track.cover || this.fallbackCover, this.fallbackCover, tempBuster),
+                cover: nextCover,
                 program: track.program_name || '',
             });
             const trackChanged = Boolean(previousSignature && previousSignature !== nextSignature);
@@ -1104,7 +1142,7 @@ export function registerRadioPlayer(Alpine) {
                 ...track,
                 title: nextTitle,
                 artist: nextArtist,
-                cover: this.cleanCover(widgetCover || track.cover || this.track.cover || this.fallbackCover, this.fallbackCover, tempBuster),
+                cover: nextCover,
                 lyrics: trackChanged ? nextLyrics : (nextLyrics || this.track.lyrics || ''),
                 band_info: trackChanged ? nextBandInfo : (nextBandInfo || this.track.band_info || ''),
                 band_biography: trackChanged ? nextBandBiography : (nextBandBiography || this.track.band_biography || ''),

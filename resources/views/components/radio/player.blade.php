@@ -405,59 +405,6 @@
                 <button type="button" class="radio-player-dock-trigger" data-player-band-trigger @click="toggleInfoWindow($event)" aria-label="Abrir información">
                     <img class="radio-player-cover radio-player-dock-cover" data-player-cover-image :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="cover art" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" loading="lazy">
                 </button>
-                <div class="radio-player-share-popout radio-player-dock-share-popout-desktop" x-show="!dockMinimized" x-cloak>
-                    <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="toggleSharePanel()" :aria-expanded="sharePanelOpen">Share</button>
-                    <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="openPopout()">Popup</button>
-                </div>
-                <div class="radio-player-mobile-share-popout" aria-label="Acciones móviles extra" x-show="!dockMinimized" x-cloak>
-                    <button type="button" class="radio-player-chip radio-player-mobile-share" @click="toggleSharePanel()" :aria-expanded="sharePanelOpen">Share</button>
-                    <button type="button" class="radio-player-chip radio-player-mobile-popout" @click="openPopout()">Pop-out</button>
-                </div>
-                <div x-show="sharePanelOpen && !dockMinimized" x-cloak class="radio-player-share-panel radio-player-share-panel--dock" aria-label="Compartir emisión">
-                    <span class="radio-player-share-panel-label">Compartir</span>
-                    <a :href="shareTargets().facebook" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Facebook" title="Facebook">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
-                        </svg>
-                        <span class="radio-player-share-link-code">FB</span>
-                        <span class="radio-player-share-link-text">Facebook</span>
-                    </a>
-                    <a :href="shareTargets().whatsapp" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en WhatsApp" title="WhatsApp">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M17 14.25c-.25-.13-1.5-.74-1.73-.82-.23-.08-.4-.12-.57.14-.17.26-.67.84-.82 1.01-.15.17-.3.19-.55.06A7.4 7.4 0 0 1 10.3 12.3a8.13 8.13 0 0 1-1.39-1.73c-.15-.26 0-.4.12-.52.1-.1.25-.3.37-.44.13-.15.17-.25.26-.42.08-.17.04-.32 0-.45C9.6 8.63 9 7.37 8.78 6.85c-.22-.5-.45-.43-.6-.44l-.52-.01c-.18 0-.47.07-.72.34C6.7 7.01 6 7.7 6 9.1s1 2.76 1.14 2.95c.14.19 1.96 3 4.75 4.2.66.29 1.18.46 1.59.59.66.21 1.27.18 1.75.11.53-.08 1.63-.67 1.86-1.31.23-.65.23-1.2.16-1.31-.07-.11-.25-.18-.5-.3z"></path>
-                            <path d="M3 21l1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
-                        </svg>
-                        <span class="radio-player-share-link-code">WA</span>
-                        <span class="radio-player-share-link-text">WhatsApp</span>
-                    </a>
-                    <a :href="shareTargets().telegram" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Telegram" title="Telegram">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                        </svg>
-                        <span class="radio-player-share-link-code">TG</span>
-                        <span class="radio-player-share-link-text">Telegram</span>
-                    </a>
-                    <a :href="shareTargets().twitter" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en X" title="X">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 4l11.733 16h4.267l-11.733 -16z"></path>
-                            <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"></path>
-                        </svg>
-                        <span class="radio-player-share-link-code">X</span>
-                        <span class="radio-player-share-link-text">X</span>
-                    </a>
-                    <button type="button" class="radio-player-share-link radio-player-share-link--native" @click="shareCurrent()" aria-label="Compartir nativo" title="Compartir">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="18" cy="5" r="3"></circle>
-                            <circle cx="6" cy="12" r="3"></circle>
-                            <circle cx="18" cy="19" r="3"></circle>
-                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                        </svg>
-                        <span class="radio-player-share-link-code">N</span>
-                        <span class="radio-player-share-link-text">Nativo</span>
-                    </button>
-                </div>
             </div>
 
             <div class="radio-player-meta-column">
@@ -473,6 +420,87 @@
                         <span id="rbcloud_tracktimer_e11096"></span>
                         <span id="rbcloud_tracktimer_sep11096" hidden> &frasl; </span>
                         <span id="rbcloud_tracktimer_r11096"></span>
+                    </div>
+                    <div class="radio-player-share-popout radio-player-dock-share-popout-desktop" x-show="!dockMinimized" x-cloak>
+                        <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="toggleSharePanel()" :aria-expanded="sharePanelOpen" title="Compartir" aria-label="Compartir">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                            </svg>
+                        </button>
+                        <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="openPopout()" title="Reproductor emergente" aria-label="Reproductor emergente">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="radio-player-mobile-share-popout" aria-label="Acciones móviles extra" x-show="!dockMinimized" x-cloak>
+                        <button type="button" class="radio-player-chip radio-player-mobile-share" @click="toggleSharePanel()" :aria-expanded="sharePanelOpen" title="Compartir" aria-label="Compartir">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                            </svg>
+                        </button>
+                        <button type="button" class="radio-player-chip radio-player-mobile-popout" @click="openPopout()" title="Reproductor emergente" aria-label="Reproductor emergente">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div x-show="sharePanelOpen && !dockMinimized" x-cloak class="radio-player-share-panel radio-player-share-panel--dock" aria-label="Compartir emisión">
+                        <span class="radio-player-share-panel-label">Compartir</span>
+                        <a :href="shareTargets().facebook" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Facebook" title="Facebook">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+                            </svg>
+                            <span class="radio-player-share-link-code">FB</span>
+                            <span class="radio-player-share-link-text">Facebook</span>
+                        </a>
+                        <a :href="shareTargets().whatsapp" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en WhatsApp" title="WhatsApp">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 14.25c-.25-.13-1.5-.74-1.73-.82-.23-.08-.4-.12-.57.14-.17.26-.67.84-.82 1.01-.15.17-.3.19-.55.06A7.4 7.4 0 0 1 10.3 12.3a8.13 8.13 0 0 1-1.39-1.73c-.15-.26 0-.4.12-.52.1-.1.25-.3.37-.44.13-.15.17-.25.26-.42.08-.17.04-.32 0-.45C9.6 8.63 9 7.37 8.78 6.85c-.22-.5-.45-.43-.6-.44l-.52-.01c-.18 0-.47.07-.72.34C6.7 7.01 6 7.7 6 9.1s1 2.76 1.14 2.95c.14.19 1.96 3 4.75 4.2.66.29 1.18.46 1.59.59.66.21 1.27.18 1.75.11.53-.08 1.63-.67 1.86-1.31.23-.65.23-1.2.16-1.31-.07-.11-.25-.18-.5-.3z"></path>
+                                <path d="M3 21l1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
+                            </svg>
+                            <span class="radio-player-share-link-code">WA</span>
+                            <span class="radio-player-share-link-text">WhatsApp</span>
+                        </a>
+                        <a :href="shareTargets().telegram" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Telegram" title="Telegram">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                            <span class="radio-player-share-link-code">TG</span>
+                            <span class="radio-player-share-link-text">Telegram</span>
+                        </a>
+                        <a :href="shareTargets().twitter" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en X" title="X">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 4l11.733 16h4.267l-11.733 -16z"></path>
+                                <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"></path>
+                            </svg>
+                            <span class="radio-player-share-link-code">X</span>
+                            <span class="radio-player-share-link-text">X</span>
+                        </a>
+                        <button type="button" class="radio-player-share-link radio-player-share-link--native" @click="shareCurrent()" aria-label="Compartir nativo" title="Compartir">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                            </svg>
+                            <span class="radio-player-share-link-code">N</span>
+                            <span class="radio-player-share-link-text">Nativo</span>
+                        </button>
                     </div>
                 </div>
             </div>
