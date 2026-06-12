@@ -17,9 +17,9 @@
             class="lucille-product-field w-full" 
             placeholder="Ej: catalog/releases/covers/foto.jpg o enlace directo"
         >
-        <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#8f877d]">
-            <span>Formatos: <strong>.png, .jpg, .webp</strong></span>
-            <span class="text-[#a855f7]">💡 Google Drive y Dropbox se convierten solos al pegar</span>
+        <div class="mt-1.5 p-3 rounded bg-[#16161a] border border-white/5 text-[11px] text-[#8f877d] space-y-1.5">
+            <p><strong>¿Cómo subir la imagen de perfil?</strong> Sube tu archivo gratis en <a href="https://imgbb.com" target="_blank" rel="noreferrer" class="text-[#a855f7] hover:underline">ImgBB</a> o <a href="https://postimages.org" target="_blank" rel="noreferrer" class="text-[#a855f7] hover:underline">Postimages</a> y copia el <strong>Enlace directo</strong> (debe terminar en <code>.jpg</code>, <code>.png</code> o <code>.webp</code>).</p>
+            <p class="text-amber-400/90 font-mono text-[10px]">⚠️ Google Drive, Facebook e Instagram no se recomiendan porque sus enlaces caducan o se bloquean.</p>
         </div>
         <div x-show="url" class="mt-2" style="display: none;">
             <img :src="url" loading="lazy" class="h-16 w-auto object-contain border border-white/10" alt="Vista previa" x-on:error="$el.style.display='none'">
@@ -38,9 +38,9 @@
             class="lucille-product-field w-full" 
             placeholder="https://example.com/logo.png"
         >
-        <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#8f877d]">
-            <span>Formatos: <strong>.png, .jpg, .webp</strong></span>
-            <span class="text-[#a855f7]">💡 Google Drive y Dropbox se convierten solos al pegar</span>
+        <div class="mt-1.5 p-3 rounded bg-[#16161a] border border-white/5 text-[11px] text-[#8f877d] space-y-1.5">
+            <p><strong>¿Cómo subir el logotipo?</strong> Sube tu archivo gratis en <a href="https://imgbb.com" target="_blank" rel="noreferrer" class="text-[#a855f7] hover:underline">ImgBB</a> o <a href="https://postimages.org" target="_blank" rel="noreferrer" class="text-[#a855f7] hover:underline">Postimages</a> y copia el <strong>Enlace directo</strong> (debe terminar en <code>.jpg</code>, <code>.png</code> o <code>.webp</code>).</p>
+            <p class="text-amber-400/90 font-mono text-[10px]">⚠️ Google Drive, Facebook e Instagram no se recomiendan porque sus enlaces caducan o se bloquean.</p>
         </div>
         <div x-show="url" class="mt-2" style="display: none;">
             <img :src="url" loading="lazy" class="h-16 w-auto object-contain border border-white/10" alt="Vista previa" x-on:error="$el.style.display='none'">
