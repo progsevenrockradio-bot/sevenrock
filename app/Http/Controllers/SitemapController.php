@@ -7,6 +7,8 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Post;
 use App\Models\Video;
+use App\Models\MasterProgram;
+use App\Models\NewRelease;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\URL;
 
@@ -17,6 +19,8 @@ final class SitemapController extends Controller
         $posts = Post::query()->whereNotNull('published_at')->orderBy('published_at', 'desc')->get();
         $events = Event::query()->orderByDesc('created_at')->get();
         $videos = Video::query()->orderByDesc('created_at')->get();
+        $programs = MasterProgram::query()->orderByDesc('updated_at')->get();
+        $releases = NewRelease::query()->where('is_active', true)->orderByDesc('released_at')->get();
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
@@ -39,12 +43,24 @@ final class SitemapController extends Controller
 
         // Eventos
         foreach ($events as $event) {
-            $xml .= $this->url(route('events.single', $event->slug ?? ''), '0.5', 'monthly');
+            $xml .= $this->url(route('events.single', $event->slug ?? ''), '0.5', 'monthly', $event->updated_at?->toIso8601String());
         }
 
         // Videos
         foreach ($videos as $video) {
-            $xml .= $this->url(route('videos.single', $video->slug ?? ''), '0.5', 'monthly');
+            $xml .= $this->url(route('videos.single', $video->slug ?? ''), '0.5', 'monthly', $video->updated_at?->toIso8601String());
+        }
+
+        // Programas (MasterProgram)
+        foreach ($programs as $program) {
+            $id = $program->archive_identifier ?: \Illuminate\Support\Str::slug($program->nombre);
+            if (empty($id)) continue;
+            $xml .= $this->url(route('programs.detail', $id), '0.7', 'weekly', $program->updated_at?->toIso8601String());
+        }
+
+        // Nuevos Lanzamientos (NewRelease)
+        foreach ($releases as $release) {
+            $xml .= $this->url(route('new-releases.single', $release->slug), '0.6', 'weekly', $release->updated_at?->toIso8601String());
         }
 
         $xml .= '</urlset>';
