@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('master_programs', function (Blueprint $table) {
-            $table->string('url_mixcloud')->nullable()->after('schedule');
+            $table->string('url_mixcloud')->nullable();
         });
     }
 
