@@ -503,6 +503,7 @@ class SiteController extends Controller
                     'conductor' => $masterProgram?->conductor ?? '',
                     'schedule' => $masterProgram?->schedule ?? '',
                     'description' => $masterProgram?->description ?? '',
+                    'mixcloud' => $masterProgram?->url_mixcloud ?? '',
                 ];
             }
         } catch (Throwable) {

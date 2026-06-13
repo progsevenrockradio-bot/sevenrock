@@ -37,6 +37,7 @@
                     duration: 0,
                     progress: 0,
                     playerVisible: false,
+                    fallbackModalVisible: false,
 
                     play(episode, autoplay = true) {
                         this.activeEpisode = episode;
@@ -315,6 +316,7 @@
                 </div>
 
                 <audio x-ref="audio" preload="metadata" playsinline
+                    @error="playerVisible = false; fallbackModalVisible = true;"
                     @loadedmetadata="onLoadedMetadata()"
                     @timeupdate="onTimeUpdate()"
                     @play="onPlay()" @pause="onPause()" @ended="onEnded()">
@@ -325,8 +327,41 @@
             <div class="mt-12 text-center">
                 <a href="{{ route('programs') }}"
                    class="inline-flex items-center gap-2 border border-[#2b2b2b] px-6 py-3 text-[10px] font-display uppercase tracking-[.18em] text-[#7b7b7b] transition-all duration-300 hover:text-lucille-accent hover:border-lucille-accent/40 rounded-[8px]">
-                    ← Todos los programas
+                    ⬅ Todos los programas
                 </a>
+            </div>
+
+            {{-- Modal de Respaldo Mixcloud --}}
+            <div x-show="fallbackModalVisible" 
+                 x-transition.opacity
+                 style="display: none;" 
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                
+                <div class="relative w-full max-w-2xl rounded-[16px] border border-white/10 bg-[#111] p-6 shadow-2xl" @click.away="fallbackModalVisible = false">
+                    {{-- Botón de cerrar --}}
+                    <button @click="fallbackModalVisible = false" class="absolute top-4 right-4 text-[#7b7b7b] hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] mb-4">Emisión de Respaldo</h3>
+                    
+                    @if(!empty($program['mixcloud']))
+                        <div class="aspect-video w-full overflow-hidden rounded-[8px] bg-black">
+                            <iframe width="100%" height="100%" src="{{ $program['mixcloud'] }}" frameborder="0" allow="autoplay"></iframe>
+                        </div>
+                        <p class="mt-4 text-xs text-[#7b7b7b]">Escuchando a través de Mixcloud debido a inestabilidad en el servidor principal.</p>
+                    @else
+                        <div class="flex h-40 flex-col items-center justify-center rounded-[8px] border border-white/5 bg-white/5 text-center p-6">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-[#c32720] mb-3 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <p class="text-sm font-medium text-[#dcdcdc]">El servicio principal de audio no está disponible en este momento.</p>
+                            <p class="mt-1 text-xs text-[#7b7b7b]">Tampoco encontramos un respaldo en Mixcloud asignado a este programa.</p>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </section>
