@@ -283,6 +283,11 @@ class ThemeSetting extends Model
                 'phone' => 'Telefono',
                 'share' => 'Compartir:',
                 'featured_video' => 'Video destacado',
+                'email_background_color' => '#0c0c0e',
+                'email_title_verified_podcast' => 'Servidor de podcast',
+                'email_label_streaming' => 'Servidor streaming',
+                'email_label_podcast' => 'Servidor de podcast',
+                'email_footer_notification' => 'Notificación de que su programa ha sido puesto en la parrilla de la radio.',
             ],
             'admin_texts' => [
                 'dashboard_title' => 'Dashboard',

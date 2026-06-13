@@ -384,8 +384,26 @@ class SiteController extends Controller
             }
         );
 
+        $programsByDay = $cached['programsByDay'];
+        foreach ($programsByDay as &$dayGroup) {
+            foreach ($dayGroup['programs'] as &$prog) {
+                $dbProg = MasterProgram::find($prog['id']);
+                if ($dbProg) {
+                    $archiveOrgService->syncProgramViews($dbProg);
+                    $prog['vistas_archive'] = $dbProg->vistas_archive;
+                    $prog['escuchas_locales'] = $dbProg->escuchas_locales;
+                    $prog['vistas_totales'] = $dbProg->vistas_totales;
+                } else {
+                    $prog['vistas_archive'] = 0;
+                    $prog['escuchas_locales'] = 0;
+                    $prog['vistas_totales'] = 0;
+                }
+            }
+        }
+        unset($dayGroup, $prog);
+
         return view('pages.programs', [
-            'programsByDay' => $cached['programsByDay'],
+            'programsByDay' => $programsByDay,
             'latestEpisodes' => $cached['latestEpisodes'],
             'groupedEpisodes' => $cached['groupedEpisodes'],
             'programSlugMap' => $cached['programSlugMap'] ?? [],
@@ -1798,5 +1816,42 @@ class SiteController extends Controller
     private function resolvePublicImage(string $path): string
     {
         return PublicMediaUrl::normalizePublicUrl($path) ?: asset($path);
+    }
+
+    public function trackPlay(): \Illuminate\Http\JsonResponse
+    {
+        $programName = request()->query('program');
+        $archiveUrl = request()->query('archive_url');
+
+        $masterProgram = null;
+
+        if ($archiveUrl) {
+            $parts = explode('/details/', (string) $archiveUrl);
+            if (isset($parts[1])) {
+                $identifier = explode('?', $parts[1])[0];
+                $identifier = trim(explode('/', $identifier)[0]);
+                if ($identifier !== '') {
+                    $masterProgram = MasterProgram::query()->where('archive_identifier', $identifier)->first();
+                }
+            }
+        }
+
+        if (!$masterProgram && $programName) {
+            $masterProgram = MasterProgram::query()->where('nombre', $programName)->first();
+        }
+
+        if ($masterProgram) {
+            $masterProgram->increment('escuchas_locales');
+            $masterProgram->vistas_totales = ($masterProgram->vistas_archive ?? 0) + $masterProgram->escuchas_locales;
+            $masterProgram->save();
+
+            return response()->json([
+                'success' => true,
+                'escuchas_locales' => $masterProgram->escuchas_locales,
+                'vistas_totales' => $masterProgram->vistas_totales
+            ]);
+        }
+
+        return response()->json(['success' => false]);
     }
 }

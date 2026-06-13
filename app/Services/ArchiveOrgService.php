@@ -661,4 +661,69 @@ final class ArchiveOrgService
             return false;
         }
     }
+
+    public function syncProgramViews(MasterProgram $program, bool $force = false): int
+    {
+        $identifier = trim((string) $program->archive_identifier);
+        if ($identifier === '') {
+            return 0;
+        }
+
+        $cacheKey = 'archive-org:program-views:' . md5($identifier);
+        $cachedViews = Cache::get($cacheKey);
+
+        if ($cachedViews !== null && !$force) {
+            return (int) $cachedViews;
+        }
+
+        if (!$force) {
+            try {
+                app()->terminating(function () use ($program, $cacheKey): void {
+                    try {
+                        $identifier = trim((string) $program->archive_identifier);
+                        $response = ExternalHttp::client()->retry(2, 200)->timeout(4)
+                            ->get('https://archive.org/details/' . urlencode($identifier) . '?output=json');
+
+                        $data = $response->json();
+                        $downloads = isset($data['item']['downloads']) ? (int) $data['item']['downloads'] : 0;
+
+                        if ($downloads > 0) {
+                            $program->vistas_archive = $downloads;
+                            $program->vistas_totales = $downloads + ($program->escuchas_locales ?? 0);
+                            $program->stats_updated_at = now();
+                            $program->save();
+                        }
+
+                        Cache::put($cacheKey, $downloads, now()->addHours(2));
+                    } catch (\Throwable) {
+                        // Ignore
+                    }
+                });
+            } catch (\Throwable) {
+                // Terminating fallback
+            }
+
+            return (int) ($program->vistas_archive ?? 0);
+        }
+
+        try {
+            $response = ExternalHttp::client()->retry(2, 200)->timeout(4)
+                ->get('https://archive.org/details/' . urlencode($identifier) . '?output=json');
+
+            $data = $response->json();
+            $downloads = isset($data['item']['downloads']) ? (int) $data['item']['downloads'] : 0;
+
+            if ($downloads > 0) {
+                $program->vistas_archive = $downloads;
+                $program->vistas_totales = $downloads + ($program->escuchas_locales ?? 0);
+                $program->stats_updated_at = now();
+                $program->save();
+            }
+
+            Cache::put($cacheKey, $downloads, now()->addHours(2));
+            return $downloads;
+        } catch (\Throwable) {
+            return (int) ($program->vistas_archive ?? 0);
+        }
+    }
 }

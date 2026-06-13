@@ -132,6 +132,11 @@ class ThemeSettingsController extends Controller
             'archive_access_key' => ['nullable', 'string', 'max:255'],
             'archive_secret_key' => ['nullable', 'string', 'max:255'],
             'email_default_cover' => ['nullable', 'image', 'max:4096'],
+            'email_background_color' => ['nullable', 'string', 'max:20'],
+            'email_title_verified_podcast' => ['nullable', 'string', 'max:255'],
+            'email_label_streaming' => ['nullable', 'string', 'max:255'],
+            'email_label_podcast' => ['nullable', 'string', 'max:255'],
+            'email_footer_notification' => ['nullable', 'string'],
         ]);
 
         $settings->fill(collect($validated)->except([
@@ -172,6 +177,11 @@ class ThemeSettingsController extends Controller
             'archive_access_key',
             'archive_secret_key',
             'email_default_cover',
+            'email_background_color',
+            'email_title_verified_podcast',
+            'email_label_streaming',
+            'email_label_podcast',
+            'email_footer_notification',
         ])->all());
 
         foreach ([
@@ -223,7 +233,25 @@ class ThemeSettingsController extends Controller
         $settings->featured_stories = $this->decodeJsonSection($validated['featured_stories_json'] ?? '', 'featured_stories_json', $settings->featuredStories());
         $settings->latest_podcasts = $this->decodeJsonSection($validated['latest_podcasts_json'] ?? '', 'latest_podcasts_json', $settings->latestPodcasts());
         $settings->home_headings = $this->decodeJsonSection($validated['home_headings_json'] ?? '', 'home_headings_json', $settings->homeHeadings());
-        $settings->ui_texts = $this->decodeJsonSection($validated['ui_texts_json'] ?? '', 'ui_texts_json', $settings->uiTexts());
+
+        $uiTexts = $this->decodeJsonSection($validated['ui_texts_json'] ?? '', 'ui_texts_json', $settings->uiTexts());
+        if ($request->has('email_background_color')) {
+            $uiTexts['email_background_color'] = $validated['email_background_color'];
+        }
+        if ($request->has('email_title_verified_podcast')) {
+            $uiTexts['email_title_verified_podcast'] = $validated['email_title_verified_podcast'];
+        }
+        if ($request->has('email_label_streaming')) {
+            $uiTexts['email_label_streaming'] = $validated['email_label_streaming'];
+        }
+        if ($request->has('email_label_podcast')) {
+            $uiTexts['email_label_podcast'] = $validated['email_label_podcast'];
+        }
+        if ($request->has('email_footer_notification')) {
+            $uiTexts['email_footer_notification'] = $validated['email_footer_notification'];
+        }
+        $settings->ui_texts = $uiTexts;
+
         $settings->admin_texts = $this->decodeJsonSection($validated['admin_texts_json'] ?? '', 'admin_texts_json', $settings->adminTexts());
 
         $settings->hero_slides_interval = ((int) ($validated['hero_slides_interval'] ?? 7)) * 1000;

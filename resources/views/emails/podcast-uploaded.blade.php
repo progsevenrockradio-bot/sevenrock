@@ -1,47 +1,106 @@
-<x-mail::message>
-# {{ $deliveryStatus === 'delivery_verified' ? 'Entrega completa' : ($deliveryStatus === 'delivery_partial' ? 'Entrega parcial' : 'Error en la entrega') }}
+@php
+    $settings = \App\Models\ThemeSetting::current();
+    $ui = $settings->uiTexts();
+    $bgColor = $ui['email_background_color'] ?? '#0c0c0e';
+    $titleText = $ui['email_title_verified_podcast'] ?? 'Servidor de podcast';
+    $lblStreaming = $ui['email_label_streaming'] ?? 'Servidor streaming';
+    $lblPodcast = $ui['email_label_podcast'] ?? 'Servidor de podcast';
+    $footerText = $ui['email_footer_notification'] ?? 'Notificación de que su programa ha sido puesto en la parrilla de la radio.';
+    $logoUrl = asset($settings->logo_path ?? 'assets/lucille/logo.png');
 
-El episodio {{ $episode->live_title ?: $episode->titulo_programa }} del programa {{ $episode->titulo_programa }} ha completado su distribución al Cloud.
+    $episodeTitle = trim((string)$episode->live_title) !== '' ? $episode->live_title : '(' . $episode->titulo_programa . ')';
+@endphp
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=html">
+    <title>{{ $titleText }}</title>
+</head>
+<body style="background-color: {{ $bgColor }}; color: #dcdcdc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 40px 10px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #111113; border: 1px solid #2b2b2b; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        
+        <!-- Header -->
+        <div style="background-color: #161619; padding: 30px; text-align: center; border-bottom: 1px solid #2b2b2b;">
+            <img src="{{ $logoUrl }}" alt="{{ $settings->site_name }}" style="max-height: 50px; display: inline-block;">
+            <h1 style="color: #ffffff; font-size: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin: 15px 0 0 0;">
+                {{ $titleText }}
+            </h1>
+        </div>
 
-<x-mail::panel>
-**Programa:** {{ $episode->titulo_programa }}
+        <!-- Content Body -->
+        <div style="padding: 30px 40px;">
+            <h2 style="color: #c32720; font-size: 18px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+                {{ $deliveryStatus === 'delivery_verified' ? 'Entrega completa' : ($deliveryStatus === 'delivery_partial' ? 'Entrega parcial' : 'Error en la entrega') }}
+            </h2>
 
-**Episodio:** #{{ $episode->numero_episodio }}
+            <p style="font-size: 14px; line-height: 1.6; color: #a9a9b2; margin-bottom: 25px;">
+                El episodio de tu programa ha completado su proceso de distribución en la radio.
+            </p>
 
-**Título:** {{ $episode->live_title ?: $episode->titulo_programa }}
+            <!-- Panel de Detalles -->
+            <div style="background-color: #18181b; border: 1px solid #2b2b2b; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <tr>
+                        <td style="padding: 6px 0; color: #7b7b7b; width: 120px; font-weight: bold;">Programa:</td>
+                        <td style="padding: 6px 0; color: #ffffff;">{{ $episode->titulo_programa }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #7b7b7b; font-weight: bold;">Episodio:</td>
+                        <td style="padding: 6px 0; color: #ffffff;">#{{ $episode->numero_episodio }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #7b7b7b; font-weight: bold;">Título:</td>
+                        <td style="padding: 6px 0; color: #ffffff; font-style: italic;">{{ $episodeTitle }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #7b7b7b; font-weight: bold;">Fecha emisión:</td>
+                        <td style="padding: 6px 0; color: #ffffff;">{{ optional($episode->fecha_emision)->format('d/m/Y') ?? 'N/D' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; color: #7b7b7b; font-weight: bold;">Archivo MP3:</td>
+                        <td style="padding: 6px 0; color: #ffffff; font-family: monospace; font-size: 12px;">{{ basename((string) $localPath) }}</td>
+                    </tr>
+                </table>
+            </div>
 
-**Fecha de emisión:** {{ optional($episode->fecha_emision)->format('d/m/Y') ?? 'N/D' }}
+            <!-- Tabla de Estados -->
+            <table style="width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 13px; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 1px solid #2b2b2b;">
+                        <th style="padding: 10px 0; color: #ffffff; font-weight: bold; text-transform: uppercase;">Destino</th>
+                        <th style="padding: 10px 0; color: #ffffff; font-weight: bold; text-transform: uppercase; text-align: center;">Estado</th>
+                        <th style="padding: 10px 0; color: #ffffff; font-weight: bold; text-transform: uppercase;">Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid #222225;">
+                        <td style="padding: 12px 0; color: #dcdcdc; font-weight: 600;">{{ $lblStreaming }}</td>
+                        <td style="padding: 12px 0; text-align: center;">{{ $radiobossVerified || $archiveVerified ? '✅' : '❌' }}</td>
+                        <td style="padding: 12px 0; color: #a9a9b2;">
+                            {{ $radiobossVerified || $archiveVerified ? 'Distribuido correctamente' : 'Con incidencias' }}
+                        </td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #222225;">
+                        <td style="padding: 12px 0; color: #dcdcdc; font-weight: 600;">Estado general</td>
+                        <td style="padding: 12px 0; text-align: center;">{{ $deliveryStatus === 'delivery_verified' ? '✅' : ($deliveryStatus === 'delivery_partial' ? '⚠️' : '❌') }}</td>
+                        <td style="padding: 12px 0; color: #a9a9b2;">
+                            {{ $deliveryStatus === 'delivery_verified' ? 'Entrega completa' : ($deliveryStatus === 'delivery_partial' ? 'Entrega parcial' : 'Error en la entrega') }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
 
-**Archivo MP3:** {{ basename((string) $localPath) }}
+            <p style="font-size: 13px; line-height: 1.6; color: #7b7b7b; margin-top: 30px; border-t: 1px dashed #2b2b2b; pt: 20px; text-align: center;">
+                {{ $footerText }}
+            </p>
+        </div>
 
-**Ruta en el Cloud:** {{ $remotePath }}
-</x-mail::panel>
+        <!-- Footer -->
+        <div style="background-color: #0e0e10; padding: 20px; text-align: center; font-size: 12px; color: #595962; border-top: 1px solid #2b2b2b;">
+            Este es un correo automático enviado por {{ $settings->site_name }}.
+        </div>
 
-<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse: collapse; margin: 16px 0;">
-<tr>
-<th align="left" style="border-bottom: 1px solid #e5e7eb; padding: 8px 0;">Destino</th>
-<th align="center" style="border-bottom: 1px solid #e5e7eb; padding: 8px 0;">Estado</th>
-<th align="left" style="border-bottom: 1px solid #e5e7eb; padding: 8px 0;">Detalle</th>
-</tr>
-<tr>
-<td style="padding: 8px 0;">Cloud de la Radio</td>
-<td align="center" style="padding: 8px 0;">{{ $radiobossVerified || $archiveVerified ? '✅' : '❌' }}</td>
-<td style="padding: 8px 0;">
-{{ $radiobossVerified || $archiveVerified ? 'Distribuido correctamente' : 'Con incidencias' }}
-@if($archiveVerified && !empty($archiveItemUrl))
-<br><small><a href="{{ $archiveItemUrl }}">Ver en Archive.org</a></small>
-@endif
-</td>
-</tr>
-<tr>
-<td style="padding: 8px 0;">Estado general</td>
-<td align="center" style="padding: 8px 0;">{{ $deliveryStatus === 'delivery_verified' ? '✅' : ($deliveryStatus === 'delivery_partial' ? '⚠️' : '❌') }}</td>
-<td style="padding: 8px 0;">{{ $deliveryStatus === 'delivery_verified' ? 'Entrega completa' : ($deliveryStatus === 'delivery_partial' ? 'Entrega parcial' : 'Error en la entrega') }}</td>
-</tr>
-</table>
-
-Si necesitas revisar el episodio desde el panel, puedes hacerlo desde el área de administración.
-
-Gracias,<br>
-{{ config('app.name') }}
-</x-mail::message>
+    </div>
+</body>
+</html>

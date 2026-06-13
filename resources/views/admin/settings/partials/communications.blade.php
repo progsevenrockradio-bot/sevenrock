@@ -273,4 +273,48 @@
             </div>
         </div>
     </div>
+
+    <!-- SECCIÓN: PERSONALIZACIÓN DE NOTIFICACIONES DE PODCASTS / EMAIL -->
+    <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
+        <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-6">📧 Personalización de Plantillas de Email (Podcasts)</h3>
+        
+        @php
+            $ui = $settings->uiTexts();
+        @endphp
+
+        <div class="space-y-5">
+            <div class="grid gap-5 md:grid-cols-2">
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Color de Fondo del Correo</label>
+                    <div class="flex gap-3 items-center">
+                        <input name="email_background_color" type="color" value="{{ old('email_background_color', $ui['email_background_color'] ?? '#0c0c0e') }}" class="lucille-product-field h-10 w-20 p-1 border-0 rounded cursor-pointer bg-transparent">
+                        <span class="text-xs font-mono text-[#dcdcdc]">{{ old('email_background_color', $ui['email_background_color'] ?? '#0c0c0e') }}</span>
+                    </div>
+                    <p class="mt-2 text-[10px] text-[#7b7b7b]">Fondo del email enviado. Por defecto oscuro: #0c0c0e.</p>
+                </div>
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Título de Cabecera (Servidor de Podcast)</label>
+                    <input name="email_title_verified_podcast" value="{{ old('email_title_verified_podcast', $ui['email_title_verified_podcast'] ?? 'Servidor de podcast') }}" class="lucille-product-field w-full" placeholder="Servidor de podcast">
+                    <p class="mt-2 text-[10px] text-[#7b7b7b]">Sustituye el texto "Archive.org verificado" en los asuntos/cabeceras.</p>
+                </div>
+            </div>
+
+            <div class="grid gap-5 md:grid-cols-2">
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Etiqueta de Destino: Streaming (RB)</label>
+                    <input name="email_label_streaming" value="{{ old('email_label_streaming', $ui['email_label_streaming'] ?? 'Servidor streaming') }}" class="lucille-product-field w-full" placeholder="Servidor streaming">
+                </div>
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Etiqueta de Destino: Podcast (Archive)</label>
+                    <input name="email_label_podcast" value="{{ old('email_label_podcast', $ui['email_label_podcast'] ?? 'Servidor de podcast') }}" class="lucille-product-field w-full" placeholder="Servidor de podcast">
+                </div>
+            </div>
+
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Texto de Cierre (Footer)</label>
+                <textarea name="email_footer_notification" rows="3" class="lucille-product-field w-full text-xs" placeholder="Notificación de que su programa ha sido puesto en la parrilla de la radio.">{{ old('email_footer_notification', $ui['email_footer_notification'] ?? 'Notificación de que su programa ha sido puesto en la parrilla de la radio.') }}</textarea>
+                <p class="mt-2 text-[10px] text-[#7b7b7b]">Reemplaza el texto final que invitaba a revisar el episodio en archive.org.</p>
+            </div>
+        </div>
+    </section>
 </section>

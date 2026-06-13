@@ -91,6 +91,7 @@ Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->midd
 Route::post('/posts/{post}/like', [PostReactionController::class, 'toggle'])->middleware('throttle:60,1')->name('posts.like');
 
 Route::get("/programas", [SiteController::class, "programs"])->name("programs");
+Route::get("/programas/track-play", [SiteController::class, "trackPlay"])->name("programs.track-play");
 Route::get("/programas/{identifier}", [SiteController::class, "programDetail"])->name("programs.detail");
 
 // Rutas de restablecimiento de contraseña para el panel de administración.

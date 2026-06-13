@@ -228,6 +228,10 @@
                 }
 
                 await audio.play();
+
+                if (this.activeEpisode) {
+                    fetch(`/programas/track-play?program=${encodeURIComponent(this.activeEpisode.program || '')}&archive_url=${encodeURIComponent(this.activeEpisode.archive_url || '')}`).catch(() => {});
+                }
             } catch (error) {
                 this.playing = false;
                 await this.tryNextAudioSource();
@@ -424,7 +428,7 @@
                     <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                         <div class="min-w-0 flex-1">
                             <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-text="activeEpisode.program || activeEpisode.title"></h3>
-                            <p class="mt-3 text-[12px] uppercase tracking-[.24em] text-[#dcdcdc]" x-text="activeEpisode.date || 'Archive.org'"></p>
+                            <p class="mt-3 text-[12px] uppercase tracking-[.24em] text-[#dcdcdc]" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
                             <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeEpisode.host || ''"></p>
                         </div>
 
@@ -448,7 +452,7 @@
     <aside class="home-panel p-0">
         <div class="border-b border-[#2b2b2b] px-6 py-5">
             <div class="font-display text-sm uppercase tracking-[.22em] text-[#dcdcdc]">Últimos episodios</div>
-            <div class="mt-2 text-sm text-[#7b7b7b]">Archive.org</div>
+            <div class="mt-2 text-sm text-[#7b7b7b]">Servidor de Podcast</div>
         </div>
 
         @if ($sidebarEpisodes !== [])
@@ -466,7 +470,7 @@
 
                         <div class="min-w-0 flex-1">
                             <div class="text-[10px] uppercase tracking-[.22em] text-[#7b7b7b]">
-                                {{ $episode['date'] ?: 'Archive.org' }}
+                                {{ $episode['date'] ?: 'Servidor de Podcast' }}
                             </div>
                             <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-[#dcdcdc] md:text-[15px]">
                                 {{ $episode['program'] }}
@@ -497,7 +501,7 @@
                 <div>
                     <div class="home-badge" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></div>
                     <h4 class="mt-3 font-display text-[22px] uppercase leading-none tracking-[.12em]" x-text="activeEpisode.program || activeEpisode.title || 'Podcast'"></h4>
-                    <p class="mt-2 text-xs uppercase tracking-[.24em] text-[#bfbfbf]" x-text="activeEpisode.date || 'Archive.org'"></p>
+                    <p class="mt-2 text-xs uppercase tracking-[.24em] text-[#bfbfbf]" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
                     <p class="mt-1 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeEpisode.host || ''"></p>
                 </div>
 
@@ -520,7 +524,7 @@
                         target="_blank"
                         rel="noopener"
                     >
-                        Abrir en Archive.org
+                        Escuchar en Servidor de Podcast
                     </a>
                     <button
                         type="button"

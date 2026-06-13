@@ -27,12 +27,16 @@ final class PodcastArchiveUploadedMail extends Mailable
         $programName = trim((string) ($this->episode->titulo_programa ?: $this->episode->masterProgram?->nombre ?: 'Seven Rock Radio'));
         $episodeNumber = (int) ($this->episode->numero_episodio ?? 0);
 
+        $settings = \App\Models\ThemeSetting::current();
+        $ui = $settings->uiTexts();
+        $verifiedTitle = $ui['email_title_verified_podcast'] ?? 'Servidor de podcast';
+
         return new Envelope(
             from: new Address(
                 (string) config('mail.from.address', 'prog.sevenrockradio@gmail.com'),
                 (string) config('mail.from.name', config('app.name', 'Seven Rock Radio'))
             ),
-            subject: sprintf('✅ Archive.org verificado - %s #%d', $programName, $episodeNumber),
+            subject: sprintf('✅ %s - %s #%d', $verifiedTitle, $programName, $episodeNumber),
         );
     }
 
@@ -44,7 +48,7 @@ final class PodcastArchiveUploadedMail extends Mailable
             : null;
 
         return new Content(
-            markdown: 'emails.podcast-archive-uploaded',
+            view: 'emails.podcast-archive-uploaded',
             with: [
                 'episode' => $this->episode,
                 'archiveItemUrl' => $archiveItemUrl,

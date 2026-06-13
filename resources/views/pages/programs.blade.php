@@ -56,6 +56,10 @@
                         this.activeEpisode = episode;
                         this.playerVisible = true;
                         this.$nextTick(() => this.syncAudio(true));
+
+                        if (episode) {
+                            fetch(`/programas/track-play?program=${encodeURIComponent(episode.program || '')}&archive_url=${encodeURIComponent(episode.archive_url || '')}`).catch(() => {});
+                        }
                     },
                     syncAudio(autoplay) {
                         const audio = this.$refs.audio;
@@ -167,9 +171,16 @@
                                                     {{ $progName }}
                                                 </h4>
                                                 @if ($displayTime)
-                                                    <span class="inline-block self-center sm:self-start shrink-0 text-[10px] font-mono tracking-[.08em] text-[#888] bg-[#161616] px-2 py-0.5 rounded border border-[#242424]">
-                                                        {{ $displayTime }} HS
-                                                    </span>
+                                                    <div class="flex flex-col items-center sm:items-end gap-1 mt-1 sm:mt-0 shrink-0">
+                                                        <span class="inline-block self-center sm:self-start shrink-0 text-[10px] font-mono tracking-[.08em] text-[#888] bg-[#161616] px-2 py-0.5 rounded border border-[#242424]">
+                                                            {{ $displayTime }} HS
+                                                        </span>
+                                                        @if (isset($program['vistas_totales']) && $program['vistas_totales'] > 0)
+                                                            <span class="text-[9px] font-mono text-[#666] tracking-[.04em] whitespace-nowrap">
+                                                                👁️ {{ number_format($program['vistas_totales']) }} reproducciones
+                                                            </span>
+                                                        @endif
+                                                    </div>
                                                 @endif
                                             </div>
                                             @if ($progHost)

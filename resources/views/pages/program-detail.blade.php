@@ -42,6 +42,10 @@
                         this.activeEpisode = episode;
                         this.playerVisible = true;
                         if (autoplay) this.$nextTick(() => this.syncAudio(true));
+
+                        if (episode) {
+                            fetch(`/programas/track-play?program=${encodeURIComponent(episode.program || '') || encodeURIComponent('{{ addslashes($program['title']) }}')}&archive_url=${encodeURIComponent(episode.archive_url || '') || encodeURIComponent('https://archive.org/details/{{ $program['id'] }}')}`).catch(() => {});
+                        }
                     },
                     syncAudio(autoplay) {
                         const a = this.$refs.audio;
