@@ -1,6 +1,6 @@
 <x-layouts.site 
     title="Seven Rock Radio - {{ $video['title'] }}"
-    :og-image="$shareImage"
+    :og-image="$video['image'] ?? ''"
     :description="\Illuminate\Support\Str::limit(strip_tags(implode(' ', $video['content'] ?? [])), 150)"
 >
     @php
