@@ -30,9 +30,13 @@ final class NewReleasePublishedMail extends Mailable
      */
     public function envelope(): Envelope
     {
+        $settings = \App\Models\ThemeSetting::current();
+        $ui = $settings->uiTexts();
+        $subject = $ui['email_title_new_release_published'] ?? '¡Nuevo lanzamiento publicado! - Seven Rock Radio';
+
         return new Envelope(
             from: $this->senderEmail ?: config('mail.from.address'),
-            subject: '¡Nuevo lanzamiento publicado! - Seven Rock Radio',
+            subject: $subject,
         );
     }
 

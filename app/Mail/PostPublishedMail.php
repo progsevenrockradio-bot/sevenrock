@@ -30,9 +30,13 @@ final class PostPublishedMail extends Mailable
      */
     public function envelope(): Envelope
     {
+        $settings = \App\Models\ThemeSetting::current();
+        $ui = $settings->uiTexts();
+        $subject = $ui['email_title_post_published'] ?? '¡Tu contenido ya ha sido publicado! - Seven Rock Radio';
+
         return new Envelope(
             from: $this->senderEmail ?: config('mail.from.address'),
-            subject: '¡Tu contenido ya ha sido publicado! - Seven Rock Radio',
+            subject: $subject,
         );
     }
 

@@ -137,6 +137,10 @@ class ThemeSettingsController extends Controller
             'email_label_streaming' => ['nullable', 'string', 'max:255'],
             'email_label_podcast' => ['nullable', 'string', 'max:255'],
             'email_footer_notification' => ['nullable', 'string'],
+            'email_title_new_release_published' => ['nullable', 'string', 'max:255'],
+            'email_heading_new_release_published' => ['nullable', 'string', 'max:255'],
+            'email_title_post_published' => ['nullable', 'string', 'max:255'],
+            'email_heading_post_published' => ['nullable', 'string', 'max:255'],
         ]);
 
         $settings->fill(collect($validated)->except([
@@ -182,6 +186,10 @@ class ThemeSettingsController extends Controller
             'email_label_streaming',
             'email_label_podcast',
             'email_footer_notification',
+            'email_title_new_release_published',
+            'email_heading_new_release_published',
+            'email_title_post_published',
+            'email_heading_post_published',
         ])->all());
 
         foreach ([
@@ -249,6 +257,18 @@ class ThemeSettingsController extends Controller
         }
         if ($request->has('email_footer_notification')) {
             $uiTexts['email_footer_notification'] = $validated['email_footer_notification'];
+        }
+        if ($request->has('email_title_new_release_published')) {
+            $uiTexts['email_title_new_release_published'] = $validated['email_title_new_release_published'];
+        }
+        if ($request->has('email_heading_new_release_published')) {
+            $uiTexts['email_heading_new_release_published'] = $validated['email_heading_new_release_published'];
+        }
+        if ($request->has('email_title_post_published')) {
+            $uiTexts['email_title_post_published'] = $validated['email_title_post_published'];
+        }
+        if ($request->has('email_heading_post_published')) {
+            $uiTexts['email_heading_post_published'] = $validated['email_heading_post_published'];
         }
         $settings->ui_texts = $uiTexts;
 

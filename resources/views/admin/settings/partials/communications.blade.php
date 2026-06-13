@@ -316,16 +316,54 @@
                 <p class="mt-2 text-[10px] text-[#7b7b7b]">Reemplaza el texto final que invitaba a revisar el episodio en archive.org.</p>
             </div>
 
-            <!-- ENVIAR CORREO DE PRUEBA -->
+            <!-- LANZAMIENTOS MUSICALES Y POSTS -->
             <div class="border-t border-[#2b2b2b] pt-5 mt-5">
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b] font-bold text-lucille-accent">✉️ Probar Plantilla de Email</label>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <input type="email" name="test_email" form="test-email-form" class="lucille-product-field flex-1 text-xs" placeholder="ingresa-un-correo@ejemplo.com" required>
-                    <button type="submit" form="test-email-form" class="lucille-button-solid text-xs py-2 px-4 whitespace-nowrap bg-lucille-accent/10 hover:bg-lucille-accent border-lucille-accent/30 text-white font-bold transition-all">
-                        Enviar Correo de Prueba
-                    </button>
+                <h4 class="font-display text-md uppercase tracking-[.12em] text-[#dcdcdc] mb-4">🎵 Lanzamientos Musicales y Entradas de Blog</h4>
+                <div class="grid gap-5 md:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Asunto (Nuevo Lanzamiento)</label>
+                        <input name="email_title_new_release_published" value="{{ old('email_title_new_release_published', $ui['email_title_new_release_published'] ?? '¡Nuevo lanzamiento publicado! - Seven Rock Radio') }}" class="lucille-product-field w-full" placeholder="¡Nuevo lanzamiento publicado! - Seven Rock Radio">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Cabecera (Nuevo Lanzamiento)</label>
+                        <input name="email_heading_new_release_published" value="{{ old('email_heading_new_release_published', $ui['email_heading_new_release_published'] ?? '¡Tu lanzamiento ha sido publicado!') }}" class="lucille-product-field w-full" placeholder="¡Tu lanzamiento ha sido publicado!">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Asunto (Entrada de Blog)</label>
+                        <input name="email_title_post_published" value="{{ old('email_title_post_published', $ui['email_title_post_published'] ?? '¡Tu contenido ya ha sido publicado! - Seven Rock Radio') }}" class="lucille-product-field w-full" placeholder="¡Tu contenido ya ha sido publicado! - Seven Rock Radio">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Cabecera (Entrada de Blog)</label>
+                        <input name="email_heading_post_published" value="{{ old('email_heading_post_published', $ui['email_heading_post_published'] ?? '¡Tu contenido ha sido publicado!') }}" class="lucille-product-field w-full" placeholder="¡Tu contenido ha sido publicado!">
+                    </div>
                 </div>
-                <p class="mt-2 text-[10px] text-[#7b7b7b]">Ingresa una dirección de correo para recibir un email de prueba con el nuevo diseño oscuro y tus textos personalizados.</p>
+            </div>
+
+            <!-- ENVIAR CORREO DE PRUEBA -->
+            <div class="border-t border-[#2b2b2b] pt-5 mt-5 bg-[rgba(0,0,0,0.15)] p-4 rounded border border-[#222]">
+                <label class="mb-3 block text-xs uppercase tracking-[.18em] text-[#7b7b7b] font-bold text-lucille-accent">✉️ Probar Plantilla de Email</label>
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <div>
+                        <label class="mb-1 block text-[9px] uppercase tracking-[.14em] text-[#7b7b7b]">Seleccionar Plantilla</label>
+                        <select name="template_type" form="test-email-form" class="lucille-product-field lucille-select-field w-full text-xs" style="height: 38px;">
+                            <option value="podcast_uploaded">Distribución completa (Verificado)</option>
+                            <option value="podcast_archive">Servidor respaldo verificado</option>
+                            <option value="podcast_radioboss">Servidor streaming verificado</option>
+                            <option value="new_release">Nuevo lanzamiento publicado</option>
+                            <option value="post_published">Entrada de blog publicada</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="mb-1 block text-[9px] uppercase tracking-[.14em] text-[#7b7b7b]">Destinatario de Prueba</label>
+                        <div class="flex gap-2">
+                            <input type="email" name="test_email" form="test-email-form" class="lucille-product-field flex-1 text-xs" style="height: 38px;" placeholder="ingresa-un-correo@ejemplo.com" required>
+                            <button type="submit" form="test-email-form" class="lucille-button-solid text-xs py-2 px-4 whitespace-nowrap bg-lucille-accent/20 hover:bg-lucille-accent border-lucille-accent/40 text-white font-bold transition-all" style="height: 38px;">
+                                Enviar Prueba
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-2.5 text-[10px] text-[#7b7b7b]">Elige la plantilla de notificación y el correo a donde deseas que llegue para comprobar los asuntos, colores y cabeceras dinámicas.</p>
             </div>
         </div>
     </section>

@@ -288,6 +288,10 @@ class ThemeSetting extends Model
                 'email_label_streaming' => 'Servidor streaming',
                 'email_label_podcast' => 'Servidor de podcast',
                 'email_footer_notification' => 'Notificación de que su programa ha sido puesto en la parrilla de la radio.',
+                'email_title_new_release_published' => '¡Nuevo lanzamiento publicado! - Seven Rock Radio',
+                'email_heading_new_release_published' => '¡Tu lanzamiento ha sido publicado!',
+                'email_title_post_published' => '¡Tu contenido ya ha sido publicado! - Seven Rock Radio',
+                'email_heading_post_published' => '¡Tu contenido ha sido publicado!',
             ],
             'admin_texts' => [
                 'dashboard_title' => 'Dashboard',
