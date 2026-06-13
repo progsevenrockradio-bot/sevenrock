@@ -15,7 +15,7 @@
 <x-layouts.site :title="$shareTitle"
     :description="$shareDesc"
     :og-image="$talent->logoUrl() ?? asset('assets/lucille/logo.png')">
-    <section class="mx-auto max-w-7xl px-5 pt-32 pb-16">
+    <section class="mx-auto max-w-7xl px-5 py-16" style="padding-top: 150px;">
         <!-- Profile Header -->
         <div class="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#10151a]/95 to-[#070a0d]/98 border border-white/10 p-8 md:p-12 text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-md">
             <div class="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_center,var(--lucille-accent),transparent_70%)]"></div>

@@ -1,5 +1,5 @@
 <x-layouts.site :title="'Muro de la Comunidad'">
-    <section class="mx-auto max-w-[1400px] px-5 pt-32 pb-12">
+    <section class="mx-auto max-w-[1400px] px-5 py-12" style="padding-top: 150px;">
         
         {{-- Cabecera de la Sección --}}
         <div class="mb-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-6">
