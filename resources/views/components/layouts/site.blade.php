@@ -6,6 +6,9 @@
     'ogImage' => null,
     'canonical' => null,
     'showPlayer' => true,
+    'ogType' => 'website',
+    'ogArticlePublishedTime' => null,
+    'ogArticleAuthor' => null,
 ])
 
 @php
@@ -65,67 +68,70 @@
             $finalOgImage = $siteUrl . '/' . ltrim($finalOgImage, '/');
         }
     } else {
-        $finalOgImage = $logoUrl;
-        try {
-            $logoPath = null;
-            $parsedLogo = parse_url($logoUrl);
-            $logoPathOnly = $parsedLogo['path'] ?? '';
-            $host = $parsedLogo['host'] ?? '';
-            $siteHost = parse_url($siteUrl, PHP_URL_HOST) ?: '';
-            
-            if ($logoPathOnly && (
-                $host === '' || 
-                $host === 'localhost' || 
-                $host === '127.0.0.1' || 
-                strcasecmp($host, $siteHost) === 0
-            )) {
-                $logoPath = public_path($logoPathOnly);
-            }
-            
-            if ($logoPath && file_exists($logoPath)) {
-                $dir = dirname($logoPath);
-                $filename = pathinfo($logoPath, PATHINFO_FILENAME);
-                $ext = pathinfo($logoPath, PATHINFO_EXTENSION);
-                $shareFilename = $filename . '_share.png';
-                $sharePath = $dir . DIRECTORY_SEPARATOR . $shareFilename;
+        $finalOgImage = \Illuminate\Support\Facades\Cache::remember('og_share_image_url_' . md5($logoUrl), now()->addHours(24), function () use ($logoUrl, $siteUrl) {
+            $computedUrl = $logoUrl;
+            try {
+                $logoPath = null;
+                $parsedLogo = parse_url($logoUrl);
+                $logoPathOnly = $parsedLogo['path'] ?? '';
+                $host = $parsedLogo['host'] ?? '';
+                $siteHost = parse_url($siteUrl, PHP_URL_HOST) ?: '';
                 
-                if (!file_exists($sharePath) || filemtime($logoPath) > filemtime($sharePath)) {
-                    $src = null;
-                    if (strtolower($ext) === 'png') {
-                        $src = @imagecreatefrompng($logoPath);
-                    } elseif (in_array(strtolower($ext), ['jpg', 'jpeg'])) {
-                        $src = @imagecreatefromjpeg($logoPath);
-                    } elseif (strtolower($ext) === 'webp') {
-                        $src = @imagecreatefromwebp($logoPath);
+                if ($logoPathOnly && (
+                    $host === '' || 
+                    $host === 'localhost' || 
+                    $host === '127.0.0.1' || 
+                    strcasecmp($host, $siteHost) === 0
+                )) {
+                    $logoPath = public_path($logoPathOnly);
+                }
+                
+                if ($logoPath && file_exists($logoPath)) {
+                    $dir = dirname($logoPath);
+                    $filename = pathinfo($logoPath, PATHINFO_FILENAME);
+                    $ext = pathinfo($logoPath, PATHINFO_EXTENSION);
+                    $shareFilename = $filename . '_share.png';
+                    $sharePath = $dir . DIRECTORY_SEPARATOR . $shareFilename;
+                    
+                    if (!file_exists($sharePath) || filemtime($logoPath) > filemtime($sharePath)) {
+                        $src = null;
+                        if (strtolower($ext) === 'png') {
+                            $src = @imagecreatefrompng($logoPath);
+                        } elseif (in_array(strtolower($ext), ['jpg', 'jpeg'])) {
+                            $src = @imagecreatefromjpeg($logoPath);
+                        } elseif (strtolower($ext) === 'webp') {
+                            $src = @imagecreatefromwebp($logoPath);
+                        }
+                        
+                        if ($src) {
+                            $w = imagesx($src);
+                            $h = imagesy($src);
+                            
+                            $dst = imagecreatetruecolor($w, $h);
+                            $bgColor = imagecolorallocate($dst, 16, 16, 18); // Solid theme background (#101012)
+                            imagefill($dst, 0, 0, $bgColor);
+                            
+                            imagealphablending($dst, true);
+                            imagecopy($dst, $src, 0, 0, 0, 0, $w, $h);
+                            
+                            imagepng($dst, $sharePath);
+                            imagedestroy($src);
+                            imagedestroy($dst);
+                        }
                     }
                     
-                    if ($src) {
-                        $w = imagesx($src);
-                        $h = imagesy($src);
-                        
-                        $dst = imagecreatetruecolor($w, $h);
-                        $bgColor = imagecolorallocate($dst, 16, 16, 18); // Solid theme background (#101012)
-                        imagefill($dst, 0, 0, $bgColor);
-                        
-                        imagealphablending($dst, true);
-                        imagecopy($dst, $src, 0, 0, 0, 0, $w, $h);
-                        
-                        imagepng($dst, $sharePath);
-                        imagedestroy($src);
-                        imagedestroy($dst);
+                    if (file_exists($sharePath)) {
+                        $relativePath = str_replace(public_path(), '', $sharePath);
+                        $relativePath = str_replace('\\', '/', $relativePath);
+                        $computedUrl = $siteUrl . '/' . ltrim($relativePath, '/');
                     }
                 }
-                
-                if (file_exists($sharePath)) {
-                    $relativePath = str_replace(public_path(), '', $sharePath);
-                    $relativePath = str_replace('\\', '/', $relativePath);
-                    $finalOgImage = $siteUrl . '/' . ltrim($relativePath, '/');
-                }
+            } catch (\Throwable $e) {
+                // Graceful fallback to default logoUrl
+                logger()->error('Error generating og:image share logo: ' . $e->getMessage());
             }
-        } catch (\Throwable $e) {
-            // Graceful fallback to default logoUrl
-            logger()->error('Error generating og:image share logo: ' . $e->getMessage());
-        }
+            return $computedUrl;
+        });
     }
     
     $finalCanonical = $canonical ?? (request()->has('v') ? request()->fullUrl() : url()->current());
@@ -138,9 +144,6 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" style="scrollbar-gutter: stable;">
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>{{ $finalTitle }}</title>
@@ -154,9 +157,17 @@
     <meta property="og:title" content="{!! htmlspecialchars(html_entity_decode($finalOgTitle, ENT_QUOTES, 'UTF-8'), ENT_COMPAT, 'UTF-8') !!}">
     <meta property="og:description" content="{!! htmlspecialchars(html_entity_decode($finalOgDescription, ENT_QUOTES, 'UTF-8'), ENT_COMPAT, 'UTF-8') !!}">
     <meta property="og:image" content="{{ $finalOgImage }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta property="og:url" content="{{ $finalCanonical }}">
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="{{ $ogType }}">
     <meta property="og:locale" content="es_ES">
+    @if($ogType === 'article' && $ogArticlePublishedTime)
+        <meta property="article:published_time" content="{{ $ogArticlePublishedTime }}">
+        @if($ogArticleAuthor)
+            <meta property="article:author" content="{{ $ogArticleAuthor }}">
+        @endif
+    @endif
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
@@ -164,13 +175,28 @@
     <meta name="twitter:description" content="{!! htmlspecialchars(html_entity_decode($finalOgDescription, ENT_QUOTES, 'UTF-8'), ENT_COMPAT, 'UTF-8') !!}">
     <meta name="twitter:image" content="{{ $finalOgImage }}">
 
+    <!-- Structured Data (Schema.org) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "RadioStation",
+        "name": "Seven Rock Radio",
+        "url": "{{ config('app.url') }}",
+        "logo": "{{ $logoUrl }}",
+        "description": "{{ $finalDescription }}",
+        "genre": ["Rock", "Metal", "Hard Rock"]
+    }
+    </script>
+    @stack('jsonld')
+
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ $logoUrl }}">
     <link rel="apple-touch-icon" href="{{ $logoUrl }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="{{ $theme['google_fonts_url'] }}" rel="stylesheet">
+    <link href="{{ $theme['google_fonts_url'] }}&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="{{ $theme['google_fonts_url'] }}&display=swap" rel="stylesheet"></noscript>
     @stack('preloads')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -421,14 +447,7 @@
             }
         }
     </style>
-    <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ env('GOOGLE_ANALYTICS_ID') }}"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', '{{ env('GOOGLE_ANALYTICS_ID') }}');
-    </script>
+
     <style>
         :root {
             --lucille-accent: {{ $theme['visual']['accent_color'] }};
@@ -788,6 +807,26 @@
         function applyCookiePreferences(prefs) {
             console.log('Cookie preferences applied:', prefs);
         }
+    </script>
+
+    <!-- Google Analytics (Condicionado) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const consent = localStorage.getItem('sevenrock_cookie_consent');
+            if (consent) {
+                const prefs = JSON.parse(consent);
+                if (prefs.analytics) {
+                    const s = document.createElement('script');
+                    s.async = true;
+                    s.src = 'https://www.googletagmanager.com/gtag/js?id={{ config("services.google.analytics_id", env("GOOGLE_ANALYTICS_ID")) }}';
+                    document.head.appendChild(s);
+                    window.dataLayer = window.dataLayer || [];
+                    function gtag(){dataLayer.push(arguments);}
+                    gtag('js', new Date());
+                    gtag('config', '{{ config("services.google.analytics_id", env("GOOGLE_ANALYTICS_ID")) }}');
+                }
+            }
+        });
     </script>
 
     @stack('scripts')
