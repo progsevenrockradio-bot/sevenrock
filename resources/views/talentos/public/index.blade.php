@@ -1,5 +1,5 @@
 <x-layouts.site :title="'Seven Rock Radio - Talentos'" description="Descubre nuevos talentos musicales en Seven Rock Radio. Bandas independientes, artistas emergentes y musica original.">
-    <section class="mx-auto max-w-[1180px] px-5 py-16">
+    <section class="mx-auto max-w-[1180px] px-5 pt-32 pb-16">
         <!-- Section Header -->
         <div class="mb-8 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-8 shadow-xl">
             <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Talentos</div>

@@ -1,7 +1,7 @@
 <x-layouts.site :title="'Talentos - Registro'">
     @php $planDefinitions = \App\Support\TalentPlan::definitions(); @endphp
 
-    <section class="mx-auto max-w-[1180px] px-5 py-16">
+    <section class="mx-auto max-w-[1180px] px-5 pt-32 pb-16">
         <div class="grid gap-8 lg:grid-cols-[1fr_360px]" x-data="{ selectedPlan: '{{ request()->query('plan', old('plan', 'free')) }}' }">
             
             {{-- Formulario Principal --}}
