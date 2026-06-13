@@ -315,6 +315,18 @@
                 <textarea name="email_footer_notification" rows="3" class="lucille-product-field w-full text-xs" placeholder="Notificación de que su programa ha sido puesto en la parrilla de la radio.">{{ old('email_footer_notification', $ui['email_footer_notification'] ?? 'Notificación de que su programa ha sido puesto en la parrilla de la radio.') }}</textarea>
                 <p class="mt-2 text-[10px] text-[#7b7b7b]">Reemplaza el texto final que invitaba a revisar el episodio en archive.org.</p>
             </div>
+
+            <!-- ENVIAR CORREO DE PRUEBA -->
+            <div class="border-t border-[#2b2b2b] pt-5 mt-5">
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b] font-bold text-lucille-accent">✉️ Probar Plantilla de Email</label>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="email" name="test_email" form="test-email-form" class="lucille-product-field flex-1 text-xs" placeholder="ingresa-un-correo@ejemplo.com" required>
+                    <button type="submit" form="test-email-form" class="lucille-button-solid text-xs py-2 px-4 whitespace-nowrap bg-lucille-accent/10 hover:bg-lucille-accent border-lucille-accent/30 text-white font-bold transition-all">
+                        Enviar Correo de Prueba
+                    </button>
+                </div>
+                <p class="mt-2 text-[10px] text-[#7b7b7b]">Ingresa una dirección de correo para recibir un email de prueba con el nuevo diseño oscuro y tus textos personalizados.</p>
+            </div>
         </div>
     </section>
 </section>

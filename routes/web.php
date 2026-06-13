@@ -157,6 +157,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/manual', 'manual')->withoutMiddleware('role:Super Admin')->name('manual');
         Route::get('/manual/pdf', 'manualPdf')->withoutMiddleware('role:Super Admin')->name('manual.pdf');
         Route::put('/', 'update')->middleware('password.confirm')->name('update');
+        Route::post('/send-test-email', 'sendTestEmail')->name('send-test-email');
     });
 
     Route::controller(AdminAuditLogController::class)->prefix('audit-logs')->name('audit-logs.')->middleware('role:Super Admin')->group(function (): void {

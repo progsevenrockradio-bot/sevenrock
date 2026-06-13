@@ -177,4 +177,8 @@
             </div>
         </section>
     </form>
+
+    <form id="test-email-form" method="POST" action="{{ route('admin.settings.send-test-email') }}">
+        @csrf
+    </form>
 </x-layouts.admin>

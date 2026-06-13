@@ -391,4 +391,38 @@ class ThemeSettingsController extends Controller
 
         return $value !== '' ? $value : null;
     }
+
+    public function sendTestEmail(Request $request): RedirectResponse
+    {
+        $email = $request->input('test_email');
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return redirect()->back()->with('error', 'El correo de prueba no es válido.');
+        }
+
+        $mockEpisode = new \App\Models\RadioProgram([
+            'titulo_programa' => 'Metal Storm Show',
+            'numero_episodio' => 42,
+            'live_title' => 'Especial de Thrash Metal de los 80s',
+            'fecha_emision' => now(),
+            'archivo_mp3' => 'test-episode-42.mp3',
+        ]);
+        $mockEpisode->id = 999;
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($email)->send(
+                new \App\Mail\PodcastUploadedMail(
+                    episode: $mockEpisode,
+                    localPath: '/tmp/test-episode-42.mp3',
+                    remotePath: '/music/test-episode-42.mp3',
+                    radiobossVerified: true,
+                    archiveVerified: true,
+                    deliveryStatus: 'delivery_verified'
+                )
+            );
+
+            return redirect()->back()->with('status', 'Correo de prueba enviado correctamente a ' . $email);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Error al enviar el correo: ' . $e->getMessage());
+        }
+    }
 }
