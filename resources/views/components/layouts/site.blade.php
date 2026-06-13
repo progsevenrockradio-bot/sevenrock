@@ -162,12 +162,12 @@
     <meta property="og:url" content="{{ $finalCanonical }}">
     <meta property="og:type" content="{{ $ogType }}">
     <meta property="og:locale" content="es_ES">
-    @if($ogType === 'article' && $ogArticlePublishedTime)
+    <?php if($ogType === 'article' && $ogArticlePublishedTime): ?>
         <meta property="article:published_time" content="{{ $ogArticlePublishedTime }}">
-        @if($ogArticleAuthor)
+        <?php if($ogArticleAuthor): ?>
             <meta property="article:author" content="{{ $ogArticleAuthor }}">
-        @endif
-    @endif
+        <?php endif; ?>
+    <?php endif; ?>
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
@@ -178,8 +178,8 @@
     <!-- Structured Data (Schema.org) -->
     <script type="application/ld+json">
     {
-        "@context": "https://schema.org",
-        "@type": "RadioStation",
+        "@@context": "https://schema.org",
+        "@@type": "RadioStation",
         "name": "Seven Rock Radio",
         "url": "{{ config('app.url') }}",
         "logo": "{{ $logoUrl }}",
