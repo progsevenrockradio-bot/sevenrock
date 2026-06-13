@@ -1370,12 +1370,7 @@ class SiteController extends Controller
 
     private function singleEvent(string $slug): array
     {
-        $version = $this->cacheVersion('events');
-        $event = Cache::remember(
-            "site.events.single.{$slug}.v{$version}",
-            now()->addMinutes(20),
-            fn () => Event::query()->where('slug', $slug)->first()
-        );
+        $event = Event::query()->where('slug', $slug)->first();
 
         if ($event instanceof Event) {
             $startsAt = $event->starts_at ?? now();
