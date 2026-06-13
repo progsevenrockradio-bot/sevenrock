@@ -41,6 +41,7 @@ use App\Http\Controllers\AffiliateAuthController;
 use App\Http\Controllers\CommunityWallController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\EmailTemplateController as AdminEmailTemplateController;
+use App\Http\Controllers\Admin\EmailLogController as AdminEmailLogController;
 use App\Http\Controllers\ContractSigningController;
 
 Route::get('/', [SiteController::class, 'home'])->name('home');
@@ -313,6 +314,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/{path}/edit', 'edit')->name('edit');
         Route::put('/{path}', 'update')->name('update');
         Route::post('/test', 'sendTest')->name('test');
+    });
+
+    Route::prefix('email-logs')->name('email-logs.')->controller(AdminEmailLogController::class)->middleware('role:Super Admin')->group(function (): void {
+        Route::get('/', 'index')->name('index');
     });
 
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');

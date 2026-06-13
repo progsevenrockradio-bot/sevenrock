@@ -42,6 +42,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Support\Facades\Gate::define('viewLogViewer', function ($user) {
+            return $user && $user->hasRole('Super Admin');
+        });
 
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(10)->by($request->input('email') ?: $request->ip());

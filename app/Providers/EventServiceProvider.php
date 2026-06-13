@@ -22,6 +22,9 @@ final class EventServiceProvider extends ServiceProvider
      * @var array<class-string, array<int, class-string>>
      */
     protected $listen = [
+        \Illuminate\Mail\Events\MessageSent::class => [
+            \App\Listeners\LogSentEmail::class,
+        ],
         PodcastProcessed::class => [
             DispatchPodcastDistributionJobs::class,
         ],

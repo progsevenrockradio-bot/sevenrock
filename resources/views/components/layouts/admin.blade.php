@@ -297,6 +297,16 @@
                                 <span>Plantillas Correo</span>
                             </a>
 
+                            <a href="{{ route('admin.email-logs.index') }}" class="flex items-center gap-3 px-3 py-2 text-xs rounded transition-colors {{ request()->routeIs('admin.email-logs.*') ? 'bg-[rgba(255,255,255,.05)] text-[var(--lucille-accent)] font-medium border-l-2 border-[var(--lucille-accent)]' : 'text-gray-300 hover:bg-[rgba(255,255,255,.02)] hover:text-white' }}">
+                                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <span>Historial Correos</span>
+                            </a>
+
+                            <a href="{{ url('/log-viewer') }}" target="_blank" class="flex items-center gap-3 px-3 py-2 text-xs rounded transition-colors text-gray-300 hover:bg-[rgba(255,255,255,.02)] hover:text-white">
+                                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                <span>Visor de Logs</span>
+                            </a>
+
                             <div class="my-4 border-t border-[rgba(255,255,255,.05)]"></div>
                         @endif
                     </ul>
