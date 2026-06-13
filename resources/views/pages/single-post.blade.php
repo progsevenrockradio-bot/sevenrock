@@ -26,9 +26,32 @@
 
 <x-layouts.site 
     title="Seven Rock Radio - {{ $post['title'] }}"
+    og-title="{{ $post['title'] }}"
+    og-type="article"
     :og-image="$shareImage"
     :description="$postDescription"
+    :og-article-published-time="data_get($post, 'published_at')"
+    :og-article-author="data_get($post, 'author')"
 >
+    @push('jsonld')
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "NewsArticle",
+        "headline": "{{ $shareTitle }}",
+        "image": [
+            "{{ $shareImage }}"
+        ],
+        "datePublished": "{{ data_get($post, 'published_at') }}",
+        "dateModified": "{{ data_get($post, 'updated_at') }}",
+        "author": [{
+            "@@type": "Person",
+            "name": "{{ data_get($post, 'author') }}"
+        }]
+    }
+    </script>
+    @endpush
+
 @once
 <style>
     .radio-player-share-panel {
@@ -82,7 +105,7 @@
                 <main class="lucille-blog-standard-main">
                     <article>
                         <div class="embedded-wall-socket">
-                            <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ $post['title'] }}" class="mb-0 w-full" loading="lazy">
+                            <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ $post['title'] }}" width="1200" height="630" class="mb-0 w-full" loading="eager" decoding="async">
                         </div>
 
                         <div class="lucille-single-post-body mt-0 space-y-5">

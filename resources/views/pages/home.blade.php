@@ -1,4 +1,5 @@
 <x-layouts.site title="Seven Rock Radio - Inicio" description="Seven Rock Radio — Musica rock, entrevistas, eventos y la mejor vibra. Tu radio rock online. Escucha en vivo, descubre nuevos talentos y disfruta del mejor rock.">
+    <h1 class="sr-only">Seven Rock Radio - Tu radio rock online</h1>
     @push('preloads')
         @if (!empty($themeAppearance['hero_slides']) && isset($themeAppearance['hero_slides'][0]['image']))
             @php
@@ -70,7 +71,7 @@
                             <div>
                                 <!-- Portada -->
                                 <div class="relative aspect-square overflow-hidden border border-[#2b2b2b] bg-[#111]">
-                                    <img src="{{ $release->cover_image_url }}" alt="{{ $release->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                    <img src="{{ $release->cover_image_url }}" alt="{{ $release->title }}" width="400" height="400" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
                                     @if($release->youtube_url)
                                         <a href="{{ $release->youtube_url }}" target="_blank" rel="noreferrer" class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                             <svg class="h-12 w-12 text-[#c32720] hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
