@@ -20,7 +20,7 @@
 
     <x-home.headline-ticker :ticker="$headlineTicker" />
 
-    <x-home.partners-slider :agencies="$agencies" />
+    {{-- <x-home.partners-slider :agencies="$agencies" /> --}}
 
     @if (data_get($featuredStories, 'enabled', false))
     <x-sections.background-band class="home-section-texture home-section-gray">
