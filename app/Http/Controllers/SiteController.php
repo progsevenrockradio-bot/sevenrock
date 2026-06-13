@@ -366,12 +366,12 @@ class SiteController extends Controller
 
                 $programSlugMap = [];
                 try {
-                    $programSlugMap = MasterProgram::query()
-                        ->whereNotNull('archive_identifier')
-                        ->where('archive_identifier', '!=', '')
-                        ->get()
-                        ->pluck('archive_identifier', 'nombre')
-                        ->toArray();
+                    if (isset($masterPrograms)) {
+                        $programSlugMap = $masterPrograms
+                            ->filter(fn ($p) => filled($p->archive_identifier))
+                            ->pluck('archive_identifier', 'nombre')
+                            ->toArray();
+                    }
                 } catch (Throwable) {
                 }
 
@@ -385,9 +385,22 @@ class SiteController extends Controller
         );
 
         $programsByDay = $cached['programsByDay'];
+        
+        $allProgramIds = collect($programsByDay)
+            ->flatMap(fn ($day) => collect($day['programs'])->pluck('id'))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $freshPrograms = MasterProgram::query()
+            ->whereIn('id', $allProgramIds)
+            ->get()
+            ->keyBy('id');
+
         foreach ($programsByDay as &$dayGroup) {
             foreach ($dayGroup['programs'] as &$prog) {
-                $dbProg = MasterProgram::find($prog['id']);
+                $dbProg = $freshPrograms->get($prog['id']);
                 if ($dbProg) {
                     $archiveOrgService->syncProgramViews($dbProg);
                     $prog['vistas_archive'] = $dbProg->vistas_archive;
@@ -419,50 +432,61 @@ class SiteController extends Controller
                 ->where('archive_identifier', $identifier)
                 ->first();
 
-            // Intentar obtener episodios desde archive.org via HTTP directo
+            // Intentar obtener episodios desde archive.org via HTTP directo y cachearlos
             try {
-                $json = @file_get_contents('https://archive.org/details/' . rawurlencode($identifier) . '?output=json', false, stream_context_create([
-                    'http' => ['timeout' => 8, 'method' => 'GET'],
-                    'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
-                ]));
-                if ($json !== false) {
-                    $data = json_decode($json, true);
-                    if (is_array($data) && !empty($data['files'])) {
-                        $files = $data['files'];
-                        $metadata = $data['metadata'] ?? [];
-                        $parsedEpisodes = [];
-                        foreach ($files as $key => $file) {
-                            $name = $file['name'] ?? ltrim($key, '/');
-                            $format = strtolower($file['format'] ?? '');
-                            if (str_ends_with($name, '.mp3') || str_contains($format, 'mp3')) {
-                                $parsedEpisodes[] = [
-                                    'id' => $name,
-                                    'title' => trim($file['title'] ?? $name),
-                                    'src' => 'https://archive.org/download/' . rawurlencode($identifier) . '/' . implode('/', array_map('rawurlencode', explode('/', ltrim($name, '/')))),
-                                    'published_at' => $file['mtime'] ?? 0,
-                                    'views' => $file['downloads'] ?? null,
-                                    'duration' => trim($file['length'] ?? ''),
-                                    'size' => $file['size'] ?? null,
-                                ];
+                $cacheKey = "site.program.detail.archive_data." . md5($identifier);
+                $archiveData = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($identifier, $masterProgram) {
+                    $json = @file_get_contents('https://archive.org/details/' . rawurlencode($identifier) . '?output=json', false, stream_context_create([
+                        'http' => ['timeout' => 8, 'method' => 'GET'],
+                        'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
+                    ]));
+                    
+                    if ($json !== false) {
+                        $data = json_decode($json, true);
+                        if (is_array($data) && !empty($data['files'])) {
+                            $files = $data['files'];
+                            $metadata = $data['metadata'] ?? [];
+                            $parsedEpisodes = [];
+                            foreach ($files as $key => $file) {
+                                $name = $file['name'] ?? ltrim($key, '/');
+                                $format = strtolower($file['format'] ?? '');
+                                if (str_ends_with($name, '.mp3') || str_contains($format, 'mp3')) {
+                                    $parsedEpisodes[] = [
+                                        'id' => $name,
+                                        'title' => trim($file['title'] ?? $name),
+                                        'src' => 'https://archive.org/download/' . rawurlencode($identifier) . '/' . implode('/', array_map('rawurlencode', explode('/', ltrim($name, '/')))),
+                                        'published_at' => $file['mtime'] ?? 0,
+                                        'views' => $file['downloads'] ?? null,
+                                        'duration' => trim($file['length'] ?? ''),
+                                        'size' => $file['size'] ?? null,
+                                    ];
+                                }
                             }
+                            usort($parsedEpisodes, fn($a, $b) => ($b['published_at'] ?? 0) <=> ($a['published_at'] ?? 0));
+                            
+                            $desc = $metadata['description'] ?? '';
+                            if (is_array($desc)) $desc = $desc[0] ?? '';
+                            
+                            $programData = [
+                                'id' => $identifier,
+                                'title' => $masterProgram?->nombre ?? ($metadata['title'][0] ?? $metadata['title'] ?? 'Programa'),
+                                'name' => $masterProgram?->nombre ?? ($metadata['title'][0] ?? $metadata['title'] ?? 'Programa'),
+                                'cover' => $masterProgram?->cover_url ?: asset('assets/lucille/logo.png'),
+                                'host' => $masterProgram?->host ?? ($metadata['creator'][0] ?? $metadata['creator'] ?? ''),
+                                'conductor' => $masterProgram?->conductor ?? '',
+                                'schedule' => $masterProgram?->schedule ?? '',
+                                'description' => $masterProgram?->description ?: trim(strip_tags(is_string($desc) ? $desc : '')),
+                            ];
+                            
+                            return ['episodes' => $parsedEpisodes, 'program' => $programData];
                         }
-                        usort($parsedEpisodes, fn($a, $b) => ($b['published_at'] ?? 0) <=> ($a['published_at'] ?? 0));
-                        $episodes = $parsedEpisodes;
-                        
-                        $desc = $metadata['description'] ?? '';
-                        if (is_array($desc)) $desc = $desc[0] ?? '';
-                        
-                        $program = [
-                            'id' => $identifier,
-                            'title' => $masterProgram?->nombre ?? ($metadata['title'][0] ?? $metadata['title'] ?? 'Programa'),
-                            'name' => $masterProgram?->nombre ?? ($metadata['title'][0] ?? $metadata['title'] ?? 'Programa'),
-                            'cover' => $masterProgram?->cover_url ?: asset('assets/lucille/logo.png'),
-                            'host' => $masterProgram?->host ?? ($metadata['creator'][0] ?? $metadata['creator'] ?? ''),
-                            'conductor' => $masterProgram?->conductor ?? '',
-                            'schedule' => $masterProgram?->schedule ?? '',
-                            'description' => $masterProgram?->description ?: trim(strip_tags(is_string($desc) ? $desc : '')),
-                        ];
                     }
+                    return null;
+                });
+                
+                if ($archiveData) {
+                    $episodes = $archiveData['episodes'];
+                    $program = $archiveData['program'];
                 }
             } catch (Throwable) {
                 // Fallback silencioso
@@ -701,8 +725,6 @@ class SiteController extends Controller
                     ->orderBy('id')
                     ->first(['title', 'slug', 'published_at']), null),
                 'recentPosts' => $recentPosts,
-                'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
-                'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
                 'archives' => $this->cachedPostArchives(),
                 'archiveActiveYear' => $post->published_at?->format('Y'),
                 'archiveActiveMonth' => $post->published_at?->format('m'),
