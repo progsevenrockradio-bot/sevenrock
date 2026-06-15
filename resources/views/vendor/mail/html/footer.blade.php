@@ -32,22 +32,30 @@
         <tr>
             @if($facebook)
             <td align="center" style="padding: 0 6px;">
-                <a href="{{ $facebook }}" target="_blank" style="display: inline-block; width: 34px; height: 34px; border-radius: 50%; background-color: #2b2b2b; color: #a1a1aa; line-height: 34px; text-align: center; font-family: sans-serif; font-weight: bold; text-decoration: none; font-size: 14px;">f</a>
+                <a href="{{ $facebook }}" target="_blank" style="display: inline-block; width: 34px; height: 34px; border-radius: 50%; background-color: #2b2b2b; line-height: 34px; text-align: center; text-decoration: none;">
+                    <img src="https://img.icons8.com/ios-filled/50/a1a1aa/facebook-new.png" alt="Facebook" width="16" height="16" style="vertical-align: middle; display: inline-block; border: none; margin-top: 9px;" />
+                </a>
             </td>
             @endif
             @if($twitter)
             <td align="center" style="padding: 0 6px;">
-                <a href="{{ $twitter }}" target="_blank" style="display: inline-block; width: 34px; height: 34px; border-radius: 50%; background-color: #2b2b2b; color: #a1a1aa; line-height: 34px; text-align: center; font-family: sans-serif; font-weight: bold; text-decoration: none; font-size: 14px;">X</a>
+                <a href="{{ $twitter }}" target="_blank" style="display: inline-block; width: 34px; height: 34px; border-radius: 50%; background-color: #2b2b2b; line-height: 34px; text-align: center; text-decoration: none;">
+                    <img src="https://img.icons8.com/ios-filled/50/a1a1aa/twitterx--v1.png" alt="X" width="16" height="16" style="vertical-align: middle; display: inline-block; border: none; margin-top: 9px;" />
+                </a>
             </td>
             @endif
             @if($instagram)
             <td align="center" style="padding: 0 6px;">
-                <a href="{{ $instagram }}" target="_blank" style="display: inline-block; width: 34px; height: 34px; border-radius: 50%; background-color: #2b2b2b; color: #a1a1aa; line-height: 34px; text-align: center; font-family: sans-serif; font-weight: bold; text-decoration: none; font-size: 14px;">ig</a>
+                <a href="{{ $instagram }}" target="_blank" style="display: inline-block; width: 34px; height: 34px; border-radius: 50%; background-color: #2b2b2b; line-height: 34px; text-align: center; text-decoration: none;">
+                    <img src="https://img.icons8.com/ios-filled/50/a1a1aa/instagram-new--v1.png" alt="Instagram" width="16" height="16" style="vertical-align: middle; display: inline-block; border: none; margin-top: 9px;" />
+                </a>
             </td>
             @endif
             @if($youtube)
             <td align="center" style="padding: 0 6px;">
-                <a href="{{ $youtube }}" target="_blank" style="display: inline-block; width: 34px; height: 34px; border-radius: 50%; background-color: #2b2b2b; color: #a1a1aa; line-height: 34px; text-align: center; font-family: sans-serif; font-weight: bold; text-decoration: none; font-size: 14px;">yt</a>
+                <a href="{{ $youtube }}" target="_blank" style="display: inline-block; width: 34px; height: 34px; border-radius: 50%; background-color: #2b2b2b; line-height: 34px; text-align: center; text-decoration: none;">
+                    <img src="https://img.icons8.com/ios-filled/50/a1a1aa/youtube-play.png" alt="YouTube" width="16" height="16" style="vertical-align: middle; display: inline-block; border: none; margin-top: 9px;" />
+                </a>
             </td>
             @endif
         </tr>
