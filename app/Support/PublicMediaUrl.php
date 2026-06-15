@@ -163,6 +163,16 @@ class PublicMediaUrl
                 return Storage::disk('public')->url($storageCandidate);
             }
 
+            if ($storageCandidate !== '' && self::isCloudflareR2Configured()) {
+                try {
+                    if (Storage::disk('r2')->exists($storageCandidate)) {
+                        return self::getCloudflareR2Url($storageCandidate);
+                    }
+                } catch (\Throwable) {
+                    // Ignore and keep checking other candidates.
+                }
+            }
+
             if ($storageCandidate !== '' && self::isBackblazeConfigured()) {
                 try {
                     if (Storage::disk('backblaze')->exists($storageCandidate)) {
@@ -234,6 +244,16 @@ class PublicMediaUrl
         }
 
         try {
+            if ($disk === 'r2' && self::isCloudflareR2Configured()) {
+                if (Storage::disk('r2')->exists($key)) {
+                    return self::getCloudflareR2Url($key);
+                }
+
+                if (Storage::disk('public')->exists($key)) {
+                    return Storage::disk('public')->url($key);
+                }
+            }
+
             if ($disk === 'backblaze' && self::isBackblazeConfigured()) {
                 if (Storage::disk('backblaze')->exists($key)) {
                     return self::getBackblazeUrl($key);
@@ -246,6 +266,10 @@ class PublicMediaUrl
 
             if (Storage::disk('public')->exists($key)) {
                 return Storage::disk('public')->url($key);
+            }
+
+            if ($disk !== 'public' && self::isCloudflareR2Configured() && Storage::disk('r2')->exists($key)) {
+                return self::getCloudflareR2Url($key);
             }
 
             if ($disk !== 'public' && self::isBackblazeConfigured() && Storage::disk('backblaze')->exists($key)) {
@@ -265,6 +289,14 @@ class PublicMediaUrl
             && trim((string) config('filesystems.disks.backblaze.bucket_id', '')) !== ''
             && trim((string) config('filesystems.disks.backblaze.bucket_name', '')) !== ''
             && trim((string) config('filesystems.disks.backblaze.url', '')) !== '';
+    }
+
+    private static function isCloudflareR2Configured(): bool
+    {
+        return trim((string) config('filesystems.disks.r2.key', '')) !== ''
+            && trim((string) config('filesystems.disks.r2.secret', '')) !== ''
+            && trim((string) config('filesystems.disks.r2.bucket', '')) !== ''
+            && trim((string) config('filesystems.disks.r2.endpoint', '')) !== '';
     }
 
     private static function resolveLegacyWordPressUploadUrl(string $value): ?string
@@ -446,6 +478,20 @@ class PublicMediaUrl
 
         try {
             return Storage::disk('backblaze')->url($key);
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
+    private static function getCloudflareR2Url(string $key): string
+    {
+        $r2Url = trim((string) config('filesystems.disks.r2.url', ''));
+        if ($r2Url !== '') {
+            return rtrim($r2Url, '/') . '/' . ltrim($key, '/');
+        }
+
+        try {
+            return Storage::disk('r2')->url($key);
         } catch (\Throwable) {
             return '';
         }
