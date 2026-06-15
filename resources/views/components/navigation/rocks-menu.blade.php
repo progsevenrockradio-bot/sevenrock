@@ -37,6 +37,7 @@
     $brandMark = $themeData['visual']['brand_mark'] ?? $themeData['brand_mark'] ?? $themeData['site_name'] ?? 'Seven Rock Radio';
     $brandDisplayMode = $themeData['visual']['brand_display_mode'] ?? $themeData['brand_display_mode'] ?? 'mark';
     $logoUrl = $themeData['media']['logo_url'] ?? $themeData['logo_url'] ?? $themeSettings->logo_url;
+    $logoUrl = \App\Support\PublicMediaUrl::normalize($logoUrl) ?? $logoUrl;
     $logoHeight = $themeSettings->logo_height ?? 62;
 @endphp
 
