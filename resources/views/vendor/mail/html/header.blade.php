@@ -12,7 +12,7 @@
                 <img src="{{ url($logoUrl) }}" class="logo" alt="{{ config('app.name') }}" style="max-height: 55px; width: auto; object-fit: contain; vertical-align: middle; display: block;">
             </td>
             <td style="vertical-align: middle;">
-                <span style="font-family: 'Rock Salt', cursive, sans-serif; color: #c32720; font-size: 20px; font-weight: normal; text-transform: none; letter-spacing: normal; text-shadow: 0 1.5px 3px rgba(0,0,0,0.3); display: inline-block; padding-top: 5px;">{{ \App\Models\ThemeSetting::current()->site_name ?? 'Seven Rock Radio' }}</span>
+                <span class="brand-mark-text" style="font-family: 'Rock Salt', cursive, sans-serif; color: #c32720; font-size: 20px; font-weight: normal; text-transform: none; letter-spacing: normal; text-shadow: 0 1.5px 3px rgba(0,0,0,0.3); display: inline-block; padding-top: 5px;">{{ \App\Models\ThemeSetting::current()->site_name ?? 'Seven Rock Radio' }}</span>
             </td>
         </tr>
     </table>
