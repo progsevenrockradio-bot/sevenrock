@@ -43,6 +43,7 @@ use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\EmailTemplateController as AdminEmailTemplateController;
 use App\Http\Controllers\Admin\EmailLogController as AdminEmailLogController;
 use App\Http\Controllers\ContractSigningController;
+use App\Http\Controllers\SubmissionController;
 
 Route::get('/', [SiteController::class, 'home'])->name('home');
 Route::get('/events', [SiteController::class, 'events'])->name('events');
@@ -422,6 +423,10 @@ Route::prefix('contratos')->name('contratos.')->controller(ContractSigningContro
     Route::get('/exito/{token}', 'exito')->name('exito');
     Route::get('/descargar/{token}', 'download')->name('download');
 });
+
+// Rutas de Recepción de Maquetas (Track Submissions)
+Route::get('/enviar-maqueta', [SubmissionController::class, 'create'])->name('submissions.create');
+Route::post('/enviar-maqueta', [SubmissionController::class, 'store'])->name('submissions.store');
 
 Route::get('/storage/{path}', function (string $path) {
     $filePath = storage_path('app/public/' . $path);
