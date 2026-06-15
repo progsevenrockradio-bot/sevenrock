@@ -1,4 +1,4 @@
-<x-layouts.site title="Seven Rock Radio - Enviar Maqueta" description="Envía tu maqueta a Seven Rock Radio para que nuestro equipo de A&R la escuche." ogImage="{{ asset('images/tu-imagen-para-maquetas.jpg') }}">
+<x-layouts.site title="Seven Rock Radio - Enviar Maqueta" description="Envía tu maqueta a Seven Rock Radio para que nuestro equipo de A&R la escuche." ogImage="{{ asset('images/tu-imagen-para-maquetas.png') }}">
     <x-sections.page-heading title="Enviar Maqueta" overlay="rgba(0,0,0,0)" :image="null" />
 
     <section>
