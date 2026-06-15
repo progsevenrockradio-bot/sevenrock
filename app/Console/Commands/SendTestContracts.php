@@ -90,7 +90,7 @@ class SendTestContracts extends Command
             $this->info("¡Contrato {$plan} enviado a {$email}!");
             
             // Opcional: borrar el pdf de prueba
-            Storage::delete($pdfPath);
+            // Storage::delete($pdfPath);
         }
 
         $this->info("\n¡Todos los contratos de prueba han sido enviados exitosamente!");
