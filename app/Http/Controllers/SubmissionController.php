@@ -3,12 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\TrackSubmission;
+use App\Mail\TrackSubmissionReceived;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class SubmissionController extends Controller
 {
+    /**
+     * Muestra el formulario para enviar una maqueta.
+     */
+    public function create()
+    {
+        return view('submissions.create');
+    }
+
     /**
      * Almacena una nueva maqueta (Track Submission).
      */
@@ -35,7 +45,7 @@ class SubmissionController extends Controller
         $path = Storage::disk('r2')->putFile($folderPath, $file);
 
         // 3. Guardar en Base de Datos
-        TrackSubmission::create([
+        $submission = TrackSubmission::create([
             'band_name'     => $validated['band_name'],
             'song_title'    => $validated['song_title'],
             'contact_email' => $validated['contact_email'],
@@ -44,7 +54,10 @@ class SubmissionController extends Controller
             'status'        => 'pending',
         ]);
 
-        // 4. Respuesta
+        // 4. Enviar correo de confirmación al artista
+        Mail::to($submission->contact_email)->send(new TrackSubmissionReceived($submission));
+
+        // 5. Respuesta
         // Si la petición viene de Axios/Fetch API (Javascript)
         if ($request->expectsJson()) {
             return response()->json([
