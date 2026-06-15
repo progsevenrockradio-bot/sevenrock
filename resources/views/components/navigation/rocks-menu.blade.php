@@ -26,6 +26,7 @@
             ['label' => 'Muro de la Comunidad', 'route' => 'comunidad.muro'],
             ['label' => 'Nuevos Lanzamientos', 'route' => 'new-releases.index'],
             ['label' => 'Registrar Banda', 'route' => 'talents.register'],
+            ['label' => 'Enviar Maqueta', 'route' => 'submissions.create'],
         ]],
         ['label' => 'Tienda', 'route' => 'shop'],
 
