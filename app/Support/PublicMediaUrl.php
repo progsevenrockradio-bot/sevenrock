@@ -76,6 +76,18 @@ class PublicMediaUrl
         if ($isUrl) {
             $normalizedUrl = str_replace(' ', '%20', $value);
 
+            $r2Url = trim((string) config('filesystems.disks.r2.url', ''));
+            if ($r2Url !== '') {
+                $customHost = parse_url($r2Url, PHP_URL_HOST);
+                if ($customHost) {
+                    $normalizedUrl = preg_replace(
+                        '~https?://' . preg_quote((string) $customHost, '~') . '/file/[^/]+/~i',
+                        rtrim($r2Url, '/') . '/',
+                        $normalizedUrl
+                    ) ?? $normalizedUrl;
+                }
+            }
+
             $b2Url = trim((string) config('filesystems.disks.backblaze.url', ''));
             $customResolves = self::customB2UrlResolves();
             $bucketName = trim((string) config('filesystems.disks.backblaze.bucket_name', ''));
@@ -94,18 +106,20 @@ class PublicMediaUrl
                     $customHost = parse_url($b2Url, PHP_URL_HOST);
                     if ($customHost) {
                         $normalizedUrl = preg_replace(
-                            '~https?://' . preg_quote($customHost, '~') . '/file/[^/]+/~i',
+                            '~https?://' . preg_quote((string) $customHost, '~') . '/file/[^/]+/~i',
                             'https://f003.backblazeb2.com/file/' . $bucketName . '/',
                             $normalizedUrl
                         ) ?? $normalizedUrl;
                     }
                 }
 
-                $normalizedUrl = preg_replace(
-                    '~https?://media\.sevenrockradio\.com/file/[^/]+/~i',
-                    'https://f003.backblazeb2.com/file/' . $bucketName . '/',
-                    $normalizedUrl
-                ) ?? $normalizedUrl;
+                if ($r2Url === '') {
+                    $normalizedUrl = preg_replace(
+                        '~https?://media\.sevenrockradio\.com/file/[^/]+/~i',
+                        'https://f003.backblazeb2.com/file/' . $bucketName . '/',
+                        $normalizedUrl
+                    ) ?? $normalizedUrl;
+                }
             }
 
             // Fast path: convert WordPress upload URLs to local legacy-wp-uploads
