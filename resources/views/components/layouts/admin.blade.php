@@ -172,6 +172,12 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('admin.submissions.index') }}" class="flex items-center gap-3 px-3 py-2 text-xs rounded transition-colors {{ request()->routeIs('admin.submissions.*') ? 'bg-[rgba(255,255,255,.05)] text-[var(--lucille-accent)] font-medium border-l-2 border-[var(--lucille-accent)]' : 'text-gray-300 hover:bg-[rgba(255,255,255,.02)] hover:text-white' }}">
+                                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                <span>Buzón de Maquetas</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ route('admin.events.index') }}" class="flex items-center gap-3 px-3 py-2 text-xs rounded transition-colors {{ request()->routeIs('admin.events.index') || request()->routeIs('admin.events.create') || request()->routeIs('admin.events.edit') ? 'bg-[rgba(255,255,255,.05)] text-[var(--lucille-accent)] font-medium border-l-2 border-[var(--lucille-accent)]' : 'text-gray-300 hover:bg-[rgba(255,255,255,.02)] hover:text-white' }}">
                                 <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 <span>{{ $admin['events_heading'] ?? 'Events' }}</span>

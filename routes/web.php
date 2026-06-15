@@ -117,6 +117,12 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 'throttle:admin-actions'])->group(function (): void {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
 
+    Route::controller(\App\Http\Controllers\Admin\AdminTrackSubmissionController::class)->prefix('submissions')->name('submissions.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::patch('/{submission}/status', 'updateStatus')->name('updateStatus');
+        Route::delete('/{submission}', 'destroy')->name('destroy');
+    });
+
     Route::controller(AdminPostController::class)->prefix('posts')->name('posts.')->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
