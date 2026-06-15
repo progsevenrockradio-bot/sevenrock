@@ -18,7 +18,7 @@ Has recibido un nuevo mensaje a través del formulario de **{{ $source }}** de S
 
 ---
 
-<x-mail::button :url="mailto:{{ $senderEmail }}">
+<x-mail::button url="mailto:{{ $senderEmail }}">
 Responder a {{ $senderName }}
 </x-mail::button>
 
