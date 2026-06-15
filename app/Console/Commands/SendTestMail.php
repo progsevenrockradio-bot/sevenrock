@@ -45,6 +45,31 @@ class SendTestMail extends Command
             'Amante del Rock'
         );
 
+        // 4. Correo de Alerta de Podcast
+        $dummyProgram = \App\Models\RadioProgram::first() ?? new \App\Models\RadioProgram([
+            'titulo_programa' => 'Metal Vortex',
+            'numero_episodio' => 42,
+            'live_title' => 'Especial de Thrash Metal de los 80s',
+            'archivo_mp3' => 'metal-vortex-ep42.mp3',
+        ]);
+        $mailable4 = new \App\Mail\PodcastUploadedMail(
+            $dummyProgram,
+            '/var/www/uploads/metal-vortex-ep42.mp3',
+            'remote/path',
+            true,
+            true,
+            'delivery_verified'
+        );
+
+        // 5. Correo de Firma de Contrato
+        $dummyContract = new \App\Models\Contract([
+            'title' => 'Acuerdo de Distribución Musical',
+            'signer_name' => 'Dave Mustaine',
+            'signer_email' => $email,
+            'token' => 'dummy-token-1234',
+        ]);
+        $mailable5 = new \App\Mail\ContractSignRequestMail($dummyContract);
+
         try {
             Mail::to($email)->send($mailable1);
             $this->info("¡Correo de prueba 1 (Diseño General) enviado a {$email}!");
@@ -54,6 +79,12 @@ class SendTestMail extends Command
 
             Mail::to($email)->send($mailable3);
             $this->info("¡Correo de prueba 3 (Marketing) enviado a {$email}!");
+
+            Mail::to($email)->send($mailable4);
+            $this->info("¡Correo de prueba 4 (Podcast Upload) enviado a {$email}!");
+
+            Mail::to($email)->send($mailable5);
+            $this->info("¡Correo de prueba 5 (Firma de Contrato) enviado a {$email}!");
 
             $this->info("\n¡Todos los correos de prueba han sido enviados exitosamente!");
         } catch (\Throwable $e) {

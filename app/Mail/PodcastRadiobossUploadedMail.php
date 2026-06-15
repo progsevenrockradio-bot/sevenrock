@@ -48,7 +48,7 @@ final class PodcastRadiobossUploadedMail extends Mailable
             : null;
 
         return new Content(
-            view: 'emails.podcast-radioboss-uploaded',
+            markdown: 'emails.podcast-radioboss-uploaded',
             with: [
                 'episode' => $this->episode,
                 'archiveItemUrl' => $archiveItemUrl,

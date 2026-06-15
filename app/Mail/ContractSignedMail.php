@@ -41,7 +41,7 @@ final class ContractSignedMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.contracts.signed',
+            markdown: 'emails.contracts.signed',
             with: [
                 'contract' => $this->contract,
             ],

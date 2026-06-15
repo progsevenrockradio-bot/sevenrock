@@ -40,7 +40,7 @@ final class ContractSignRequestMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.contracts.sign-request',
+            markdown: 'emails.contracts.sign-request',
             with: [
                 'contract' => $this->contract,
                 'signingUrl' => $this->contract->getSigningUrl(),

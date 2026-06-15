@@ -31,7 +31,7 @@ final class TalentProspectMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.talents.prospect-info',
+            markdown: 'emails.talents.prospect-info',
             with: [
                 'senderName' => $this->senderName,
                 'bandName' => $this->bandName,
