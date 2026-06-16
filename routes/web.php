@@ -123,6 +123,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/', 'index')->name('index');
         Route::patch('/{submission}/status', 'updateStatus')->name('updateStatus');
         Route::delete('/{submission}', 'destroy')->name('destroy');
+        Route::get('/{submission}/download', 'download')->name('download');
     });
 
     Route::controller(AdminPostController::class)->prefix('posts')->name('posts.')->group(function (): void {

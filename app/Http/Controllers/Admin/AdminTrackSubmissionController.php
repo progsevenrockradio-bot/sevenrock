@@ -90,4 +90,20 @@ class AdminTrackSubmissionController extends Controller
             return redirect()->back()->with('error', 'Ocurrió un error al intentar eliminar la maqueta.');
         }
     }
+
+    /**
+     * Download the specified submission MP3 file with a clean name.
+     */
+    public function download(TrackSubmission $submission)
+    {
+        if (!$submission->file_path || !Storage::disk(config('filesystems.default'))->exists($submission->file_path)) {
+            return redirect()->back()->with('error', 'El archivo de audio no se encontró en el servidor.');
+        }
+
+        $cleanBandName = \Illuminate\Support\Str::slug($submission->band_name);
+        $cleanSongTitle = \Illuminate\Support\Str::slug($submission->song_title);
+        $fileName = "{$cleanBandName}-{$cleanSongTitle}.mp3";
+
+        return Storage::disk(config('filesystems.default'))->download($submission->file_path, $fileName);
+    }
 }
