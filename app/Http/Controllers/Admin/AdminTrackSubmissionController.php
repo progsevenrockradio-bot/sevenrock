@@ -110,10 +110,7 @@ class AdminTrackSubmissionController extends Controller
             file_put_contents($tempPath, Storage::disk('r2')->get($submission->file_path));
 
             // 2. Initialize getID3 tag writer
-            require_once base_path('vendor/james-heinrich/getid3/getid3/getid3.php');
-            require_once base_path('vendor/james-heinrich/getid3/getid3/write.php');
-
-            $tagwriter = new \getid3_writetags;
+            $tagwriter = new \JamesHeinrich\GetID3\WriteTags();
             $tagwriter->filename = $tempPath;
             $tagwriter->tagformats = ['id3v2.3'];
             $tagwriter->overwrite_tags = true; // Overwrite to ensure clean tags
