@@ -104,9 +104,30 @@ class MediaKitMail extends Mailable
             'includeLogo'   => $this->options['include_logo'] ?? true,
         ]);
 
-        return [
-            Attachment::fromData(fn () => $pdf->output(), 'Seven_Rock_Radio_Media_Kit.pdf')
+        $attachments = [
+            Attachment::fromData(fn () => $pdf->output(), 'Media_Kit_Seven_Rock_Radio.pdf')
                 ->withMime('application/pdf')
         ];
+
+        // Attach logo if includeLogo is true
+        $includeLogo = $this->options['include_logo'] ?? true;
+        if ($includeLogo) {
+            $settings = \App\Models\ThemeSetting::current();
+            if (!empty($settings->logo_url)) {
+                $logoContent = @file_get_contents($settings->logo_url);
+                if ($logoContent) {
+                    $ext = pathinfo($settings->logo_url, PATHINFO_EXTENSION) ?: 'png';
+                    $attachments[] = Attachment::fromData(fn () => $logoContent, 'Logo_Oficial.' . $ext);
+                }
+            } else {
+                // Attach default logo
+                $logoPath = public_path('assets/lucille/logo.png');
+                if (file_exists($logoPath)) {
+                    $attachments[] = Attachment::fromPath($logoPath)->as('Logo_Oficial.png');
+                }
+            }
+        }
+
+        return $attachments;
     }
 }

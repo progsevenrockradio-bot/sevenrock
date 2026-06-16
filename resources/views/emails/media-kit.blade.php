@@ -33,6 +33,23 @@
                 </div>
             @endif
 
+            @if(!empty($theme['social_links']))
+                <div style="background-color: #1a1a1a; padding: 20px; border: 1px solid #2b2b2b; border-radius: 8px; margin-bottom: 30px;">
+                    <h3 style="margin-top: 0; color: #eb3b5a; font-size: 15px; text-transform: uppercase; letter-spacing: 1px;">Nuestras Redes Oficiales</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        @foreach($theme['social_links'] as $social)
+                            @if(!empty($social['url']))
+                                <li style="margin-bottom: 10px;">
+                                    <a href="{{ $social['url'] }}" style="color: #ffffff; text-decoration: none; font-weight: bold; font-size: 14px;">
+                                        👉 {{ ucfirst($social['network']) }}: <span style="color: #eb3b5a; text-decoration: underline;">{{ $social['url'] }}</span>
+                                    </a>
+                                </li>
+                            @endif
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <p style="text-align: center; font-size: 16px;">Nos complace compartir contigo nuestra información oficial y Media Kit.</p>
 
             <div style="background-color: #1a1a1a; padding: 25px; border-radius: 8px; margin-top: 35px; border: 1px solid #222222;">
