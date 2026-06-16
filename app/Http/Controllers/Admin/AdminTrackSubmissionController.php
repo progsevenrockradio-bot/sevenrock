@@ -34,9 +34,24 @@ class AdminTrackSubmissionController extends Controller
             'status' => ['required', 'string', 'in:pending,approved,rejected'],
         ]);
 
+        $oldStatus = $submission->status;
+        $newStatus = $request->input('status');
+
         $submission->update([
-            'status' => $request->input('status'),
+            'status' => $newStatus,
         ]);
+
+        if ($oldStatus !== $newStatus && in_array($newStatus, ['approved', 'rejected'])) {
+            try {
+                \Illuminate\Support\Facades\Mail::to($submission->contact_email)
+                    ->send(new \App\Mail\SubmissionStatusUpdated($submission));
+                
+                return redirect()->back()->with('success', 'Estado actualizado y correo automático enviado a la banda.');
+            } catch (\Throwable $e) {
+                Log::error('Error al enviar correo a la banda (' . $submission->contact_email . '): ' . $e->getMessage());
+                return redirect()->back()->with('success', 'Estado actualizado, pero hubo un error al enviar el correo automático.');
+            }
+        }
 
         return redirect()->back()->with('success', 'Estado de la maqueta actualizado correctamente.');
     }
