@@ -74,6 +74,7 @@ class MediaKitMail extends Mailable
         $theme['media']['logo_url'] = $settings->logo_url ?? asset('assets/lucille/logo.png');
 
         $pdf = \App::make('dompdf.wrapper');
+        $pdf->setOption(['isRemoteEnabled' => true]);
         $pdf->loadView('pdf.media-kit', [
             'theme' => $theme,
             'recipientName' => $this->recipientName,
