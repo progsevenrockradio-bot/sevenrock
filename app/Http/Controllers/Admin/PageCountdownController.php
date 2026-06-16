@@ -21,6 +21,14 @@ class PageCountdownController extends Controller
 
     public function store(Request $request)
     {
+        // Limpiar la ruta por si pegan la URL completa
+        $routePath = $request->input('route_path');
+        if (str_starts_with($routePath, 'http')) {
+            $parsed = parse_url($routePath);
+            $routePath = ltrim($parsed['path'] ?? '', '/');
+            $request->merge(['route_path' => $routePath]);
+        }
+
         $validated = $request->validate([
             'route_path' => 'required|string|unique:page_countdowns,route_path',
             'title' => 'required|string|max:255',
@@ -43,6 +51,14 @@ class PageCountdownController extends Controller
 
     public function update(Request $request, PageCountdown $pageCountdown)
     {
+        // Limpiar la ruta por si pegan la URL completa
+        $routePath = $request->input('route_path');
+        if (str_starts_with($routePath, 'http')) {
+            $parsed = parse_url($routePath);
+            $routePath = ltrim($parsed['path'] ?? '', '/');
+            $request->merge(['route_path' => $routePath]);
+        }
+
         $validated = $request->validate([
             'route_path' => 'required|string|unique:page_countdowns,route_path,' . $pageCountdown->id,
             'title' => 'required|string|max:255',
