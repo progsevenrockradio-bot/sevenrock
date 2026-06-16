@@ -49,6 +49,7 @@ class MediaKitMail extends Mailable implements ShouldQueue
     {
         $settings = \App\Models\ThemeSetting::current();
         $this->appTheme['social_links'] = $settings->resolvedLinks()['social_links'] ?? [];
+        $this->appTheme['media']['logo_url'] = $settings->logo_url ?? asset('assets/lucille/logo.png');
 
         return new Content(
             view: 'emails.media-kit',
@@ -67,17 +68,20 @@ class MediaKitMail extends Mailable implements ShouldQueue
      */
     public function attachments(): array
     {
-        // If a Media Kit PDF exists, attach it. 
-        // For demonstration, checking if public/assets/lucille/media-kit.pdf exists
-        $attachments = [];
-        $pdfPath = public_path('assets/lucille/media-kit.pdf');
-        
-        if (file_exists($pdfPath)) {
-            $attachments[] = Attachment::fromPath($pdfPath)
-                ->as('Seven_Rock_Radio_Media_Kit.pdf')
-                ->withMime('application/pdf');
-        }
+        $settings = \App\Models\ThemeSetting::current();
+        $theme = $this->appTheme;
+        $theme['social_links'] = $settings->resolvedLinks()['social_links'] ?? [];
+        $theme['media']['logo_url'] = $settings->logo_url ?? asset('assets/lucille/logo.png');
 
-        return $attachments;
+        $pdf = \App::make('dompdf.wrapper');
+        $pdf->loadView('pdf.media-kit', [
+            'theme' => $theme,
+            'recipientName' => $this->recipientName,
+        ]);
+
+        return [
+            Attachment::fromData(fn () => $pdf->output(), 'Seven_Rock_Radio_Media_Kit.pdf')
+                ->withMime('application/pdf')
+        ];
     }
 }

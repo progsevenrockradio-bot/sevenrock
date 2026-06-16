@@ -50,8 +50,18 @@
                     <div style="font-size: 12px; font-weight: bold; margin-bottom: 15px; color: #777777; text-transform: uppercase; letter-spacing: 1.5px;">Síguenos en nuestras redes</div>
                     @foreach($theme['social_links'] as $social)
                         @if(!empty($social['url']))
-                            <a href="{{ $social['url'] }}" style="display: inline-block; margin: 5px; color: #ffffff; text-decoration: none; background-color: #2a2a2a; padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
-                                {{ $social['network'] ?? 'Social' }}
+                            @php
+                                $net = strtolower($social['network'] ?? '');
+                                $iconUrl = 'https://img.icons8.com/ios-filled/50/ffffff/domain.png';
+                                if(str_contains($net, 'facebook')) $iconUrl = 'https://img.icons8.com/ios-filled/50/ffffff/facebook-new.png';
+                                elseif(str_contains($net, 'instagram')) $iconUrl = 'https://img.icons8.com/ios-filled/50/ffffff/instagram-new.png';
+                                elseif(str_contains($net, 'youtube')) $iconUrl = 'https://img.icons8.com/ios-filled/50/ffffff/youtube-play.png';
+                                elseif(str_contains($net, 'twitter') || str_contains($net, ' x')) $iconUrl = 'https://img.icons8.com/ios-filled/50/ffffff/twitter.png';
+                                elseif(str_contains($net, 'spotify')) $iconUrl = 'https://img.icons8.com/ios-filled/50/ffffff/spotify.png';
+                                elseif(str_contains($net, 'tiktok')) $iconUrl = 'https://img.icons8.com/ios-filled/50/ffffff/tiktok.png';
+                            @endphp
+                            <a href="{{ $social['url'] }}" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                                <img src="{{ $iconUrl }}" alt="{{ $social['network'] ?? 'Social' }}" style="width: 28px; height: 28px; vertical-align: middle;">
                             </a>
                         @endif
                     @endforeach
