@@ -65,10 +65,14 @@
                                 <td class="px-5 py-5 align-top">
                                     @if($submission->file_path)
                                         <div class="bg-[#1a1a1c] p-2 rounded-md border border-[#2b2b2b] min-w-[260px]">
-                                            <audio controls class="h-10 w-full" controlsList="nodownload">
+                                            <audio controls class="h-10 w-full mb-2">
                                                 <source src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($submission->file_path) }}" type="audio/mpeg">
                                                 Tu navegador no soporta el audio.
                                             </audio>
+                                            <a href="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($submission->file_path) }}" download class="text-xs font-semibold uppercase tracking-wider text-[#b8e6c3] hover:text-white transition-colors flex items-center gap-1">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                                Descargar MP3
+                                            </a>
                                         </div>
                                     @else
                                         <span class="inline-block rounded border border-[#4d1e1e] bg-[rgba(64,16,16,.2)] px-3 py-1 text-xs text-[#e6b8b8]">Sin archivo adjunto</span>
