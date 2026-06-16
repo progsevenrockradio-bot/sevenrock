@@ -12,9 +12,9 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Mail\Mailables\Attachment;
 
-class MediaKitMail extends Mailable implements ShouldQueue
+class MediaKitMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use SerializesModels;
 
     public $customSubject;
     public $customMessage;
