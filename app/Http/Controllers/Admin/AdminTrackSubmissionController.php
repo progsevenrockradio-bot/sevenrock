@@ -107,7 +107,17 @@ class AdminTrackSubmissionController extends Controller
 
             // 1. Download file from R2 to a temporary local file
             $tempPath = tempnam(sys_get_temp_dir(), 'mp3_');
-            file_put_contents($tempPath, Storage::disk('r2')->get($submission->file_path));
+            $mp3TempPath = $tempPath . '.mp3';
+            rename($tempPath, $mp3TempPath);
+            $tempPath = $mp3TempPath;
+
+            $readStream = Storage::disk('r2')->readStream($submission->file_path);
+            $writeStream = fopen($tempPath, 'w');
+            stream_copy_to_stream($readStream, $writeStream);
+            fclose($writeStream);
+            if (is_resource($readStream)) {
+                fclose($readStream);
+            }
 
             // 2. Initialize getID3 tag writer
             $tagwriter = new \JamesHeinrich\GetID3\WriteTags();
