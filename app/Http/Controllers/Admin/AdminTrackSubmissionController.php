@@ -20,9 +20,16 @@ class AdminTrackSubmissionController extends Controller
         // Get all submissions ordered by latest first
         $submissions = TrackSubmission::query()
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate(20, ['*'], 'maquetas_page');
+            
+        // Get all email logs associated with track submissions
+        $emailLogs = \App\Models\EmailLog::query()
+            ->whereNotNull('track_submission_id')
+            ->with('trackSubmission')
+            ->orderByDesc('created_at')
+            ->paginate(20, ['*'], 'logs_page');
 
-        return view('admin.submissions.index', compact('submissions'));
+        return view('admin.submissions.index', compact('submissions', 'emailLogs'));
     }
 
     /**
@@ -43,13 +50,21 @@ class AdminTrackSubmissionController extends Controller
 
         if ($oldStatus !== $newStatus && in_array($newStatus, ['approved', 'rejected'])) {
             try {
-                \Illuminate\Support\Facades\Mail::to($submission->contact_email)
-                    ->send(new \App\Mail\SubmissionStatusUpdated($submission));
+                $mail = new \App\Mail\SubmissionStatusUpdated($submission);
+                \Illuminate\Support\Facades\Mail::to($submission->contact_email)->send($mail);
+                
+                \App\Models\EmailLog::create([
+                    'track_submission_id' => $submission->id,
+                    'to_email' => $submission->contact_email,
+                    'subject' => $mail->envelope()->subject,
+                    'body' => $mail->render(),
+                    'status' => 'sent',
+                ]);
                 
                 return redirect()->back()->with('success', 'Estado actualizado y correo automático enviado a la banda.');
             } catch (\Throwable $e) {
-                Log::error('Error al enviar correo a la banda (' . $submission->contact_email . '): ' . $e->getMessage());
-                return redirect()->back()->with('success', 'Estado actualizado, pero hubo un error al enviar el correo automático.');
+                Log::error('Error sending submission status email', ['error' => $e->getMessage(), 'submission_id' => $submission->id]);
+                return redirect()->back()->with('error', 'Estado actualizado, pero hubo un error al enviar el correo automático.');
             }
         }
 

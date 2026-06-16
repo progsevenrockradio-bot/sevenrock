@@ -10,9 +10,15 @@ class EmailLog extends Model
     use HasFactory;
 
     protected $fillable = [
+        'track_submission_id',
         'to_email',
         'subject',
         'body',
         'status',
     ];
+
+    public function trackSubmission()
+    {
+        return $this->belongsTo(TrackSubmission::class);
+    }
 }

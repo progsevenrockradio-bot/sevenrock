@@ -36,4 +36,12 @@ class TrackSubmission extends Model
         
         return null;
     }
+
+    /**
+     * Get the email logs associated with the submission.
+     */
+    public function emailLogs()
+    {
+        return $this->hasMany(EmailLog::class);
+    }
 }
