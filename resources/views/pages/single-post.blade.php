@@ -337,31 +337,65 @@
                         @if (session("status"))
                             <div class="mb-4 rounded-lg bg-green-900/30 px-4 py-3 text-sm text-green-300">{{ session("status") }}</div>
                         @endif
-                            <div id="respond" class="comment-respond">
-                                <h3 class="lucille-comment-title">{{ $ui['leave_a_reply'] }}</h3>
-                                <form method="POST" action="{{ route('posts.comments.store', $post['id']) }}" class="mt-5 space-y-5">
-                                    @csrf
-                                    <div class="hidden" style="display:none !important" aria-hidden="true">
-                                        <input type="text" name="user_website" tabindex="-1" autocomplete="off">
+
+                            {{-- Comentarios aprobados --}}
+                            @if (count($comments) > 0)
+                                <div class="mb-8">
+                                    <h3 class="lucille-comment-title mb-6">{{ count($comments) }} {{ count($comments) === 1 ? 'comentario' : 'comentarios' }}</h3>
+                                    <div class="space-y-5">
+                                        @foreach ($comments as $comment)
+                                            <div class="border border-white/8 bg-[#080808f5] px-5 py-5">
+                                                <div class="mb-3 flex items-center justify-between gap-3">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lucille-accent/15 font-display text-sm uppercase text-lucille-accent">
+                                                            {{ strtoupper(substr(trim((string)($comment['author_name'] ?? 'A')), 0, 1)) }}
+                                                        </div>
+                                                        <div>
+                                                            <p class="font-display text-xs uppercase tracking-[.14em] text-[#dcdcdc]">
+                                                                {{ $comment['author_name'] ?: 'Anónimo' }}
+                                                            </p>
+                                                            @if (!empty($comment['created_at']))
+                                                                <p class="text-xs text-[#5b5b5b]">
+                                                                    {{ \Illuminate\Support\Carbon::parse($comment['created_at'])->diffForHumans() }}
+                                                                </p>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <p class="text-sm leading-relaxed text-[#c0c0c0]">{{ $comment['content'] }}</p>
+                                            </div>
+                                        @endforeach
                                     </div>
-                                    <div class="lucille-comment-inputs">
-                                        <input type="text" name="author_name" placeholder="{{ $ui['your_name'] }}" class="lucille-comment-input">
-                                        <input type="email" name="author_email" placeholder="{{ $ui['email_address'] }}" class="lucille-comment-input">
-                                        <input type="url" name="author_website" placeholder="{{ $ui['website'] }}" class="lucille-comment-input">
-                                    </div>
-                                    <textarea name="content" placeholder="{{ $ui['write_comment'] }}" rows="8" class="lucille-comment-textarea" required minlength="5"></textarea>
-                                    <button type="submit" class="lucille-button">{{ $ui['post_comment'] }}</button>
-                                </form>
-                            </div>
+                                </div>
+                            @endif
+
+                            @if(data_get($post, 'id'))
+                                <div id="respond" class="comment-respond">
+                                    <h3 class="lucille-comment-title">{{ $ui['leave_a_reply'] }}</h3>
+                                    <form method="POST" action="{{ route('posts.comments.store', data_get($post, 'id')) }}" class="mt-5 space-y-5">
+                                        @csrf
+                                        <div class="hidden" style="display:none !important" aria-hidden="true">
+                                            <input type="text" name="user_website" tabindex="-1" autocomplete="off">
+                                        </div>
+                                        <div class="lucille-comment-inputs">
+                                            <input type="text" name="author_name" placeholder="{{ $ui['your_name'] }}" class="lucille-comment-input">
+                                            <input type="email" name="author_email" placeholder="{{ $ui['email_address'] }}" class="lucille-comment-input">
+                                            <input type="url" name="author_website" placeholder="{{ $ui['website'] }}" class="lucille-comment-input">
+                                        </div>
+                                        <textarea name="content" placeholder="{{ $ui['write_comment'] }}" rows="8" class="lucille-comment-textarea" required minlength="5"></textarea>
+                                        <button type="submit" class="lucille-button">{{ $ui['post_comment'] }}</button>
+                                    </form>
+                                </div>
+                            @endif
                         </div>
                     </article>
                 </main>
 
                 <aside class="lucille-blog-sidebar lucille-sidebar">
                     <div class="lucille-sidebar-widget">
-                        <form class="lucille-sidebar-search">
-                            <input type="search" placeholder="{{ $ui['search_placeholder'] }}" aria-label="{{ $ui['search_button_label'] }}">
-                            <button type="button" aria-label="{{ $ui['search_button_label'] }}">⌕</button>
+                        <form method="GET" action="{{ route('search') }}" class="lucille-sidebar-search">
+                            <input type="search" name="q" placeholder="{{ $ui['search_placeholder'] }}" aria-label="{{ $ui['search_button_label'] }}">
+                            <button type="submit" aria-label="{{ $ui['search_button_label'] }}">⌕</button>
                         </form>
                     </div>
 
@@ -388,11 +422,20 @@
 
                     <div class="lucille-sidebar-widget">
                         <h3 class="lucille-sidebar-title">{{ $ui['recent_comments'] }}</h3>
-                        <ul class="lucille-sidebar-list">
-                            @foreach ($comments as $comment)
-                                <li><a href="#">{{ $comment }}</a></li>
-                            @endforeach
-                        </ul>
+                        @if (count($comments) > 0)
+                            <ul class="lucille-sidebar-list">
+                                @foreach ($comments as $comment)
+                                    <li>
+                                        <a href="#comments" class="block">
+                                            <span class="font-semibold text-[#dcdcdc]">{{ $comment['author_name'] ?: 'Anónimo' }}</span>
+                                            <span class="ml-1 text-[#7b7b7b]">en {{ $post['title'] }}</span>
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="text-sm text-[#5b5b5b]">Aún no hay comentarios.</p>
+                        @endif
                     </div>
 
                     <div class="lucille-sidebar-widget">

@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadCont
 use App\Http\Controllers\Admin\ProgramCodeController as AdminProgramCodeController;
 use App\Http\Controllers\Admin\NewReleaseController as AdminNewReleaseController;
 use App\Http\Controllers\Admin\MarketingController as AdminMarketingController;
+use App\Http\Controllers\Admin\AdminMediaKitController;
 use App\Http\Controllers\LegacyWordPressUploadController;
 use App\Http\Controllers\PostReactionController;
 use App\Http\Controllers\PlayerController;
@@ -42,6 +43,7 @@ use App\Http\Controllers\CommunityWallController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\EmailTemplateController as AdminEmailTemplateController;
 use App\Http\Controllers\Admin\EmailLogController as AdminEmailLogController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ContractSigningController;
 use App\Http\Controllers\SubmissionController;
 
@@ -315,6 +317,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::post('/campaigns', 'storeCampaign')->name('campaigns.store');
     });
 
+    Route::controller(AdminMediaKitController::class)->prefix('media-kit')->name('media-kit.')->group(function (): void {
+        Route::get('/', 'showForm')->name('form');
+        Route::post('/send', 'sendMediaKit')->name('send');
+    });
+
     Route::prefix('contracts')->name('contracts.')->controller(AdminContractController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
@@ -334,6 +341,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
 
     Route::prefix('email-logs')->name('email-logs.')->controller(AdminEmailLogController::class)->middleware('role:Super Admin')->group(function (): void {
         Route::get('/', 'index')->name('index');
+    });
+
+    Route::controller(AdminUserController::class)->prefix('users')->name('users.')->middleware('role:Super Admin')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{user}/edit', 'edit')->name('edit');
+        Route::put('/{user}', 'update')->name('update');
+        Route::delete('/{user}', 'destroy')->name('destroy');
     });
 
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');

@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\AuditTrailService;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AuthController extends Controller
@@ -99,5 +103,64 @@ class AuthController extends Controller
         $request->session()->put('auth.password_confirmed_at', time());
 
         return redirect()->intended(route('admin.dashboard'));
+    }
+
+    // ─── Password Reset ───────────────────────────────────────────────────────
+
+    public function showLinkRequestForm(): View
+    {
+        return view('admin.forgot-password');
+    }
+
+    public function sendResetLinkEmail(Request $request): RedirectResponse
+    {
+        $request->validate(['email' => ['required', 'email']]);
+
+        $status = Password::sendResetLink(
+            $request->only('email')
+        );
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return back()->with('status', 'Si ese email existe en nuestro sistema, recibirás un enlace para restablecer tu contraseña.');
+        }
+
+        // No revelar si el email existe o no (previene enumeración de usuarios)
+        return back()->with('status', 'Si ese email existe en nuestro sistema, recibirás un enlace para restablecer tu contraseña.');
+    }
+
+    public function showResetForm(Request $request, string $token): View
+    {
+        return view('admin.reset-password', [
+            'token' => $token,
+            'email' => $request->email,
+        ]);
+    }
+
+    public function reset(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'token'    => ['required'],
+            'email'    => ['required', 'email'],
+            'password' => ['required', 'min:8', 'confirmed'],
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, string $password): void {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                ])->setRememberToken(Str::random(60));
+
+                $user->save();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return redirect()->route('admin.login')->with('status', 'Contraseña restablecida correctamente. Inicia sesión.');
+        }
+
+        return back()->withErrors(['email' => __($status)]);
     }
 }

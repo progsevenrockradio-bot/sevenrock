@@ -729,7 +729,15 @@ class SiteController extends Controller
                 'archives' => $this->cachedPostArchives(),
                 'archiveActiveYear' => $post->published_at?->format('Y'),
                 'archiveActiveMonth' => $post->published_at?->format('m'),
-                'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
+                'comments' => $this->safeValue(
+                    fn () => \App\Models\Comment::query()
+                        ->where('post_id', $post->id)
+                        ->where('approved', true)
+                        ->orderBy('created_at')
+                        ->get()
+                        ->toArray(),
+                    []
+                ),
             ]);
         }
 
@@ -743,7 +751,7 @@ class SiteController extends Controller
             'archives' => $this->cachedPostArchives(),
             'archiveActiveYear' => null,
             'archiveActiveMonth' => null,
-            'comments' => ['admin on Landscape Post', 'A WordPress Commenter on Lucille'],
+            'comments' => [],
         ]);
     }
 

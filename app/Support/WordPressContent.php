@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Mews\Purifier\Facades\Purifier;
+
 final class WordPressContent
 {
     /**
@@ -332,11 +334,34 @@ final class WordPressContent
     {
         $html = trim($html);
 
-        return $html !== ''
-            ? self::rewriteBareUrlsInHtml(
-                PublicMediaUrl::rewriteLegacyWordPressUploadsInHtml(self::stripWpComments($html))
-            )
-            : '';
+        if ($html === '') {
+            return '';
+        }
+
+        // Sanitizar HTML arbitrario con Purify (perfil 'default') para prevenir XSS.
+        // El perfil 'default' permite iframes de YouTube/Spotify/Vimeo pero elimina <script>.
+        $html = self::cleanRaw(PublicMediaUrl::rewriteLegacyWordPressUploadsInHtml(self::stripWpComments($html)));
+
+        return $html !== '' ? self::rewriteBareUrlsInHtml($html) : '';
+    }
+
+    /**
+     * Sanitiza HTML usando HTMLPurifier con el perfil 'default' de la aplicación.
+     * Elimina <script>, event handlers y atributos peligrosos mientras preserva
+     * el contenido enriquecido lícito (iframes de YouTube, imágenes, etc.).
+     */
+    private static function cleanRaw(string $html): string
+    {
+        if ($html === '') {
+            return '';
+        }
+
+        try {
+            return (string) Purifier::clean($html, 'default');
+        } catch (\Throwable) {
+            // Si Purifier falla por cualquier motivo, devolver string vacío por seguridad.
+            return '';
+        }
     }
 
     private static function rewriteBareUrlsInText(string $text): string

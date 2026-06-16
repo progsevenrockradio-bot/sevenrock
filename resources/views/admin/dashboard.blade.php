@@ -162,6 +162,7 @@
                             <a href="{{ route('admin.podcast-uploads.index') }}" class="lucille-button py-1.5 px-3 text-[10px] uppercase tracking-wider text-white">Podcast uploads</a>
                             <a href="{{ route('admin.songs.index') }}" class="lucille-button py-1.5 px-3 text-[10px] uppercase tracking-wider text-white">Canciones</a>
                             <a href="{{ route('admin.master-programs.index') }}" class="lucille-button py-1.5 px-3 text-[10px] uppercase tracking-wider text-white">Programas</a>
+                            <a href="{{ route('admin.media-kit.form') }}" class="lucille-button py-1.5 px-3 text-[10px] uppercase tracking-wider text-white">Media Kit</a>
                         </div>
                     </div>
 

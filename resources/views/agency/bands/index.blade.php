@@ -39,7 +39,7 @@
                                 <tr class="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
                                     <td class="py-3 px-4 font-semibold text-white">
                                         @if($band->logo_path)
-                                            <img src="{{ $band->logo_path }}" alt="{{ $band->name }}" class="h-8 w-8 rounded-full inline-block mr-3 object-cover border border-white/10">
+                                            <img src="{{ $band->logo_path }}" alt="{{ $band->name }}" class="h-8 w-8 rounded-full inline-block mr-3 object-cover border border-white/10" loading="lazy">
                                         @else
                                             <div class="h-8 w-8 rounded-full bg-white/5 border border-white/10 text-white font-bold font-display text-xs inline-flex items-center justify-center mr-3">
                                                 {{ strtoupper(substr($band->name, 0, 1)) }}

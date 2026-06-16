@@ -1,5 +1,5 @@
 import Alpine from 'alpinejs';
-import { registerRadioPlayer } from './player';
+import { registerRadioPlayer } from './player.js';
 
 window.Alpine = Alpine;
 window.__srUserGesture = false;
@@ -1125,7 +1125,10 @@ if (document.readyState === 'loading') {
     setupRadioPlayerLayout();
 }
 
-registerRadioPlayer(Alpine);
+const playerRoot = document.querySelector('[data-radio-player-root]');
+if (playerRoot) {
+    registerRadioPlayer(Alpine);
+}
 
 Alpine.start();
 

@@ -210,7 +210,7 @@
                             <div class="flex items-center justify-between gap-3">
                                 <div class="flex items-center gap-3 min-w-0">
                                     @if ($band->logo)
-                                        <img src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($band->logo) }}" alt="{{ $band->band_name }}" class="h-8 w-8 rounded-full border border-white/10 object-cover shrink-0">
+                                        <img src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($band->logo) }}" alt="{{ $band->band_name }}" class="h-8 w-8 rounded-full border border-white/10 object-cover shrink-0" loading="lazy">
                                     @else
                                         <div class="h-8 w-8 rounded-full bg-white/5 border border-white/10 text-white font-bold font-display text-xs flex items-center justify-center shrink-0">
                                             {{ strtoupper(substr($band->band_name, 0, 1)) }}

@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
 import tailwindcss from '@tailwindcss/vite';
+import { compression } from 'vite-plugin-compression2';
 
 export default defineConfig({
     cacheDir: 'storage/framework/vite-cache',
@@ -16,6 +17,8 @@ export default defineConfig({
             ],
         }),
         tailwindcss(),
+        compression({ algorithm: 'brotliCompress', exclude: /\.(png|jpg|webp|gif|svg)$/ }),
+        compression({ algorithm: 'gzip', exclude: /\.(png|jpg|webp|gif|svg)$/ }),
     ],
     build: {
         outDir: 'public/build',

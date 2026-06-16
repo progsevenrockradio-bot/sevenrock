@@ -59,23 +59,23 @@ class ProgramScheduleService
             'upcoming' => [
                 [
                     ...$this->fallbackProgramPayload('PROGRAMACIÓN', 'Seven Rock Radio', 'Próxima emisión', 'assets/lucille/microphone-1206364_1920.jpg'),
-                    'time' => 'Cargando',
+                    'time' => 'Próximamente',
                 ],
                 [
                     ...$this->fallbackProgramPayload('SEVEN ROCK RADIO', 'Seven Rock Radio', 'Programación continua', 'assets/lucille/pedalboard-1511069_1920.jpg'),
-                    'time' => 'Cargando',
+                    'time' => 'Próximamente',
                 ],
                 [
                     ...$this->fallbackProgramPayload('MULTIMEDIA', 'Seven Rock Radio', 'Bloque especial', 'assets/lucille/music-1284505_1920.jpg'),
-                    'time' => 'Cargando',
+                    'time' => 'Próximamente',
                 ],
                 [
                     ...$this->fallbackProgramPayload('EVENTOS', 'Seven Rock Radio', 'Agenda en vivo', 'assets/lucille/live-slider-bg.jpg'),
-                    'time' => 'Cargando',
+                    'time' => 'Próximamente',
                 ],
                 [
                     ...$this->fallbackProgramPayload('ENTREVISTAS', 'Seven Rock Radio', 'Cápsulas y especial', 'assets/lucille/guitar-1758005_1920.jpg'),
-                    'time' => 'Cargando',
+                    'time' => 'Próximamente',
                 ],
             ],
         ];

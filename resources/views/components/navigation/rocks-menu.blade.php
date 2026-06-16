@@ -191,7 +191,7 @@
                     <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both" loading="lazy">
                     <span class="brand-mark-container" :class="sticky ? 'sticky-active' : 'normal'">
                         @php
-                            $words = explode(' ', $brandMark);
+                            $words = preg_split('/\s+/', trim($brandMark));
                             $wordClasses = ['word-seven', 'word-rock', 'word-radio'];
                         @endphp
                         @foreach ($words as $index => $word)
@@ -201,7 +201,15 @@
                 @elseif ($brandDisplayMode === 'logo' && $logoUrl)
                     <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo" loading="lazy">
                 @else
-                    <span class="lucille-brand-mark">{{ $brandMark }}</span>
+                    <span class="brand-mark-container" :class="sticky ? 'sticky-active' : 'normal'">
+                        @php
+                            $words = preg_split('/\s+/', trim($brandMark));
+                            $wordClasses = ['word-seven', 'word-rock', 'word-radio'];
+                        @endphp
+                        @foreach ($words as $index => $word)
+                            <span class="brand-word {{ $wordClasses[$index] ?? 'word-' . $index }}">{{ $word }}</span>
+                        @endforeach
+                    </span>
                 @endif
             </a>
 
@@ -324,8 +332,8 @@
 
     <div x-cloak x-show="searchOpen" x-transition.opacity class="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-6">
         <button type="button" class="absolute right-8 top-7 font-display text-3xl text-white" @click="searchOpen = false" aria-label="Close search">&times;</button>
-        <form class="w-full max-w-3xl">
-            <input type="search" placeholder="{{ $ui['search_placeholder'] }}" class="w-full border-0 border-b border-white/40 bg-transparent px-0 py-5 font-display text-4xl uppercase tracking-[.04em] text-white placeholder:text-white/45 focus:border-lucille-accent focus:outline-none">
+        <form method="GET" action="{{ route('search') }}" class="w-full max-w-3xl">
+            <input type="search" name="q" placeholder="{{ $ui['search_placeholder'] }}" class="w-full border-0 border-b border-white/40 bg-transparent px-0 py-5 font-display text-4xl uppercase tracking-[.04em] text-white placeholder:text-white/45 focus:border-lucille-accent focus:outline-none">
         </form>
     </div>
 </header>

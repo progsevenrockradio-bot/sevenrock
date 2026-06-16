@@ -247,9 +247,9 @@
                 </main>
                 <aside class="lucille-blog-sidebar lucille-sidebar w-full lg:w-1/4 mt-12 lg:mt-0">
                     <div class="lucille-sidebar-widget">
-                        <form class="lucille-sidebar-search">
-                            <input type="search" placeholder="{{ $ui['search_placeholder'] }}" aria-label="{{ $ui['search_button_label'] }}">
-                            <button type="button" aria-label="{{ $ui['search_button_label'] }}">⌕</button>
+                        <form method="GET" action="{{ route('search') }}" class="lucille-sidebar-search">
+                            <input type="search" name="q" placeholder="{{ $ui['search_placeholder'] }}" aria-label="{{ $ui['search_button_label'] }}">
+                            <button type="submit" aria-label="{{ $ui['search_button_label'] }}">⌕</button>
                         </form>
                     </div>
 

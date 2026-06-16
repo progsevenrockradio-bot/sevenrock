@@ -1,5 +1,5 @@
 <x-layouts.site :title="'Talentos - Login'">
-    <section class="mx-auto max-w-3xl px-5 py-10">
+    <section class="mx-auto max-w-3xl px-5 py-10" style="margin-top: 180px;">
         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Acceso Talentos</h1>
             <p class="mt-3 text-sm text-[#7b7b7b]">Entra al panel para gestionar tu perfil y tu catálogo.</p>

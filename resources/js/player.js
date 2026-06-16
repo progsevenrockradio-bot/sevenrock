@@ -1125,8 +1125,8 @@ export function registerRadioPlayer(Alpine) {
             const widgetCover = widgetTrack?.cover || '';
             const currentTitle = this.track.title && this.track.title !== this.defaultTitle ? this.track.title : '';
             const currentArtist = this.track.artist && this.track.artist !== this.defaultArtist ? this.track.artist : '';
-            const nextTitle = this.normalizeTrackTitle(widgetTitle || track.title || currentTitle || this.defaultTitle || '');
-            const nextArtist = this.normalizeBandArtist(widgetArtist || track.artist || currentArtist || this.defaultArtist || '');
+            const nextTitle = this.normalizeTrackTitle(widgetTitle || track.title || currentTitle || this.defaultTitle || 'Transmisión Oficial');
+            const nextArtist = this.normalizeBandArtist(widgetArtist || track.artist || currentArtist || this.defaultArtist || 'Seven Rock Radio');
             const tempBuster = nextArtist + '|' + nextTitle;
 
             let nextCoverCandidate = this.fallbackCover;
@@ -1442,8 +1442,7 @@ export function registerRadioPlayer(Alpine) {
                 return '';
             }
 
-            return ['Seven Rock Radio', 'Transmisión oficial']
-                .some((needle) => cleaned.toLowerCase() === needle.toLowerCase())
+            return cleaned.toLowerCase() === 'transmisión oficial' || cleaned.toLowerCase() === 'transmisiÃ³n oficial'
                 ? ''
                 : cleaned;
         },
@@ -1464,7 +1463,7 @@ export function registerRadioPlayer(Alpine) {
 
         cleanWidgetText(value) {
             const text = String(value || '').replace(/\s+/g, ' ').trim();
-            if (!text || text === '...' || text === '&nbsp;') {
+            if (!text || text === '...' || text === '&nbsp;' || text.toLowerCase() === 'cargando...') {
                 return '';
             }
 

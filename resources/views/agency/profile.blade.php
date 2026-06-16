@@ -45,7 +45,7 @@
                     <div class="grid gap-4 md:grid-cols-[150px_1fr] items-center">
                         <div class="border border-white/10 p-2 bg-black/45 rounded-[6px] h-28 flex items-center justify-center overflow-hidden">
                             @if($agency->logo_path)
-                                <img src="{{ $agency->logo_url }}" alt="{{ $agency->name }}" class="max-h-full max-w-full object-contain">
+                                <img src="{{ $agency->logo_url }}" alt="{{ $agency->name }}" class="max-h-full max-w-full object-contain" loading="lazy">
                             @else
                                 <span class="text-[10px] text-gray-500 uppercase tracking-widest text-center">Sin Logo</span>
                             @endif
