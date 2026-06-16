@@ -78,8 +78,8 @@ class AdminTrackSubmissionController extends Controller
     {
         try {
             // Eliminar el archivo MP3 del disco (R2) para no acumular basura
-            if ($submission->file_path && Storage::disk(config('filesystems.default'))->exists($submission->file_path)) {
-                Storage::disk(config('filesystems.default'))->delete($submission->file_path);
+            if ($submission->file_path && Storage::disk('r2')->exists($submission->file_path)) {
+                Storage::disk('r2')->delete($submission->file_path);
             }
             
             $submission->delete();
@@ -96,14 +96,19 @@ class AdminTrackSubmissionController extends Controller
      */
     public function download(TrackSubmission $submission)
     {
-        if (!$submission->file_path || !Storage::disk(config('filesystems.default'))->exists($submission->file_path)) {
-            return redirect()->back()->with('error', 'El archivo de audio no se encontró en el servidor.');
+        try {
+            if (!$submission->file_path || !Storage::disk('r2')->exists($submission->file_path)) {
+                return redirect()->back()->with('error', 'El archivo de audio no se encontró en el servidor.');
+            }
+
+            $cleanBandName = \Illuminate\Support\Str::slug($submission->band_name);
+            $cleanSongTitle = \Illuminate\Support\Str::slug($submission->song_title);
+            $fileName = "{$cleanBandName}-{$cleanSongTitle}.mp3";
+
+            return Storage::disk('r2')->download($submission->file_path, $fileName);
+        } catch (\Throwable $e) {
+            Log::error('Error downloading file: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Ocurrió un error al intentar descargar el archivo.');
         }
-
-        $cleanBandName = \Illuminate\Support\Str::slug($submission->band_name);
-        $cleanSongTitle = \Illuminate\Support\Str::slug($submission->song_title);
-        $fileName = "{$cleanBandName}-{$cleanSongTitle}.mp3";
-
-        return Storage::disk(config('filesystems.default'))->download($submission->file_path, $fileName);
     }
 }
