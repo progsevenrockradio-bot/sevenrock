@@ -21,8 +21,8 @@
 
     <div class="overflow-hidden border border-[#2b2b2b] bg-[rgba(16,16,18,.88)]">
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm whitespace-nowrap">
-                <thead class="border-b border-[#2b2b2b] text-[#dcdcdc]">
+            <table class="w-full text-left text-sm">
+                <thead class="border-b border-[#2b2b2b] text-[#dcdcdc] whitespace-nowrap">
                     <tr>
                         <th class="px-5 py-4">Banda / Artista</th>
                         <th class="px-5 py-4">Canción</th>
@@ -39,7 +39,7 @@
                             <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">{{ $submission->band_name }}</td>
                             <td class="px-5 py-4 text-[#dcdcdc]">{{ $submission->song_title }}</td>
                             <td class="px-5 py-4 text-xs">
-                                <a href="mailto:{{ $submission->contact_email }}" class="text-[#b8e6c3] hover:underline">{{ $submission->contact_email }}</a>
+                                <a href="mailto:{{ $submission->contact_email }}" class="text-[#b8e6c3] hover:underline break-all">{{ $submission->contact_email }}</a>
                                 @if($submission->phone_number)
                                     <br><span class="text-[#7b7b7b]">{{ $submission->phone_number }}</span>
                                 @endif
@@ -47,7 +47,7 @@
                                     <br><a href="{{ $submission->social_link }}" target="_blank" class="text-lucille-accent hover:underline">Ver enlace &nearr;</a>
                                 @endif
                             </td>
-                            <td class="px-5 py-4 min-w-[250px]">
+                            <td class="px-5 py-4 min-w-[150px]">
                                 @if($submission->file_path)
                                     <audio controls class="h-8 w-full max-w-[200px]" controlsList="nodownload">
                                         <source src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($submission->file_path) }}" type="audio/mpeg">
