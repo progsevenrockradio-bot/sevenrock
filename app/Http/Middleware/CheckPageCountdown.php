@@ -30,6 +30,8 @@ class CheckPageCountdown
                 // Exact match or wildcard match
                 $query->where('route_path', $path)
                       ->orWhere('route_path', '/' . $path)
+                      // Si guardaron la URL completa accidentalmente
+                      ->orWhere('route_path', 'LIKE', '%/' . $path)
                       ->orWhereRaw('? LIKE REPLACE(route_path, "*", "%")', [$path]);
             })
             ->first();
