@@ -374,7 +374,7 @@
                     <div class="radio-player-popup-drawer-body">
                         <div x-show="activeTab === 'lyrics'">
                             <h4 class="radio-player-popup-section-title">Letra del tema</h4>
-                            <p class="radio-player-popup-section-text" x-text="track.lyrics || 'Letra no disponible'"></p>
+                            <p style="white-space: pre-wrap;" class="radio-player-popup-section-text" x-text="track.lyrics || 'Letra no disponible'"></p>
                         </div>
 
                         <div x-show="activeTab === 'band'">
@@ -762,7 +762,7 @@
                                     <div class="radio-modal-scroll">
                                     <section class="radio-modal-card">
                                         <h4 class="radio-modal-card-title">Letra</h4>
-                                        <p class="radio-modal-text radio-modal-text--lyrics" x-text="bandWindowView.lyrics && bandWindowView.lyrics.trim() ? bandWindowView.lyrics : 'No hay letra disponible para esta canción'"></p>
+                                        <p style="white-space: pre-wrap;" class="radio-modal-text radio-modal-text--lyrics" x-text="bandWindowView.lyrics && bandWindowView.lyrics.trim() ? bandWindowView.lyrics : 'No hay letra disponible para esta canción'"></p>
                                     </section>
                                 </div>
                             </div>
@@ -967,7 +967,7 @@
                     <div class="radio-player-tab-body radio-player-tab-body--dock">
                         <div x-show="activeTab === 'lyrics'">
                             <h4>Letra del tema</h4>
-                            <p x-text="track.lyrics || 'Letra no disponible'"></p>
+                            <p style="white-space: pre-wrap;" x-text="track.lyrics || 'Letra no disponible'"></p>
                         </div>
                         <div x-show="activeTab === 'band'">
                             <h4>Info de banda</h4>

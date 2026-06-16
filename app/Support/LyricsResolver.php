@@ -18,30 +18,47 @@ class LyricsResolver
         }
 
         $cacheKey = 'lyrics:v2:' . md5(mb_strtolower($artist . '|' . $title));
+        
         $cached = Cache::get($cacheKey);
         if (is_string($cached) && trim($cached) !== '') {
             return $cached;
         }
 
-        foreach ($this->artistVariants($artist) as $artistVariant) {
-            foreach ($this->titleVariants($title) as $titleVariant) {
-                $lyrics = $this->fetchFromLrclib($artistVariant, $titleVariant);
-                if ($lyrics !== '') {
-                    Cache::put($cacheKey, $lyrics, now()->addHours(12));
-
-                    return $lyrics;
+        $lock = Cache::lock($cacheKey . ':lock', 5);
+        
+        try {
+            if ($lock->block(5)) {
+                // Re-check cache after acquiring lock
+                $cached = Cache::get($cacheKey);
+                if (is_string($cached) && trim($cached) !== '') {
+                    return $cached;
                 }
 
-                $lyrics = $this->fetchFromLyricsOvh($artistVariant, $titleVariant);
-                if ($lyrics !== '') {
-                    Cache::put($cacheKey, $lyrics, now()->addHours(12));
+                foreach ($this->artistVariants($artist) as $artistVariant) {
+                    foreach ($this->titleVariants($title) as $titleVariant) {
+                        $lyrics = $this->fetchFromLrclib($artistVariant, $titleVariant);
+                        if ($lyrics !== '') {
+                            Cache::put($cacheKey, $lyrics, now()->addHours(12));
+                            return $lyrics;
+                        }
 
-                    return $lyrics;
+                        $lyrics = $this->fetchFromLyricsOvh($artistVariant, $titleVariant);
+                        if ($lyrics !== '') {
+                            Cache::put($cacheKey, $lyrics, now()->addHours(12));
+                            return $lyrics;
+                        }
+                    }
                 }
+
+                Cache::put($cacheKey, 'Letra no disponible', now()->addMinutes(3));
+                return 'Letra no disponible';
             }
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            // If we couldn't get the lock, return a temporary fallback rather than hammering the API
+            return 'Letra no disponible';
+        } finally {
+            $lock?->release();
         }
-
-        Cache::put($cacheKey, 'Letra no disponible', now()->addMinutes(3));
 
         return 'Letra no disponible';
     }
