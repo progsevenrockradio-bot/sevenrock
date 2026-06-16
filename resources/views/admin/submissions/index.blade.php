@@ -25,7 +25,7 @@
                 <thead class="border-b border-[#2b2b2b] text-[#dcdcdc] whitespace-nowrap">
                     <tr>
                         <th class="px-5 py-4">Información</th>
-                        <th class="px-5 py-4 w-1/3">Audio</th>
+                        <th class="px-5 py-4 w-1/3 min-w-[280px]">Audio</th>
                         <th class="px-5 py-4">Contacto</th>
                         <th class="px-5 py-4">Estado</th>
                         <th class="px-5 py-4 text-right">Acciones</th>
@@ -44,7 +44,7 @@
                             </td>
                             <td class="px-5 py-5 align-top">
                                 @if($submission->file_path)
-                                    <div class="bg-[#1a1a1c] p-2 rounded-md border border-[#2b2b2b]">
+                                    <div class="bg-[#1a1a1c] p-2 rounded-md border border-[#2b2b2b] min-w-[260px]">
                                         <audio controls class="h-10 w-full" controlsList="nodownload">
                                             <source src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($submission->file_path) }}" type="audio/mpeg">
                                             Tu navegador no soporta el audio.
