@@ -105,7 +105,34 @@ class AdminTrackSubmissionController extends Controller
             $cleanSongTitle = \Illuminate\Support\Str::slug($submission->song_title);
             $fileName = "{$cleanBandName}-{$cleanSongTitle}.mp3";
 
-            return Storage::disk('r2')->download($submission->file_path, $fileName);
+            // 1. Download file from R2 to a temporary local file
+            $tempPath = tempnam(sys_get_temp_dir(), 'mp3_');
+            file_put_contents($tempPath, Storage::disk('r2')->get($submission->file_path));
+
+            // 2. Initialize getID3 tag writer
+            require_once base_path('vendor/james-heinrich/getid3/getid3/getid3.php');
+            require_once base_path('vendor/james-heinrich/getid3/getid3/write.php');
+
+            $tagwriter = new \getid3_writetags;
+            $tagwriter->filename = $tempPath;
+            $tagwriter->tagformats = ['id3v2.3'];
+            $tagwriter->overwrite_tags = true; // Overwrite to ensure clean tags
+            $tagwriter->tag_encoding = 'UTF-8';
+            $tagwriter->remove_other_tags = false;
+
+            // 3. Set the metadata from the database
+            $tagData = [
+                'title'  => [$submission->song_title],
+                'artist' => [$submission->band_name],
+                'album'  => ['Maquetas Seven Rock Radio'],
+                'year'   => [date('Y')],
+            ];
+
+            $tagwriter->tag_data = $tagData;
+            $tagwriter->WriteTags();
+
+            // 4. Return the modified file as download and automatically delete the temp file
+            return response()->download($tempPath, $fileName)->deleteFileAfterSend(true);
         } catch (\Throwable $e) {
             Log::error('Error downloading file: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Ocurrió un error al intentar descargar el archivo.');
