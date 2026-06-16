@@ -209,6 +209,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::delete('/{id}', 'destroy')->name('destroy');
     });
 
+    Route::controller(\App\Http\Controllers\Admin\PageCountdownController::class)->prefix('page-countdowns')->name('page-countdowns.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{pageCountdown}/edit', 'edit')->name('edit');
+        Route::put('/{pageCountdown}', 'update')->name('update');
+        Route::delete('/{pageCountdown}', 'destroy')->name('destroy');
+    });
+
     Route::controller(AdminSongController::class)->prefix('songs')->name('songs.')->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');

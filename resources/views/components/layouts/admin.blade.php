@@ -217,6 +217,12 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('admin.page-countdowns.index') }}" class="flex items-center gap-3 px-3 py-2 text-xs rounded transition-colors {{ request()->routeIs('admin.page-countdowns.*') ? 'bg-[rgba(255,255,255,.05)] text-[var(--lucille-accent)] font-medium border-l-2 border-[var(--lucille-accent)]' : 'text-gray-300 hover:bg-[rgba(255,255,255,.02)] hover:text-white' }}">
+                                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>Páginas en Espera</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ route('admin.songs.index') }}" class="flex items-center gap-3 px-3 py-2 text-xs rounded transition-colors {{ request()->routeIs('admin.songs.*') ? 'bg-[rgba(255,255,255,.05)] text-[var(--lucille-accent)] font-medium border-l-2 border-[var(--lucille-accent)]' : 'text-gray-300 hover:bg-[rgba(255,255,255,.02)] hover:text-white' }}">
                                 <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
                                 <span>{{ $admin['songs_heading'] ?? 'Songs' }}</span>
