@@ -20,16 +20,18 @@ class MediaKitMail extends Mailable
     public $customMessage;
     public $appTheme;
     public $recipientName;
+    public $options;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(string $subject, ?string $customMessage, array $theme, ?string $recipientName = null)
+    public function __construct(string $subject, ?string $customMessage, array $theme, ?string $recipientName = null, array $options = [])
     {
         $this->customSubject = $subject;
         $this->customMessage = $customMessage;
         $this->appTheme = $theme;
         $this->recipientName = $recipientName;
+        $this->options = $options;
     }
 
     /**
@@ -41,22 +43,46 @@ class MediaKitMail extends Mailable
             subject: $this->customSubject,
         );
     }
+    
+    private function getFilteredTheme(): array
+    {
+        $settings = \App\Models\ThemeSetting::current();
+        $theme = $this->appTheme;
+        
+        // Filter logo
+        $includeLogo = $this->options['include_logo'] ?? true;
+        $theme['media']['logo_url'] = $includeLogo ? ($settings->logo_url ?? asset('assets/lucille/logo.png')) : null;
+        
+        // Filter social links
+        $allSocials = $settings->resolvedLinks()['social_links'] ?? [];
+        $selectedSocials = $this->options['socials'] ?? [];
+        
+        if (empty($selectedSocials)) {
+            // If no socials selected (e.g. form didn't send any), we should probably include none. 
+            // Wait, if options['socials'] is empty array, it means no checkboxes were checked.
+            // If options wasn't passed, we'd include all, but we pass [] by default in the controller if none selected.
+            $theme['social_links'] = [];
+        } else {
+            $theme['social_links'] = array_filter($allSocials, function ($social) use ($selectedSocials) {
+                return in_array($social['network'], $selectedSocials);
+            });
+        }
+        
+        return $theme;
+    }
 
     /**
      * Get the message content definition.
      */
     public function content(): Content
     {
-        $settings = \App\Models\ThemeSetting::current();
-        $this->appTheme['social_links'] = $settings->resolvedLinks()['social_links'] ?? [];
-        $this->appTheme['media']['logo_url'] = $settings->logo_url ?? asset('assets/lucille/logo.png');
-
         return new Content(
             view: 'emails.media-kit',
             with: [
                 'customMessage' => $this->customMessage,
-                'theme'         => $this->appTheme,
+                'theme'         => $this->getFilteredTheme(),
                 'recipientName' => $this->recipientName,
+                'includeLogo'   => $this->options['include_logo'] ?? true,
             ],
         );
     }
@@ -68,16 +94,14 @@ class MediaKitMail extends Mailable
      */
     public function attachments(): array
     {
-        $settings = \App\Models\ThemeSetting::current();
-        $theme = $this->appTheme;
-        $theme['social_links'] = $settings->resolvedLinks()['social_links'] ?? [];
-        $theme['media']['logo_url'] = $settings->logo_url ?? asset('assets/lucille/logo.png');
+        $theme = $this->getFilteredTheme();
 
         $pdf = \App::make('dompdf.wrapper');
         $pdf->setOption(['isRemoteEnabled' => true]);
         $pdf->loadView('pdf.media-kit', [
-            'theme' => $theme,
+            'theme'         => $theme,
             'recipientName' => $this->recipientName,
+            'includeLogo'   => $this->options['include_logo'] ?? true,
         ]);
 
         return [

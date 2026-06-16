@@ -10,7 +10,11 @@
         
         <!-- Header -->
         <div style="text-align: center; padding: 40px 20px 30px; background: linear-gradient(to bottom, #1a1a1a, #121212); border-bottom: 2px solid #eb3b5a;">
-            <img src="{{ $theme['media']['logo_url'] ?? asset('assets/lucille/logo.png') }}" alt="Seven Rock Radio Logo" style="max-width: 200px; height: auto;">
+            @if($includeLogo ?? true)
+                <img src="{{ $theme['media']['logo_url'] ?? asset('assets/lucille/logo.png') }}" alt="Seven Rock Radio Logo" style="max-width: 200px; height: auto;">
+            @else
+                <h1 style="color: #ffffff; font-size: 24px; margin: 0; text-transform: uppercase; letter-spacing: 2px;">Seven Rock Radio</h1>
+            @endif
         </div>
 
         <!-- Content -->

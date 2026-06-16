@@ -61,6 +61,37 @@
                         <p class="mt-2 text-xs text-[var(--lucille-accent)]">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <div class="sm:col-span-2 pt-4 border-t border-[#2b2b2b]">
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-[#a0a0a0] mb-4">Opciones de Inclusión</h3>
+                    
+                    <div class="flex flex-col gap-4">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" name="include_logo" value="1" checked
+                                class="w-4 h-4 rounded border-[#3b3b3b] bg-[rgba(0,0,0,0.2)] text-[var(--lucille-accent)] focus:ring-[var(--lucille-accent)] focus:ring-offset-[#161618]">
+                            <span class="text-sm text-[#dcdcdc] group-hover:text-white transition-colors">Incluir Logo Oficial de la Web</span>
+                        </label>
+                        
+                        @if(!empty($socialLinks))
+                        <div class="ml-1 pl-3 border-l-2 border-[#2b2b2b] flex flex-col gap-2 mt-1">
+                            <span class="text-xs text-[#8a8a8a] mb-1 uppercase tracking-wider">Redes Sociales a Incluir:</span>
+                            <div class="flex flex-wrap gap-x-6 gap-y-3">
+                                @foreach($socialLinks as $social)
+                                    @if(!empty($social['network']))
+                                    <label class="flex items-center gap-2 cursor-pointer group">
+                                        <input type="checkbox" name="socials[]" value="{{ $social['network'] }}" checked
+                                            class="w-4 h-4 rounded border-[#3b3b3b] bg-[rgba(0,0,0,0.2)] text-[var(--lucille-accent)] focus:ring-[var(--lucille-accent)] focus:ring-offset-[#161618]">
+                                        <span class="text-sm text-[#dcdcdc] capitalize group-hover:text-white transition-colors">{{ $social['network'] }}</span>
+                                    </label>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                        @else
+                            <p class="text-xs text-[#7b7b7b]">No hay redes sociales configuradas en el panel.</p>
+                        @endif
+                    </div>
+                </div>
             </div>
 
             <div class="pt-5 border-t border-[#2b2b2b] text-right">

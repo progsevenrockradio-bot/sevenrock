@@ -93,12 +93,18 @@
         $logoUrl = !empty($theme['media']['logo_url']) ? $theme['media']['logo_url'] : asset('assets/lucille/logo.png');
     @endphp
 
+    @if($includeLogo ?? true)
     <div class="watermark">
         <img src="{{ $logoUrl }}" alt="">
     </div>
+    @endif
 
     <div class="header">
-        <img src="{{ $logoUrl }}" alt="Seven Rock Radio Logo" class="logo">
+        @if($includeLogo ?? true)
+            <img src="{{ $logoUrl }}" alt="Seven Rock Radio Logo" class="logo">
+        @else
+            <h1>SEVEN ROCK RADIO</h1>
+        @endif
         <h1>Media Kit Oficial</h1>
     </div>
 
