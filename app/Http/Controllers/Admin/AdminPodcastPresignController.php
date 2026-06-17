@@ -39,6 +39,11 @@ final class AdminPodcastPresignController extends Controller
 
             return response()->json([
                 'url' => $url,
+                'method' => 'PUT',
+                'headers' => [
+                    'Content-Type' => $request->input('contentType'),
+                ],
+                'fields' => (object)[],
                 'key' => $r2Key,
             ]);
         } catch (\Throwable $exception) {

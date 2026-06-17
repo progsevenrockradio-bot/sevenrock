@@ -323,12 +323,10 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                     .then((data) => {
                         this.uppy.setFileMeta(file.id, { r2Key: data.key });
                         return {
-                            method: 'PUT',
                             url: data.url,
-                            fields: {},
-                            headers: {
-                                'Content-Type': file.type,
-                            },
+                            method: data.method,
+                            headers: data.headers,
+                            fields: data.fields,
                         };
                     });
                 },
