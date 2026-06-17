@@ -690,10 +690,17 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                 return;
             }
 
-            this.phaseLabel = 'Procesando RadioBOSS';
-            this.phaseDetailLabel = this.phaseDetailText();
-            this.statusMessage = 'No se pudo completar la subida.';
-            this.errorMessages = payload?.message ? [payload.message] : [];
+            if (xhr.status === 413) {
+                this.phaseLabel = 'Error de límite';
+                this.phaseDetailLabel = 'Archivo demasiado pesado';
+                this.statusMessage = 'El servidor rechazó la subida (Error 413).';
+                this.errorMessages = ['El archivo excede el límite máximo permitido por tu servidor o Cloudflare (suele ser de 100 MB a 256 MB).'];
+            } else {
+                this.phaseLabel = 'Error del servidor';
+                this.phaseDetailLabel = `Error HTTP ${xhr.status}`;
+                this.statusMessage = 'No se pudo completar la subida.';
+                this.errorMessages = payload?.message ? [payload.message] : [];
+            }
             this.uploadEtaLabel = '';
         };
 
