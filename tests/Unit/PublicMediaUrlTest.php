@@ -26,12 +26,12 @@ class PublicMediaUrlTest extends TestCase
     public function test_it_rewrites_raw_backblaze_urls_to_custom_cloudflare_proxy(): void
     {
         config([
-            'filesystems.disks.backblaze.url' => 'https://media.sevenrockradio.com/file/7RR-DATOS',
+            'filesystems.disks.backblaze.url' => 'https://media.sevenrockradio.com/file/other-bucket',
             'filesystems.disks.backblaze.custom_url_resolves' => true,
         ]);
 
-        $rawUrl = 'https://f003.backblazeb2.com/file/7RR-DATOS/theme/logo.png';
-        $expectedUrl = 'https://media.sevenrockradio.com/file/7RR-DATOS/theme/logo.png';
+        $rawUrl = 'https://f003.backblazeb2.com/file/other-bucket/theme/logo.png';
+        $expectedUrl = 'https://media.sevenrockradio.com/file/other-bucket/theme/logo.png';
 
         $resolved = PublicMediaUrl::normalize($rawUrl);
 
@@ -41,30 +41,28 @@ class PublicMediaUrlTest extends TestCase
     public function test_it_does_not_rewrite_if_custom_url_does_not_resolve(): void
     {
         config([
-            'filesystems.disks.backblaze.url' => 'https://media.sevenrockradio.com/file/7RR-DATOS',
+            'filesystems.disks.backblaze.url' => 'https://media.sevenrockradio.com/file/other-bucket',
             'filesystems.disks.backblaze.custom_url_resolves' => false,
         ]);
 
-        $rawUrl = 'https://f003.backblazeb2.com/file/7RR-DATOS/theme/logo.png';
-        $expectedUrl = 'https://f003.backblazeb2.com/file/7RR-DATOS/theme/logo.png';
+        $rawUrl = 'https://f003.backblazeb2.com/file/other-bucket/theme/logo.png';
+        $expectedUrl = 'https://f003.backblazeb2.com/file/other-bucket/theme/logo.png';
 
         $resolved = PublicMediaUrl::normalize($rawUrl);
 
         $this->assertSame($expectedUrl, $resolved);
     }
 
-    public function test_it_rewrites_custom_url_to_friendly_b2_if_dns_fails(): void
+    public function test_it_unconditionally_rewrites_legacy_b2_bucket_urls_to_r2_url(): void
     {
         config([
-            'filesystems.disks.backblaze.url' => 'https://media.sevenrockradio.com/file/7RR-DATOS',
-            'filesystems.disks.backblaze.bucket_name' => '7RR-DATOS',
-            'filesystems.disks.backblaze.custom_url_resolves' => false,
+            'filesystems.disks.r2.url' => 'https://media.sevenrockradio.com',
         ]);
 
-        $customUrl = 'https://media.sevenrockradio.com/file/7RR-DATOS/theme/logo.png';
-        $expectedUrl = 'https://f003.backblazeb2.com/file/7RR-DATOS/theme/logo.png';
+        $rawUrl = 'https://f003.backblazeb2.com/file/7RR-DATOS/theme/logo.png';
+        $expectedUrl = 'https://media.sevenrockradio.com/theme/logo.png';
 
-        $resolved = PublicMediaUrl::normalize($customUrl);
+        $resolved = PublicMediaUrl::normalize($rawUrl);
 
         $this->assertSame($expectedUrl, $resolved);
     }

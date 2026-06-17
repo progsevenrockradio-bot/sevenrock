@@ -28,9 +28,11 @@ final class ReconcilePodcastPipelineCommand extends Command
 
         $programs = RadioProgram::query()
             ->with('masterProgram')
-            ->where(function ($query) use ($threshold): void {
+            ->whereNotNull('processing_started_at')
+            ->whereNotIn('delivery_status', ['delivery_verified', 'skipped'])
+            ->where('updated_at', '<=', $threshold)
+            ->where(function ($query): void {
                 $query->whereNull('processing_finished_at')
-                    ->orWhere('updated_at', '<=', $threshold)
                     ->orWhereIn('radioboss_status', ['radioboss_error', 'radioboss_pending'])
                     ->orWhereIn('archive_org_status', ['archive_error', 'archive_pending', 'archive_pending_indexing']);
             })
