@@ -177,12 +177,16 @@ final class PodcastUploadController extends Controller
             'imagen_episodio_file' => ['nullable', 'file', 'image', 'max:10240'],
             'sync_archive_org' => ['nullable', 'boolean'],
             'download_processed_mp3' => ['nullable', 'boolean'],
-            'pipeline_action' => ['nullable', Rule::in(['save', 'process'])],
+            'r2_key' => ['nullable', 'string', 'max:255'],
             'archivo_mp3' => [
-                'required',
+                'required_without:r2_key',
+                'nullable',
                 'file',
                 'max:512000',
-                function (string $attribute, mixed $value, \Closure $fail): void {
+                function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                    if ($request->filled('r2_key')) {
+                        return;
+                    }
                     if (! $value instanceof UploadedFile) {
                         $fail('El archivo MP3 no es válido.');
 
@@ -208,20 +212,28 @@ final class PodcastUploadController extends Controller
             'imagen_episodio_url.max' => 'La URL de la imagen no puede superar 255 caracteres.',
             'imagen_episodio_file.image' => 'El archivo de imagen debe ser una imagen válida.',
             'imagen_episodio_file.max' => 'La imagen no puede superar 10 MB.',
-            'archivo_mp3.required' => 'Debes seleccionar un archivo MP3.',
+            'archivo_mp3.required_without' => 'Debes seleccionar un archivo MP3.',
             'archivo_mp3.file' => 'El archivo MP3 no es válido.',
             'archivo_mp3.max' => 'El archivo MP3 no puede superar 500 MB.',
         ]);
 
         $master = MasterProgram::query()->findOrFail((int) $data['master_program_id']);
-        $rawFileName = $this->buildRawFileName($data);
-        $rawPath = $this->storeRawMp3(
-            $request->file('archivo_mp3'),
-            $rawFileName,
-        );
+        
+        $isR2 = $request->filled('r2_key');
+        if ($isR2) {
+            $rawPath = trim((string) $request->input('r2_key'));
+            $disk = 'r2';
+        } else {
+            $rawFileName = $this->buildRawFileName($data);
+            $rawPath = $this->storeRawMp3(
+                $request->file('archivo_mp3'),
+                $rawFileName,
+            );
+            $disk = 'public';
 
-        if ($rawPath === '') {
-            return back()->withInput()->withErrors(['archivo_mp3' => 'No se pudo guardar el archivo localmente.']);
+            if ($rawPath === '') {
+                return back()->withInput()->withErrors(['archivo_mp3' => 'No se pudo guardar el archivo localmente.']);
+            }
         }
 
         $imagePath = $this->resolveEpisodeImageValue($request, $master, $data);
@@ -233,7 +245,7 @@ final class PodcastUploadController extends Controller
         $pipelineAction = strtolower(trim((string) $request->input('pipeline_action', 'process')));
         $shouldProcessPipeline = $pipelineAction !== 'save';
 
-        $radioProgram = RadioProgram::withoutEvents(function () use ($master, $data, $rawPath, $syncArchiveOrg, $imagePath, $manualEpisodeNumber, $downloadProcessedMp3, $shouldProcessPipeline): RadioProgram {
+        $radioProgram = RadioProgram::withoutEvents(function () use ($master, $data, $rawPath, $disk, $syncArchiveOrg, $imagePath, $manualEpisodeNumber, $downloadProcessedMp3, $shouldProcessPipeline): RadioProgram {
             $radioBossaStatus = $shouldProcessPipeline ? 'radioboss_pending' : 'skipped';
             $archiveStatus = $shouldProcessPipeline ? 'archive_pending' : 'skipped';
             $deliveryStatus = $shouldProcessPipeline ? 'delivery_pending' : 'skipped';
@@ -253,7 +265,7 @@ final class PodcastUploadController extends Controller
                 'live_description' => trim((string) ($data['resena'] ?? '')) ?: null,
                 'comentario_episodio' => trim((string) ($data['resena'] ?? '')) ?: null,
                 'archivo_mp3' => $rawPath,
-                'archivo_mp3_disk' => 'public',
+                'archivo_mp3_disk' => $disk,
                 'enviado_radioboss' => false,
                 'radioboss_status' => $radioBossaStatus,
                 'sync_archive_org' => $syncArchiveOrg,

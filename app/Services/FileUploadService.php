@@ -222,6 +222,42 @@ class FileUploadService
             return is_file($path) ? $path : null;
         }
 
+        if ($resolvedDisk === 'r2') {
+            try {
+                $stream = Storage::disk('r2')->readStream($key);
+                if (! is_resource($stream)) {
+                    return null;
+                }
+
+                $directory = storage_path('app/tmp/r2');
+                File::ensureDirectoryExists($directory);
+
+                $tmpPath = $directory . DIRECTORY_SEPARATOR . Str::uuid()->toString() . '-' . basename($key);
+                $handle = fopen($tmpPath, 'w+b');
+                if ($handle === false) {
+                    fclose($stream);
+
+                    return null;
+                }
+
+                try {
+                    if (stream_copy_to_stream($stream, $handle) === false) {
+                        fclose($handle);
+                        @unlink($tmpPath);
+
+                        return null;
+                    }
+                } finally {
+                    fclose($handle);
+                    fclose($stream);
+                }
+
+                return $tmpPath;
+            } catch (Throwable) {
+                return null;
+            }
+        }
+
         if ($resolvedDisk !== 'backblaze' || ! $this->isB2Configured()) {
             return null;
         }

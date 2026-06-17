@@ -1,4 +1,4 @@
-<?php
+ Estás intentando subir un archivo gigantesco de 319.6 MB<?php
 
 namespace App\Http\Controllers\Admin;
 
@@ -21,7 +21,7 @@ class AdminTrackSubmissionController extends Controller
         $submissions = TrackSubmission::query()
             ->orderByDesc('created_at')
             ->paginate(20, ['*'], 'maquetas_page');
-            
+
         // Get all email logs associated with track submissions
         $emailLogs = \App\Models\EmailLog::query()
             ->whereNotNull('track_submission_id')
@@ -52,7 +52,7 @@ class AdminTrackSubmissionController extends Controller
             try {
                 $mail = new \App\Mail\SubmissionStatusUpdated($submission);
                 \Illuminate\Support\Facades\Mail::to($submission->contact_email)->send($mail);
-                
+
                 \App\Models\EmailLog::create([
                     'track_submission_id' => $submission->id,
                     'to_email' => $submission->contact_email,
@@ -60,7 +60,7 @@ class AdminTrackSubmissionController extends Controller
                     'body' => $mail->render(),
                     'status' => 'sent',
                 ]);
-                
+
                 return redirect()->back()->with('success', 'Estado actualizado y correo automático enviado a la banda.');
             } catch (\Throwable $e) {
                 Log::error('Error sending submission status email', ['error' => $e->getMessage(), 'submission_id' => $submission->id]);
@@ -81,7 +81,7 @@ class AdminTrackSubmissionController extends Controller
             if ($submission->file_path && Storage::disk('r2')->exists($submission->file_path)) {
                 Storage::disk('r2')->delete($submission->file_path);
             }
-            
+
             $submission->delete();
 
             return redirect()->back()->with('success', 'Maqueta eliminada permanentemente.');

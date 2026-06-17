@@ -1,4 +1,6 @@
 <x-layouts.admin :title="'Podcast Uploads - '.config('app.name')">
+    <link href="https://releases.transloadit.com/uppy/v3.23.0/uppy.min.css" rel="stylesheet">
+    <script src="https://releases.transloadit.com/uppy/v3.23.0/uppy.min.js"></script>
     @php
         $selectedProgramId = old('master_program_id');
         $selectedDay = null;
