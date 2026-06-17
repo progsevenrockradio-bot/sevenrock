@@ -32,17 +32,20 @@ final class AdminPodcastPresignController extends Controller
 
         try {
             // Generar URL firmada válida por 60 minutos
-            $url = Storage::disk('r2')->temporaryUploadUrl(
+            $presignedData = Storage::disk('r2')->temporaryUploadUrl(
                 $r2Key,
                 now()->addMinutes(60)
             );
 
+            $urlStr = is_array($presignedData) ? ($presignedData['url'] ?? '') : (string) $presignedData;
+            $headers = is_array($presignedData) ? ($presignedData['headers'] ?? []) : [
+                'Content-Type' => $request->input('contentType'),
+            ];
+
             return response()->json([
-                'url' => $url,
+                'url' => $urlStr,
                 'method' => 'PUT',
-                'headers' => [
-                    'Content-Type' => $request->input('contentType'),
-                ],
+                'headers' => $headers,
                 'fields' => (object)[],
                 'key' => $r2Key,
             ]);
