@@ -367,7 +367,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                     fileInput.addEventListener('change', (event) => {
                         const file = event.target.files[0];
                         if (file) {
-                            this.uppy.clear();
+                            this.uppy.cancelAll();
                             this.uppy.addFile({
                                 name: file.name,
                                 type: file.type,
