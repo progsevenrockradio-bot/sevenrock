@@ -193,9 +193,24 @@ final class ArchiveOrgService
                     'mp.descripcion as master_description',
                 ])
                 ->where(function ($query): void {
-                    $query->where('rp.sync_archive_org', true)
-                        ->orWhereIn('rp.archive_org_status', ['archive_verified', 'archive_pending_indexing', 'uploaded'])
-                        ->orWhereNotNull('rp.archive_org_uploaded_at');
+                    $query->where(function ($q) {
+                        $q->where('rp.sync_archive_org', true)
+                            ->orWhereIn('rp.archive_org_status', ['archive_verified', 'archive_pending_indexing', 'uploaded'])
+                            ->orWhereNotNull('rp.archive_org_uploaded_at');
+                    });
+                    
+                    // Solo mostrar episodios cuya hora de emisión en vivo ya haya finalizado
+                    $query->where(function ($q) {
+                        $q->whereNull('rp.fecha_emision')
+                          ->orWhere('rp.fecha_emision', '<', now()->toDateString())
+                          ->orWhere(function ($q2) {
+                              $q2->where('rp.fecha_emision', '=', now()->toDateString())
+                                 ->where(function ($q3) {
+                                     $q3->whereNull('rp.hora_fin')
+                                        ->orWhere('rp.hora_fin', '<=', now()->toTimeString());
+                                 });
+                          });
+                    });
                 })
                 ->orderByDesc('rp.fecha_emision')
                 ->orderByDesc('rp.archive_org_uploaded_at')
