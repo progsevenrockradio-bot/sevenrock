@@ -112,14 +112,14 @@
                                                 </span>
                                             </td>
                                             <td class="px-4 py-4">
-                                                <div class="flex flex-wrap gap-2">
+                                                <div class="flex flex-nowrap gap-1.5">
                                                     <a
                                                         href="{{ route('admin.master-programs.edit', $masterProgram) }}"
-                                                        class="inline-flex h-10 w-10 items-center justify-center border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:border-[var(--color-lucille-accent)] hover:bg-[var(--color-lucille-accent)] hover:text-white"
+                                                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:border-[var(--color-lucille-accent)] hover:bg-[var(--color-lucille-accent)] hover:text-white"
                                                         title="Editar"
                                                         aria-label="Editar programa"
                                                     >
-                                                        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                        <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                             <path d="M12 20h9" />
                                                             <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
                                                         </svg>
@@ -127,10 +127,10 @@
                                                     <button
                                                         type="button"
                                                         @click="$dispatch('open-invitation', { id: {{ $masterProgram->id }}, name: '{{ addslashes($masterProgram->name) }}' })"
-                                                        class="inline-flex h-10 w-10 items-center justify-center border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:border-[#a855f7] hover:bg-[#a855f7]/20 hover:text-[#a855f7]"
+                                                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:border-[#a855f7] hover:bg-[#a855f7]/20 hover:text-[#a855f7]"
                                                         title="Solicitar Info"
                                                     >
-                                                        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                        <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                                             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                                                             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                                                         </svg>
@@ -147,11 +147,11 @@
                                                         @method('DELETE')
                                                         <button
                                                             type="submit"
-                                                            class="inline-flex h-10 w-10 items-center justify-center border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:border-red-500 hover:bg-red-500 hover:text-white"
+                                                            class="inline-flex h-8 w-8 shrink-0 items-center justify-center border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:border-red-500 hover:bg-red-500 hover:text-white"
                                                             title="Eliminar"
                                                             aria-label="Eliminar programa"
                                                         >
-                                                            <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                                 <path d="M3 6h18" />
                                                                 <path d="M8 6V4h8v2" />
                                                                 <path d="M19 6l-1 14H6L5 6" />
