@@ -126,7 +126,7 @@
                                                     </a>
                                                     <button
                                                         type="button"
-                                                        @click="$dispatch('open-invitation', { id: {{ $masterProgram->id }}, name: '{{ addslashes($masterProgram->name) }}' })"
+                                                        @click="$dispatch('open-invitation', { id: {{ $masterProgram->id }}, name: '{{ addslashes($masterProgram->name) }}', email: '{{ addslashes((string)($masterProgram->email_notificacion ?? '')) }}' })"
                                                         class="inline-flex h-8 w-8 shrink-0 items-center justify-center border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:border-[#a855f7] hover:bg-[#a855f7]/20 hover:text-[#a855f7]"
                                                         title="Solicitar Info"
                                                     >
@@ -175,12 +175,16 @@
 
     <!-- Modal Invitación -->
     <div x-data="{
+        show: false,
+        loading: false,
+        sendingEmail: false,
         openInvitation: false,
         programId: null,
         programName: '',
-        url: '',
-        loading: false,
+        programEmail: '',
+        invitationId: null,
         expiresIn: 3,
+        url: '',
         fields: {
             nombre: true,
             conductor: true,
@@ -192,11 +196,15 @@
             hora_transmision: true,
             caratula_url: false
         },
-        openModal(id, name) {
-            this.programId = id;
-            this.programName = name;
-            this.url = '';
-            this.openInvitation = true;
+        init() {
+            window.addEventListener('open-invitation', (e) => {
+                this.programId = e.detail.id;
+                this.programName = e.detail.name;
+                this.programEmail = e.detail.email || '';
+                this.invitationId = null;
+                this.url = '';
+                this.openInvitation = true;
+            });
         },
         async generate() {
             this.loading = true;
@@ -221,6 +229,7 @@
                 const data = await res.json();
                 if (data.success) {
                     this.url = data.url;
+                    this.invitationId = data.invitation_id;
                 } else {
                     alert('Error: ' + data.message);
                 }
@@ -230,11 +239,36 @@
             this.loading = false;
         },
         copyUrl() {
-            navigator.clipboard.writeText(this.url);
+            const input = document.getElementById('invitation-url');
+            input.select();
+            document.execCommand('copy');
             alert('¡Enlace copiado al portapapeles!');
+        },
+        async sendEmail() {
+            if (!this.invitationId || !this.programEmail) return;
+            this.sendingEmail = true;
+            try {
+                const res = await fetch('/admin/master-programs/' + this.programId + '/invitations/' + this.invitationId + '/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ email: this.programEmail })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Correo enviado exitosamente.');
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (err) {
+                alert('Ocurrió un error al enviar el correo.');
+            }
+            this.sendingEmail = false;
         }
-    }"
-    @open-invitation.window="openModal($event.detail.id, $event.detail.name)">
+    }">
         <div x-show="openInvitation" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-6 sm:px-0">
             <div @click.away="openInvitation = false" class="w-full max-w-lg border border-[#2b2b2b] bg-[rgba(16,16,18,1)] p-6 shadow-2xl">
                 <div class="mb-4 flex items-center justify-between">
@@ -272,14 +306,27 @@
                     </button>
                 </div>
 
-                <div x-show="url" style="display: none;" class="mt-4 border border-[#2b2b2b] bg-[#1a1a1e] p-4">
-                    <p class="mb-2 text-xs uppercase tracking-[.1em] text-[#a855f7]">¡Enlace generado exitosamente!</p>
-                    <div class="flex items-center gap-2">
-                        <input type="text" readonly :value="url" class="w-full bg-[#111] border border-[#2b2b2b] px-3 py-2 text-sm text-[#dcdcdc] focus:outline-none">
-                        <button type="button" @click="copyUrl()" class="lucille-button whitespace-nowrap">Copiar</button>
+                <template x-if="url">
+                    <div class="mt-6 border-t border-[#2b2b2b] pt-6">
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Enlace Generado</label>
+                        <div class="flex items-center gap-2">
+                            <input type="text" readonly :value="url" class="lucille-form-field flex-1 cursor-text bg-[#0e0e10]" id="invitation-url">
+                            <button type="button" @click="copyUrl" class="lucille-button-solid bg-[#a855f7] hover:bg-[#9333ea] border-none text-white whitespace-nowrap">
+                                Copiar
+                            </button>
+                        </div>
+                        <template x-if="programEmail">
+                            <button type="button" :disabled="sendingEmail" @click="sendEmail" class="lucille-button-solid mt-4 w-full bg-green-600 hover:bg-green-500 border-none text-white flex justify-center items-center gap-2">
+                                <span x-show="!sendingEmail">Enviar al correo (</span><span x-show="!sendingEmail" x-text="programEmail"></span><span x-show="!sendingEmail">)</span>
+                                <span x-show="sendingEmail">Enviando...</span>
+                            </button>
+                        </template>
+                        <template x-if="!programEmail">
+                            <p class="mt-4 text-xs text-red-400">Este programa no tiene un correo configurado. Cópialo manualmente.</p>
+                        </template>
                     </div>
-                    <p class="mt-2 text-xs text-[#7b7b7b]">Este enlace expirará en <span x-text="expiresIn"></span> días y solo puede usarse una vez.</p>
-                </div>
+                </template>
+                <p class="mt-4 text-xs text-[#7b7b7b]">Este enlace expirará en <span x-text="expiresIn"></span> días y solo puede usarse una vez.</p>
             </div>
         </div>
     </div>

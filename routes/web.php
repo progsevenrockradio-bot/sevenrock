@@ -202,6 +202,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
 
     Route::controller(\App\Http\Controllers\Admin\ProgramInvitationController::class)->prefix('master-programs/{masterProgram}/invitations')->name('master-programs.invitations.')->group(function (): void {
         Route::post('/', 'store')->name('store');
+        Route::post('/{invitation}/send', 'sendEmail')->name('send');
     });
 
     Route::prefix('programs')->name('programs.')->controller(AdminProgramCodeController::class)->group(function (): void {

@@ -1,4 +1,17 @@
-<x-layouts.site title="Seven Rock Radio - Actualización de Programa" description="Formulario de actualización de programa para Seven Rock Radio.">
+<x-layouts.site :title="'Actualizar: ' . $program->name" :showPlayer="false" description="Formulario de actualización de programa para Seven Rock Radio.">
+    @push('styles')
+        <style>
+            /* Deshabilitar navegación superior */
+            .lucille-nav {
+                pointer-events: none !important;
+                opacity: 0.3 !important;
+            }
+            .lucille-mobile-menu-btn {
+                display: none !important;
+            }
+        </style>
+    @endpush
+
     <x-sections.page-heading title="Actualizar Información del Programa" overlay="rgba(0,0,0,0)" :image="$themeAppearance['background_url'] ?? null" />
 
     <section>

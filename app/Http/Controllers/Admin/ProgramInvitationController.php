@@ -36,7 +36,40 @@ class ProgramInvitationController extends Controller
         return response()->json([
             'success' => true,
             'url' => $url,
+            'invitation_id' => $invitation->id,
             'message' => 'Enlace de invitación generado correctamente.',
         ]);
+    }
+
+    public function sendEmail(Request $request, MasterProgram $masterProgram, ProgramInvitation $invitation): JsonResponse
+    {
+        $url = URL::temporarySignedRoute(
+            'invitation.program.edit',
+            $invitation->expires_at,
+            ['invitation' => $invitation->id]
+        );
+
+        $email = $request->input('email', $masterProgram->email_notificacion);
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El programa no tiene un correo válido configurado.'
+            ], 400);
+        }
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\ProducerInvitationMail($masterProgram, $url));
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Correo enviado exitosamente a {$email}"
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al enviar el correo: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
