@@ -1,4 +1,4 @@
- Estás intentando subir un archivo gigantesco de 319.6 MB<?php
+<?php
 
 namespace App\Http\Controllers\Admin;
 
