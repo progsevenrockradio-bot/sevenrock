@@ -118,7 +118,7 @@
                                 $epTitle = $episode['title'] ?? 'Episodio ' . ($index + 1 + ($episodes->currentPage() - 1) * $episodes->perPage());
                                 $epSrc = $episode['src'] ?? '';
                                 $epDuration = $episode['duration'] ?? '';
-                                $epDate = isset($episode['published_at']) ? \Carbon\Carbon::createFromTimestamp((int)$episode['published_at'])->format('d/m/Y') : '';
+                                $epDate = (!empty($episode['published_at']) && $episode['published_at'] > 0) ? \Carbon\Carbon::createFromTimestamp((int)$episode['published_at'])->format('d/m/Y') : '';
                                 $epSize = isset($episode['size']) ? round($episode['size'] / 1048576, 1) . ' MB' : '';
                                 $epViews = $episode['views'] ?? '';
                             @endphp

@@ -262,8 +262,6 @@ final class ArchiveOrgService
             $publishedAt = $this->publishedAtToDate(
                 data_get($row, 'fecha_emision')
                 ?: data_get($row, 'archive_org_uploaded_at')
-                ?: data_get($row, 'updated_at')
-                ?: data_get($snapshot, 'synced_at')
             );
 
             $title = trim((string) (
