@@ -10,7 +10,16 @@
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Radio Artists</h1>
             <p class="mt-2 text-[#7b7b7b]">Local editorial profile cache used by the player modal and drawer.</p>
         </div>
-        <a href="{{ route('admin.radio-artists.create') }}" class="lucille-button-solid">New Radio Artist</a>
+        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <form action="{{ route('admin.radio-artists.index') }}" method="GET" class="flex">
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Buscar por nombre..." class="px-3 py-2 bg-[rgba(16,16,18,.88)] border border-[#2b2b2b] text-[#dcdcdc] text-sm focus:outline-none focus:border-lucille-accent placeholder-[#4a4a4a] rounded-l-md w-full sm:w-64">
+                <button type="submit" class="bg-[#2b2b2b] hover:bg-lucille-accent text-[#dcdcdc] hover:text-white px-4 py-2 text-sm border border-[#2b2b2b] border-l-0 rounded-r-md transition-colors">Buscar</button>
+                @if(request('search'))
+                    <a href="{{ route('admin.radio-artists.index') }}" class="ml-2 text-xs text-[#7b7b7b] hover:text-white self-center transition-colors">Limpiar</a>
+                @endif
+            </form>
+            <a href="{{ route('admin.radio-artists.create') }}" class="lucille-button-solid whitespace-nowrap">New Radio Artist</a>
+        </div>
     </div>
 
     <div class="overflow-hidden border border-[#2b2b2b] bg-[rgba(16,16,18,.88)]">
@@ -61,4 +70,10 @@
             </tbody>
         </table>
     </div>
+
+    @if ($bandProfiles->hasPages())
+        <div class="mt-6">
+            {{ $bandProfiles->links() }}
+        </div>
+    @endif
 </x-layouts.admin>

@@ -16,10 +16,17 @@ use Illuminate\Support\Str;
 
 class BandProfileController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $query = RadioArtist::query();
+
+        if ($search = $request->input('search')) {
+            $query->where('name', 'like', '%' . $search . '%');
+        }
+
         return view('admin.radio-artists.index', [
-            'bandProfiles' => RadioArtist::query()->orderBy('name')->get(),
+            'bandProfiles' => $query->orderBy('name')->paginate(20)->withQueryString(),
+            'search' => $search,
         ]);
     }
 
