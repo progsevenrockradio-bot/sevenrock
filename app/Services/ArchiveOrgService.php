@@ -74,10 +74,12 @@ final class ArchiveOrgService
         }
 
         if (count($episodes) < $limit) {
+            $archiveCol = 'archive_identifier';
+            $nombreCol = 'nombre';
             $programs = MasterProgram::query()
-                ->whereNotNull('archive_identifier')
-                ->where('archive_identifier', '!=', '')
-                ->orderBy('nombre')
+                ->whereNotNull($archiveCol)
+                ->where($archiveCol, '!=', '')
+                ->orderBy($nombreCol)
                 ->limit(80)
                 ->get();
 
@@ -164,8 +166,16 @@ final class ArchiveOrgService
         }
 
         try {
-            $rows = DB::table('radio_programs as rp')
-                ->leftJoin('master_programs as mp', 'mp.id', '=', 'rp.master_program_id')
+            $tableName = 'radio_programs as rp';
+            $joinTable = 'master_programs as mp';
+            $joinKey = 'mp.id';
+            $joinForeign = 'rp.master_program_id';
+            $orderDate = 'rp.fecha_emision';
+            $orderUploaded = 'rp.archive_org_uploaded_at';
+            $orderUpdated = 'rp.updated_at';
+
+            $rows = DB::table($tableName)
+                ->leftJoin($joinTable, $joinKey, '=', $joinForeign)
                 ->select([
                     'rp.id',
                     'rp.master_program_id',
@@ -212,9 +222,9 @@ final class ArchiveOrgService
                           });
                     });
                 })
-                ->orderByDesc('rp.fecha_emision')
-                ->orderByDesc('rp.archive_org_uploaded_at')
-                ->orderByDesc('rp.updated_at')
+                ->orderByDesc($orderDate)
+                ->orderByDesc($orderUploaded)
+                ->orderByDesc($orderUpdated)
                 ->limit($limit)
                 ->get();
         } catch (Throwable) {
@@ -705,16 +715,16 @@ final class ArchiveOrgService
                         if ($downloads > 0) {
                             $program->vistas_archive = $downloads;
                             $program->vistas_totales = $downloads + ($program->escuchas_locales ?? 0);
-                            $program->stats_updated_at = now();
+                            $program->stats_updated_at = Carbon::now();
                             $program->save();
                         }
 
                         Cache::put($cacheKey, $downloads, now()->addHours(2));
-                    } catch (\Throwable) {
+                    } catch (Throwable) {
                         // Ignore
                     }
                 });
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Terminating fallback
             }
 
@@ -731,13 +741,13 @@ final class ArchiveOrgService
             if ($downloads > 0) {
                 $program->vistas_archive = $downloads;
                 $program->vistas_totales = $downloads + ($program->escuchas_locales ?? 0);
-                $program->stats_updated_at = now();
+                $program->stats_updated_at = Carbon::now();
                 $program->save();
             }
 
             Cache::put($cacheKey, $downloads, now()->addHours(2));
             return $downloads;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return (int) ($program->vistas_archive ?? 0);
         }
     }

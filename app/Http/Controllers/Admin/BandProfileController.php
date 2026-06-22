@@ -173,12 +173,12 @@ class BandProfileController extends Controller
             'source' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $validated['members_count'] = $validated['members_count'] !== null ? (int) $validated['members_count'] : null;
-        $validated['status'] = $validated['status'] !== '' ? $validated['status'] : null;
+        $validated['members_count'] = isset($validated['members_count']) ? (int) $validated['members_count'] : null;
+        $validated['status'] = ($validated['status'] ?? '') !== '' ? $validated['status'] : null;
         $validated['featured_facts'] = $this->splitLines((string) ($validated['featured_facts_text'] ?? ''));
         $validated['official_links'] = $this->splitLinks((string) ($validated['official_links_text'] ?? ''));
         $validated['related_artists'] = $this->splitLines((string) ($validated['related_artists_text'] ?? ''));
-        $validated['source'] = $validated['source'] ?: 'Seven Rock Radio';
+        $validated['source'] = ($validated['source'] ?? '') ?: 'Seven Rock Radio';
         $validated['labels'] = trim((string) ($validated['labels'] ?? '')) !== '' ? trim((string) $validated['labels']) : null;
 
         unset($validated['featured_facts_text'], $validated['official_links_text'], $validated['related_artists_text']);

@@ -53,6 +53,34 @@ final class MasterProgramController extends Controller
         ]);
     }
 
+    public function report(): View
+    {
+        $masterPrograms = MasterProgram::adminListing();
+
+        $dayTabs = [
+            'LUNES' => 'Lunes',
+            'MARTES' => 'Martes',
+            'MIERCOLES' => 'Miércoles',
+            'JUEVES' => 'Jueves',
+            'VIERNES' => 'Viernes',
+            'SABADO' => 'Sábado',
+            'DOMINGO' => 'Domingo',
+        ];
+
+        $programsByDay = collect($dayTabs)
+            ->mapWithKeys(function (string $label, string $day) use ($masterPrograms): array {
+                return [
+                    $day => $masterPrograms->where('dia_transmision', $day)->values(),
+                ];
+            });
+
+        return view('admin.master-programs.report', [
+            'masterPrograms' => $masterPrograms,
+            'dayTabs' => $dayTabs,
+            'programsByDay' => $programsByDay,
+        ]);
+    }
+
     public function create(): View
     {
         $masterProgram = new MasterProgram([

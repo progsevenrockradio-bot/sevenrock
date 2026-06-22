@@ -1,5 +1,16 @@
 @php $isEdit = $bandProfile->exists; @endphp
 
+@if ($errors->any())
+    <div class="mb-6 border border-[#5d2b2b] bg-[rgba(92,35,35,.28)] px-4 py-3 text-sm text-[#ffd0d0]">
+        <div class="font-bold uppercase tracking-wider mb-2">Por favor corrige los siguientes errores:</div>
+        <ul class="list-disc list-inside space-y-1">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
 <div class="grid gap-5 md:grid-cols-2">
     <div>
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Name</label>

@@ -316,7 +316,7 @@
                 </div>
 
                 <audio x-ref="audio" preload="metadata" playsinline
-                    @error="playerVisible = false; fallbackModalVisible = true;"
+                    x-on:error="playerVisible = false; fallbackModalVisible = true;"
                     @loadedmetadata="onLoadedMetadata()"
                     @timeupdate="onTimeUpdate()"
                     @play="onPlay()" @pause="onPause()" @ended="onEnded()">

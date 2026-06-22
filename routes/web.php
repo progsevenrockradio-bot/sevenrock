@@ -186,6 +186,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
 
     Route::controller(AdminMasterProgramController::class)->prefix('master-programs')->name('master-programs.')->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::get('/reporte', 'report')->name('report');
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
         Route::get('/{masterProgram}/edit', 'edit')->name('edit');
