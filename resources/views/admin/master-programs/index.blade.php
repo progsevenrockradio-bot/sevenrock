@@ -185,6 +185,9 @@
         invitationId: null,
         expiresIn: 3,
         url: '',
+        alertOpen: false,
+        alertMessage: '',
+        alertType: 'error',
         fields: {
             nombre: true,
             conductor: true,
@@ -231,10 +234,10 @@
                     this.url = data.url;
                     this.invitationId = data.invitation_id;
                 } else {
-                    alert('Error: ' + data.message);
+                    this.showError('Error: ' + data.message);
                 }
             } catch (err) {
-                alert('Ocurrió un error al generar la invitación.');
+                this.showError('Ocurrió un error al generar la invitación.');
             }
             this.loading = false;
         },
@@ -242,7 +245,7 @@
             const input = document.getElementById('invitation-url');
             input.select();
             document.execCommand('copy');
-            alert('¡Enlace copiado al portapapeles!');
+            this.showError('¡Enlace copiado al portapapeles!', 'success');
         },
         async sendEmail() {
             if (!this.invitationId || !this.programEmail) return;
@@ -259,14 +262,19 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert('Correo enviado exitosamente.');
+                    this.showError('Correo enviado exitosamente.', 'success');
                 } else {
-                    alert('Error: ' + data.message);
+                    this.showError('Error: ' + (data.message || 'No se encontró la ruta o recurso. Asegúrate de vaciar la caché de rutas.'));
                 }
             } catch (err) {
-                alert('Ocurrió un error al enviar el correo.');
+                this.showError('Ocurrió un error al enviar el correo. Si el error persiste, intenta vaciar la caché de rutas en tu servidor.');
             }
             this.sendingEmail = false;
+        },
+        showError(message, type = 'error') {
+            this.alertMessage = message;
+            this.alertType = type;
+            this.alertOpen = true;
         }
     }">
         <div x-show="openInvitation" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-6 sm:px-0">
@@ -327,6 +335,25 @@
                     </div>
                 </template>
                 <p class="mt-4 text-xs text-[#7b7b7b]">Este enlace expirará en <span x-text="expiresIn"></span> días y solo puede usarse una vez.</p>
+            </div>
+        </div>
+
+        <!-- Custom Alert Modal -->
+        <div x-show="alertOpen" style="display: none;" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-6 sm:px-0">
+            <div @click.away="alertOpen = false" class="w-full max-w-sm border bg-[rgba(16,16,18,1)] p-6 shadow-2xl"
+                 :class="alertType === 'error' ? 'border-[#c32720]' : 'border-[var(--color-lucille-accent)]'">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="font-display text-lg uppercase tracking-[.1em]" :class="alertType === 'error' ? 'text-[#c32720]' : 'text-[var(--color-lucille-accent)]'" x-text="alertType === 'error' ? 'Error' : 'Notificación'"></h3>
+                    <button @click="alertOpen = false" class="text-[#7b7b7b] hover:text-white">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <p class="mb-6 text-sm text-[#dcdcdc]" x-text="alertMessage"></p>
+                <div class="flex justify-end">
+                    <button type="button" @click="alertOpen = false" class="lucille-button-solid" :class="alertType === 'error' ? 'bg-[#c32720] hover:bg-[#a1201a] border-[#c32720]' : 'bg-[var(--color-lucille-accent)] hover:bg-opacity-80'">
+                        Aceptar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
