@@ -100,6 +100,12 @@ Route::get("/programas", [SiteController::class, "programs"])->name("programs");
 Route::get("/programas/track-play", [SiteController::class, "trackPlay"])->name("programs.track-play");
 Route::get("/programas/{identifier}", [SiteController::class, "programDetail"])->name("programs.detail");
 
+// Rutas Públicas de Invitaciones de Programas
+Route::controller(\App\Http\Controllers\GuestProgramController::class)->prefix('invitacion/programa')->name('invitation.program.')->middleware('signed')->group(function (): void {
+    Route::get('/{invitation}', 'edit')->name('edit');
+    Route::post('/{invitation}', 'update')->name('update');
+});
+
 // Rutas de restablecimiento de contraseña para el panel de administración.
 // Se conservan por compatibilidad con enlaces existentes.
 Route::get('/admin/forgot-password', [AdminAuthController::class, 'showLinkRequestForm'])->name('admin.password.request');
@@ -192,6 +198,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/{masterProgram}/edit', 'edit')->name('edit');
         Route::put('/{masterProgram}', 'update')->name('update');
         Route::delete('/{masterProgram}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(\App\Http\Controllers\Admin\ProgramInvitationController::class)->prefix('master-programs/{masterProgram}/invitations')->name('master-programs.invitations.')->group(function (): void {
+        Route::post('/', 'store')->name('store');
     });
 
     Route::prefix('programs')->name('programs.')->controller(AdminProgramCodeController::class)->group(function (): void {

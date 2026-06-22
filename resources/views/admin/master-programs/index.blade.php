@@ -124,6 +124,17 @@
                                                             <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
                                                         </svg>
                                                     </a>
+                                                    <button
+                                                        type="button"
+                                                        @click="$dispatch('open-invitation', { id: {{ $masterProgram->id }}, name: '{{ addslashes($masterProgram->name) }}' })"
+                                                        class="inline-flex h-10 w-10 items-center justify-center border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:border-[#a855f7] hover:bg-[#a855f7]/20 hover:text-[#a855f7]"
+                                                        title="Solicitar Info"
+                                                    >
+                                                        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                                                        </svg>
+                                                    </button>
                                                     <form
                                                         action="{{ route('admin.master-programs.destroy', $masterProgram) }}"
                                                         method="POST"
@@ -161,4 +172,115 @@
             @endforeach
         </div>
     </section>
+
+    <!-- Modal Invitación -->
+    <div x-data="{
+        openInvitation: false,
+        programId: null,
+        programName: '',
+        url: '',
+        loading: false,
+        expiresIn: 3,
+        fields: {
+            nombre: true,
+            conductor: true,
+            genero: true,
+            descripcion: true,
+            red_social1_url: false,
+            red_social2_url: false,
+            dia_transmision: true,
+            hora_transmision: true,
+            caratula_url: false
+        },
+        openModal(id, name) {
+            this.programId = id;
+            this.programName = name;
+            this.url = '';
+            this.openInvitation = true;
+        },
+        async generate() {
+            this.loading = true;
+            this.url = '';
+            let requestedFields = [];
+            for (const [key, val] of Object.entries(this.fields)) {
+                if (val) requestedFields.push(key);
+            }
+            try {
+                const res = await fetch('/admin/master-programs/' + this.programId + '/invitations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                    },
+                    body: JSON.stringify({
+                        expires_in_days: this.expiresIn,
+                        requested_fields: requestedFields
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.url = data.url;
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (err) {
+                alert('Ocurrió un error al generar la invitación.');
+            }
+            this.loading = false;
+        },
+        copyUrl() {
+            navigator.clipboard.writeText(this.url);
+            alert('¡Enlace copiado al portapapeles!');
+        }
+    }"
+    @open-invitation.window="openModal($event.detail.id, $event.detail.name)">
+        <div x-show="openInvitation" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-6 sm:px-0">
+            <div @click.away="openInvitation = false" class="w-full max-w-lg border border-[#2b2b2b] bg-[rgba(16,16,18,1)] p-6 shadow-2xl">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="font-display text-xl uppercase tracking-[.1em] text-[#dcdcdc]">Generar Invitación Temporal</h3>
+                    <button @click="openInvitation = false" class="text-[#7b7b7b] hover:text-white">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <p class="mb-4 text-sm text-[#7b7b7b]">Crea un enlace único para que el productor actualice la información de: <strong class="text-white" x-text="programName"></strong>.</p>
+                
+                <div class="mb-4">
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Vigencia (Días)</label>
+                    <input type="number" x-model.number="expiresIn" min="1" max="30" class="lucille-product-field w-full">
+                </div>
+                
+                <div class="mb-6">
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Campos a solicitar</label>
+                    <div class="grid grid-cols-2 gap-3 text-sm text-[#dcdcdc]">
+                        <label class="flex items-center gap-2"><input type="checkbox" x-model="fields.nombre" class="rounded border-[#2b2b2b] bg-[#1a1a1e] text-[#a855f7]"> Nombre</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" x-model="fields.conductor" class="rounded border-[#2b2b2b] bg-[#1a1a1e] text-[#a855f7]"> Conductor</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" x-model="fields.genero" class="rounded border-[#2b2b2b] bg-[#1a1a1e] text-[#a855f7]"> Género</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" x-model="fields.descripcion" class="rounded border-[#2b2b2b] bg-[#1a1a1e] text-[#a855f7]"> Descripción</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" x-model="fields.caratula_url" class="rounded border-[#2b2b2b] bg-[#1a1a1e] text-[#a855f7]"> Carátula URL</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" x-model="fields.red_social1_url" class="rounded border-[#2b2b2b] bg-[#1a1a1e] text-[#a855f7]"> Red Social 1</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" x-model="fields.red_social2_url" class="rounded border-[#2b2b2b] bg-[#1a1a1e] text-[#a855f7]"> Red Social 2</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" x-model="fields.dia_transmision" class="rounded border-[#2b2b2b] bg-[#1a1a1e] text-[#a855f7]"> Día Transmisión</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" x-model="fields.hora_transmision" class="rounded border-[#2b2b2b] bg-[#1a1a1e] text-[#a855f7]"> Hora Transmisión</label>
+                    </div>
+                </div>
+
+                <div x-show="!url" class="flex justify-end">
+                    <button type="button" @click="generate()" class="lucille-button-solid bg-[#a855f7] border-[#a855f7] text-white hover:bg-[#9333ea]" :disabled="loading">
+                        <span x-show="!loading">Generar Enlace</span>
+                        <span x-show="loading">Generando...</span>
+                    </button>
+                </div>
+
+                <div x-show="url" style="display: none;" class="mt-4 border border-[#2b2b2b] bg-[#1a1a1e] p-4">
+                    <p class="mb-2 text-xs uppercase tracking-[.1em] text-[#a855f7]">¡Enlace generado exitosamente!</p>
+                    <div class="flex items-center gap-2">
+                        <input type="text" readonly :value="url" class="w-full bg-[#111] border border-[#2b2b2b] px-3 py-2 text-sm text-[#dcdcdc] focus:outline-none">
+                        <button type="button" @click="copyUrl()" class="lucille-button whitespace-nowrap">Copiar</button>
+                    </div>
+                    <p class="mt-2 text-xs text-[#7b7b7b]">Este enlace expirará en <span x-text="expiresIn"></span> días y solo puede usarse una vez.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </x-layouts.admin>
