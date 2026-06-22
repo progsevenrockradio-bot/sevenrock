@@ -98,6 +98,11 @@ class MasterProgram extends Model
         return $this->hasMany(RadioProgram::class, 'master_program_id');
     }
 
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(ProgramInvitation::class, 'master_program_id');
+    }
+
     public function outreachContacts(): HasMany
     {
         return $this->hasMany(BandContact::class, 'program_code', 'program_code');
