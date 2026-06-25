@@ -1,3 +1,7 @@
+@php
+    /** @var \Illuminate\Pagination\LengthAwarePaginator $episodes */
+    /** @var array $program */
+@endphp
 <x-layouts.site 
     title="Seven Rock Radio - {{ $program['title'] ?? 'Programa' }}"
     :og-image="$program['cover'] ?? null"

@@ -60,9 +60,25 @@ final class ArchiveOrgService
             return [];
         }
 
+        $masterPrograms = MasterProgram::query()->where('activo', true)->get();
+        $programsById = $masterPrograms->keyBy('id');
+        $programsByName = $masterPrograms->keyBy(fn($p) => mb_strtolower(trim((string)$p->nombre)));
+
         $episodes = [];
         foreach ($this->latestEpisodesFromRadioPrograms($limit * 3) as $episode) {
             if (! is_array($episode) || empty($episode['src'])) {
+                continue;
+            }
+
+            $masterProgram = null;
+            if (!empty($episode['master_program_id'])) {
+                $masterProgram = $programsById->get($episode['master_program_id']);
+            }
+            if (!$masterProgram && !empty($episode['show'])) {
+                $masterProgram = $programsByName->get(mb_strtolower(trim((string)$episode['show'])));
+            }
+
+            if ($masterProgram && $this->isBroadcastTodayAndNotFinished($masterProgram)) {
                 continue;
             }
 
@@ -88,6 +104,10 @@ final class ArchiveOrgService
                 $forceNetwork = in_array(config('cache.default'), ['array', 'null'], true);
 
                 foreach ($programs as $program) {
+                    if ($this->isBroadcastTodayAndNotFinished($program)) {
+                        continue;
+                    }
+
                     $cover = PublicMediaUrl::normalizePublicUrl((string) ($program->caratula_url ?: ''));
                     $allowNetwork = $forceNetwork || $networkBudget > 0;
 
@@ -212,9 +232,9 @@ final class ArchiveOrgService
                     // Solo mostrar episodios cuya hora de emisión en vivo ya haya finalizado
                     $query->where(function ($q) {
                         $q->whereNull('rp.fecha_emision')
-                          ->orWhere('rp.fecha_emision', '<', now()->toDateString())
+                          ->orWhereDate('rp.fecha_emision', '<', now()->toDateString())
                           ->orWhere(function ($q2) {
-                              $q2->where('rp.fecha_emision', '=', now()->toDateString())
+                              $q2->whereDate('rp.fecha_emision', '=', now()->toDateString())
                                  ->where(function ($q3) {
                                      $q3->whereNull('rp.hora_fin')
                                         ->orWhere('rp.hora_fin', '<=', now()->toTimeString());
@@ -296,6 +316,7 @@ final class ArchiveOrgService
 
             $episodes[] = [
                 'id' => trim((string) ($row->id ?? '')),
+                'master_program_id' => $row->master_program_id !== null ? (int) $row->master_program_id : null,
                 'show' => trim((string) ($row->titulo_programa ?: $row->master_name ?: $title)),
                 'slug' => Str::slug((string) ($row->titulo_programa ?: $row->master_name ?: $title)),
                 'title' => $title !== '' ? $title : 'Podcast',
@@ -748,5 +769,144 @@ final class ArchiveOrgService
         } catch (Throwable) {
             return (int) ($program->vistas_archive ?? 0);
         }
+    }
+
+    private const DAY_ORDER = [
+        'LUNES' => 1,
+        'MARTES' => 2,
+        'MIERCOLES' => 3,
+        'JUEVES' => 4,
+        'VIERNES' => 5,
+        'SABADO' => 6,
+        'DOMINGO' => 7,
+    ];
+
+    private function dayNumber(string $day): ?int
+    {
+        $day = mb_strtoupper(Str::ascii(trim($day)));
+
+        return self::DAY_ORDER[$day] ?? null;
+    }
+
+    private function parseScheduleTime(string $time): ?array
+    {
+        $time = trim($time);
+        if ($time === '') {
+            return null;
+        }
+
+        $time = str_replace('.', ':', $time);
+        $parts = array_values(array_filter(explode(':', $time), static fn ($part) => trim($part) !== ''));
+
+        if ($parts === []) {
+            return null;
+        }
+
+        $hour = (int) preg_replace('/\D+/', '', (string) ($parts[0] ?? ''));
+        $minute = (int) preg_replace('/\D+/', '', (string) ($parts[1] ?? '0'));
+
+        if ($hour < 0 || $hour > 23 || $minute < 0 || $minute > 59) {
+            return null;
+        }
+
+        return [$hour, $minute];
+    }
+
+    private function parseTimeOnDate(Carbon $base, string $value): ?Carbon
+    {
+        $hm = $this->parseScheduleTime($value);
+        if (! $hm) {
+            return null;
+        }
+
+        [$hour, $minute] = $hm;
+
+        return $base->copy()->startOfDay()->setTime($hour, $minute, 0);
+    }
+
+    private function isBroadcastTodayAndNotFinished(MasterProgram $program): bool
+    {
+        $timezone = trim((string) ($program->timezone ?: 'America/Caracas'));
+        $now = Carbon::now($timezone);
+        $todayStr = $now->toDateString();
+
+        static $broadcastTodayCache = [];
+        $cacheKey = $program->id . '|' . $now->minute . '|' . $now->hour . '|' . $todayStr;
+
+        if (array_key_exists($cacheKey, $broadcastTodayCache)) {
+            return $broadcastTodayCache[$cacheKey];
+        }
+
+        $isNotFinished = false;
+
+        // 1. Check if there's a specific episode in radio_programs for today
+        if (Schema::hasTable('radio_programs')) {
+            $episode = DB::table('radio_programs')
+                ->whereDate('fecha_emision', $todayStr)
+                ->where(function ($query) use ($program): void {
+                    $query->where('master_program_id', $program->id)
+                        ->orWhere('titulo_programa', (string) $program->nombre);
+                })
+                ->first();
+
+            if ($episode) {
+                $startTime = trim((string) ($episode->hora_inicio ?: $program->hora_transmision ?: ''));
+                $start = $this->parseTimeOnDate($now, $startTime);
+                if ($start) {
+                    $endTime = trim((string) ($episode->hora_fin ?: ''));
+                    if ($endTime !== '') {
+                        $end = $this->parseTimeOnDate($now, $endTime);
+                    } elseif ((int) ($episode->duration_seconds ?? 0) > 0) {
+                        $end = $start->copy()->addSeconds((int) $episode->duration_seconds);
+                    } else {
+                        $duration = max(15, (int) ($program->duracion_minutos ?? 120));
+                        $end = $start->copy()->addMinutes($duration);
+                    }
+
+                    if ($end instanceof Carbon) {
+                        if ($end->lessThanOrEqualTo($start)) {
+                            $end = $end->copy()->addDay();
+                        }
+                        $isNotFinished = $now->lessThan($end);
+                    }
+                }
+            }
+        }
+
+        // 2. Check if the MasterProgram has live override dates for today
+        if (!$isNotFinished && $program->live_starts_at && $program->live_ends_at) {
+            $startsAt = $program->live_starts_at->copy()->setTimezone($timezone);
+            $endsAt = $program->live_ends_at->copy()->setTimezone($timezone);
+            if ($endsAt->lessThanOrEqualTo($startsAt)) {
+                $endsAt = $endsAt->copy()->addDay();
+            }
+
+            if ($startsAt->toDateString() === $todayStr) {
+                $isNotFinished = $now->lessThan($endsAt);
+            }
+        }
+
+        // 3. Check regular schedule on MasterProgram
+        if (!$isNotFinished) {
+            $dayNumber = $this->dayNumber((string) $program->dia_transmision);
+            if ($dayNumber !== null && $dayNumber === $now->dayOfWeekIso) {
+                $hm = $this->parseScheduleTime((string) $program->hora_transmision);
+                if ($hm) {
+                    [$hour, $minute] = $hm;
+                    $start = $now->copy()->startOfDay()->setTime($hour, $minute, 0);
+                    $duration = max(15, (int) ($program->duracion_minutos ?? 120));
+                    $end = $start->copy()->addMinutes($duration);
+
+                    if ($end->lessThanOrEqualTo($start)) {
+                        $end = $end->copy()->addDay();
+                    }
+
+                    $isNotFinished = $now->lessThan($end);
+                }
+            }
+        }
+
+        $broadcastTodayCache[$cacheKey] = $isNotFinished;
+        return $isNotFinished;
     }
 }

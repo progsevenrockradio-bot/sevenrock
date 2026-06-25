@@ -103,9 +103,8 @@ class BandProfileController extends Controller
     }
 
     /**
-     * @return array<string, mixed>
+     * @return JsonResponse
      */
-
     public function autoGenerate(Request $request, RadioArtist $bandProfile): JsonResponse
     {
         $artist = trim((string) $bandProfile->name);

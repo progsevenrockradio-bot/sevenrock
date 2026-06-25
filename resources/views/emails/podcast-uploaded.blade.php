@@ -19,6 +19,7 @@ El episodio de tu programa ha completado su proceso de distribución en la radio
 **Programa:** {{ $episode->titulo_programa }}  
 **Episodio:** #{{ $episode->numero_episodio }}  
 **Título:** *{{ $episodeTitle }}*  
+**Programa (Registro original):** {{ $episode->masterProgram?->nombre ?? $episode->titulo_programa }}  
 **Fecha emisión:** {{ optional($episode->fecha_emision)->format('d/m/Y') ?? 'N/D' }}  
 **Archivo MP3:** `{{ basename((string) $localPath) }}`
 </x-mail::panel>

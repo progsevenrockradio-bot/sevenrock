@@ -8,23 +8,37 @@ use App\Contracts\PaymentGateway;
 use App\Models\Talent;
 use App\Models\TalentSubscription;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class PayPalGateway implements PaymentGateway
 {
-    private $apiContext;
-
-    public function __construct()
+    private function getAccessToken(): ?string
     {
-        if (class_exists(\PayPal\Rest\ApiContext::class)) {
-            $this->apiContext = new \PayPal\Rest\ApiContext(
-                new \PayPal\Auth\OAuthTokenCredential(
-                    (string) config('paypal.client_id'),
-                    (string) config('paypal.secret')
-                )
-            );
-            $this->apiContext->setConfig(['mode' => config('paypal.mode')]);
+        $clientId = config('paypal.client_id');
+        $secret = config('paypal.secret');
+        $mode = config('paypal.mode', 'sandbox');
+        $baseUrl = $mode === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+
+        if (!$clientId || !$secret) {
+            return null;
         }
+
+        try {
+            $response = Http::asForm()
+                ->withBasicAuth($clientId, $secret)
+                ->post("{$baseUrl}/v1/oauth2/token", [
+                    'grant_type' => 'client_credentials',
+                ]);
+
+            if ($response->successful()) {
+                return (string) $response->json('access_token');
+            }
+        } catch (\Throwable $e) {
+            Log::error('PayPal getAccessToken failed', ['message' => $e->getMessage()]);
+        }
+
+        return null;
     }
 
     public function createCheckoutSession(Talent $talent, string $plan): array
@@ -33,7 +47,8 @@ class PayPalGateway implements PaymentGateway
             return ['url' => route('talents.dashboard'), 'provider' => 'paypal'];
         }
 
-        if (! class_exists(\PayPal\Api\Agreement::class)) {
+        $token = $this->getAccessToken();
+        if (!$token) {
             return ['url' => route('talents.dashboard'), 'provider' => 'paypal'];
         }
 
@@ -42,53 +57,109 @@ class PayPalGateway implements PaymentGateway
             return ['url' => route('talents.dashboard'), 'provider' => 'paypal'];
         }
 
+        $mode = config('paypal.mode', 'sandbox');
+        $baseUrl = $mode === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+        $currency = (string) config("payment.plans.$plan.currency", 'EUR');
         $startDate = now()->addDay()->toIso8601String();
         $planName = 'Seven Rock Radio - ' . ucfirst($plan) . ' plan';
 
-        $payer = new \PayPal\Api\Payer();
-        $payer->setPaymentMethod('paypal');
-
-        $amount = new \PayPal\Api\Currency();
-        $amount->setCurrency((string) config("payment.plans.$plan.currency", 'EUR'));
-        $amount->setValue(number_format($price, 2, '.', ''));
-
-        $paymentDefinition = new \PayPal\Api\PaymentDefinition();
-        $paymentDefinition->setName('Monthly Payments')
-            ->setType('REGULAR')
-            ->setFrequency('Month')
-            ->setFrequencyInterval('1')
-            ->setCycles('0')
-            ->setAmount($amount);
-
-        $merchantPreferences = new \PayPal\Api\MerchantPreferences();
-        $merchantPreferences->setReturnUrl(route('talents.payment.success') . '?gateway=paypal')
-            ->setCancelUrl(route('talents.payment.cancel') . '?gateway=paypal')
-            ->setAutoBillAmount('yes')
-            ->setInitialFailAmountAction('CONTINUE')
-            ->setMaxFailAttempts('1')
-            ->setSetupFee($amount);
-
-        $planObject = new \PayPal\Api\Plan();
-        $planObject->setName($planName)
-            ->setDescription('Suscripción mensual ' . $plan)
-            ->setType('INFINITE')
-            ->setPaymentDefinitions([$paymentDefinition])
-            ->setMerchantPreferences($merchantPreferences);
-
         try {
-            $createdPlan = $planObject->create($this->apiContext);
-            $agreement = new \PayPal\Api\Agreement();
-            $agreement->setName($planName)
-                ->setDescription('Suscripción Seven Rock Radio')
-                ->setStartDate($startDate)
-                ->setPlan($createdPlan)
-                ->setPayer($payer);
+            // 1. Create Billing Plan
+            $planResponse = Http::withToken($token)
+                ->post("{$baseUrl}/v1/payments/billing-plans", [
+                    'name' => $planName,
+                    'description' => 'Suscripción mensual ' . $plan,
+                    'type' => 'INFINITE',
+                    'payment_definitions' => [
+                        [
+                            'name' => 'Monthly Payments',
+                            'type' => 'REGULAR',
+                            'frequency' => 'Month',
+                            'frequency_interval' => '1',
+                            'amount' => [
+                                'value' => number_format($price, 2, '.', ''),
+                                'currency' => $currency,
+                            ],
+                            'cycles' => '0',
+                        ],
+                    ],
+                    'merchant_preferences' => [
+                        'return_url' => route('talents.payment.success') . '?gateway=paypal',
+                        'cancel_url' => route('talents.payment.cancel') . '?gateway=paypal',
+                        'auto_bill_amount' => 'yes',
+                        'initial_fail_amount_action' => 'CONTINUE',
+                        'max_fail_attempts' => '1',
+                        'setup_fee' => [
+                            'value' => number_format($price, 2, '.', ''),
+                            'currency' => $currency,
+                        ],
+                    ],
+                ]);
 
-            $agreement = $agreement->create($this->apiContext);
+            if (!$planResponse->successful()) {
+                Log::error('PayPal Billing Plan creation failed', [
+                    'status' => $planResponse->status(),
+                    'body' => $planResponse->body(),
+                ]);
+                return ['url' => route('talents.dashboard'), 'provider' => 'paypal'];
+            }
+
+            $createdPlanId = $planResponse->json('id');
+
+            // 2. Activate the Billing Plan
+            $activateResponse = Http::withToken($token)
+                ->patch("{$baseUrl}/v1/payments/billing-plans/{$createdPlanId}", [
+                    [
+                        'op' => 'replace',
+                        'path' => '/',
+                        'value' => [
+                            'state' => 'ACTIVE',
+                        ],
+                    ],
+                ]);
+
+            if (!$activateResponse->successful()) {
+                Log::error('PayPal Billing Plan activation failed', [
+                    'status' => $activateResponse->status(),
+                    'body' => $activateResponse->body(),
+                ]);
+                return ['url' => route('talents.dashboard'), 'provider' => 'paypal'];
+            }
+
+            // 3. Create Billing Agreement
+            $agreementResponse = Http::withToken($token)
+                ->post("{$baseUrl}/v1/payments/billing-agreements", [
+                    'name' => $planName,
+                    'description' => 'Suscripción Seven Rock Radio',
+                    'start_date' => $startDate,
+                    'plan' => [
+                        'id' => $createdPlanId,
+                    ],
+                    'payer' => [
+                        'payment_method' => 'paypal',
+                    ],
+                ]);
+
+            if (!$agreementResponse->successful()) {
+                Log::error('PayPal Billing Agreement creation failed', [
+                    'status' => $agreementResponse->status(),
+                    'body' => $agreementResponse->body(),
+                ]);
+                return ['url' => route('talents.dashboard'), 'provider' => 'paypal'];
+            }
+
+            $agreementData = $agreementResponse->json();
+            $approvalUrl = '';
+            foreach ($agreementData['links'] ?? [] as $link) {
+                if ($link['rel'] === 'approval_url') {
+                    $approvalUrl = $link['href'];
+                    break;
+                }
+            }
 
             return [
-                'url' => (string) $agreement->getApprovalLink(),
-                'payment_id' => (string) $agreement->getId(),
+                'url' => $approvalUrl ?: route('talents.dashboard'),
+                'payment_id' => (string) ($agreementData['id'] ?? ''),
                 'provider' => 'paypal',
             ];
         } catch (\Throwable $exception) {
@@ -172,26 +243,42 @@ class PayPalGateway implements PaymentGateway
 
     public function cancelSubscription(string $subscriptionId): bool
     {
-        if ($subscriptionId === '' || ! class_exists(\PayPal\Api\Agreement::class)) {
+        if ($subscriptionId === '') {
             return false;
         }
 
-        try {
-            $agreement = \PayPal\Api\Agreement::get($subscriptionId, $this->apiContext);
-            $descriptor = new \PayPal\Api\AgreementStateDescriptor();
-            $descriptor->setNote('Cancelación solicitada por el talento.');
-            $agreement->cancel($descriptor, $this->apiContext);
+        $token = $this->getAccessToken();
+        if (!$token) {
+            return false;
+        }
 
-            $talentSubscription = TalentSubscription::query()->where('payment_id', $subscriptionId)->latest()->first();
-            if ($talentSubscription) {
-                $talentSubscription->update([
-                    'status' => 'cancelled',
-                    'end_date' => today(),
+        $mode = config('paypal.mode', 'sandbox');
+        $baseUrl = $mode === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+
+        try {
+            $response = Http::withToken($token)
+                ->post("{$baseUrl}/v1/payments/billing-agreements/{$subscriptionId}/cancel", [
+                    'note' => 'Cancelación solicitada por el talento.',
                 ]);
-                $talentSubscription->talent?->update(['subscription_status' => 'cancelled']);
+
+            if ($response->successful()) {
+                $talentSubscription = TalentSubscription::query()->where('payment_id', $subscriptionId)->latest()->first();
+                if ($talentSubscription) {
+                    $talentSubscription->update([
+                        'status' => 'cancelled',
+                        'end_date' => today(),
+                    ]);
+                    $talentSubscription->talent?->update(['subscription_status' => 'cancelled']);
+                }
+                return true;
             }
 
-            return true;
+            Log::error('PayPal subscription cancellation request failed', [
+                'subscription_id' => $subscriptionId,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            return false;
         } catch (\Throwable $exception) {
             Log::error('PayPal subscription cancellation failed', [
                 'subscription_id' => $subscriptionId,

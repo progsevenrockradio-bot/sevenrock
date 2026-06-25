@@ -16,6 +16,7 @@ El archivo de tu programa se ha distribuido correctamente a la red de podcasts.
 **Programa:** {{ $episode->titulo_programa }}  
 **Episodio:** #{{ $episode->numero_episodio }}  
 **Título:** *{{ $episodeTitle }}*  
+**Programa (Registro original):** {{ $episode->masterProgram?->nombre ?? $episode->titulo_programa }}  
 **Archivo:** `{{ basename((string) $episode->archivo_mp3) }}`
 </x-mail::panel>
 
