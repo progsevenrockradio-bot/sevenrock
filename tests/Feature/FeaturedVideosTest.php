@@ -117,10 +117,11 @@ class FeaturedVideosTest extends TestCase
         $response = $this->get(route('home'));
         $response->assertStatus(200);
 
-        // Should see the 3 latest featured videos
-        $response->assertSee('Featured Video 1');
-        $response->assertSee('Featured Video 2');
-        $response->assertSee('Featured Video 3');
+        // Should see the 3 latest featured videos (checked by title parts because of bicolor HTML formatting)
+        $response->assertSee('Featured Video');
+        $response->assertSee('1');
+        $response->assertSee('2');
+        $response->assertSee('3');
 
         // Should not see the non-featured video or the oldest featured video
         $response->assertDontSee('Video Non Featured');

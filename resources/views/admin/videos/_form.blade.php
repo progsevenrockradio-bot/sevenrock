@@ -6,11 +6,11 @@
 <div class="grid gap-5 md:grid-cols-2">
     <div>
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['form_title_label'] }}</label>
-        <input name="title" value="{{ old('title', $video->title) }}" class="lucille-product-field w-full">
+        <input name="title" id="title-input" value="{{ old('title', $video->title) }}" class="lucille-product-field w-full">
     </div>
     <div>
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['form_slug_label'] }}</label>
-        <input name="slug" value="{{ old('slug', $video->slug) }}" class="lucille-product-field w-full">
+        <input name="slug" id="slug-input" value="{{ old('slug', $video->slug) }}" class="lucille-product-field w-full">
     </div>
     <div class="md:col-span-2">
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['image_path_label'] }}</label>
@@ -39,3 +39,24 @@
     <button type="submit" class="lucille-button-solid">{{ $isEdit ? $admin['edit_video'] : $admin['new_video'] }}</button>
     <a href="{{ route('admin.videos.index') }}" class="lucille-button">{{ $admin['back_to_videos'] }}</a>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const titleInput = document.getElementById('title-input');
+        const slugInput = document.getElementById('slug-input');
+
+        if (titleInput && slugInput) {
+            titleInput.addEventListener('input', function () {
+                let slug = titleInput.value.toString().toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '') // remove accent marks
+                    .replace(/[^a-z0-9 -]/g, '')    // remove non-alphanumeric except space and dash
+                    .replace(/\s+/g, '-')           // replace spaces with single dash
+                    .replace(/-+/g, '-')            // collapse dashes
+                    .replace(/^-+/, '')             // trim leading dash
+                    .replace(/-+$/, '');            // trim trailing dash
+                slugInput.value = slug;
+            });
+        }
+    });
+</script>

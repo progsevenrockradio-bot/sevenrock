@@ -29,6 +29,25 @@
         activeProgram: @js($heroProgram),
         originalProgram: @js($heroProgram),
         restoreTimer: null,
+        formatearTituloJS(text) {
+            if (!text) return '';
+            let cleanText = text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+            if (!cleanText) return '';
+            let words = cleanText.split(' ').filter(Boolean);
+            let totalWords = words.length;
+            if (totalWords === 1) {
+                let word = words[0];
+                let len = word.length;
+                if (len <= 1) return `<span class='text-white'>${word}</span>`;
+                let half = Math.ceil(len / 2);
+                return `<span class='text-white'>${word.substring(0, half)}</span><span class='text-lucille-accent'>${word.substring(half)}</span>`;
+            }
+            if (totalWords === 2) {
+                return `<span class='text-white'>${words[0]}</span> <span class='text-lucille-accent'>${words[1]}</span>`;
+            }
+            let half = Math.ceil(totalWords / 2);
+            return `<span class='text-white'>${words.slice(0, half).join(' ')}</span> <span class='text-lucille-accent'>${words.slice(half).join(' ')}</span>`;
+        },
         programKey(program) {
             return [program?.title || '', program?.host || '', program?.schedule || '', program?.image || ''].join('|');
         },
@@ -86,7 +105,7 @@
                     <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-center gap-2 md:gap-3">
-                                <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-html="activeProgram.title_html || activeProgram.title || ''"></h3>
+                                <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-html="activeProgram.title_html || formatearTituloJS(activeProgram.title || '')"></h3>
                                 <div class="flex flex-wrap gap-2">
                                     <a
                                         class="inline-flex h-7 items-center justify-center border border-[#d42426] bg-[#d42426] px-2.5 py-0 text-[9px] font-display uppercase tracking-[.14em] text-white transition-colors hover:bg-[#ba1f22]"
@@ -157,7 +176,7 @@
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <div class="home-badge" x-text="activeProgram.badge || 'On deck'"></div>
-                    <h4 class="mt-3 font-display text-[22px] uppercase leading-none tracking-[.12em]" x-html="activeProgram.title_html || activeProgram.title || ''"></h4>
+                    <h4 class="mt-3 font-display text-[22px] uppercase leading-none tracking-[.12em]" x-html="activeProgram.title_html || formatearTituloJS(activeProgram.title || '')"></h4>
                     <p class="mt-2 text-xs uppercase tracking-[.24em] text-[#bfbfbf]" x-text="activeProgram.schedule || ''"></p>
                     <p class="mt-1 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeProgram.host || ''"></p>
                 </div>

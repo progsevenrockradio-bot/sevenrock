@@ -53,7 +53,7 @@
                                 </div>
                             </div>
                             @if ($videos->count() > 1)
-                                <h4 class="mt-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 group-hover:text-[var(--color-lucille-accent)] transition-colors text-center">{{ $video->title }}</h4>
+                                <h4 class="mt-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 transition-colors text-center">{!! formatear_titulo_hover($video->title) !!}</h4>
                             @endif
                         </a>
                     </div>

@@ -115,6 +115,25 @@
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
+        formatearTituloJS(text) {
+            if (!text) return '';
+            let cleanText = text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+            if (!cleanText) return '';
+            let words = cleanText.split(' ').filter(Boolean);
+            let totalWords = words.length;
+            if (totalWords === 1) {
+                let word = words[0];
+                let len = word.length;
+                if (len <= 1) return `<span class='text-white'>${word}</span>`;
+                let half = Math.ceil(len / 2);
+                return `<span class='text-white'>${word.substring(0, half)}</span><span class='text-lucille-accent'>${word.substring(half)}</span>`;
+            }
+            if (totalWords === 2) {
+                return `<span class='text-white'>${words[0]}</span> <span class='text-lucille-accent'>${words[1]}</span>`;
+            }
+            let half = Math.ceil(totalWords / 2);
+            return `<span class='text-white'>${words.slice(0, half).join(' ')}</span> <span class='text-lucille-accent'>${words.slice(half).join(' ')}</span>`;
+        },
         infoModalOpen: false,
         playing: false,
         muted: false,
@@ -427,7 +446,7 @@
                 <div class="mt-3">
                     <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                         <div class="min-w-0 flex-1">
-                            <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-text="activeEpisode.program || activeEpisode.title"></h3>
+                            <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
                             <p class="mt-3 text-[12px] uppercase tracking-[.24em] text-[#dcdcdc]" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
                             <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeEpisode.host || ''"></p>
                         </div>
@@ -473,7 +492,7 @@
                                 {{ $episode['date'] ?: 'Servidor de Podcast' }}
                             </div>
                             <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-[#dcdcdc] md:text-[15px]">
-                                {{ $episode['program'] }}
+                                {!! formatear_titulo($episode['program']) !!}
                             </div>
                             <div class="mt-1 truncate text-[12px] text-[#9a9a9a]">
                                 {{ $episode['episode_title'] }}
@@ -500,7 +519,7 @@
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <div class="home-badge" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></div>
-                    <h4 class="mt-3 font-display text-[22px] uppercase leading-none tracking-[.12em]" x-text="activeEpisode.program || activeEpisode.title || 'Podcast'"></h4>
+                    <h4 class="mt-3 font-display text-[22px] uppercase leading-none tracking-[.12em]" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title || 'Podcast')"></h4>
                     <p class="mt-2 text-xs uppercase tracking-[.24em] text-[#bfbfbf]" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
                     <p class="mt-1 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeEpisode.host || ''"></p>
                 </div>
