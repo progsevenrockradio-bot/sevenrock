@@ -78,7 +78,7 @@ final class ArchiveOrgService
                 $masterProgram = $programsByName->get(mb_strtolower(trim((string)$episode['show'])));
             }
 
-            if ($masterProgram && $this->isBroadcastTodayAndNotFinished($masterProgram)) {
+            if ($masterProgram && $this->isBroadcastUnderEmbargo($masterProgram)) {
                 continue;
             }
 
@@ -104,7 +104,7 @@ final class ArchiveOrgService
                 $forceNetwork = in_array(config('cache.default'), ['array', 'null'], true);
 
                 foreach ($programs as $program) {
-                    if ($this->isBroadcastTodayAndNotFinished($program)) {
+                    if ($this->isBroadcastUnderEmbargo($program)) {
                         continue;
                     }
 
@@ -825,38 +825,42 @@ final class ArchiveOrgService
         return $base->copy()->startOfDay()->setTime($hour, $minute, 0);
     }
 
-    private function isBroadcastTodayAndNotFinished(MasterProgram $program): bool
+    private function isBroadcastUnderEmbargo(MasterProgram $program): bool
     {
-        $timezone = trim((string) ($program->timezone ?: 'America/Caracas'));
+        // Enforce America/Caracas timezone strictly as per requirements
+        $timezone = 'America/Caracas';
         $now = Carbon::now($timezone);
         $todayStr = $now->toDateString();
+        $yesterdayStr = $now->copy()->subDay()->toDateString();
 
-        static $broadcastTodayCache = [];
+        static $embargoCache = [];
         $cacheKey = $program->id . '|' . $now->minute . '|' . $now->hour . '|' . $todayStr;
 
-        if (array_key_exists($cacheKey, $broadcastTodayCache)) {
-            return $broadcastTodayCache[$cacheKey];
+        if (array_key_exists($cacheKey, $embargoCache)) {
+            return $embargoCache[$cacheKey];
         }
 
-        $isNotFinished = false;
+        $isUnderEmbargo = false;
 
-        // 1. Check if there's a specific episode in radio_programs for today
+        // 1. Check if there's an episode in radio_programs for today or yesterday
         if (Schema::hasTable('radio_programs')) {
-            $episode = DB::table('radio_programs')
-                ->whereDate('fecha_emision', $todayStr)
+            $episodes = DB::table('radio_programs')
+                ->whereIn('fecha_emision', [$todayStr, $yesterdayStr])
                 ->where(function ($query) use ($program): void {
                     $query->where('master_program_id', $program->id)
                         ->orWhere('titulo_programa', (string) $program->nombre);
                 })
-                ->first();
+                ->get();
 
-            if ($episode) {
+            foreach ($episodes as $episode) {
+                $episodeDate = Carbon::parse($episode->fecha_emision, $timezone);
                 $startTime = trim((string) ($episode->hora_inicio ?: $program->hora_transmision ?: ''));
-                $start = $this->parseTimeOnDate($now, $startTime);
+                $start = $this->parseTimeOnDate($episodeDate, $startTime);
+                
                 if ($start) {
                     $endTime = trim((string) ($episode->hora_fin ?: ''));
                     if ($endTime !== '') {
-                        $end = $this->parseTimeOnDate($now, $endTime);
+                        $end = $this->parseTimeOnDate($episodeDate, $endTime);
                     } elseif ((int) ($episode->duration_seconds ?? 0) > 0) {
                         $end = $start->copy()->addSeconds((int) $episode->duration_seconds);
                     } else {
@@ -868,46 +872,70 @@ final class ArchiveOrgService
                         if ($end->lessThanOrEqualTo($start)) {
                             $end = $end->copy()->addDay();
                         }
-                        $isNotFinished = $now->lessThan($end);
+                        
+                        // Visible after 24 hours from the end of the broadcast
+                        $visibleAfter = $end->copy()->addHours(24);
+                        if ($now->lessThan($visibleAfter)) {
+                            $isUnderEmbargo = true;
+                            break;
+                        }
                     }
                 }
             }
         }
 
-        // 2. Check if the MasterProgram has live override dates for today
-        if (!$isNotFinished && $program->live_starts_at && $program->live_ends_at) {
+        // 2. Check if the MasterProgram has live override dates active or within 24h
+        if (!$isUnderEmbargo && $program->live_starts_at && $program->live_ends_at) {
             $startsAt = $program->live_starts_at->copy()->setTimezone($timezone);
             $endsAt = $program->live_ends_at->copy()->setTimezone($timezone);
             if ($endsAt->lessThanOrEqualTo($startsAt)) {
                 $endsAt = $endsAt->copy()->addDay();
             }
 
-            if ($startsAt->toDateString() === $todayStr) {
-                $isNotFinished = $now->lessThan($endsAt);
+            $visibleAfter = $endsAt->copy()->addHours(24);
+            // Hide it if we are before the visibleAfter time, AND after the start of the day it broadcasts
+            if ($now->lessThan($visibleAfter) && $now->greaterThanOrEqualTo($startsAt->copy()->startOfDay())) {
+                $isUnderEmbargo = true;
             }
         }
 
         // 3. Check regular schedule on MasterProgram
-        if (!$isNotFinished) {
+        if (!$isUnderEmbargo) {
             $dayNumber = $this->dayNumber((string) $program->dia_transmision);
-            if ($dayNumber !== null && $dayNumber === $now->dayOfWeekIso) {
+            if ($dayNumber !== null) {
                 $hm = $this->parseScheduleTime((string) $program->hora_transmision);
                 if ($hm) {
                     [$hour, $minute] = $hm;
+                    
+                    // Start assuming the broadcast is today
                     $start = $now->copy()->startOfDay()->setTime($hour, $minute, 0);
+                    
+                    // If the scheduled day is not today, move back to the last time that day occurred
+                    if ($start->dayOfWeekIso !== $dayNumber) {
+                        $daysToSub = $start->dayOfWeekIso - $dayNumber;
+                        if ($daysToSub < 0) {
+                            $daysToSub += 7;
+                        }
+                        $start->subDays($daysToSub);
+                    }
+                    
                     $duration = max(15, (int) ($program->duracion_minutos ?? 120));
                     $end = $start->copy()->addMinutes($duration);
-
                     if ($end->lessThanOrEqualTo($start)) {
                         $end = $end->copy()->addDay();
                     }
 
-                    $isNotFinished = $now->lessThan($end);
+                    $visibleAfter = $end->copy()->addHours(24);
+
+                    // Embargo applies from the beginning of the broadcast day until 24h after it ends
+                    if ($now->lessThan($visibleAfter) && $now->greaterThanOrEqualTo($start->copy()->startOfDay())) {
+                        $isUnderEmbargo = true;
+                    }
                 }
             }
         }
 
-        $broadcastTodayCache[$cacheKey] = $isNotFinished;
-        return $isNotFinished;
+        $embargoCache[$cacheKey] = $isUnderEmbargo;
+        return $isUnderEmbargo;
     }
 }
