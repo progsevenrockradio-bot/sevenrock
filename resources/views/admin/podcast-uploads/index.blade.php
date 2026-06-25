@@ -176,9 +176,19 @@
             </div>
         </div>
 
-        <div class="mt-4 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">
-            <span x-text="lastUpdatedLabel"></span>
-            <span x-show="isRefreshing" x-cloak>Refrescando lista...</span>
+        <div class="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <form action="{{ route('admin.podcast-uploads.index') }}" method="GET" class="flex items-center gap-3">
+                <label for="filter_date" class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Filtrar por fecha:</label>
+                <input type="date" name="date" id="filter_date" value="{{ request('date') }}" class="h-9 border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] px-3 text-sm text-[#e4e4e4] focus:border-[#4a4a4a] focus:outline-none">
+                <button type="submit" class="lucille-button">Filtrar</button>
+                @if(request('date'))
+                    <a href="{{ route('admin.podcast-uploads.index') }}" class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b] hover:text-white">Limpiar</a>
+                @endif
+            </form>
+            <div class="flex items-center gap-3 text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">
+                <span x-text="lastUpdatedLabel"></span>
+                <span x-show="isRefreshing" x-cloak>Refrescando lista...</span>
+            </div>
         </div>
 
         <div class="mt-6" x-ref="recentUploads">

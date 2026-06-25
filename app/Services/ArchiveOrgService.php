@@ -229,18 +229,7 @@ final class ArchiveOrgService
                             ->orWhereNotNull('rp.archive_org_uploaded_at');
                     });
                     
-                    // Solo mostrar episodios cuya hora de emisión en vivo ya haya finalizado
-                    $query->where(function ($q) {
-                        $q->whereNull('rp.fecha_emision')
-                          ->orWhereDate('rp.fecha_emision', '<', now()->toDateString())
-                          ->orWhere(function ($q2) {
-                              $q2->whereDate('rp.fecha_emision', '=', now()->toDateString())
-                                 ->where(function ($q3) {
-                                     $q3->whereNull('rp.hora_fin')
-                                        ->orWhere('rp.hora_fin', '<=', now()->toTimeString());
-                                 });
-                          });
-                    });
+                    // PHP loop will filter out unfinished broadcasts correctly taking timezone into account.
                 })
                 ->orderByDesc($orderDate)
                 ->orderByDesc($orderUploaded)
@@ -795,21 +784,33 @@ final class ArchiveOrgService
             return null;
         }
 
-        $time = str_replace('.', ':', $time);
-        $parts = array_values(array_filter(explode(':', $time), static fn ($part) => trim($part) !== ''));
+        try {
+            $parsed = Carbon::parse($time);
+            return [$parsed->hour, $parsed->minute];
+        } catch (Throwable) {
+            // Fallback for weird formats
+            $time = str_replace('.', ':', $time);
+            $parts = array_values(array_filter(explode(':', $time), static fn ($part) => trim($part) !== ''));
 
-        if ($parts === []) {
-            return null;
+            if ($parts === []) {
+                return null;
+            }
+
+            $hour = (int) preg_replace('/\D+/', '', (string) ($parts[0] ?? ''));
+            $minute = (int) preg_replace('/\D+/', '', (string) ($parts[1] ?? '0'));
+
+            if (stripos($time, 'pm') !== false && $hour < 12) {
+                $hour += 12;
+            } elseif (stripos($time, 'am') !== false && $hour === 12) {
+                $hour = 0;
+            }
+
+            if ($hour < 0 || $hour > 23 || $minute < 0 || $minute > 59) {
+                return null;
+            }
+
+            return [$hour, $minute];
         }
-
-        $hour = (int) preg_replace('/\D+/', '', (string) ($parts[0] ?? ''));
-        $minute = (int) preg_replace('/\D+/', '', (string) ($parts[1] ?? '0'));
-
-        if ($hour < 0 || $hour > 23 || $minute < 0 || $minute > 59) {
-            return null;
-        }
-
-        return [$hour, $minute];
     }
 
     private function parseTimeOnDate(Carbon $base, string $value): ?Carbon

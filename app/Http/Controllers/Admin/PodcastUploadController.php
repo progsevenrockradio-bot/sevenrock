@@ -554,7 +554,9 @@ final class PodcastUploadController extends Controller
      */
     private function recentUploads()
     {
-        $uploads = RadioProgram::query()
+        $date = request('date');
+        
+        $query = RadioProgram::query()
             ->orderByRaw(
                 "CASE
                     WHEN COALESCE(radioboss_status, '') = 'skipped'
@@ -564,19 +566,29 @@ final class PodcastUploadController extends Controller
                     ELSE 1
                  END"
             )
-            ->latest('id')
-            ->limit(20)
-            ->get();
+            ->latest('id');
+
+        if ($date) {
+            $query->whereDate('created_at', $date)
+                  ->orWhereDate('fecha_emision', $date);
+        } else {
+            // Default: last 2 days
+            $query->where('created_at', '>=', Carbon::now()->subDays(2)->startOfDay());
+        }
+
+        $uploads = $query->paginate(20)->withQueryString();
+        $uploads->setPath(route('admin.podcast-uploads.index'));
 
         if (Schema::hasTable('master_programs')) {
             $uploads->load('masterProgram');
-
             return $uploads;
         }
 
-        return $uploads->each(static function (RadioProgram $upload): void {
+        $uploads->getCollection()->each(static function (RadioProgram $upload): void {
             $upload->setRelation('masterProgram', null);
         });
+
+        return $uploads;
     }
 
     /**

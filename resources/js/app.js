@@ -974,6 +974,10 @@ Alpine.data('podcastUploadsDashboard', (options = {}) => ({
 
         try {
             const url = new URL(this.recentUrl, window.location.origin);
+            const searchParams = new URLSearchParams(window.location.search);
+            searchParams.forEach((value, key) => {
+                url.searchParams.set(key, value);
+            });
             const response = await fetch(url.toString(), {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
