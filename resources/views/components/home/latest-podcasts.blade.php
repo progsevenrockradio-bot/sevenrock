@@ -175,7 +175,7 @@
         },
         selectEpisode(episode) {
             this.activeEpisode = this.normalizeEpisode(episode);
-            this.infoModalOpen = false;
+            this.closeInfoModal();
             this.syncAudio(false);
             this.play();
         },
@@ -184,9 +184,11 @@
                 return;
             }
             this.infoModalOpen = true;
+            document.body.style.overflow = 'hidden';
         },
         closeInfoModal() {
             this.infoModalOpen = false;
+            document.body.style.overflow = '';
         },
         syncAudio(autoplay = false) {
             const audio = this.$refs.audio;

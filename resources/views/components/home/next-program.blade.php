@@ -67,9 +67,11 @@
                 return;
             }
             this.infoModalOpen = true;
+            document.body.style.overflow = 'hidden';
         },
         closeInfoModal() {
             this.infoModalOpen = false;
+            document.body.style.overflow = '';
         },
         init() {
             window.addEventListener('sr-force-close-modals', () => {
