@@ -167,10 +167,12 @@
         </div>
     </aside>
 
-    <template x-if="infoModalOpen">
+    <template x-teleport="body">
     <div
+        x-show="infoModalOpen"
+        x-transition.opacity.duration.300ms
         x-cloak
-        class="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 px-4 py-8"
+        class="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 px-4 py-8 backdrop-blur-sm"
         @keydown.escape.window="closeInfoModal()"
         @click.self="closeInfoModal()"
     >
