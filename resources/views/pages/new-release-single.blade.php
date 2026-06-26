@@ -75,7 +75,7 @@
                             <span class="text-xs uppercase tracking-wider text-[#7b7b7b] block mb-3">Reseña del Lanzamiento</span>
                             <div class="space-y-4 text-[14px] leading-6 text-lucille-body whitespace-pre-line">
                                 @if($newRelease->description)
-                                    {{ $newRelease->description }}
+                                    {{ str_replace(['\r\n', '\r', '\n'], "\n", $newRelease->description ?? '') }}
                                 @else
                                     <p class="italic text-gray-600">No hay reseña escrita aún para este lanzamiento.</p>
                                 @endif

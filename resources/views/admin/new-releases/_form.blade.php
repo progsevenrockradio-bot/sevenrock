@@ -99,7 +99,7 @@
 
     <div class="md:col-span-2">
         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Reseña / Descripción</label>
-        <textarea name="description" rows="6" class="lucille-product-field w-full" placeholder="Escribe una pequeña reseña del lanzamiento aquí...">{{ old('description', $newRelease->description) }}</textarea>
+        <textarea name="description" rows="6" class="lucille-product-field w-full" placeholder="Escribe una pequeña reseña del lanzamiento aquí...">{{ old('description', str_replace(['\r\n', '\r', '\n'], "\n", $newRelease->description ?? '')) }}</textarea>
         @error('description') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
     </div>
 </div>

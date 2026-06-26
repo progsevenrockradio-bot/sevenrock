@@ -42,7 +42,7 @@
                                 @endif
 
                                 @if($release->description)
-                                    <p class="mt-3 text-xs leading-5 text-[#7b7b7b] line-clamp-3 select-text">{{ strip_tags($release->description) }}</p>
+                                    <p class="mt-3 text-xs leading-5 text-[#7b7b7b] line-clamp-3 select-text">{{ strip_tags(str_replace(['\r\n', '\r', '\n'], ' ', $release->description ?? '')) }}</p>
                                 @endif
                             </div>
 
