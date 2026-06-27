@@ -202,6 +202,8 @@ final class ArchiveOrgService
                     'rp.titulo_programa',
                     'rp.conductor',
                     'rp.fecha_emision',
+                    'rp.hora_inicio',
+                    'rp.hora_fin',
                     'rp.resena',
                     'rp.live_title',
                     'rp.live_description',
@@ -221,6 +223,8 @@ final class ArchiveOrgService
                     'mp.archive_identifier as master_archive_identifier',
                     'mp.caratula_url as master_cover',
                     'mp.descripcion as master_description',
+                    'mp.hora_transmision as master_hora_transmision',
+                    'mp.duracion_minutos as master_duracion_minutos',
                 ])
                 ->where(function ($query): void {
                     $query->where(function ($q) {
@@ -243,6 +247,10 @@ final class ArchiveOrgService
         $episodes = [];
 
         foreach ($rows as $row) {
+            if ($this->isEpisodeRowUnderEmbargo($row)) {
+                continue;
+            }
+
             $snapshot = $this->normalizeArchiveMetadata($row->archive_org_metadata ?? null);
             $identifier = trim((string) data_get($snapshot, 'identifier', ''));
             if ($identifier === '') {
@@ -823,6 +831,53 @@ final class ArchiveOrgService
         [$hour, $minute] = $hm;
 
         return $base->copy()->startOfDay()->setTime($hour, $minute, 0);
+    }
+
+    private function isEpisodeRowUnderEmbargo(object $row): bool
+    {
+        $timezone = 'America/Caracas';
+        $now = Carbon::now($timezone);
+
+        if (empty($row->fecha_emision)) {
+            return false;
+        }
+
+        try {
+            $episodeDate = Carbon::parse($row->fecha_emision, $timezone);
+            $startTime = trim((string) ($row->hora_inicio ?: $row->master_hora_transmision ?: ''));
+            $start = $this->parseTimeOnDate($episodeDate, $startTime);
+            
+            if ($start) {
+                $endTime = trim((string) ($row->hora_fin ?: ''));
+                if ($endTime !== '') {
+                    $end = $this->parseTimeOnDate($episodeDate, $endTime);
+                } else {
+                    $duration = max(15, (int) ($row->master_duracion_minutos ?? 120));
+                    $end = $start->copy()->addMinutes($duration);
+                }
+
+                if ($end instanceof Carbon) {
+                    if ($end->lessThanOrEqualTo($start)) {
+                        $end = $end->copy()->addDay();
+                    }
+                    
+                    // Visible after 24 hours from the end of the broadcast
+                    $visibleAfter = $end->copy()->addHours(24);
+                    if ($now->lessThan($visibleAfter)) {
+                        return true;
+                    }
+                }
+            } else {
+                // Future broadcast date where start time is not specified yet
+                if ($episodeDate->startOfDay()->greaterThan($now->copy()->startOfDay())) {
+                    return true;
+                }
+            }
+        } catch (Throwable) {
+            // Keep filter safe
+        }
+
+        return false;
     }
 
     private function isBroadcastUnderEmbargo(MasterProgram $program): bool

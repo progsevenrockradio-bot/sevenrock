@@ -78,10 +78,15 @@ class ArchiveOrgPodcastFilterTest extends TestCase
         $episodes = $service->latestPodcastEpisodes(10);
         $this->assertEmpty($episodes, 'Podcast should be filtered out during the live broadcast.');
 
-        // Move time to 13:01 UTC (after the live broadcast has finished). It must now be visible!
+        // Move time to 13:01 UTC (after the live broadcast has finished, but under 24h embargo). It must still be filtered out!
         Carbon::setTestNow(Carbon::parse('2026-05-18 13:01:00', 'UTC'));
         $episodes = $service->latestPodcastEpisodes(10);
-        $this->assertNotEmpty($episodes, 'Podcast should be visible after the live broadcast is finished.');
+        $this->assertEmpty($episodes, 'Podcast should be filtered out during the 24-hour embargo period.');
+
+        // Move time to 17:01 UTC on May 19th (more than 24 hours after the live broadcast has finished in Caracas). It must now be visible!
+        Carbon::setTestNow(Carbon::parse('2026-05-19 17:01:00', 'UTC'));
+        $episodes = $service->latestPodcastEpisodes(10);
+        $this->assertNotEmpty($episodes, 'Podcast should be visible after the 24-hour embargo has ended.');
         $this->assertSame('1', $episodes[0]['id'] ?? null);
         $this->assertSame('https://archive.org/details/morning-rock-podcast', $episodes[0]['archive_url'] ?? null);
     }
