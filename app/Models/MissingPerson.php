@@ -46,3 +46,4 @@ class MissingPerson extends Model
     {
         return $query->where('status', 'active');
     }
+}
