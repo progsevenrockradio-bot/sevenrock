@@ -34,27 +34,11 @@
 
             <!-- Listado -->
             @if($missingPersons->count() > 0)
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     @foreach($missingPersons as $person)
-                        <div class="bg-[#121212] rounded-xl overflow-hidden shadow-2xl border border-white/5 flex flex-col group relative">
-                            <!-- Foto -->
-                            <div class="relative w-full aspect-[3/4] overflow-hidden bg-[#0a0a0a]">
-                                @if($person->photo_url)
-                                    <img src="{{ $person->photo_url }}" alt="Foto de {{ $person->full_name }}" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105">
-                                @else
-                                    <div class="absolute inset-0 flex h-full w-full items-center justify-center text-white/20">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                        </svg>
-                                    </div>
-                                @endif
-                                <div class="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full shadow-lg">
-                                    Desaparecido
-                                </div>
-                            </div>
-                            
+                        <div class="bg-[#121212] rounded-xl overflow-hidden shadow-2xl border border-white/5 flex flex-row group relative">
                             <!-- Información -->
-                            <div class="p-5 flex-1 flex flex-col">
+                            <div class="p-5 flex-1 flex flex-col justify-center">
                                 <h3 class="text-lg font-display font-bold text-white mb-2 uppercase tracking-wide">{{ $person->full_name }}</h3>
                                 
                                 <div class="space-y-2 text-xs text-lucille-text-muted mb-5 flex-1">
@@ -86,6 +70,22 @@
                                     <p class="text-white font-mono text-lg">{{ $person->emergency_contact_number }}</p>
                                 </div>
                                 @endif
+                            </div>
+
+                            <!-- Foto (Derecha) -->
+                            <div class="relative w-1/3 aspect-[3/4] overflow-hidden bg-[#0a0a0a] shrink-0 border-l border-white/5">
+                                @if($person->photo_url)
+                                    <img src="{{ $person->photo_url }}" alt="Foto de {{ $person->full_name }}" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105">
+                                @else
+                                    <div class="absolute inset-0 flex h-full w-full items-center justify-center text-white/20">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                    </div>
+                                @endif
+                                <div class="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded shadow-lg">
+                                    Desaparecido
+                                </div>
                             </div>
                         </div>
                     @endforeach
