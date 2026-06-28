@@ -90,6 +90,40 @@ class MissingPersonController extends Controller
         return back()->with('success', 'Persona marcada como encontrada.');
     }
 
+    public function edit(MissingPerson $missingPerson)
+    {
+        return view('pages.missing-persons.edit', compact('missingPerson'));
+    }
+
+    public function update(Request $request, MissingPerson $missingPerson)
+    {
+        $data = $request->validate([
+            'full_name' => 'required|string|max:255',
+            'cedula' => 'nullable|string|max:20',
+            'age' => 'nullable|integer|min:0|max:150',
+            'sex' => 'nullable|in:masculino,femenino,otro',
+            'place_of_residence' => 'nullable|string|max:255',
+            'emergency_contact_number' => 'nullable|string|max:100',
+            'last_seen_location' => 'nullable|string|max:255',
+            'missing_since' => 'nullable|date|before_or_equal:today',
+            'description' => 'nullable|string|max:2000',
+            'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'is_approved' => 'boolean',
+            'status' => 'in:active,found',
+        ]);
+
+        if ($request->hasFile('photo')) {
+            $data['photo_path'] = $request->file('photo')->store('missing-persons', 'public');
+        }
+
+        $data['is_approved'] = $request->boolean('is_approved');
+
+        $missingPerson->update($data);
+
+        return redirect()->route('missing-persons.moderation.index')
+            ->with('success', 'Registro actualizado exitosamente.');
+    }
+
     public function destroy(MissingPerson $missingPerson)
     {
         $missingPerson->delete();

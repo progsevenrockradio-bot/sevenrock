@@ -109,6 +109,8 @@ Route::prefix('desaparecidos')->name('missing-persons.')->group(function (): voi
     // Rutas de Moderación - Protegidas
     Route::middleware(['auth', 'admin'])->prefix('moderacion')->name('moderation.')->group(function (): void {
         Route::get('/', [\App\Http\Controllers\MissingPersonController::class, 'moderationIndex'])->name('index');
+        Route::get('/{missingPerson}/edit', [\App\Http\Controllers\MissingPersonController::class, 'edit'])->name('edit');
+        Route::put('/{missingPerson}', [\App\Http\Controllers\MissingPersonController::class, 'update'])->name('update');
         Route::post('/{missingPerson}/approve', [\App\Http\Controllers\MissingPersonController::class, 'approve'])->name('approve');
         Route::post('/{missingPerson}/found', [\App\Http\Controllers\MissingPersonController::class, 'markAsFound'])->name('found');
         Route::delete('/{missingPerson}', [\App\Http\Controllers\MissingPersonController::class, 'destroy'])->name('destroy');
