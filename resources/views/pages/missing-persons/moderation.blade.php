@@ -1,4 +1,4 @@
-<x-layouts.site title="Moderación de Personas Desaparecidas - {{ $themeSettings->site_name ?? 'Seven Rock Radio' }}" :showPlayer="false">
+<x-layouts.site title="Moderación de Personas Desaparecidas - {{ $themeSettings->site_name ?? 'Seven Rock Radio' }}" :showPlayer="false" :showSocialFlyout="false">
     <x-sections.page-heading title="Moderación">
         <p class="text-base md:text-lg font-normal tracking-wide text-white/80 not-italic mt-2 uppercase">
             Panel in-site para gestionar reportes de personas desaparecidas.

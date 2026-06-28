@@ -1,4 +1,4 @@
-<x-layouts.site title="Editar Registro - {{ $themeSettings->site_name ?? 'Seven Rock Radio' }}" :showPlayer="false">
+<x-layouts.site title="Editar Registro - {{ $themeSettings->site_name ?? 'Seven Rock Radio' }}" :showPlayer="false" :showSocialFlyout="false">
     <x-sections.page-heading title="Editar Registro">
         <p class="text-base md:text-lg font-normal tracking-wide text-white/80 not-italic mt-2 uppercase">
             Estás editando el registro de {{ $missingPerson->full_name }}.

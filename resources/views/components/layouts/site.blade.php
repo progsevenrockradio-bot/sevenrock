@@ -6,6 +6,7 @@
     'ogImage' => null,
     'canonical' => null,
     'showPlayer' => true,
+    'showSocialFlyout' => true,
     'ogType' => 'website',
     'ogArticlePublishedTime' => null,
     'ogArticleAuthor' => null,
@@ -279,7 +280,7 @@
             ->values();
     @endphp
 
-    @if ($socialLinks->isNotEmpty())
+    @if ($showSocialFlyout && $socialLinks->isNotEmpty())
         <aside class="social-flyout" aria-label="Redes sociales">
             <div class="social-flyout__inner">
                 <div class="social-flyout__tab">

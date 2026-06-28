@@ -1,4 +1,4 @@
-<x-layouts.site title="Personas Desaparecidas - {{ $themeSettings->site_name ?? 'Seven Rock Radio' }}" :showPlayer="false">
+<x-layouts.site title="Personas Desaparecidas - {{ $themeSettings->site_name ?? 'Seven Rock Radio' }}" :showPlayer="false" :showSocialFlyout="false">
     <x-sections.page-heading title="Personas Desaparecidas">
         <p class="text-base md:text-lg font-normal tracking-wide text-white/80 not-italic mt-2 uppercase">
             Ayúdanos a encontrar a quienes faltan en casa. Comparte información o reporta un caso.

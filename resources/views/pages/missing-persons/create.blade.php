@@ -1,4 +1,4 @@
-<x-layouts.site title="Reportar Persona Desaparecida - {{ $themeSettings->site_name ?? 'Seven Rock Radio' }}" :showPlayer="false">
+<x-layouts.site title="Reportar Persona Desaparecida - {{ $themeSettings->site_name ?? 'Seven Rock Radio' }}" :showPlayer="false" :showSocialFlyout="false">
     <x-sections.page-heading title="Reportar Caso">
         <p class="text-base md:text-lg font-normal tracking-wide text-white/80 not-italic mt-2 uppercase">
             Por favor, completa la mayor cantidad de información posible. Tu reporte será publicado inmediatamente para ayudar en la búsqueda.
