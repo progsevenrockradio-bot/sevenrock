@@ -50,12 +50,11 @@
     <div class="absolute inset-0 bg-[rgba(0,0,0,.24)]"></div>
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_72%_42%,rgba(195,39,32,.12),transparent_30%),linear-gradient(90deg,rgba(0,0,0,.26),transparent_54%)]"></div>
 
-    <div class="relative z-10 mx-auto flex min-h-[340px] max-w-[1240px] items-end justify-end px-6 pt-[10dvh] pb-[4dvh] text-right sm:min-h-[70svh] md:min-h-[960px] md:pt-0 md:pb-6 lg:px-10 xl:min-h-[868px]">
-        <h1 class="hidden max-w-[760px] font-sans text-[20px] font-bold uppercase leading-none text-white sm:text-[22px] md:block md:text-[38px] lg:text-[48px]">
-            todas la <span class="text-lucille-accent">épocas del rock</span>,<br>
-            están <span class="text-lucille-accent">aquí!</span>
-        </h1>
-    </div>
+    @if(!empty($themeAppearance['hero_floating_text']))
+        <div class="hero-floating-text {{ $themeAppearance['hero_floating_text_position'] ?? 'inferior-centro' }}">
+            {{ $themeAppearance['hero_floating_text'] }}
+        </div>
+    @endif
 
     <div class="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-3">
         @foreach ($slides as $index => $slide)

@@ -125,6 +125,28 @@
                         <label for="hero_video_disabled" class="text-xs uppercase tracking-wider text-[#dcdcdc]">{{ $admin['disable_hero_video_label'] }}</label>
                     </div>
                     @error('hero_video_disabled')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+
+                    <div class="mt-6 border-t border-[#2b2b2b] pt-6">
+                        <h4 class="font-display text-lg uppercase tracking-[.12em] text-[#dcdcdc] mb-4">📝 Texto Flotante (Slider)</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Texto Flotante</label>
+                                <input name="hero_floating_text" value="{{ old('hero_floating_text', $settings->hero_floating_text) }}" class="lucille-product-field w-full" placeholder="Ej. Todas las épocas del rock, están aquí.">
+                                @error('hero_floating_text')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                            </div>
+                            <div>
+                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Posición del Texto</label>
+                                <select name="hero_floating_text_position" class="lucille-product-field lucille-select-field w-full">
+                                    <option value="columna-izquierda" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'columna-izquierda')>Columna Izquierda (Vertical)</option>
+                                    <option value="columna-derecha" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'columna-derecha')>Columna Derecha (Vertical)</option>
+                                    <option value="inferior-izquierda" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'inferior-izquierda')>Inferior Izquierda</option>
+                                    <option value="inferior-derecha" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'inferior-derecha')>Inferior Derecha</option>
+                                    <option value="inferior-centro" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'inferior-centro')>Inferior Centro</option>
+                                </select>
+                                @error('hero_floating_text_position')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

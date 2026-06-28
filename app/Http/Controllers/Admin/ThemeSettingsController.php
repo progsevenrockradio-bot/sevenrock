@@ -109,6 +109,8 @@ class ThemeSettingsController extends Controller
             'hero_video' => ['nullable', 'file', 'mimetypes:video/mp4,video/webm', 'max:102400'],
             'hero_video_url' => ['nullable', 'url', 'max:2048'],
             'hero_video_disabled' => ['nullable', 'boolean'],
+            'hero_floating_text' => ['nullable', 'string', 'max:255'],
+            'hero_floating_text_position' => ['nullable', 'string', 'in:columna-izquierda,columna-derecha,inferior-izquierda,inferior-derecha,inferior-centro'],
             'social_facebook' => ['nullable', 'url', 'max:2048'],
             'social_instagram' => ['nullable', 'url', 'max:2048'],
             'social_youtube' => ['nullable', 'url', 'max:2048'],

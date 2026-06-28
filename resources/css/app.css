@@ -5862,3 +5862,77 @@ audio.dark-audio {
     object-fit: contain;
     display: block;
 }
+
+/* ==========================================================================
+   Hero Floating Text
+   ========================================================================== */
+.hero-floating-text {
+    position: absolute;
+    z-index: 10;
+    color: #fff;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-weight: 700;
+    font-size: clamp(24px, 5vw, 64px);
+    line-height: 1.1;
+    text-shadow: 2px 2px 12px rgba(0,0,0,0.8);
+    pointer-events: none;
+    max-width: 90vw;
+}
+
+.hero-floating-text.columna-izquierda {
+    top: 0;
+    bottom: 0;
+    left: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+}
+
+.hero-floating-text.columna-derecha {
+    top: 0;
+    bottom: 0;
+    right: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+}
+
+.hero-floating-text.inferior-izquierda {
+    bottom: 60px;
+    left: 40px;
+    text-align: left;
+}
+
+.hero-floating-text.inferior-derecha {
+    bottom: 60px;
+    right: 40px;
+    text-align: right;
+}
+
+.hero-floating-text.inferior-centro {
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .hero-floating-text.columna-izquierda,
+    .hero-floating-text.columna-derecha,
+    .hero-floating-text.inferior-izquierda,
+    .hero-floating-text.inferior-derecha,
+    .hero-floating-text.inferior-centro {
+        writing-mode: horizontal-tb;
+        transform: translateX(-50%);
+        top: auto;
+        bottom: 40px;
+        left: 50%;
+        right: auto;
+        width: 90%;
+        text-align: center;
+    }
+}
