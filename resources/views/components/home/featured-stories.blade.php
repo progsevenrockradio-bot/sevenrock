@@ -2,17 +2,19 @@
 
 <div class="mt-[60px] grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
     <article class="home-panel overflow-hidden">
-        <div class="home-story-hero">
-            <img
-                src="{{ asset($stories['featured']['image']) }}"
-                alt="{{ $stories['featured']['title'] }}"
-                width="1200"
-                height="800"
-                class="home-story-hero-media"
-                loading="lazy"
-                decoding="async"
-            >
-            <div class="home-story-overlay"></div>
+        <div class="home-story-hero relative">
+            <div class="absolute inset-0 hero-slide" style="background-image: url('{{ asset($stories['featured']['image']) }}');">
+                <img
+                    src="{{ asset($stories['featured']['image']) }}"
+                    alt="{{ $stories['featured']['title'] }}"
+                    width="1200"
+                    height="800"
+                    class="home-story-hero-media hero-slide-img"
+                    loading="lazy"
+                    decoding="async"
+                >
+            </div>
+            <div class="home-story-overlay" style="z-index: 2;"></div>
             <div class="home-story-content">
                 <div class="home-badge">Perfil monitorizado</div>
                 <div class="mt-3 text-xs uppercase tracking-[.24em] text-[#cfcfcf]">{{ $stories['featured']['type'] }}</div>

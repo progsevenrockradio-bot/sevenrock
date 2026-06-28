@@ -28,7 +28,7 @@
         },
     }"
     x-init="init"
-    class="relative min-h-[340px] overflow-hidden sm:min-h-[70svh] md:min-h-[960px] xl:min-h-[868px]"
+    class="relative min-h-[340px] overflow-hidden sm:min-h-[70svh] md:min-h-[960px] xl:min-h-[868px] hero-rocks-section"
 >
     @foreach ($slides as $index => $slide)
         @php
@@ -39,10 +39,12 @@
         <div
             x-show="active === {{ $index }}"
             {!! $transitionModifiers !!}
-            class="absolute inset-0 bg-cover bg-top bg-no-repeat lucille-card-image hero-rocks-bg"
-            style="background-image: url('{{ $slideImage }}'); background-repeat: no-repeat;"
+            class="absolute inset-0 hero-slide"
+            style="background-image: url('{{ $slideImage }}');"
             aria-hidden="{{ $index === 0 ? 'false' : 'true' }}"
-        ></div>
+        >
+            <img src="{{ $slideImage }}" alt="Slide {{ $index + 1 }}" class="hero-slide-img">
+        </div>
     @endforeach
 
     <div class="absolute inset-0 bg-[rgba(0,0,0,.24)]"></div>

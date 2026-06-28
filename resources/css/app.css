@@ -1342,6 +1342,7 @@
         max-width: 1180px;
         padding: 200px 20px 110px;
         text-align: center;
+        z-index: 10;
     }
 
     .lucille-page-heading.no-subtitle .lucille-page-heading-inner {
@@ -5800,4 +5801,64 @@ audio.dark-audio {
     border-radius: 9999px;
     background-color: #202022;
     filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(1.2);
+}
+
+/* ==========================================================================
+   Hero Slider Adjustments
+   ========================================================================== */
+
+.hero-rocks-section {
+    overflow: hidden;
+    height: 340px;
+}
+
+@media (min-width: 640px) {
+    .hero-rocks-section {
+        height: 70svh;
+    }
+}
+
+@media (min-width: 768px) {
+    .hero-rocks-section {
+        height: 960px;
+    }
+}
+
+@media (min-width: 1280px) {
+    .hero-rocks-section {
+        height: 868px;
+    }
+}
+
+.hero-slide {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.hero-slide::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: inherit;
+    background-size: cover;
+    background-position: center;
+    filter: blur(20px);
+    opacity: 0.45;
+    z-index: 0;
+}
+
+.hero-slide-img {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
 }

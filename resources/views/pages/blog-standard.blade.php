@@ -38,14 +38,14 @@
                             {{-- Featured Hero Post Card --}}
                             <article class="blog-card-hero group">
                                 @if ($image)
-                                    <div class="hero-image-wrapper mb-6 md:mb-0 shrink-0 overflow-hidden rounded-xl border border-white/5 shadow-2xl aspect-video bg-[#0c0c0c]">
-                                        <a href="{{ $url }}" class="block h-full">
+                                    <div class="relative hero-image-wrapper mb-6 md:mb-0 shrink-0 overflow-hidden rounded-xl border border-white/5 shadow-2xl aspect-video bg-[#0c0c0c]">
+                                        <a href="{{ $url }}" class="block hero-slide" style="background-image: url('{{ str_starts_with($image, 'http') ? $image : asset($image) }}');">
                                             <img
                                                 src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}"
                                                 alt="{{ $title }}"
                                                 width="1200"
                                                 height="675"
-                                                class="w-full h-full object-cover transition duration-500 ease-out group-hover:scale-102"
+                                                class="hero-slide-img transition duration-500 ease-out group-hover:scale-102"
                                                 loading="lazy"
                                                 decoding="async"
                                             >

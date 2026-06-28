@@ -14,10 +14,12 @@
                     ? (string) $image
                     : asset((string) $image));
         @endphp
-        <div class="absolute inset-0 lucille-card-image" style="background-image: url('{{ $pageHeadingImage }}');"></div>
-        <div class="absolute inset-0" style="background: {{ $overlay === 'rgba(21,21,21,.88)' ? 'rgba(16, 16, 18, 0.75)' : $overlay }};"></div>
+        <div class="absolute inset-0 hero-slide" style="background-image: url('{{ $pageHeadingImage }}');">
+            <img src="{{ $pageHeadingImage }}" alt="Background" class="hero-slide-img" aria-hidden="true">
+        </div>
+        <div class="absolute inset-0" style="background: {{ $overlay === 'rgba(21,21,21,.88)' ? 'rgba(16, 16, 18, 0.75)' : $overlay }}; z-index: 2;"></div>
     @else
-        <div class="absolute inset-0" style="background: rgba(16, 16, 18, 0.75);"></div>
+        <div class="absolute inset-0" style="background: rgba(16, 16, 18, 0.75); z-index: 2;"></div>
     @endif
 
     <div class="lucille-page-heading-inner">
