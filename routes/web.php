@@ -100,6 +100,21 @@ Route::get("/programas", [SiteController::class, "programs"])->name("programs");
 Route::get("/programas/track-play", [SiteController::class, "trackPlay"])->name("programs.track-play");
 Route::get("/programas/{identifier}", [SiteController::class, "programDetail"])->name("programs.detail");
 
+// Rutas Públicas - Personas Desaparecidas
+Route::prefix('desaparecidos')->name('missing-persons.')->group(function (): void {
+    Route::get('/', [\App\Http\Controllers\MissingPersonController::class, 'index'])->name('index');
+    Route::get('/reportar', [\App\Http\Controllers\MissingPersonController::class, 'create'])->name('create');
+    Route::post('/', [\App\Http\Controllers\MissingPersonController::class, 'store'])->name('store');
+    
+    // Rutas de Moderación - Protegidas
+    Route::middleware(['auth', 'admin'])->prefix('moderacion')->name('moderation.')->group(function (): void {
+        Route::get('/', [\App\Http\Controllers\MissingPersonController::class, 'moderationIndex'])->name('index');
+        Route::post('/{missingPerson}/approve', [\App\Http\Controllers\MissingPersonController::class, 'approve'])->name('approve');
+        Route::post('/{missingPerson}/found', [\App\Http\Controllers\MissingPersonController::class, 'markAsFound'])->name('found');
+        Route::delete('/{missingPerson}', [\App\Http\Controllers\MissingPersonController::class, 'destroy'])->name('destroy');
+    });
+});
+
 // Rutas Públicas de Invitaciones de Programas
 Route::controller(\App\Http\Controllers\GuestProgramController::class)->prefix('invitacion/programa')->name('invitation.program.')->middleware('signed')->group(function (): void {
     Route::get('/{invitation}', 'edit')->name('edit');

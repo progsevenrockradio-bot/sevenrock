@@ -71,6 +71,12 @@
         </div>
     @endif
 
+    <div class="absolute bottom-20 left-1/2 z-20 flex -translate-x-1/2">
+        <a href="{{ route('missing-persons.index') }}" class="lucille-button-solid bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded text-xs md:text-sm font-bold uppercase tracking-widest shadow-lg hover:shadow-red-600/50 transition-all">
+            Personas Desaparecidas
+        </a>
+    </div>
+
     <div class="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-3">
         @foreach ($slides as $index => $slide)
             <button type="button" class="h-2.5 w-2.5 rounded-full border border-white/70 transition" :class="active === {{ $index }} ? 'bg-lucille-accent border-lucille-accent' : 'bg-transparent'" @click="go({{ $index }})" aria-label="Show slide {{ $index + 1 }}"></button>
