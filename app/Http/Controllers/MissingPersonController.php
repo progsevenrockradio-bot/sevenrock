@@ -22,7 +22,7 @@ class MissingPersonController extends Controller
             });
         }
 
-        $missingPersons = $query->paginate(12)->withQueryString();
+        $missingPersons = $query->paginate(25)->withQueryString();
 
         return view('pages.missing-persons.index', compact('missingPersons', 'search'));
     }
