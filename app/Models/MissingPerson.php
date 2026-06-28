@@ -9,6 +9,8 @@ class MissingPerson extends Model
 {
     use SoftDeletes;
 
+    protected $table = 'missing_persons';
+
     protected $fillable = [
         'full_name',
         'cedula',
