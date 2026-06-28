@@ -32,6 +32,7 @@ class MissingPerson extends Model
     protected $casts = [
         'age' => 'integer',
         'missing_since' => 'date',
+        'date_update' => 'date',
         'is_approved' => 'boolean',
     ];
 
