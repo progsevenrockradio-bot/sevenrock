@@ -34,15 +34,15 @@
 
             <!-- Listado -->
             @if($missingPersons->count() > 0)
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
                     @foreach($missingPersons as $person)
                         <div class="bg-[#121212] rounded-xl overflow-hidden shadow-2xl border border-white/5 flex flex-col group relative">
                             <!-- Foto -->
-                            <div class="relative h-56 w-full overflow-hidden bg-[#0a0a0a]">
+                            <div class="relative w-full aspect-[3/4] overflow-hidden bg-[#0a0a0a]">
                                 @if($person->photo_url)
-                                    <img src="{{ $person->photo_url }}" alt="Foto de {{ $person->full_name }}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105">
+                                    <img src="{{ $person->photo_url }}" alt="Foto de {{ $person->full_name }}" class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105">
                                 @else
-                                    <div class="flex h-full w-full items-center justify-center text-white/20">
+                                    <div class="absolute inset-0 flex h-full w-full items-center justify-center text-white/20">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                         </svg>
