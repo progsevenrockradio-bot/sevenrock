@@ -10,6 +10,48 @@
 
     <section class="lucille-section bg-lucille-surface">
         <div class="lucille-container">
+            <!-- Estadísticas -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <!-- Personas Reportadas -->
+                <div class="bg-[#121212] border border-white/5 rounded-xl p-6 flex items-center shadow-lg transition-transform hover:-translate-y-1 duration-300">
+                    <div class="p-4 bg-lucille-accent/10 rounded-full mr-5 text-lucille-accent">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-xs text-lucille-text-muted font-bold uppercase tracking-wider mb-1">Personas Reportadas</h4>
+                        <p class="text-4xl font-display font-bold text-white">{{ $stats['reportadas'] }}</p>
+                    </div>
+                </div>
+
+                <!-- En Búsqueda -->
+                <div class="bg-[#121212] border border-white/5 rounded-xl p-6 flex items-center shadow-lg transition-transform hover:-translate-y-1 duration-300">
+                    <div class="p-4 bg-yellow-500/10 rounded-full mr-5 text-yellow-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-xs text-lucille-text-muted font-bold uppercase tracking-wider mb-1">En Búsqueda</h4>
+                        <p class="text-4xl font-display font-bold text-white">{{ $stats['buscadas'] }}</p>
+                    </div>
+                </div>
+
+                <!-- Personas Encontradas -->
+                <div class="bg-[#121212] border border-white/5 rounded-xl p-6 flex items-center shadow-lg transition-transform hover:-translate-y-1 duration-300">
+                    <div class="p-4 bg-green-500/10 rounded-full mr-5 text-green-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-xs text-lucille-text-muted font-bold uppercase tracking-wider mb-1">Personas Encontradas</h4>
+                        <p class="text-4xl font-display font-bold text-white">{{ $stats['encontradas'] }}</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Buscador y Acciones -->
             <div class="mb-12 flex flex-col md:flex-row items-center justify-between gap-6">
                 <form action="{{ route('missing-persons.index') }}" method="GET" class="w-full md:max-w-md relative">

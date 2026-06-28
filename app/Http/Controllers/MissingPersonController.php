@@ -28,7 +28,14 @@ class MissingPersonController extends Controller
 
         $missingPersons = $query->paginate(25)->withQueryString();
 
-        return view('pages.missing-persons.index', compact('missingPersons', 'search'));
+        // Estadísticas de personas
+        $stats = [
+            'reportadas' => MissingPerson::approved()->count(),
+            'encontradas' => MissingPerson::where('status', 'found')->count(),
+            'buscadas' => MissingPerson::active()->approved()->count(),
+        ];
+
+        return view('pages.missing-persons.index', compact('missingPersons', 'search', 'stats'));
     }
 
     public function create()
