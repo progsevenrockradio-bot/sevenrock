@@ -1,8 +1,9 @@
-<x-layouts.site title="Moderación de Personas Desaparecidas - {{ $themeSettings->site_name }}">
-    <x-sections.page-heading 
-        title="Moderación" 
-        subtitle="Panel in-site para gestionar reportes de personas desaparecidas." 
-    />
+<x-layouts.site title="Moderación de Personas Desaparecidas - {{ $themeSettings->site_name ?? 'Seven Rock Radio' }}" :showPlayer="false">
+    <x-sections.page-heading title="Moderación">
+        <p class="text-base md:text-lg font-normal tracking-wide text-white/80 not-italic mt-2 uppercase">
+            Panel in-site para gestionar reportes de personas desaparecidas.
+        </p>
+    </x-sections.page-heading>
 
     <section class="lucille-section bg-lucille-surface">
         <div class="lucille-container max-w-6xl">
