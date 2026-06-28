@@ -47,7 +47,7 @@ class MissingPersonController extends Controller
             'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        $data['is_approved'] = false;
+        $data['is_approved'] = true;
         $data['status'] = 'active';
 
         if ($request->hasFile('photo')) {
@@ -57,7 +57,7 @@ class MissingPersonController extends Controller
         MissingPerson::create($data);
 
         return redirect()->route('missing-persons.index')
-            ->with('success', 'Reporte enviado correctamente. Será revisado por nuestro equipo antes de ser publicado.');
+            ->with('success', 'Reporte enviado y publicado exitosamente en nuestra plataforma.');
     }
 
     // === MODERATION METHODS ===
