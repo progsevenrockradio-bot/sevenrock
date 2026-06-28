@@ -132,6 +132,7 @@
                             <div>
                                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Texto Flotante</label>
                                 <input name="hero_floating_text" value="{{ old('hero_floating_text', $settings->hero_floating_text) }}" class="lucille-product-field w-full" placeholder="Ej. Todas las épocas del rock, están aquí.">
+                                <p class="mt-2 text-[11px] text-[#7b7b7b]">Nota: Usa un asterisco (*) para indicar qué parte del texto debe ir en rojo. Ej: Todas las épocas del *rock, están aquí!!</p>
                                 @error('hero_floating_text')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                             </div>
                             <div>

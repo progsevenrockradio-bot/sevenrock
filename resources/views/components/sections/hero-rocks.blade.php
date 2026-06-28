@@ -52,13 +52,20 @@
 
     @if(!empty($themeAppearance['hero_floating_text']))
         @php
-            $words = explode(' ', $themeAppearance['hero_floating_text']);
-            $half = ceil(count($words) / 2);
-            $firstHalf = implode(' ', array_slice($words, 0, $half));
-            $secondHalf = implode(' ', array_slice($words, $half));
+            $text = $themeAppearance['hero_floating_text'];
+            if (str_contains($text, '*')) {
+                $parts = explode('*', $text);
+                $firstHalf = $parts[0];
+                $secondHalf = $parts[1] ?? '';
+            } else {
+                $words = explode(' ', $text);
+                $half = ceil(count($words) / 2);
+                $firstHalf = implode(' ', array_slice($words, 0, $half));
+                $secondHalf = implode(' ', array_slice($words, $half));
+            }
         @endphp
-        <div class="hero-floating-text {{ $themeAppearance['hero_floating_text_position'] ?? 'inferior-centro' }}">
-            {!! $firstHalf !!} @if($secondHalf)<span class="text-lucille-accent">{!! $secondHalf !!}</span>@endif
+        <div class="hero-floating-text whitespace-nowrap {{ $themeAppearance['hero_floating_text_position'] ?? 'inferior-centro' }}">
+            {!! $firstHalf !!}@if($secondHalf) <span class="text-lucille-accent">{!! $secondHalf !!}</span>@endif
         </div>
     @endif
 
