@@ -74,6 +74,8 @@ class ThemeAppearance
             'featured_album_url' => $settings->featuredAlbumUrl(),
             'hero_video_url' => $media['hero_video_media_url'],
             'hero_video_disabled' => (bool) $media['hero_video_disabled'],
+            'hero_floating_text' => $settings->hero_floating_text,
+            'hero_floating_text_position' => $settings->hero_floating_text_position,
             'social_links' => $links['social_links'],
             'featured_stories' => $settings->featuredStories(),
             'latest_podcasts' => $settings->latestPodcasts(),
