@@ -64,8 +64,10 @@
                 $secondHalf = implode(' ', array_slice($words, $half));
             }
         @endphp
-        <div class="hero-floating-text whitespace-nowrap {{ $themeAppearance['hero_floating_text_position'] ?? 'inferior-centro' }}">
-            {!! $firstHalf !!}@if($secondHalf) <span class="text-lucille-accent">{!! $secondHalf !!}</span>@endif
+        <div class="hero-floating-text {{ $themeAppearance['hero_floating_text_position'] ?? 'inferior-centro' }}">
+            <div class="text-center">
+                {!! $firstHalf !!}@if($secondHalf) <span class="text-lucille-accent">{!! $secondHalf !!}</span>@endif
+            </div>
         </div>
     @endif
 
