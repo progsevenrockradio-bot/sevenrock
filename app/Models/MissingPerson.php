@@ -14,6 +14,9 @@ class MissingPerson extends Model
     protected $fillable = [
         'full_name',
         'cedula',
+        'hospital_admitted_to',
+        'date_update',
+        'service_provided',
         'age',
         'sex',
         'place_of_residence',

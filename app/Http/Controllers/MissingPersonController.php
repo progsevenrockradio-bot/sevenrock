@@ -40,7 +40,10 @@ class MissingPersonController extends Controller
     {
         $data = $request->validate([
             'full_name' => 'required|string|max:255',
-            'cedula' => 'nullable|string|max:20',
+            'cedula' => 'nullable|string|max:20|unique:missing_persons,cedula',
+            'hospital_admitted_to' => 'nullable|string|max:255',
+            'date_update' => 'nullable|date',
+            'service_provided' => 'nullable|string|max:255',
             'age' => 'nullable|integer|min:0|max:150',
             'sex' => 'nullable|in:masculino,femenino,otro',
             'place_of_residence' => 'nullable|string|max:255',
@@ -103,7 +106,10 @@ class MissingPersonController extends Controller
     {
         $data = $request->validate([
             'full_name' => 'required|string|max:255',
-            'cedula' => 'nullable|string|max:20',
+            'cedula' => 'nullable|string|max:20|unique:missing_persons,cedula,' . $missingPerson->id,
+            'hospital_admitted_to' => 'nullable|string|max:255',
+            'date_update' => 'nullable|date',
+            'service_provided' => 'nullable|string|max:255',
             'age' => 'nullable|integer|min:0|max:150',
             'sex' => 'nullable|in:masculino,femenino,otro',
             'place_of_residence' => 'nullable|string|max:255',

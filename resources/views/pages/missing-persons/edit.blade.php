@@ -92,6 +92,30 @@
                     </div>
 
                     <h3 class="text-2xl font-display font-bold text-white uppercase tracking-widest mb-8 border-b border-white/10 pb-4 mt-12">
+                        Datos Médicos / Hospitalarios (Opcional)
+                    </h3>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-[0.2em] text-[#7b7b7b] mb-2">Ingresado por sismo a (Hospital)</label>
+                        <input type="text" name="hospital_admitted_to" value="{{ old('hospital_admitted_to', $missingPerson->hospital_admitted_to) }}" class="lucille-field w-full" placeholder="Ej. Hospital Domingo Luciani">
+                        @error('hospital_admitted_to')<p class="text-red-400 text-sm mt-1">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-[0.2em] text-[#7b7b7b] mb-2">Servicio</label>
+                            <input type="text" name="service_provided" value="{{ old('service_provided', $missingPerson->service_provided) }}" class="lucille-field w-full" placeholder="Ej. Cirugía General, Traumatología...">
+                            @error('service_provided')<p class="text-red-400 text-sm mt-1">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-[0.2em] text-[#7b7b7b] mb-2">Fecha de Actualización</label>
+                            <input type="date" name="date_update" value="{{ old('date_update', $missingPerson->date_update ? \Carbon\Carbon::parse($missingPerson->date_update)->format('Y-m-d') : '') }}" class="lucille-field w-full bg-[#1a1a1a]">
+                            @error('date_update')<p class="text-red-400 text-sm mt-1">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-display font-bold text-white uppercase tracking-widest mb-8 border-b border-white/10 pb-4 mt-12">
                         Detalles Adicionales
                     </h3>
 
