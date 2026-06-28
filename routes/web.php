@@ -113,6 +113,7 @@ Route::prefix('desaparecidos')->name('missing-persons.')->group(function (): voi
         Route::put('/{missingPerson}', [\App\Http\Controllers\MissingPersonController::class, 'update'])->name('update');
         Route::post('/{missingPerson}/approve', [\App\Http\Controllers\MissingPersonController::class, 'approve'])->name('approve');
         Route::post('/{missingPerson}/found', [\App\Http\Controllers\MissingPersonController::class, 'markAsFound'])->name('found');
+        Route::post('/export-email', [\App\Http\Controllers\MissingPersonController::class, 'exportAndEmail'])->name('export-email');
         Route::delete('/{missingPerson}', [\App\Http\Controllers\MissingPersonController::class, 'destroy'])->name('destroy');
     });
 });

@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\MissingPerson;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\MissingPersonsExportMail;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class MissingPersonController extends Controller
 {
@@ -127,6 +131,40 @@ class MissingPersonController extends Controller
     public function destroy(MissingPerson $missingPerson)
     {
         $missingPerson->delete();
-        return back()->with('success', 'Registro eliminado exitosamente.');
+        return back()->with('success', 'Registro eliminado correctamente.');
+    }
+
+    /**
+     * Export all missing persons to PDF and send via email
+     */
+    public function exportAndEmail(Request $request)
+    {
+        $request->validate([
+            'email_to' => 'required|email',
+            'email_from' => 'nullable|email',
+        ]);
+
+        $missingPersons = MissingPerson::active()->latest()->get();
+
+        // Configure DOMPDF
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('isHtml5ParserEnabled', true);
+        
+        $dompdf = new Dompdf($options);
+        
+        $html = view('pdf.missing-persons', compact('missingPersons'))->render();
+        
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        
+        $pdfOutput = $dompdf->output();
+
+        // Send email
+        $mail = new MissingPersonsExportMail($pdfOutput, $request->email_from);
+        Mail::to($request->email_to)->send($mail);
+
+        return back()->with('success', 'El reporte PDF ha sido generado y enviado a ' . $request->email_to);
     }
 }

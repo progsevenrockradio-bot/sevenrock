@@ -20,21 +20,54 @@
                 </div>
             @endif
 
-            <!-- Filtros rápidos -->
-            <div class="mb-8 flex flex-wrap gap-4 items-center bg-[#121212] p-4 rounded-xl border border-white/5">
-                <span class="text-xs font-bold uppercase tracking-widest text-[#7b7b7b] mr-2">Filtros:</span>
-                <a href="{{ route('missing-persons.moderation.index') }}" class="px-4 py-2 text-sm rounded-lg {{ !request()->has('approved') && !request()->has('status') ? 'bg-lucille-accent text-white' : 'bg-white/5 text-white/70 hover:bg-white/10' }}">
-                    Todos
-                </a>
-                <a href="{{ route('missing-persons.moderation.index', ['approved' => '0']) }}" class="px-4 py-2 text-sm rounded-lg {{ request('approved') === '0' ? 'bg-lucille-accent text-white' : 'bg-white/5 text-white/70 hover:bg-white/10' }}">
-                    Pendientes de Aprobación
-                </a>
-                <a href="{{ route('missing-persons.moderation.index', ['status' => 'active', 'approved' => '1']) }}" class="px-4 py-2 text-sm rounded-lg {{ request('status') === 'active' && request('approved') === '1' ? 'bg-lucille-accent text-white' : 'bg-white/5 text-white/70 hover:bg-white/10' }}">
-                    Activos y Aprobados
-                </a>
-                <a href="{{ route('missing-persons.moderation.index', ['status' => 'found']) }}" class="px-4 py-2 text-sm rounded-lg {{ request('status') === 'found' ? 'bg-lucille-accent text-white' : 'bg-white/5 text-white/70 hover:bg-white/10' }}">
-                    Encontrados
-                </a>
+            <!-- Filtros rápidos y Exportar -->
+            <div x-data="{ exportModalOpen: false }" class="mb-8 flex flex-wrap gap-4 items-center justify-between bg-[#121212] p-4 rounded-xl border border-white/5">
+                <div class="flex flex-wrap gap-4 items-center">
+                    <span class="text-xs font-bold uppercase tracking-widest text-[#7b7b7b] mr-2">Filtros:</span>
+                    <a href="{{ route('missing-persons.moderation.index') }}" class="px-4 py-2 text-sm rounded-lg {{ !request()->has('approved') && !request()->has('status') ? 'bg-lucille-accent text-white' : 'bg-white/5 text-white/70 hover:bg-white/10' }}">
+                        Todos
+                    </a>
+                    <a href="{{ route('missing-persons.moderation.index', ['approved' => '0']) }}" class="px-4 py-2 text-sm rounded-lg {{ request('approved') === '0' ? 'bg-lucille-accent text-white' : 'bg-white/5 text-white/70 hover:bg-white/10' }}">
+                        Pendientes de Aprobación
+                    </a>
+                    <a href="{{ route('missing-persons.moderation.index', ['status' => 'active', 'approved' => '1']) }}" class="px-4 py-2 text-sm rounded-lg {{ request('status') === 'active' && request('approved') === '1' ? 'bg-lucille-accent text-white' : 'bg-white/5 text-white/70 hover:bg-white/10' }}">
+                        Activos y Aprobados
+                    </a>
+                    <a href="{{ route('missing-persons.moderation.index', ['status' => 'found']) }}" class="px-4 py-2 text-sm rounded-lg {{ request('status') === 'found' ? 'bg-lucille-accent text-white' : 'bg-white/5 text-white/70 hover:bg-white/10' }}">
+                        Encontrados
+                    </a>
+                </div>
+                <div>
+                    <button @click="exportModalOpen = true" type="button" class="px-4 py-2 text-sm font-bold bg-white text-black hover:bg-gray-200 rounded-lg flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Exportar y Enviar PDF
+                    </button>
+                </div>
+
+                <!-- Export Modal -->
+                <div x-show="exportModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" @click="exportModalOpen = false" @keydown.escape.window="exportModalOpen = false">
+                    <div class="bg-[#1a1a1a] border border-white/10 rounded-xl p-8 max-w-md w-full shadow-2xl relative" @click.stop>
+                        <button @click="exportModalOpen = false" class="absolute top-4 right-4 text-white/50 hover:text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                        <h3 class="text-xl font-display font-bold text-white mb-6 uppercase tracking-wide">Exportar y Enviar Reporte PDF</h3>
+                        <form action="{{ route('missing-persons.moderation.export-email') }}" method="POST">
+                            @csrf
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold uppercase tracking-[0.2em] text-[#7b7b7b] mb-2">Enviar al correo: <span class="text-lucille-accent">*</span></label>
+                                <input type="email" name="email_to" required class="lucille-field w-full border-white/20" placeholder="Ej. autoridad@ejemplo.com">
+                            </div>
+                            <div class="mb-6">
+                                <label class="block text-xs font-bold uppercase tracking-[0.2em] text-[#7b7b7b] mb-2">Tu correo (Remitente / Reply-To):</label>
+                                <input type="email" name="email_from" class="lucille-field w-full border-white/20" placeholder="Opcional">
+                            </div>
+                            <div class="flex justify-end gap-4">
+                                <button type="button" @click="exportModalOpen = false" class="px-6 py-3 font-bold uppercase tracking-widest text-xs rounded-full border border-white/20 text-white hover:bg-white/5 transition-colors">Cancelar</button>
+                                <button type="submit" class="px-6 py-3 font-bold uppercase tracking-widest text-xs rounded-full bg-lucille-accent text-white hover:bg-red-700 transition-colors">Generar y Enviar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
 
             <!-- Tabla -->
