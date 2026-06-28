@@ -51,8 +51,14 @@
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_72%_42%,rgba(195,39,32,.12),transparent_30%),linear-gradient(90deg,rgba(0,0,0,.26),transparent_54%)]"></div>
 
     @if(!empty($themeAppearance['hero_floating_text']))
+        @php
+            $words = explode(' ', $themeAppearance['hero_floating_text']);
+            $half = ceil(count($words) / 2);
+            $firstHalf = implode(' ', array_slice($words, 0, $half));
+            $secondHalf = implode(' ', array_slice($words, $half));
+        @endphp
         <div class="hero-floating-text {{ $themeAppearance['hero_floating_text_position'] ?? 'inferior-centro' }}">
-            {{ $themeAppearance['hero_floating_text'] }}
+            {!! $firstHalf !!} @if($secondHalf)<span class="text-lucille-accent">{!! $secondHalf !!}</span>@endif
         </div>
     @endif
 

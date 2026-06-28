@@ -5873,7 +5873,7 @@ audio.dark-audio {
     font-family: var(--font-display);
     text-transform: uppercase;
     font-weight: 700;
-    font-size: clamp(24px, 5vw, 64px);
+    font-size: clamp(16px, 3.5vw, 42px);
     line-height: 1.1;
     text-shadow: 2px 2px 12px rgba(0,0,0,0.8);
     pointer-events: none;
