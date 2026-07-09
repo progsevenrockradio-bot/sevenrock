@@ -21,6 +21,40 @@
 
     <x-home.headline-ticker :ticker="$headlineTicker" />
 
+    @if (!empty($noticiasRock) && $noticiasRock->count() > 0)
+    <x-sections.background-band class="home-section-texture home-section-gray">
+        <div class="pt-[100px] pb-[80px]">
+            <x-ui.section-heading title="Noticias" accent="Rock" subtitle="Lo último en el mundo del rock y metal" />
+            
+            <div class="mx-auto max-w-[1200px] px-6 mt-10">
+                <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach($noticiasRock as $post)
+                        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:border-[#c32720]/40 group">
+                            <div>
+                                <div class="relative aspect-[4/3] overflow-hidden border border-[#2b2b2b] bg-[#111]">
+                                    <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}" alt="{{ $post->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
+                                </div>
+                                <h4 class="mt-4 font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 group-hover:text-[#c32720] transition-colors">
+                                    <a href="{{ route('blog.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-10"></a>
+                                    {{ $post->title }}
+                                </h4>
+                                @if($post->published_at)
+                                    <p class="text-[10px] uppercase tracking-[.12em] text-[#555] mt-2">{{ $post->published_at->translatedFormat('d M, Y') }}</p>
+                                @endif
+                                @if($post->excerpt)
+                                    <p class="mt-3 text-xs leading-5 text-[#7b7b7b] line-clamp-3 relative z-20">{{ $post->excerpt }}</p>
+                                @endif
+                            </div>
+                            <div class="mt-4 border-t border-[#222] pt-3 text-right relative z-20">
+                                <a href="{{ route('blog.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] hover:text-[#c32720] transition-colors">Leer más &rarr;</a>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </x-sections.background-band>
+    @endif
     {{-- <x-home.partners-slider :agencies="$agencies" /> --}}
 
     @if (data_get($featuredStories, 'enabled', false))
@@ -37,6 +71,41 @@
         <div class="pt-[100px] pb-[80px]">
             <x-ui.section-heading :title="$homeHeadings['next_program']['title']" :subtitle="$homeHeadings['next_program']['subtitle']" />
             <x-home.next-program :program="$nextProgram" />
+        </div>
+    </x-sections.background-band>
+    @endif
+
+    @if (!empty($efemerides) && $efemerides->count() > 0)
+    <x-sections.background-band class="home-section-texture home-section-black">
+        <div class="pt-[100px] pb-[80px]">
+            <x-ui.section-heading title="Hoy en el" accent="Rock" subtitle="Efemérides musicales, lanzamientos y cumpleaños" />
+            
+            <div class="mx-auto max-w-[1200px] px-6 mt-10">
+                <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach($efemerides as $post)
+                        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:border-[#c32720]/40 group">
+                            <div>
+                                <div class="relative aspect-[4/3] overflow-hidden border border-[#2b2b2b] bg-[#111]">
+                                    <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}" alt="{{ $post->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
+                                </div>
+                                <h4 class="mt-4 font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 group-hover:text-[#c32720] transition-colors">
+                                    <a href="{{ route('blog.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-10"></a>
+                                    {{ $post->title }}
+                                </h4>
+                                @if($post->published_at)
+                                    <p class="text-[10px] uppercase tracking-[.12em] text-[#555] mt-2">{{ $post->published_at->translatedFormat('d M, Y') }}</p>
+                                @endif
+                                @if($post->excerpt)
+                                    <p class="mt-3 text-xs leading-5 text-[#7b7b7b] line-clamp-3 relative z-20">{{ $post->excerpt }}</p>
+                                @endif
+                            </div>
+                            <div class="mt-4 border-t border-[#222] pt-3 text-right relative z-20">
+                                <a href="{{ route('blog.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] hover:text-[#c32720] transition-colors">Leer más &rarr;</a>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
         </div>
     </x-sections.background-band>
     @endif

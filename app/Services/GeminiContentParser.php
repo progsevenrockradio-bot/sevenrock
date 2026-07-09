@@ -367,4 +367,121 @@ PROMPT;
             return null;
         }
     }
+
+    /**
+     * Analiza el asunto y el cuerpo del correo para extraer una lista de efemérides usando Gemini.
+     */
+    public function parseEfemeridesBatch(string $subject, string $body, string $apiKey): ?array
+    {
+        $this->lastError = null;
+        $prompt = <<<PROMPT
+Eres un asistente de redacción editorial para la radio de rock "Seven Rock Radio".
+Tu tarea es analizar el correo electrónico recibido que contiene una o varias "Efemérides" (Hoy en el Rock) y convertirlo en un arreglo estructurado.
+
+Sigue estas reglas estrictas:
+1. Extrae cada efeméride individual que encuentres en el texto.
+2. Cada efeméride debe tener:
+   - "title": Un título atractivo en español (ej: "Se lanza Master of Puppets de Metallica").
+   - "excerpt": Un resumen corto de 150-180 caracteres de la efeméride.
+   - "content": El cuerpo principal de la efeméride, limpio, en español y bien redactado (propio de una revista de rock), separado por párrafos con salto de línea doble.
+3. Evalúa la importancia ("importance"): un número del 1 al 5.
+4. Omite saludos, despedidas o cualquier contenido irrelevante.
+
+Devuelve la respuesta estrictamente en formato JSON utilizando el esquema indicado, el cual debe ser un arreglo ("array") de objetos.
+
+Asunto del correo: {$subject}
+Cuerpo del correo:
+{$body}
+PROMPT;
+
+        $model = config('services.gemini.model', 'gemini-flash-latest');
+
+        // Primer intento
+        $result = $this->callApiForBatch($model, $prompt, $apiKey);
+
+        // Auto-descubrimiento en caso de error
+        if ($result === null && ($this->isNotFoundError($this->lastError) || $this->isQuotaZeroError($this->lastError))) {
+            $discoveredModel = $this->discoverBestModel($apiKey);
+            if ($discoveredModel && $discoveredModel !== $model) {
+                $this->lastError = null;
+                $result = $this->callApiForBatch($discoveredModel, $prompt, $apiKey);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Hace la llamada HTTP a la API de Gemini usando el esquema de Array (Batch).
+     */
+    protected function callApiForBatch(string $model, string $prompt, string $apiKey): ?array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'responseMimeType' => 'application/json',
+                    'responseSchema' => [
+                        'type' => 'ARRAY',
+                        'items' => [
+                            'type' => 'OBJECT',
+                            'properties' => [
+                                'title' => [
+                                    'type' => 'STRING',
+                                    'description' => 'El título de la efeméride.'
+                                ],
+                                'importance' => [
+                                    'type' => 'INTEGER',
+                                    'description' => 'Un valor del 1 al 5.'
+                                ],
+                                'excerpt' => [
+                                    'type' => 'STRING',
+                                    'description' => 'Resumen de 150-180 caracteres.'
+                                ],
+                                'content' => [
+                                    'type' => 'STRING',
+                                    'description' => 'El cuerpo principal de la efeméride.'
+                                ]
+                            ],
+                            'required' => ['title', 'importance', 'excerpt', 'content']
+                        ]
+                    ]
+                ]
+            ]);
+
+            if ($response->failed()) {
+                $errorMsg = "HTTP Code " . $response->status() . " - " . $response->body();
+                $this->lastError = $errorMsg;
+                return null;
+            }
+
+            $result = $response->json();
+            $text = $result['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+            if (! $text) {
+                $this->lastError = "Response does not contain text.";
+                return null;
+            }
+
+            $parsedData = json_decode($text, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $this->lastError = "JSON decode error: " . json_last_error_msg();
+                return null;
+            }
+
+            return $parsedData;
+
+        } catch (\Throwable $e) {
+            $this->lastError = "Exception: " . $e->getMessage();
+            return null;
+        }
+    }
 }

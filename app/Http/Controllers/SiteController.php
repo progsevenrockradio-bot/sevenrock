@@ -62,12 +62,34 @@ class SiteController extends Controller
             collect()
         );
 
+        $noticiasRock = $this->safeValue(
+            fn () => Post::query()
+                ->published()
+                ->whereJsonContains('categories', 'Noticias Rock')
+                ->orderByDesc('published_at')
+                ->take(4)
+                ->get(),
+            collect()
+        );
+
+        $efemerides = $this->safeValue(
+            fn () => Post::query()
+                ->published()
+                ->whereJsonContains('categories', 'Efeméride')
+                ->orderByDesc('published_at')
+                ->take(4)
+                ->get(),
+            collect()
+        );
+
         return view('pages.home', [
             'events' => $events,
             'album' => $latestAlbum,
             'featuredVideos' => $this->safeValue(fn () => Video::query()->where('is_featured', true)->latest()->take(3)->get(), collect()),
             'galleryImages' => $galleryImages,
             'posts' => $this->latestPosts(),
+            'noticiasRock' => $noticiasRock,
+            'efemerides' => $efemerides,
             'newReleases' => $newReleases,
             'nextProgram' => $this->safeValue(
                 fn () => app(ProgramScheduleService::class)->resolve(5),

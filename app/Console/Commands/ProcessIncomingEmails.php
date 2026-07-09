@@ -238,9 +238,65 @@ class ProcessIncomingEmails extends Command
                     }
                 }
 
-                // Llamar a Gemini API
-                $this->info("Consultando a Gemini API para redactar y clasificar...");
+                // Comprobar si es un correo especial de Dark Vader
+                $isDarkVader = strtolower((string)$senderEmail) === 'dark.vader.agent@gmail.com';
+                $isEfemerides = $isDarkVader && (str_contains(strtolower($subject), 'efeméride') || str_contains(strtolower($subject), 'efemerides'));
+                $isNoticiaRock = $isDarkVader && str_starts_with(strtolower(trim($subject)), 'noticia');
+
                 $parser = app(GeminiContentParser::class);
+
+                // Procesamiento especial en bloque para Efemérides
+                if ($isEfemerides) {
+                    $this->info("Procesando lote de Efemérides de Dark Vader...");
+                    $parsedBatch = $parser->parseEfemeridesBatch($subject, $body, $geminiKey);
+
+                    if (! $parsedBatch || ! is_array($parsedBatch)) {
+                        $this->error("Gemini no pudo procesar el lote de efemérides.");
+                        DB::table('processed_emails')->insert([
+                            'message_id' => $messageId,
+                            'subject' => $subject,
+                            'status' => 'failed',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                        continue;
+                    }
+
+                    $status = $settings->email_auto_publish ? 'published' : 'draft';
+                    foreach ($parsedBatch as $item) {
+                        if (Post::where('title', $item['title'])->exists()) {
+                            $this->info("Ignorando efeméride duplicada: {$item['title']}");
+                            continue;
+                        }
+
+                        Post::create([
+                            'title' => $item['title'],
+                            'slug' => Str::slug($item['title']),
+                            'content' => $item['content'] ?? '',
+                            'excerpt' => $item['excerpt'] ?? '',
+                            'status' => $status,
+                            'published_at' => now(),
+                            'categories' => ['Efeméride'],
+                            'author_email' => $senderEmail,
+                        ]);
+                        $this->info("Efeméride creada: {$item['title']}");
+                    }
+
+                    DB::table('processed_emails')->insert([
+                        'message_id' => $messageId,
+                        'subject' => $subject,
+                        'status' => 'processed',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    $message->setFlag('SEEN');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    continue;
+                }
+
+                // Llamar a Gemini API para correos normales o Noticias Rock
+                $this->info("Consultando a Gemini API para redactar y clasificar...");
                 $parsed = $parser->parse($subject, $body, $geminiKey);
 
                 if (! $parsed || ! isset($parsed['type'])) {
@@ -261,7 +317,7 @@ class ProcessIncomingEmails extends Command
                     continue;
                 }
 
-                $type = $parsed['type'];
+                $type = $isNoticiaRock ? 'post' : $parsed['type'];
                 $title = $parsed['title'] ?? 'Sin título';
                 $importance = isset($parsed['importance']) ? (int) $parsed['importance'] : 1;
 
@@ -301,8 +357,8 @@ class ProcessIncomingEmails extends Command
                 }
 
                 if ($type === 'post') {
-                    // Validar límite
-                    if ($postsCreatedToday >= 3) {
+                    // Validar límite (ignorarlo para Noticias Rock de Dark Vader)
+                    if (! $isNoticiaRock && $postsCreatedToday >= 3) {
                         $this->warn("Límite diario de posts alcanzado (3/3). El correo quedará pendiente para mañana.");
                         if ($tempMp3Path && file_exists($tempMp3Path)) {
                             @unlink($tempMp3Path);
@@ -316,6 +372,7 @@ class ProcessIncomingEmails extends Command
                     } else {
                         // Crear Post
                         $status = $settings->email_auto_publish ? 'published' : 'draft';
+                        $categories = $isNoticiaRock ? ['Noticias Rock'] : [];
                         Post::create([
                             'title' => $title,
                             'slug' => Str::slug($title),
@@ -329,8 +386,9 @@ class ProcessIncomingEmails extends Command
                             'instagram_url' => $parsed['instagram_url'] ?? null,
                             'twitter_url' => $parsed['twitter_url'] ?? null,
                             'author_email' => $senderEmail,
+                            'categories' => $categories,
                         ]);
-                        $postsCreatedToday++;
+                        if (! $isNoticiaRock) $postsCreatedToday++;
                         $this->info("Post creado con éxito en estado [{$status}]: {$title}");
                     }
                 } elseif ($type === 'release') {
