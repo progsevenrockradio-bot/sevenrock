@@ -3,7 +3,7 @@
         $contact = $themeAppearance['contact'];
     @endphp
 
-    <x-sections.page-heading title="Términos y Copyright" :image="$themeAppearance['background_url']" />
+    <x-sections.page-heading title="Términos y Copyright" />
 
     <section class="py-16">
         <div class="lucille-content-box max-w-4xl mx-auto">

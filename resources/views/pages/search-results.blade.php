@@ -1,5 +1,5 @@
 <x-layouts.site title="Seven Rock Radio - Búsqueda" description="Resultados de búsqueda en Seven Rock Radio">
-    <x-sections.page-heading title="Búsqueda" overlay="rgba(0,0,0,0)" :image="$themeAppearance['background_url'] ?? ''" />
+    <x-sections.page-heading title="Búsqueda" overlay="rgba(0,0,0,0)" />
 
     <section>
         <div class="lucille-content-box">

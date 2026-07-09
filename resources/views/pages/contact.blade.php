@@ -4,7 +4,7 @@
         $ui = $themeAppearance['ui_texts'];
     @endphp
 
-    <x-sections.page-heading title="Contacto" overlay="rgba(0,0,0,0)" :image="$themeAppearance['background_url']" />
+    <x-sections.page-heading title="Contacto" subtitle="Escríbenos" overlay="rgba(0,0,0,0)" />
 
     <section>
         <div class="lucille-content-box">
