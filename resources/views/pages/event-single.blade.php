@@ -17,7 +17,7 @@
 
 <x-layouts.site 
     title="Seven Rock Radio - {{ $event['title'] }}"
-    :og-image="$poster"
+    :og-image="\App\Support\PublicMediaUrl::normalizePublicUrl($poster)"
     :description="\Illuminate\Support\Str::limit(strip_tags(implode(' ', $event['content'] ?? [])), 150)"
 >
     <section class="lucille-event-single-shell">
@@ -92,7 +92,7 @@
                 <div class="space-y-3 lg:-mt-4">
                     <div class="border border-[#2b2b2b] bg-black/40 p-2">
                         <img
-                            src="{{ $poster }}"
+                            src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($poster) }}"
                             alt="{{ $event['title'] }}"
                             itemprop="image"
                             class="event-single-poster h-auto w-full object-cover"

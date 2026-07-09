@@ -98,5 +98,9 @@ class AppServiceProvider extends ServiceProvider
                 \Illuminate\Support\Facades\Log::error('Dynamic scheduled post publish failed: ' . $e->getMessage());
             }
         }
+        
+        if (config('app.env') !== 'local' || str_contains(config('app.url', ''), 'https://')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
     }
 }
