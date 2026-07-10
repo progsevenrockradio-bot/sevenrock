@@ -297,10 +297,10 @@ class ProcessIncomingEmails extends Command
                             'excerpt' => $item['excerpt'] ?? '',
                             'status' => $status,
                             'published_at' => now(),
-                            'categories' => ['Efeméride'],
+                            'categories' => ['Hoy en el Rock'],
                             'author_email' => $senderEmail,
                         ]);
-                        $this->syncTaxonomies($post, ['Efeméride']);
+                        $this->syncTaxonomies($post, ['Hoy en el Rock']);
                         $this->info("Efeméride creada: {$item['title']}");
                     }
 

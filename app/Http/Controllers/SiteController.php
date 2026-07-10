@@ -75,7 +75,7 @@ class SiteController extends Controller
         $efemerides = $this->safeValue(
             fn () => Post::query()
                 ->published()
-                ->whereJsonContains('categories', 'Efeméride')
+                ->whereJsonContains('categories', 'Hoy en el Rock')
                 ->orderByDesc('published_at')
                 ->take(4)
                 ->get(),
