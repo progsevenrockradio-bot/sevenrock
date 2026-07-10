@@ -76,39 +76,166 @@
     @endif
 
     @if (!empty($efemerides) && $efemerides->count() > 0)
-    <x-sections.background-band class="home-section-texture home-section-black">
-        <div class="pt-[100px] pb-[80px]">
-            <x-ui.section-heading title="Hoy en el" accent="Rock" subtitle="Efemérides musicales, lanzamientos y cumpleaños" />
-            
-            <div class="mx-auto max-w-[1200px] px-6 mt-10">
-                <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-                    @foreach($efemerides as $post)
-                        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:border-[#c32720]/40 group">
-                            <div>
-                                <div class="relative aspect-[4/3] overflow-hidden border border-[#2b2b2b] bg-[#111]">
-                                    <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}" alt="{{ $post->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
-                                </div>
-                                <h4 class="mt-4 font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 group-hover:text-[#c32720] transition-colors">
-                                    <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-10"></a>
-                                    {{ $post->title }}
-                                </h4>
-                                @if($post->published_at)
-                                    <p class="text-[10px] uppercase tracking-[.12em] text-[#555] mt-2">{{ $post->published_at->translatedFormat('d M, Y') }}</p>
-                                @endif
-                                @if($post->excerpt)
-                                    <p class="mt-3 text-xs leading-5 text-[#7b7b7b] line-clamp-3 relative z-20">{{ $post->excerpt }}</p>
-                                @endif
-                            </div>
-                            <div class="mt-4 border-t border-[#222] pt-3 text-right relative z-20">
-                                <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] hover:text-[#c32720] transition-colors">Leer más &rarr;</a>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
+    {{-- ── CINTILLO EFEMÉRIDES ──────────────────────────────────────────────── --}}
+    <div class="relative w-full overflow-hidden border-y border-[#c32720]/30 bg-[#0a0a0b]" id="efemerides-ticker">
+
+        {{-- Etiqueta "HOY EN EL ROCK" --}}
+        <div class="absolute left-0 top-0 z-20 flex h-full items-center bg-[#c32720] px-5 shadow-[4px_0_20px_rgba(195,39,32,.5)]">
+            <span class="whitespace-nowrap font-display text-[10px] uppercase tracking-[.22em] text-white">
+                🎸 Hoy en el Rock
+            </span>
         </div>
-    </x-sections.background-band>
+
+        {{-- Gradiente de fundido izquierda --}}
+        <div class="pointer-events-none absolute left-[140px] top-0 z-10 h-full w-16 bg-gradient-to-r from-[#0a0a0b] to-transparent"></div>
+        {{-- Gradiente de fundido derecha --}}
+        <div class="pointer-events-none absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-[#0a0a0b] to-transparent"></div>
+
+        {{-- Track animado --}}
+        <div class="efem-track flex items-center gap-0 pl-[170px]" style="animation: efem-scroll 60s linear infinite;">
+            @php
+                $efemItems = $efemerides->values();
+                // Pre-cargar los tags de cada post (una sola query por post)
+                $efemTagsByPost = $efemItems->mapWithKeys(fn($p) => [
+                    $p->id => method_exists($p, 'taxonomies')
+                        ? $p->taxonomies->where('type', 'tag')->pluck('name')->map(fn($t) => '#'.$t)->values()->all()
+                        : []
+                ]);
+            @endphp
+
+            {{-- Doble pasada para loop continuo --}}
+            @foreach([0,1] as $_)
+                @foreach($efemItems as $idx => $post)
+                    @php $postTags = $efemTagsByPost[$post->id] ?? []; @endphp
+                    <button
+                        type="button"
+                        data-efem-idx="{{ $idx }}"
+                        class="efem-pill group inline-flex shrink-0 cursor-pointer items-center gap-2 border-r border-[#1e1e1e] px-6 py-4 text-left transition-colors duration-200 hover:bg-[#c32720]/10 focus:outline-none"
+                        onclick="openEfemModal({{ $idx }})"
+                        aria-label="Leer: {{ $post->title }}"
+                    >
+                        <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#c32720] opacity-70 group-hover:opacity-100 transition-opacity"></span>
+                        <span class="whitespace-nowrap text-[12px] tracking-wide text-[#9a9a9a] group-hover:text-[#e0e0e0] transition-colors">
+                            {{ $post->title }}
+                        </span>
+                        @if(!empty($postTags[0]))
+                            <span class="whitespace-nowrap text-[10px] tracking-wider text-[#c32720]/70 group-hover:text-[#c32720] transition-colors font-medium">
+                                {{ $postTags[0] }}
+                            </span>
+                        @endif
+                    </button>
+                @endforeach
+            @endforeach
+        </div>
+    </div>
+
+    {{-- ── MODAL EFEMÉRIDES ────────────────────────────────────────────────── --}}
+    <div id="efem-modal" role="dialog" aria-modal="true" aria-labelledby="efem-modal-title"
+         class="fixed inset-0 z-[9999] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300"
+         style="background:rgba(0,0,0,.82); backdrop-filter:blur(6px);">
+
+        <div id="efem-modal-box"
+             class="relative w-full max-w-lg scale-95 rounded-sm border border-[#c32720]/30 bg-[#0d0d0f] p-8 shadow-[0_0_60px_rgba(195,39,32,.25)] transition-transform duration-300">
+
+            {{-- Línea decorativa superior --}}
+            <div class="absolute left-0 top-0 h-[2px] w-full bg-gradient-to-r from-[#c32720] via-[#ff4a42] to-transparent rounded-t-sm"></div>
+
+            {{-- Cerrar --}}
+            <button onclick="closeEfemModal()" class="absolute right-4 top-4 text-[#555] hover:text-[#e0e0e0] transition-colors focus:outline-none" aria-label="Cerrar">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+
+            {{-- Icono musical --}}
+            <div class="mb-5 flex items-center gap-3">
+                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#c32720]/15 text-[#c32720]">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 3v10.55A4 4 0 1 0 11 17V7h4V3H9z"/>
+                    </svg>
+                </span>
+                <p class="text-[10px] uppercase tracking-[.2em] text-[#c32720]">Hoy en el Rock</p>
+            </div>
+
+            <h3 id="efem-modal-title" class="mb-4 font-display text-[18px] uppercase tracking-[.06em] leading-snug text-[#dcdcdc]"></h3>
+            <p id="efem-modal-body" class="text-[14px] leading-7 text-[#7a7a7a]"></p>
+            <div id="efem-modal-tags" class="mt-5 flex flex-wrap gap-2"></div>
+        </div>
+    </div>
+
+    {{-- Datos JSON para el modal (incluye tags del post) --}}
+    <script id="efem-data" type="application/json">
+        @json($efemItems->map(fn($p) => [
+            'title'   => $p->title,
+            'content' => $p->excerpt ?: $p->title,
+            'tags'    => method_exists($p, 'taxonomies')
+                ? $p->taxonomies->where('type', 'tag')->pluck('name')->map(fn($t) => '#'.$t)->values()->all()
+                : [],
+        ])->values())
+    </script>
+
+    <style>
+        @keyframes efem-scroll {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        #efemerides-ticker:hover .efem-track { animation-play-state: paused; }
+    </style>
+
+    <script>
+        (function () {
+            const data   = JSON.parse(document.getElementById('efem-data').textContent || '[]');
+            const modal  = document.getElementById('efem-modal');
+            const box    = document.getElementById('efem-modal-box');
+            const title  = document.getElementById('efem-modal-title');
+            const body   = document.getElementById('efem-modal-body');
+
+            window.openEfemModal = function (idx) {
+                const item = data[idx % data.length];
+                if (!item) return;
+                title.textContent = item.title;
+                body.textContent  = item.content;
+
+                // Renderizar hashtags como pills
+                const tagsEl = document.getElementById('efem-modal-tags');
+                tagsEl.innerHTML = '';
+                if (item.tags && item.tags.length) {
+                    item.tags.forEach(function(tag) {
+                        const pill = document.createElement('span');
+                        pill.className = 'inline-block rounded-full border border-[#c32720]/40 bg-[#c32720]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[.16em] text-[#c32720]';
+                        pill.textContent = tag;
+                        tagsEl.appendChild(pill);
+                    });
+                }
+
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                modal.classList.add('opacity-100');
+                box.classList.remove('scale-95');
+                box.classList.add('scale-100');
+                document.body.style.overflow = 'hidden';
+            };
+
+            window.closeEfemModal = function () {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                modal.classList.remove('opacity-100');
+                box.classList.add('scale-95');
+                box.classList.remove('scale-100');
+                document.body.style.overflow = '';
+            };
+
+            // Cerrar al hacer clic fuera del box
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) closeEfemModal();
+            });
+
+            // Cerrar con Escape
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeEfemModal();
+            });
+        })();
+    </script>
     @endif
+
 
     @if (!empty($latestPodcasts) && !empty($latestPodcasts['episodes']))
     <x-sections.background-band class="home-section-texture home-section-black">
