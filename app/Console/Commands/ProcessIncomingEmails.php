@@ -301,15 +301,43 @@ class ProcessIncomingEmails extends Command
 
                 // ── PROCESAMIENTO DIRECTO PARA DARK VADER (sin Gemini, sin consumo de cuota) ─────
 
-                // Efemérides: parsear el cuerpo por bloques (párrafos separados por doble salto de línea)
+                // Efemérides: un post independiente por cada evento del día
                 if ($isEfemerides) {
                     $this->info("[DARK VADER] Procesando Efemérides directamente (sin Gemini)...");
                     $plainBody = strip_tags($body);
-                    // Separar por doble salto de línea
-                    $chunks = preg_split('/\n{2,}|\r\n{2,}/', $plainBody) ?: [];
-                    $chunks = array_values(array_filter(array_map('trim', $chunks)));
+                    $plainBody = html_entity_decode($plainBody, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-                    if (empty($chunks)) {
+                    // ── Estrategia 1: items numerados (1. texto, 2. texto...)  ──────────────
+                    // Detectamos líneas que empiezan por número + punto/paréntesis
+                    $lines = array_values(array_filter(
+                        array_map('trim', preg_split('/\r?\n/', $plainBody) ?: [])
+                    ));
+
+                    // Agrupar líneas en "items": una nueva entrada cada vez que aparece
+                    // una línea que empieza por \d+[.)]\s
+                    $items = [];
+                    $current = null;
+                    foreach ($lines as $line) {
+                        if (preg_match('/^\d+[.)]\s+/', $line)) {
+                            if ($current !== null) {
+                                $items[] = $current;
+                            }
+                            $current = $line;
+                        } elseif ($current !== null && $line !== '') {
+                            $current .= ' ' . $line; // línea de continuación del mismo item
+                        }
+                    }
+                    if ($current !== null) {
+                        $items[] = $current;
+                    }
+
+                    // ── Estrategia 2: fallback — separar por doble salto de línea ──────────
+                    if (count($items) < 2) {
+                        $chunks = preg_split('/\n{2,}|\r\n{2,}/', $plainBody) ?: [];
+                        $items  = array_values(array_filter(array_map('trim', $chunks)));
+                    }
+
+                    if (empty($items)) {
                         $this->warn("Efemérides: cuerpo vacío tras parsear. Saltando.");
                         DB::table('processed_emails')->insert([
                             'message_id' => $messageId, 'subject' => $subject,
@@ -319,27 +347,36 @@ class ProcessIncomingEmails extends Command
                         continue;
                     }
 
+                    $this->info("Efemérides: " . count($items) . " evento(s) detectado(s).");
                     $status = $settings->email_auto_publish ? 'published' : 'draft';
                     $efemCreadas = 0;
 
-                    // Si hay varios bloques, cada uno puede ser una efeméride independiente.
-                    // Si solo hay uno (todo el correo), lo tratamos como un único post de Efemérides.
-                    foreach ($chunks as $chunk) {
-                        $lines = array_values(array_filter(array_map('trim', explode("\n", $chunk))));
-                        if (empty($lines)) continue;
+                    foreach ($items as $item) {
+                        // Quitar el prefijo numérico y el emoji para obtener el título real
+                        // Ejemplo: "1. 🎸 1942 - Nace Ronnie James Dio..." → "1942 - Nace Ronnie James Dio..."
+                        $cleanItem = preg_replace('/^\d+[.)]\s*/', '', $item);
+                        // Quitar emojis del inicio (caracteres unicode en rango de emojis)
+                        $cleanItem = preg_replace('/^[\x{1F300}-\x{1FFFF}\x{2600}-\x{27BF}]\s*/u', '', $cleanItem);
+                        $cleanItem = trim($cleanItem);
 
-                        // Primera línea no vacía como título, resto como contenido
-                        $efTitle = $lines[0];
-                        // Limpiar prefijos numéricos comunes: "1. ", "1) ", "- "
-                        $efTitle = preg_replace('/^\d+[\.\.\)\-]\s*/', '', $efTitle);
-                        $efTitle = trim($efTitle);
+                        if ($cleanItem === '' || strlen($cleanItem) < 8) continue;
+
+                        // Título = todo el texto hasta el primer punto final (máx 120 chars)
+                        // Esto evita títulos kilométricos
+                        $efTitle = $cleanItem;
+                        if (preg_match('/^(.{10,120}?[.!?])\s/u', $cleanItem, $m)) {
+                            $efTitle = rtrim($m[1], '.!?');
+                        } elseif (mb_strlen($cleanItem) > 100) {
+                            // Cortar por longitud si no hay punto
+                            $efTitle = Str::limit($cleanItem, 100, '');
+                            // Cortar en la última palabra completa
+                            $efTitle = preg_replace('/\s+\S+$/', '', $efTitle) ?: $efTitle;
+                        }
+                        $efTitle = trim($efTitle, ' .,;:—-');
 
                         if ($efTitle === '' || strlen($efTitle) < 5) continue;
 
-                        $efContent = count($lines) > 1
-                            ? implode("\n\n", array_slice($lines, 1))
-                            : $efTitle;
-
+                        // Contenido = el texto completo del item
                         if (Post::where('title', $efTitle)->exists()) {
                             $this->info("Ignorando efeméride duplicada: {$efTitle}");
                             continue;
@@ -352,26 +389,26 @@ class ProcessIncomingEmails extends Command
                         }
 
                         Post::create([
-                            'title'        => $efTitle,
-                            'slug'         => $slug,
-                            'content'      => $efContent,
-                            'excerpt'      => Str::limit(strip_tags($efContent), 160),
-                            'status'       => $status,
-                            'is_published' => $settings->email_auto_publish,
-                            'published_at' => now(),
+                            'title'          => $efTitle,
+                            'slug'           => $slug,
+                            'content'        => $cleanItem,
+                            'excerpt'        => Str::limit($cleanItem, 160),
+                            'status'         => $status,
+                            'is_published'   => $settings->email_auto_publish,
+                            'published_at'   => now(),
                             'featured_image' => $coverUrl,
-                            'categories'   => ['Hoy en el Rock'],
-                            'author_email' => $senderEmail,
+                            'categories'     => ['Hoy en el Rock'],
+                            'author_email'   => $senderEmail,
                         ]);
                         $this->syncTaxonomies(
                             Post::where('slug', $slug)->first(),
                             ['Hoy en el Rock']
                         );
-                        $this->info("[OK] Efeméride creada (sin Gemini): {$efTitle}");
+                        $this->info("[OK] Efeméride creada: {$efTitle}");
                         $efemCreadas++;
                     }
 
-                    $this->info("Efemérides procesadas: {$efemCreadas} de " . count($chunks) . " bloques.");
+                    $this->info("Efemérides procesadas: {$efemCreadas} de " . count($items) . " evento(s).");
                     DB::table('processed_emails')->insert([
                         'message_id' => $messageId, 'subject' => $subject,
                         'status' => 'processed', 'created_at' => now(), 'updated_at' => now(),
