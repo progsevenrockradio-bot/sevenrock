@@ -170,6 +170,9 @@ class ProcessIncomingEmails extends Command
                 $tempMp3Name = null;
                 $coverUrl = null;
 
+                // Dark Vader envía fotos de artistas de ~26-32 KB: umbral reducido a 10 KB para no descartarlas
+                $imageMinSize = $isDarkVaderAgent ? 10240 : 40960;
+
                 foreach ($message->getAttachments() as $attachment) {
                     $filename = (string) $attachment->getName();
                     $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
@@ -186,10 +189,10 @@ class ProcessIncomingEmails extends Command
                         $this->info("Adjunto de audio detectado y guardado temporalmente: {$filename}");
                     } elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
                         $sizeInBytes = strlen((string) $content);
-                        
-                        // Omitir imágenes pequeñas menores a 40 KB (como firmas, logos o íconos)
-                        if ($sizeInBytes < 40960) {
-                            $this->info("Ignorando imagen pequeña (posible firma/logo): {$filename} ({$sizeInBytes} bytes)");
+
+                        // Omitir imágenes por debajo del umbral mínimo (logos, firmas, íconos)
+                        if ($sizeInBytes < $imageMinSize) {
+                            $this->info("Ignorando imagen pequeña (posible firma/logo): {$filename} ({$sizeInBytes} bytes, umbral: {$imageMinSize} bytes)");
                             continue;
                         }
 
@@ -259,7 +262,7 @@ class ProcessIncomingEmails extends Command
                                         $imgContent = $response->body();
                                         $imgSize = strlen($imgContent);
 
-                                        if ($imgSize >= 40960) {
+                                        if ($imgSize >= $imageMinSize) {
                                             $ext = pathinfo(parse_url($imgUrl, PHP_URL_PATH) ?? '', PATHINFO_EXTENSION);
                                             $ext = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp']) ? strtolower($ext) : 'jpg';
 
@@ -271,7 +274,7 @@ class ProcessIncomingEmails extends Command
                                             $this->info("Imagen extraída del cuerpo HTML del correo y subida: {$coverUrl}");
                                             break;
                                         } else {
-                                            $this->info("Imagen ignorada por tamaño menor a 40 KB: {$imgSize} bytes");
+                                            $this->info("Imagen ignorada por tamaño menor a {$imageMinSize} bytes: {$imgSize} bytes");
                                         }
                                     }
                                 } catch (\Throwable $e) {
@@ -296,52 +299,134 @@ class ProcessIncomingEmails extends Command
 
                 $parser = app(GeminiContentParser::class);
 
-                // Procesamiento especial en bloque para Efemérides
-                if ($isEfemerides) {
-                    $this->info("Procesando lote de Efemérides de Dark Vader...");
-                    $parsedBatch = $parser->parseEfemeridesBatch($subject, $body, $geminiKey);
+                // ── PROCESAMIENTO DIRECTO PARA DARK VADER (sin Gemini, sin consumo de cuota) ─────
 
-                    if (! $parsedBatch || ! is_array($parsedBatch)) {
-                        $this->error("Gemini no pudo procesar el lote de efemérides.");
+                // Efemérides: parsear el cuerpo por bloques (párrafos separados por doble salto de línea)
+                if ($isEfemerides) {
+                    $this->info("[DARK VADER] Procesando Efemérides directamente (sin Gemini)...");
+                    $plainBody = strip_tags($body);
+                    // Separar por doble salto de línea
+                    $chunks = preg_split('/\n{2,}|\r\n{2,}/', $plainBody) ?: [];
+                    $chunks = array_values(array_filter(array_map('trim', $chunks)));
+
+                    if (empty($chunks)) {
+                        $this->warn("Efemérides: cuerpo vacío tras parsear. Saltando.");
                         DB::table('processed_emails')->insert([
-                            'message_id' => $messageId,
-                            'subject' => $subject,
-                            'status' => 'failed',
-                            'created_at' => now(),
-                            'updated_at' => now(),
+                            'message_id' => $messageId, 'subject' => $subject,
+                            'status' => 'failed', 'created_at' => now(), 'updated_at' => now(),
                         ]);
                         if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
                         continue;
                     }
 
                     $status = $settings->email_auto_publish ? 'published' : 'draft';
-                    foreach ($parsedBatch as $item) {
-                        if (Post::where('title', $item['title'])->exists()) {
-                            $this->info("Ignorando efeméride duplicada: {$item['title']}");
+                    $efemCreadas = 0;
+
+                    // Si hay varios bloques, cada uno puede ser una efeméride independiente.
+                    // Si solo hay uno (todo el correo), lo tratamos como un único post de Efemérides.
+                    foreach ($chunks as $chunk) {
+                        $lines = array_values(array_filter(array_map('trim', explode("\n", $chunk))));
+                        if (empty($lines)) continue;
+
+                        // Primera línea no vacía como título, resto como contenido
+                        $efTitle = $lines[0];
+                        // Limpiar prefijos numéricos comunes: "1. ", "1) ", "- "
+                        $efTitle = preg_replace('/^\d+[\.\.\)\-]\s*/', '', $efTitle);
+                        $efTitle = trim($efTitle);
+
+                        if ($efTitle === '' || strlen($efTitle) < 5) continue;
+
+                        $efContent = count($lines) > 1
+                            ? implode("\n\n", array_slice($lines, 1))
+                            : $efTitle;
+
+                        if (Post::where('title', $efTitle)->exists()) {
+                            $this->info("Ignorando efeméride duplicada: {$efTitle}");
                             continue;
                         }
 
-                        $post = Post::create([
-                            'title' => $item['title'],
-                            'slug' => Str::slug($item['title']),
-                            'content' => $item['content'] ?? '',
-                            'excerpt' => $item['excerpt'] ?? '',
-                            'status' => $status,
+                        $baseSlug = Str::slug($efTitle);
+                        $slug = $baseSlug; $suffix = 1;
+                        while (DB::table('posts')->where('slug', $slug)->exists()) {
+                            $slug = $baseSlug . '-' . $suffix++;
+                        }
+
+                        Post::create([
+                            'title'        => $efTitle,
+                            'slug'         => $slug,
+                            'content'      => $efContent,
+                            'excerpt'      => Str::limit(strip_tags($efContent), 160),
+                            'status'       => $status,
                             'is_published' => $settings->email_auto_publish,
                             'published_at' => now(),
-                            'categories' => ['Hoy en el Rock'],
+                            'featured_image' => $coverUrl,
+                            'categories'   => ['Hoy en el Rock'],
                             'author_email' => $senderEmail,
                         ]);
-                        $this->syncTaxonomies($post, ['Hoy en el Rock']);
-                        $this->info("Efeméride creada: {$item['title']}");
+                        $this->syncTaxonomies(
+                            Post::where('slug', $slug)->first(),
+                            ['Hoy en el Rock']
+                        );
+                        $this->info("[OK] Efeméride creada (sin Gemini): {$efTitle}");
+                        $efemCreadas++;
+                    }
+
+                    $this->info("Efemérides procesadas: {$efemCreadas} de " . count($chunks) . " bloques.");
+                    DB::table('processed_emails')->insert([
+                        'message_id' => $messageId, 'subject' => $subject,
+                        'status' => 'processed', 'created_at' => now(), 'updated_at' => now(),
+                    ]);
+                    $message->setFlag('SEEN');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    continue;
+                }
+
+                // Noticias Rock: publicar directamente sin Gemini
+                if ($isNoticiaRock) {
+                    $this->info("[DARK VADER] Procesando Noticia Rock directamente (sin Gemini)...");
+
+                    // Limpiar el asunto: quitar prefijos como "Noticia - ", "Noticia: ", "Noticia "
+                    $cleanTitle = preg_replace('/^noticia[\s\-–:]+/iu', '', trim($subject));
+                    $cleanTitle = trim($cleanTitle) ?: $subject;
+
+                    $status = $settings->email_auto_publish ? 'published' : 'draft';
+
+                    if (Post::where('title', $cleanTitle)->exists()) {
+                        $this->info("Ignorando Noticia Rock duplicada: {$cleanTitle}");
+                    } else {
+                        $baseSlug = Str::slug($cleanTitle);
+                        $slug = $baseSlug; $suffix = 1;
+                        while (DB::table('posts')->where('slug', $slug)->exists()) {
+                            $slug = $baseSlug . '-' . $suffix++;
+                        }
+
+                        // Usar cuerpo HTML directamente como contenido
+                        $contentToSave = $body ?: strip_tags($body);
+
+                        Log::info("ProcessIncomingEmails: Creando Noticia Rock (sin Gemini).", [
+                            'title'  => $cleanTitle, 'slug' => $slug,
+                            'status' => $status, 'cover_url' => $coverUrl,
+                        ]);
+
+                        $post = Post::create([
+                            'title'          => $cleanTitle,
+                            'slug'           => $slug,
+                            'content'        => $contentToSave,
+                            'excerpt'        => Str::limit(strip_tags($contentToSave), 160),
+                            'status'         => $status,
+                            'is_published'   => $settings->email_auto_publish,
+                            'published_at'   => now(),
+                            'featured_image' => $coverUrl,
+                            'author_email'   => $senderEmail,
+                            'categories'     => ['Noticias Rock'],
+                        ]);
+                        $this->syncTaxonomies($post, ['Noticias Rock']);
+                        $this->info("[OK] Noticia Rock creada en estado [{$status}]: ID {$post->id} — {$cleanTitle}");
                     }
 
                     DB::table('processed_emails')->insert([
-                        'message_id' => $messageId,
-                        'subject' => $subject,
-                        'status' => 'processed',
-                        'created_at' => now(),
-                        'updated_at' => now(),
+                        'message_id' => $messageId, 'subject' => $subject,
+                        'status' => 'processed', 'created_at' => now(), 'updated_at' => now(),
                     ]);
                     $message->setFlag('SEEN');
                     if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
