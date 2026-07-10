@@ -35,7 +35,7 @@
                                     <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}" alt="{{ $post->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
                                 </div>
                                 <h4 class="mt-4 font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 group-hover:text-[#c32720] transition-colors">
-                                    <a href="{{ route('blog.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-10"></a>
+                                    <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-10"></a>
                                     {{ $post->title }}
                                 </h4>
                                 @if($post->published_at)
@@ -46,7 +46,7 @@
                                 @endif
                             </div>
                             <div class="mt-4 border-t border-[#222] pt-3 text-right relative z-20">
-                                <a href="{{ route('blog.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] hover:text-[#c32720] transition-colors">Leer más &rarr;</a>
+                                <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] hover:text-[#c32720] transition-colors">Leer más &rarr;</a>
                             </div>
                         </div>
                     @endforeach
@@ -89,7 +89,7 @@
                                     <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}" alt="{{ $post->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
                                 </div>
                                 <h4 class="mt-4 font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 group-hover:text-[#c32720] transition-colors">
-                                    <a href="{{ route('blog.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-10"></a>
+                                    <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-10"></a>
                                     {{ $post->title }}
                                 </h4>
                                 @if($post->published_at)
@@ -100,7 +100,7 @@
                                 @endif
                             </div>
                             <div class="mt-4 border-t border-[#222] pt-3 text-right relative z-20">
-                                <a href="{{ route('blog.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] hover:text-[#c32720] transition-colors">Leer más &rarr;</a>
+                                <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] hover:text-[#c32720] transition-colors">Leer más &rarr;</a>
                             </div>
                         </div>
                     @endforeach
