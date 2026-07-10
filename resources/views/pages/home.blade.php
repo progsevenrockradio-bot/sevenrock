@@ -164,14 +164,17 @@
     </div>
 
     {{-- Datos JSON para el modal (incluye tags del post) --}}
-    <script id="efem-data" type="application/json">
-        @json($efemItems->map(fn($p) => [
+    @php
+        $modalData = $efemItems->map(fn($p) => [
             'title'   => $p->title,
             'content' => $p->excerpt ?: $p->title,
             'tags'    => method_exists($p, 'taxonomies')
                 ? $p->taxonomies->where('type', 'tag')->pluck('name')->map(fn($t) => '#'.$t)->values()->all()
                 : [],
-        ])->values())
+        ])->values();
+    @endphp
+    <script id="efem-data" type="application/json">
+        {!! json_encode($modalData) !!}
     </script>
 
     <style>
