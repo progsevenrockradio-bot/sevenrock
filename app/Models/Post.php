@@ -132,6 +132,11 @@ class Post extends Model
             $q->where('is_published', true)
               ->orWhere(function ($sub) {
                   if (Schema::hasColumn($sub->getModel()->getTable(), 'status')) {
+                      $sub->where('status', 'published');
+                  }
+              })
+              ->orWhere(function ($sub) {
+                  if (Schema::hasColumn($sub->getModel()->getTable(), 'status')) {
                       $sub->where('status', 'scheduled');
                   } else {
                       $sub->where('is_published', false);
