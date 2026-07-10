@@ -23,6 +23,8 @@ class ThemeSetting extends Model
         'email_auto_publish' => 'bool',
         'email_processing_enabled' => 'bool',
         'email_min_importance' => 'integer',
+        'email_daily_posts_limit' => 'integer',
+        'email_daily_releases_limit' => 'integer',
     ];
 
     protected $fillable = [
@@ -83,6 +85,8 @@ class ThemeSetting extends Model
         'email_min_importance',
         'email_whitelist_senders',
         'imap_password',
+        'email_daily_posts_limit',
+        'email_daily_releases_limit',
     ];
 
     public static function defaults(): array
@@ -92,6 +96,8 @@ class ThemeSetting extends Model
             'email_auto_publish' => false,
             'email_processing_enabled' => true,
             'email_min_importance' => 1,
+            'email_daily_posts_limit' => 3,
+            'email_daily_releases_limit' => 3,
             'email_whitelist_senders' => null,
             'gemini_api_key' => null,
             'archive_access_key' => null,

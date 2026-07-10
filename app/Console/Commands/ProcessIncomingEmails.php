@@ -376,8 +376,9 @@ class ProcessIncomingEmails extends Command
 
                 if ($type === 'post') {
                     // Validar límite (ignorarlo para Noticias Rock de Dark Vader)
-                    if (! $isNoticiaRock && $postsCreatedToday >= 3) {
-                        $this->warn("Límite diario de posts alcanzado (3/3). El correo quedará pendiente para mañana.");
+                    $postsLimit = (int) ($settings->email_daily_posts_limit ?? 3);
+                    if (! $isNoticiaRock && $postsCreatedToday >= $postsLimit) {
+                        $this->warn("Límite diario de posts alcanzado ({$postsLimit}/{$postsLimit}). El correo quedará pendiente para mañana.");
                         if ($tempMp3Path && file_exists($tempMp3Path)) {
                             @unlink($tempMp3Path);
                         }
@@ -413,8 +414,9 @@ class ProcessIncomingEmails extends Command
                     $artistName = $parsed['artist_name'] ?? 'Artista Desconocido';
 
                     // Validar límite
-                    if ($releasesCreatedToday >= 3) {
-                        $this->warn("Límite diario de lanzamientos alcanzado (3/3). El correo quedará pendiente.");
+                    $releasesLimit = (int) ($settings->email_daily_releases_limit ?? 3);
+                    if ($releasesCreatedToday >= $releasesLimit) {
+                        $this->warn("Límite diario de lanzamientos alcanzado ({$releasesLimit}/{$releasesLimit}). El correo quedará pendiente.");
                         if ($tempMp3Path && file_exists($tempMp3Path)) {
                             @unlink($tempMp3Path);
                         }

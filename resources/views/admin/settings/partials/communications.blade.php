@@ -239,6 +239,22 @@
                 @error('email_whitelist_senders')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
             </div>
 
+            <!-- Límite diario de Posts -->
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Límite Diario de Noticias (Posts)</label>
+                <input type="number" name="email_daily_posts_limit" value="{{ old('email_daily_posts_limit', $settings->email_daily_posts_limit ?? 3) }}" class="lucille-product-field w-full text-xs" min="1" max="100">
+                <p class="mt-2 text-[10px] text-[#7b7b7b]">Número máximo de noticias creadas automáticamente por día.</p>
+                @error('email_daily_posts_limit')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
+            <!-- Límite diario de Lanzamientos -->
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Límite Diario de Lanzamientos</label>
+                <input type="number" name="email_daily_releases_limit" value="{{ old('email_daily_releases_limit', $settings->email_daily_releases_limit ?? 3) }}" class="lucille-product-field w-full text-xs" min="1" max="100">
+                <p class="mt-2 text-[10px] text-[#7b7b7b]">Número máximo de lanzamientos musicales creados automáticamente por día.</p>
+                @error('email_daily_releases_limit')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
             <!-- API Keys -->
             <div class="border-t border-[#2b2b2b] pt-5 mt-3 md:col-span-2 grid gap-5 md:grid-cols-3">
                 <div>
