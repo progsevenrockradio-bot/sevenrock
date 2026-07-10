@@ -111,8 +111,8 @@
                     </div>
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Contraseña de correo (Entrada/Salida de noticias)</label>
-                        <input type="password" name="imap_password" value="{{ old('imap_password', $settings->imap_password) }}" class="lucille-product-field w-full font-mono" placeholder="********">
-                        <p class="mt-1 text-[10px] text-[#7b7b7b]">Contraseña de Aplicación generada para procesar los correos automáticamente.</p>
+                        <input type="password" name="imap_password" class="lucille-product-field w-full font-mono" placeholder="{{ $settings->imap_password ? '******** (Guardada, dejar en blanco para mantener)' : '********' }}">
+                        <p class="mt-1 text-[10px] text-[#7b7b7b]">Contraseña de Aplicación de Google. Déjala en blanco si no deseas cambiar la actual.</p>
                         @error('imap_password')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                     </div>
                     <div>

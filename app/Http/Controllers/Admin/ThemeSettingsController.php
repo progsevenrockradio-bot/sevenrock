@@ -219,7 +219,9 @@ class ThemeSettingsController extends Controller
         $settings->notification_copy_email = trim((string) ($validated['notification_copy_email'] ?? '')) ?: null;
         $settings->notification_from_email = trim((string) ($validated['notification_from_email'] ?? '')) ?: null;
         $settings->notification_reply_to_email = trim((string) ($validated['notification_reply_to_email'] ?? '')) ?: null;
-        $settings->imap_password = trim((string) ($validated['imap_password'] ?? '')) ?: null;
+        if ($request->filled('imap_password')) {
+            $settings->imap_password = trim((string) $validated['imap_password']);
+        }
         $settings->notification_mailer = trim((string) ($validated['notification_mailer'] ?? '')) ?: null;
         $settings->social_facebook = trim((string) ($validated['social_facebook'] ?? '')) ?: null;
         $settings->social_instagram = trim((string) ($validated['social_instagram'] ?? '')) ?: null;
