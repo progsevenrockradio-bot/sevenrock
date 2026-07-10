@@ -110,6 +110,12 @@
                         @error('notification_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                     </div>
                     <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Contraseña de correo (Entrada/Salida de noticias)</label>
+                        <input type="password" name="imap_password" value="{{ old('imap_password', $settings->imap_password) }}" class="lucille-product-field w-full font-mono" placeholder="********">
+                        <p class="mt-1 text-[10px] text-[#7b7b7b]">Contraseña de Aplicación generada para procesar los correos automáticamente.</p>
+                        @error('imap_password')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['notification_copy_email_label'] }}</label>
                         <input name="notification_copy_email" value="{{ old('notification_copy_email', $settings->notification_copy_email) }}" class="lucille-product-field w-full" placeholder="copias@sevenrockradio.com">
                         <p class="mt-1 text-[10px] text-[#7b7b7b]">Copia global usada por defecto en los programas.</p>

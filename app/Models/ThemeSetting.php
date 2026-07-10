@@ -82,6 +82,7 @@ class ThemeSetting extends Model
         'email_processing_enabled',
         'email_min_importance',
         'email_whitelist_senders',
+        'imap_password',
     ];
 
     public static function defaults(): array
@@ -120,6 +121,7 @@ class ThemeSetting extends Model
             'notification_from_email' => 'prog.sevenrockradio@gmail.com',
             'notification_reply_to_email' => 'prog.sevenrockradio@gmail.com',
             'notification_mailer' => null,
+            'imap_password' => null,
             'contact_phone_primary' => '',
             'contact_phone_secondary' => '',
             'featured_stories' => [

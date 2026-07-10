@@ -98,6 +98,7 @@ class ThemeSettingsController extends Controller
             'notification_copy_email' => ['nullable', 'email', 'max:255'],
             'notification_from_email' => ['nullable', 'email', 'max:255'],
             'notification_reply_to_email' => ['nullable', 'email', 'max:255'],
+            'imap_password' => ['nullable', 'string', 'max:255'],
             'notification_mailer' => ['nullable', 'string', 'max:50', 'in:'.implode(',', array_keys(config('mail.mailers', [])))],
             'contact_phone_primary' => ['nullable', 'string', 'max:255'],
             'contact_phone_secondary' => ['nullable', 'string', 'max:255'],
@@ -166,6 +167,7 @@ class ThemeSettingsController extends Controller
             'notification_copy_email',
             'notification_from_email',
             'notification_reply_to_email',
+            'imap_password',
             'notification_mailer',
             'contact_phone_primary',
             'contact_phone_secondary',
@@ -217,6 +219,7 @@ class ThemeSettingsController extends Controller
         $settings->notification_copy_email = trim((string) ($validated['notification_copy_email'] ?? '')) ?: null;
         $settings->notification_from_email = trim((string) ($validated['notification_from_email'] ?? '')) ?: null;
         $settings->notification_reply_to_email = trim((string) ($validated['notification_reply_to_email'] ?? '')) ?: null;
+        $settings->imap_password = trim((string) ($validated['imap_password'] ?? '')) ?: null;
         $settings->notification_mailer = trim((string) ($validated['notification_mailer'] ?? '')) ?: null;
         $settings->social_facebook = trim((string) ($validated['social_facebook'] ?? '')) ?: null;
         $settings->social_instagram = trim((string) ($validated['social_instagram'] ?? '')) ?: null;

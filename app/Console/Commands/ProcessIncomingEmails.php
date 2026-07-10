@@ -9,8 +9,10 @@ use App\Models\Post;
 use App\Models\ThemeSetting;
 use App\Services\GeminiContentParser;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Webklex\PHPIMAP\ClientManager;
 
@@ -45,17 +47,25 @@ class ProcessIncomingEmails extends Command
         $geminiKey = trim((string) $settings->gemini_api_key);
         if ($geminiKey === '') {
             $this->error('La API Key de Gemini no está configurada en los Ajustes del Tema.');
+            $this->sendAdminAlert(
+                'gemini_api_key_missing', 
+                '⚠️ Error Crítico: API Key de Gemini faltante en SevenRockRadio', 
+                'El cron de procesamiento de correos se ha detenido porque la API Key de Gemini no está configurada o se ha borrado en los Ajustes del Tema.', 
+                $settings
+            );
             return 1;
         }
+
+        Cache::forget('admin_alert_sent_gemini_api_key_missing');
 
         $imapHost = config('services.imap.host', 'imap.gmail.com');
         $imapPort = (int) config('services.imap.port', 993);
         $imapEncryption = config('services.imap.encryption', 'ssl');
         $imapUsername = config('services.imap.username') ?: $settings->notification_email;
-        $imapPassword = config('services.imap.password');
+        $imapPassword = trim((string) $settings->imap_password) ?: config('services.imap.password');
 
         if (empty($imapPassword)) {
-            $this->error('La contraseña de IMAP (IMAP_PASSWORD) no está configurada en el archivo .env.');
+            $this->error('La contraseña de IMAP no está configurada en los Ajustes del Tema (Contraseña de correo) ni en el archivo .env.');
             return 1;
         }
 
@@ -77,8 +87,16 @@ class ProcessIncomingEmails extends Command
         } catch (\Throwable $e) {
             Log::error("ProcessIncomingEmails: Fallo de conexión IMAP: " . $e->getMessage());
             $this->error("Error de conexión IMAP: " . $e->getMessage());
+            $this->sendAdminAlert(
+                'imap_connection_failed',
+                '⚠️ Error Crítico: Fallo de conexión IMAP en SevenRockRadio',
+                "El cron no pudo conectarse al servidor de correo.\n\nError: " . $e->getMessage(),
+                $settings
+            );
             return 1;
         }
+
+        Cache::forget('admin_alert_sent_imap_connection_failed');
 
         try {
             $folder = $client->getFolder('INBOX');
@@ -485,5 +503,27 @@ class ProcessIncomingEmails extends Command
 
         $this->info("Procesamiento de correos finalizado.");
         return 0;
+    }
+
+    /**
+     * Envía una notificación por correo al administrador asegurando que no se sature (rate limit de 24h).
+     */
+    protected function sendAdminAlert(string $errorKey, string $subject, string $message, $settings): void
+    {
+        $cacheKey = "admin_alert_sent_{$errorKey}";
+        if (!Cache::has($cacheKey)) {
+            try {
+                $recipient = $settings->notification_email ?: config('mail.from.address');
+                if ($recipient) {
+                    Mail::raw($message, function($msg) use ($recipient, $subject) {
+                        $msg->to($recipient)->subject($subject);
+                    });
+                    Cache::put($cacheKey, true, now()->addHours(24));
+                    $this->info("Alerta de administrador enviada a {$recipient}.");
+                }
+            } catch (\Throwable $e) {
+                Log::error("No se pudo enviar la alerta de administrador: " . $e->getMessage());
+            }
+        }
     }
 }
