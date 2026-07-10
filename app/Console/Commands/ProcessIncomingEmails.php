@@ -112,8 +112,16 @@ class ProcessIncomingEmails extends Command
             $this->info("Encontrados " . count($messages) . " correos no leídos.");
 
             // Contadores diarios para límites (máx 3 de cada tipo por día)
+            // Solo cuenta posts que NO son de Dark Vader, para no interferir con sus publicaciones
             $releasesCreatedToday = NewRelease::whereDate('created_at', today())->count();
-            $postsCreatedToday = Post::whereDate('created_at', today())->count();
+            $postsCreatedToday = Post::whereDate('created_at', today())
+                ->where(function ($q) {
+                    $q->where('author_email', '!=', 'dark.vader.agent@gmail.com')
+                      ->orWhereNull('author_email');
+                })
+                ->count();
+
+            Log::info("ProcessIncomingEmails: Contadores del día — Posts normales: {$postsCreatedToday}, Lanzamientos: {$releasesCreatedToday}.");
 
             foreach ($messages as $message) {
                 $messageId = (string) $message->getMessageId();
@@ -131,8 +139,11 @@ class ProcessIncomingEmails extends Command
                 $senderAddress = $fromAttribute ? $fromAttribute->first() : null;
                 $senderEmail = $senderAddress instanceof \Webklex\PHPIMAP\Address ? trim((string) $senderAddress->mail) : null;
 
-                $isWhitelisted = false;
-                if ($senderEmail && $settings->email_whitelist_senders) {
+                // Dark Vader es un agente de confianza: siempre pasa el filtro de relevancia sin depender de la whitelist manual
+                $isDarkVaderAgent = strtolower((string) $senderEmail) === 'dark.vader.agent@gmail.com';
+
+                $isWhitelisted = $isDarkVaderAgent; // Dark Vader siempre está en whitelist implícita
+                if (! $isWhitelisted && $senderEmail && $settings->email_whitelist_senders) {
                     $whitelist = array_values(array_filter(array_map('trim', explode(',', $settings->email_whitelist_senders))));
                     foreach ($whitelist as $allowed) {
                         if ($allowed !== '') {
@@ -144,7 +155,15 @@ class ProcessIncomingEmails extends Command
                     }
                 }
 
-                $this->info("Procesando correo de " . ($senderEmail ?: 'Remitente Desconocido') . " (Lista blanca: " . ($isWhitelisted ? 'SI' : 'NO') . "): {$subject}");
+                $whitelistReason = $isDarkVaderAgent ? 'Dark Vader Agent (implícito)' : ($isWhitelisted ? 'Lista blanca manual' : 'NO');
+                $this->info("[EMAIL] Remitente: " . ($senderEmail ?: 'Desconocido') . " | Whitelist: {$whitelistReason} | Asunto: {$subject}");
+                Log::info("ProcessIncomingEmails: Procesando correo.", [
+                    'message_id' => $messageId,
+                    'sender'     => $senderEmail,
+                    'subject'    => $subject,
+                    'whitelisted' => $isWhitelisted,
+                    'is_dark_vader' => $isDarkVaderAgent,
+                ]);
 
                 // Extraer adjuntos
                 $tempMp3Path = null;
@@ -263,10 +282,17 @@ class ProcessIncomingEmails extends Command
                     }
                 }
 
-                // Comprobar si es un correo especial de Dark Vader
-                $isDarkVader = strtolower((string)$senderEmail) === 'dark.vader.agent@gmail.com';
+                // Comprobar si es un correo especial de Dark Vader (reutilizamos $isDarkVaderAgent calculado arriba)
+                $isDarkVader = $isDarkVaderAgent;
                 $isEfemerides = $isDarkVader && (str_contains(strtolower($subject), 'efeméride') || str_contains(strtolower($subject), 'efemerides'));
                 $isNoticiaRock = $isDarkVader && str_starts_with(strtolower(trim($subject)), 'noticia');
+
+                Log::info("ProcessIncomingEmails: Tipo de correo Dark Vader detectado.", [
+                    'is_dark_vader'   => $isDarkVader,
+                    'is_efemerides'   => $isEfemerides,
+                    'is_noticia_rock' => $isNoticiaRock,
+                    'subject'         => $subject,
+                ]);
 
                 $parser = app(GeminiContentParser::class);
 
@@ -331,6 +357,12 @@ class ProcessIncomingEmails extends Command
                     if ($parser->lastError) {
                         $this->error("  -> Detalle del error: " . $parser->lastError);
                     }
+                    Log::error("ProcessIncomingEmails: Fallo de Gemini.", [
+                        'message_id' => $messageId,
+                        'subject'    => $subject,
+                        'sender'     => $senderEmail,
+                        'error'      => $parser->lastError,
+                    ]);
                     DB::table('processed_emails')->insert([
                         'message_id' => $messageId,
                         'subject' => $subject,
@@ -344,9 +376,20 @@ class ProcessIncomingEmails extends Command
                     continue;
                 }
 
-                $type = $isNoticiaRock ? 'post' : $parsed['type'];
+                $geminiType = $parsed['type'];
+                $type = $isNoticiaRock ? 'post' : $geminiType;
                 $title = $parsed['title'] ?? 'Sin título';
                 $importance = isset($parsed['importance']) ? (int) $parsed['importance'] : 1;
+
+                Log::info("ProcessIncomingEmails: Gemini clasificó el correo.", [
+                    'subject'       => $subject,
+                    'gemini_type'   => $geminiType,
+                    'effective_type' => $type,
+                    'title'         => $title,
+                    'importance'    => $importance,
+                    'is_noticia_rock' => $isNoticiaRock,
+                ]);
+                $this->info("[GEMINI] Tipo Gemini: {$geminiType} | Tipo efectivo: {$type} | Importancia: {$importance} | Título: {$title}");
 
                 // 1. Filtrar si es descarte/spam
                 if ($type === 'discard') {
@@ -369,6 +412,13 @@ class ProcessIncomingEmails extends Command
                 $minImportance = (int) ($settings->email_min_importance ?? 1);
                 if (! $isWhitelisted && $importance < $minImportance) {
                     $this->info("Correo omitido por baja relevancia (Relevancia: {$importance} < Mínima: {$minImportance}): {$subject}");
+                    Log::warning("ProcessIncomingEmails: Correo descartado por baja relevancia.", [
+                        'message_id'    => $messageId,
+                        'subject'       => $subject,
+                        'sender'        => $senderEmail,
+                        'importance'    => $importance,
+                        'min_importance' => $minImportance,
+                    ]);
                     DB::table('processed_emails')->insert([
                         'message_id' => $messageId,
                         'subject' => $subject,
@@ -397,29 +447,63 @@ class ProcessIncomingEmails extends Command
                     // Evitar duplicados por título
                     if (Post::where('title', $title)->exists()) {
                         $this->info("Ignorando post duplicado con el título: {$title}");
+                        Log::info("ProcessIncomingEmails: Post duplicado ignorado.", ['title' => $title, 'subject' => $subject]);
                     } else {
                         // Crear Post
                         $status = $settings->email_auto_publish ? 'published' : 'draft';
-                        $categories = $isNoticiaRock ? ['Noticias Rock'] : [];
+
+                        // Asignar categoría correcta según el tipo de correo Dark Vader
+                        if ($isNoticiaRock) {
+                            $categories = ['Noticias Rock'];
+                        } elseif ($isEfemerides) {
+                            $categories = ['Hoy en el Rock'];
+                        } else {
+                            $categories = [];
+                        }
+
+                        // Generar slug único con sufijo numérico si ya existe
+                        $baseSlug = Str::slug($title);
+                        $slug = $baseSlug;
+                        $suffix = 1;
+                        while (\Illuminate\Support\Facades\DB::table('posts')->where('slug', $slug)->exists()) {
+                            $slug = $baseSlug . '-' . $suffix;
+                            $suffix++;
+                        }
+
+                        Log::info("ProcessIncomingEmails: Creando post.", [
+                            'title'       => $title,
+                            'slug'        => $slug,
+                            'status'      => $status,
+                            'categories'  => $categories,
+                            'cover_url'   => $coverUrl,
+                            'is_published' => $settings->email_auto_publish,
+                        ]);
+
                         $post = Post::create([
-                            'title' => $title,
-                            'slug' => Str::slug($title),
-                            'content' => $parsed['content'] ?? '',
-                            'excerpt' => $parsed['excerpt'] ?? '',
-                            'status' => $status,
+                            'title'        => $title,
+                            'slug'         => $slug,
+                            'content'      => $parsed['content'] ?? '',
+                            'excerpt'      => $parsed['excerpt'] ?? '',
+                            'status'       => $status,
                             'is_published' => $settings->email_auto_publish,
                             'published_at' => now(),
                             'featured_image' => $coverUrl,
-                            'facebook_url' => $parsed['facebook_url'] ?? null,
-                            'youtube_url' => $parsed['youtube_url'] ?? null,
-                            'instagram_url' => $parsed['instagram_url'] ?? null,
-                            'twitter_url' => $parsed['twitter_url'] ?? null,
-                            'author_email' => $senderEmail,
-                            'categories' => $categories,
+                            'facebook_url'   => $parsed['facebook_url'] ?? null,
+                            'youtube_url'    => $parsed['youtube_url'] ?? null,
+                            'instagram_url'  => $parsed['instagram_url'] ?? null,
+                            'twitter_url'    => $parsed['twitter_url'] ?? null,
+                            'author_email'   => $senderEmail,
+                            'categories'     => $categories,
                         ]);
                         $this->syncTaxonomies($post, $categories);
                         if (! $isNoticiaRock) $postsCreatedToday++;
-                        $this->info("Post creado con éxito en estado [{$status}]: {$title}");
+                        $this->info("[OK] Post creado en estado [{$status}]: ID {$post->id} — {$title}");
+                        Log::info("ProcessIncomingEmails: Post creado exitosamente.", [
+                            'post_id'    => $post->id,
+                            'title'      => $title,
+                            'status'     => $status,
+                            'categories' => $categories,
+                        ]);
                     }
                 } elseif ($type === 'release') {
                     $artistName = $parsed['artist_name'] ?? 'Artista Desconocido';

@@ -109,7 +109,7 @@ class Post extends Model
 
     public function getFeaturedImageAttribute(?string $value): ?string
     {
-        return [] ?: ($this->featured_image_path ?: null);
+        return $value ?: ($this->featured_image_path ?: null);
     }
 
     public function setFeaturedImageAttribute(?string $value): void
