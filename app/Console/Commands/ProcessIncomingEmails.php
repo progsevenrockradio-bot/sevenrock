@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Models\PostTaxonomy;
+use Illuminate\Support\Facades\Schema;
 use Webklex\PHPIMAP\ClientManager;
 
 class ProcessIncomingEmails extends Command
@@ -288,7 +290,7 @@ class ProcessIncomingEmails extends Command
                             continue;
                         }
 
-                        Post::create([
+                        $post = Post::create([
                             'title' => $item['title'],
                             'slug' => Str::slug($item['title']),
                             'content' => $item['content'] ?? '',
@@ -298,6 +300,7 @@ class ProcessIncomingEmails extends Command
                             'categories' => ['Efeméride'],
                             'author_email' => $senderEmail,
                         ]);
+                        $this->syncTaxonomies($post, ['Efeméride']);
                         $this->info("Efeméride creada: {$item['title']}");
                     }
 
@@ -392,7 +395,7 @@ class ProcessIncomingEmails extends Command
                         // Crear Post
                         $status = $settings->email_auto_publish ? 'published' : 'draft';
                         $categories = $isNoticiaRock ? ['Noticias Rock'] : [];
-                        Post::create([
+                        $post = Post::create([
                             'title' => $title,
                             'slug' => Str::slug($title),
                             'content' => $parsed['content'] ?? '',
@@ -407,6 +410,7 @@ class ProcessIncomingEmails extends Command
                             'author_email' => $senderEmail,
                             'categories' => $categories,
                         ]);
+                        $this->syncTaxonomies($post, $categories);
                         if (! $isNoticiaRock) $postsCreatedToday++;
                         $this->info("Post creado con éxito en estado [{$status}]: {$title}");
                     }
@@ -527,5 +531,35 @@ class ProcessIncomingEmails extends Command
                 Log::error("No se pudo enviar la alerta de administrador: " . $e->getMessage());
             }
         }
+    }
+
+    private function syncTaxonomies(Post $post, array $categories): void
+    {
+        if (! Schema::hasTable('post_taxonomies') || ! Schema::hasTable('post_taxonomy_post')) {
+            return;
+        }
+
+        $ids = [];
+        foreach ($categories as $category) {
+            if (trim($category) !== '') {
+                $ids[] = $this->ensureTaxonomy(PostTaxonomy::TYPE_CATEGORY, $category)->id;
+            }
+        }
+
+        $post->taxonomies()->sync($ids);
+    }
+
+    private function ensureTaxonomy(string $type, string $name): PostTaxonomy
+    {
+        $name = trim($name);
+        return PostTaxonomy::query()->firstOrCreate(
+            [
+                'type' => $type,
+                'slug' => Str::slug($name),
+            ],
+            [
+                'name' => $name,
+            ]
+        );
     }
 }
