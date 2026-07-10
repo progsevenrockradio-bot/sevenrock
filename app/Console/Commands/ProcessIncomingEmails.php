@@ -25,7 +25,7 @@ class ProcessIncomingEmails extends Command
      *
      * @var string
      */
-    protected $signature = 'emails:process';
+    protected $signature = 'emails:process {--reset : Vaciar el registro de correos procesados antes de iniciar}';
 
     /**
      * The console command description.
@@ -39,6 +39,11 @@ class ProcessIncomingEmails extends Command
      */
     public function handle(): int
     {
+        if ($this->option('reset')) {
+            DB::table('processed_emails')->truncate();
+            $this->info('Registro de correos procesados vaciado con éxito.');
+        }
+
         $settings = ThemeSetting::current();
 
         if (! $settings->email_processing_enabled) {
