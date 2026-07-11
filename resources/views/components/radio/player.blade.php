@@ -469,8 +469,7 @@
                     {{-- Controls + seek --}}
                     <div class="flex items-center gap-4 w-full sm:w-auto flex-[2] max-w-sm mx-auto">
                         <button type="button"
-                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
-                            :class="playing ? 'bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)] hover:bg-amber-400' : 'bg-lucille-accent shadow-[0_0_15px_rgba(195,39,32,0.4)] hover:bg-lucille-accent/90'"
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_15px_rgba(195,39,32,0.4)] hover:bg-lucille-accent/90 hover:scale-105 active:scale-95 transition-all duration-200"
                             @click="togglePlay()" aria-label="Reproducir o pausar">
                             <span class="text-base leading-none ml-0.5" x-show="!playing">▶</span>
                             <span class="text-base leading-none" x-show="playing">⏸</span>
@@ -540,74 +539,79 @@
                     </div>
                 </div>
 
-                {{-- Layout Móvil (Compacto de una línea - Inspirado en Spotify) --}}
-                <div class="flex md:hidden items-center justify-between gap-2.5 w-full">
-                    {{-- Cover + info --}}
-                    <div class="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer" @click="toggleInfoWindow($event)" title="Ver Info">
+                {{-- Layout Móvil (Dos líneas - Inspirado en Spotify) --}}
+                <div class="flex md:hidden flex-col gap-2 w-full">
+                    {{-- Fila 1: Cover + info --}}
+                    <div class="flex items-center gap-2.5 min-w-0 w-full cursor-pointer" @click="toggleInfoWindow($event)" title="Ver Info">
                         <div class="group h-10 w-10 shrink-0 overflow-hidden rounded border border-white/10 bg-[#111] shadow relative">
                             <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="track.title || defaultTitle" width="128" height="128" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
                             <div x-show="track.is_live" class="absolute inset-0 flex items-center justify-center bg-black/60">
                                 <span class="text-[7px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
                             </div>
                         </div>
-                        <div class="min-w-0">
-                            <div class="truncate font-display text-[11px] uppercase tracking-wider text-[#dcdcdc] leading-tight" x-text="track.title || defaultTitle"></div>
-                            <div class="truncate text-[9px] text-[#777] mt-0.5" x-text="track.artist || defaultArtist"></div>
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate font-display text-[12px] uppercase tracking-wider text-[#dcdcdc] leading-tight" x-text="track.title || defaultTitle"></div>
+                            <div class="truncate text-[9.5px] text-[#777] mt-0.5" x-text="track.artist || defaultArtist"></div>
                         </div>
                     </div>
 
-                    {{-- Controles compactos --}}
-                    <div class="flex items-center gap-1.5 shrink-0">
-                        {{-- Info --}}
-                        <button type="button"
-                            class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
-                            @click="toggleInfoWindow($event)" aria-label="Letras e info de banda">
-                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                        </button>
+                    {{-- Fila 2: Controles compactos --}}
+                    <div class="flex items-center justify-between border-t border-white/5 pt-2 w-full">
+                        {{-- Botones de acción izquierdos --}}
+                        <div class="flex items-center gap-2">
+                            {{-- Info --}}
+                            <button type="button"
+                                class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                                @click="toggleInfoWindow($event)" aria-label="Letras e info de banda">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                            </button>
 
-                        {{-- Favorite --}}
-                        <button type="button"
-                            class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
-                            @click="toggleFavorite()" :aria-pressed="isFavoriteCurrent()" aria-label="Favorito">
-                            <span class="text-sm" x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
-                        </button>
+                            {{-- Favorite --}}
+                            <button type="button"
+                                class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                                @click="toggleFavorite()" :aria-pressed="isFavoriteCurrent()" aria-label="Favorito">
+                                <span class="text-sm" x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
+                            </button>
 
-                        {{-- Share --}}
-                        <button type="button"
-                            class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
-                            @click="toggleSharePanel()" :aria-expanded="sharePanelOpen" aria-label="Compartir">
-                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="18" cy="5" r="3"></circle>
-                                <circle cx="6" cy="12" r="3"></circle>
-                                <circle cx="18" cy="19" r="3"></circle>
-                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                            </svg>
-                        </button>
+                            {{-- Share --}}
+                            <button type="button"
+                                class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                                @click="toggleSharePanel()" :aria-expanded="sharePanelOpen" aria-label="Compartir">
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                            </button>
 
-                        {{-- Mute --}}
-                        <button type="button"
-                            class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
-                            @click="toggleMute()" aria-label="Silenciar">
-                            <span x-show="!muted" class="text-xs">🔊</span>
-                            <span x-show="muted" class="text-xs">🔇</span>
-                        </button>
+                            {{-- Mute --}}
+                            <button type="button"
+                                class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                                @click="toggleMute()" aria-label="Silenciar">
+                                <span x-show="!muted" class="text-xs">🔊</span>
+                                <span x-show="muted" class="text-xs">🔇</span>
+                            </button>
+                        </div>
 
-                        {{-- Play/Pause (Cambia dinámicamente a amarillo al reproducir) --}}
-                        <button type="button"
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
-                            :class="playing ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)] hover:bg-amber-400' : 'bg-lucille-accent shadow-[0_0_12px_rgba(195,39,32,0.4)] hover:bg-lucille-accent/90'"
-                            @click="togglePlay()" aria-label="Reproducir o pausar">
-                            <span class="text-xs leading-none ml-0.5" x-show="!playing">▶</span>
-                            <span class="text-xs leading-none" x-show="playing">⏸</span>
-                        </button>
+                        {{-- Botones de reproducción derechos --}}
+                        <div class="flex items-center gap-2">
+                            {{-- Play/Pause --}}
+                            <button type="button"
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_12px_rgba(195,39,32,0.4)] hover:bg-lucille-accent/90 hover:scale-105 active:scale-95 transition-all duration-200"
+                                @click="togglePlay()" aria-label="Reproducir o pausar">
+                                <span class="text-xs leading-none ml-0.5" x-show="!playing">▶</span>
+                                <span class="text-xs leading-none" x-show="playing">⏸</span>
+                            </button>
 
-                        {{-- Close --}}
-                        <button type="button"
-                            class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#555] transition-colors hover:text-white"
-                            @click="hideDock()" aria-label="Cerrar">
-                            <span class="text-xs leading-none">✕</span>
-                        </button>
+                            {{-- Close --}}
+                            <button type="button"
+                                class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#555] transition-colors hover:text-white"
+                                @click="hideDock()" aria-label="Cerrar">
+                                <span class="text-xs leading-none">✕</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -664,14 +668,14 @@
             x-transition:enter="transition-all duration-300 ease-out" x-transition:enter-start="translate-y-10 opacity-0 scale-90" x-transition:enter-end="translate-y-0 opacity-100 scale-100"
             x-transition:leave="transition-all duration-200 ease-in"  x-transition:leave-start="translate-y-0 opacity-100 scale-100"  x-transition:leave-end="translate-y-10 opacity-0 scale-90"
             @click="startLiveFromFAB()"
-            class="fixed bottom-6 right-6 z-[95] flex items-center gap-2 px-5 py-3 rounded-full bg-lucille-accent text-white shadow-[0_4px_25px_rgba(195,39,32,0.55)] hover:bg-lucille-accent/90 hover:scale-105 active:scale-95 transition-all duration-200 pointer-events-auto"
+            class="fixed bottom-6 right-6 z-[95] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-lucille-accent text-white shadow-[0_2px_12px_rgba(195,39,32,0.45)] hover:bg-lucille-accent/90 hover:scale-105 active:scale-95 transition-all duration-200 pointer-events-auto"
             aria-label="Escuchar en vivo"
         >
-            <span class="relative flex h-2 w-2">
+            <span class="relative flex h-1.5 w-1.5">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
             </span>
-            <span class="font-display text-[10px] uppercase tracking-[.15em] font-semibold">Escuchar en Vivo</span>
+            <span class="font-display text-[8px] uppercase tracking-[.15em] font-semibold">Escuchar en Vivo</span>
         </button>
 
         <template x-if="bandWindowOpen">
