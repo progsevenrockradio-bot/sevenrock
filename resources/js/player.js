@@ -1560,7 +1560,10 @@ export function registerRadioPlayer(Alpine) {
                         const timerRemainingEl = document.getElementById(this.widgetIds.timerRemaining);
                         const timer = this.readTrackTimerWidget(timerRoot, timerElapsedEl, timerRemainingEl);
                         if (timer.elapsed > 0) {
-                            this.currentTime = timer.elapsed;
+                            const diff = Math.abs(this.currentTime - timer.elapsed);
+                            if (diff > 3 && timer.elapsed > this.currentTime) {
+                                this.currentTime = timer.elapsed;
+                            }
                             if (timer.remaining > 0) {
                                 this.fixedDuration = timer.elapsed + timer.remaining;
                             }
