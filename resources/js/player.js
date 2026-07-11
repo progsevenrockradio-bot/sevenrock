@@ -1375,6 +1375,7 @@ export function registerRadioPlayer(Alpine) {
             }
 
             const rawText = this.cleanWidgetText(timerRoot?.innerText || timerRoot?.textContent || '');
+            const matches = Array.from(rawText.matchAll(/\b(\d{1,3}:\d{2})\b/g), (match) => match[1]);
             const fallbackElapsed = this.parseWidgetDuration(matches[0] || '');
             const fallbackRemaining = this.parseWidgetDuration(matches[1] || '');
             return {
