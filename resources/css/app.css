@@ -1412,6 +1412,21 @@
         transition: color .3s ease;
     }
 
+    /* Animación inteligente de marquesina para textos largos en reproductor móvil */
+    .animate-marquee-text {
+        display: inline-block;
+        animation: marquee-scroll 10s linear infinite alternate;
+    }
+
+    @keyframes marquee-scroll {
+        0%, 15% {
+            transform: translateX(0);
+        }
+        85%, 100% {
+            transform: translateX(min(0px, calc(-100% + 200px)));
+        }
+    }
+
     .lucille-cpt-meta a:hover {
         color: var(--color-lucille-accent);
     }

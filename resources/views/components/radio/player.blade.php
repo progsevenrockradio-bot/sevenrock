@@ -471,8 +471,12 @@
                         <button type="button"
                             class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_15px_rgba(195,39,32,0.4)] hover:bg-lucille-accent/90 hover:scale-105 active:scale-95 transition-all duration-200"
                             @click="togglePlay()" aria-label="Reproducir o pausar">
-                            <span class="text-base leading-none ml-0.5" x-show="!playing">▶</span>
-                            <span class="text-base leading-none" x-show="playing">⏸</span>
+                            <span x-show="!playing" class="flex items-center justify-center">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" class="ml-0.5"><path d="M8 5v14l11-7z"/></svg>
+                            </span>
+                            <span x-show="playing" class="flex items-center justify-center">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                            </span>
                         </button>
                         <div class="hidden sm:flex items-center gap-2.5 w-full">
                             <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-right" x-text="track.is_live ? '●' : formatTime(progress.elapsed)"></span>
@@ -549,9 +553,13 @@
                                 <span class="text-[7px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
                             </div>
                         </div>
-                        <div class="min-w-0 flex-1">
-                            <div class="truncate font-display text-[12px] uppercase tracking-wider text-[#dcdcdc] leading-tight" x-text="track.title || defaultTitle"></div>
-                            <div class="truncate text-[9.5px] text-[#777] mt-0.5" x-text="track.artist || defaultArtist"></div>
+                        <div class="min-w-0 flex-1 overflow-hidden relative">
+                            <div class="w-full overflow-hidden whitespace-nowrap">
+                                <div class="font-display text-[12px] uppercase tracking-wider text-[#dcdcdc] leading-tight animate-marquee-text" x-text="track.title || defaultTitle"></div>
+                            </div>
+                            <div class="w-full overflow-hidden whitespace-nowrap mt-0.5">
+                                <div class="text-[9.5px] text-[#777] animate-marquee-text" x-text="track.artist || defaultArtist"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -601,8 +609,12 @@
                             <button type="button"
                                 class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_12px_rgba(195,39,32,0.4)] hover:bg-lucille-accent/90 hover:scale-105 active:scale-95 transition-all duration-200"
                                 @click="togglePlay()" aria-label="Reproducir o pausar">
-                                <span class="text-xs leading-none ml-0.5" x-show="!playing">▶</span>
-                                <span class="text-xs leading-none" x-show="playing">⏸</span>
+                                <span x-show="!playing" class="flex items-center justify-center">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" class="ml-0.5"><path d="M8 5v14l11-7z"/></svg>
+                                </span>
+                                <span x-show="playing" class="flex items-center justify-center">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                </span>
                             </button>
 
                             {{-- Close --}}
