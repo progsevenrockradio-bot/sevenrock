@@ -77,20 +77,22 @@
 
     @if (!empty($efemerides) && $efemerides->count() > 0)
     {{-- ── CINTILLO EFEMÉRIDES ──────────────────────────────────────────────── --}}
-    <div class="mx-auto max-w-[1200px] px-6 mt-8 mb-4">
-        <div class="relative w-full overflow-hidden rounded-sm border border-[#c32720]/30 bg-black shadow-lg" id="efemerides-ticker">
+    <x-sections.background-band class="home-section-texture home-section-gray">
+        <div class="py-8">
+            <div class="mx-auto max-w-[1200px] px-6">
+                <div class="relative w-full overflow-hidden rounded-sm border border-[#c32720]/30 bg-black shadow-lg" id="efemerides-ticker">
 
-            {{-- Etiqueta "HOY EN EL ROCK" --}}
-            <div class="absolute left-0 top-0 z-20 flex h-full items-center bg-[#c32720] px-5 shadow-[4px_0_20px_rgba(195,39,32,.5)]">
-                <span class="whitespace-nowrap font-display text-[10px] uppercase tracking-[.22em] text-white">
-                    🎸 Hoy en el Rock
-                </span>
-            </div>
-
-            {{-- Gradiente de fundido izquierda --}}
-            <div class="pointer-events-none absolute left-[140px] top-0 z-10 h-full w-16 bg-gradient-to-r from-[#0a0a0b] to-transparent"></div>
-            {{-- Gradiente de fundido derecha --}}
-            <div class="pointer-events-none absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-[#0a0a0b] to-transparent"></div>
+                    {{-- Etiqueta "HOY EN EL ROCK" --}}
+                    <div class="absolute left-0 top-0 z-20 flex h-full items-center justify-center bg-[#c32720] px-5 shadow-[4px_0_20px_rgba(195,39,32,.5)]">
+                        <div class="flex flex-col items-center justify-center">
+                            <span class="whitespace-nowrap font-display text-[10px] uppercase tracking-[.22em] text-white">
+                                🎸 Hoy en el Rock
+                            </span>
+                            <span class="mt-[2px] whitespace-nowrap font-sans text-[7px] uppercase tracking-[.15em] text-white/80">
+                                {{ \Carbon\Carbon::now()->locale('es')->isoFormat('D \d\e MMMM YYYY') }}
+                            </span>
+                        </div>
+                    </div>
 
             {{-- Track animado --}}
             <div class="efem-track flex items-center gap-0 pl-[170px]" style="animation: efem-scroll 60s alternate linear infinite;">
