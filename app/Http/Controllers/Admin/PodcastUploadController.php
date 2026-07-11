@@ -260,7 +260,7 @@ final class PodcastUploadController extends Controller
         $pipelineAction = strtolower(trim((string) $request->input('pipeline_action', 'process')));
         $shouldProcessPipeline = $pipelineAction !== 'save';
 
-        $radioProgram = RadioProgram::withoutEvents(function () use ($master, $data, $rawPath, $disk, $syncArchiveOrg, $imagePath, $manualEpisodeNumber, $downloadProcessedMp3, $shouldProcessPipeline): RadioProgram {
+        $radioProgram = RadioProgram::withoutEvents(function () use ($master, $data, $rawPath, $disk, $syncArchiveOrg, $imagePath, $manualEpisodeNumber, $downloadProcessedMp3, $shouldProcessPipeline, $durationSeconds): RadioProgram {
             $radioBossaStatus = $shouldProcessPipeline ? 'radioboss_pending' : 'skipped';
             $archiveStatus = $shouldProcessPipeline ? 'archive_pending' : 'skipped';
             $deliveryStatus = $shouldProcessPipeline ? 'delivery_pending' : 'skipped';
