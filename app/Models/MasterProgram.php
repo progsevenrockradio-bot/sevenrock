@@ -45,6 +45,7 @@ class MasterProgram extends Model
         'red_social1_url',
         'red_social2_url',
         'activo',
+        'sync_archive_org',
         'archive_identifier',
         'vistas_archive',
         'escuchas_locales',
@@ -57,6 +58,7 @@ class MasterProgram extends Model
 
     protected $casts = [
         'activo' => 'boolean',
+        'sync_archive_org' => 'boolean',
         'duracion_minutos' => 'integer',
         'default_news_ids' => 'array',
         'live_news_ids' => 'array',

@@ -100,10 +100,17 @@
                 </div>
             </div>
 
-            <label class="flex items-center gap-3 text-sm text-[#7b7b7b]">
-                <input type="checkbox" name="activo" value="1" @checked(old('activo', $masterProgram->activo ?? true)) class="h-4 w-4">
-                Programa activo
-            </label>
+            <div class="flex flex-col gap-3">
+                <label class="flex items-center gap-3 text-sm text-[#7b7b7b]">
+                    <input type="checkbox" name="activo" value="1" @checked(old('activo', $masterProgram->activo ?? true)) class="h-4 w-4">
+                    Programa activo
+                </label>
+                
+                <label class="flex items-center gap-3 text-sm text-[#7b7b7b]">
+                    <input type="checkbox" name="sync_archive_org" value="1" @checked(old('sync_archive_org', $masterProgram->sync_archive_org ?? true)) class="h-4 w-4">
+                    Subir episodios automáticamente a Archive.org (Bucket Público)
+                </label>
+            </div>
         </section>
 
         <section class="space-y-5">

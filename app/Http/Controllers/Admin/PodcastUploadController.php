@@ -255,7 +255,7 @@ final class PodcastUploadController extends Controller
         $manualEpisodeNumber = isset($data['numero_episodio']) && $data['numero_episodio'] !== ''
             ? max(1, (int) $data['numero_episodio'])
             : null;
-        $syncArchiveOrg = $request->boolean('sync_archive_org', true);
+        $syncArchiveOrg = $request->boolean('sync_archive_org', $master->sync_archive_org ?? true);
         $downloadProcessedMp3 = $request->boolean('download_processed_mp3', false);
         $pipelineAction = strtolower(trim((string) $request->input('pipeline_action', 'process')));
         $shouldProcessPipeline = $pipelineAction !== 'save';
