@@ -435,7 +435,7 @@
             x-transition:leave="transition-all duration-300 ease-in"  x-transition:leave-start="translate-y-0 opacity-100"  x-transition:leave-end="translate-y-20 opacity-0"
             class="fixed bottom-0 left-0 right-0 z-[100] flex justify-center p-3 sm:p-4 pointer-events-none"
         >
-            <div class="w-full max-w-5xl pointer-events-auto relative bg-[#0b0b0c]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] overflow-hidden p-3 sm:p-4">
+            <div class="w-full max-w-6xl pointer-events-auto relative bg-[#0b0b0c]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] overflow-hidden p-3 sm:p-4">
                 {{-- Progress Bar --}}
                 <div class="absolute top-0 left-0 right-0 h-[3px] bg-white/5 rounded-t-2xl">
                     <div class="h-full bg-lucille-accent transition-all duration-100 rounded-t-2xl" :style="'width: ' + progress.ratio + '%'"></div>
@@ -443,9 +443,9 @@
 
                 <div class="flex flex-col md:flex-row items-center justify-between gap-3">
                     {{-- Cover + info --}}
-                    <div class="flex items-center gap-3 min-w-0 flex-[2] sm:flex-[1.5] lg:flex-1 w-full sm:w-auto">
-                        <div class="h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#2b2b2b] bg-[#111] shadow-md relative">
-                            <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="track.title || defaultTitle" width="256" height="256" class="h-full w-full object-cover" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
+                    <div class="flex items-center gap-3 min-w-0 flex-[2] sm:flex-[1.5] lg:flex-[1.2] w-full sm:w-auto">
+                        <div class="group h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#2b2b2b] bg-[#111] shadow-md relative cursor-pointer" @click="toggleInfoWindow($event)" title="Ver Info">
+                            <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="track.title || defaultTitle" width="256" height="256" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
                             <div x-show="track.is_live" class="absolute inset-0 flex items-center justify-center bg-black/60">
                                 <span class="text-[8px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
                             </div>
@@ -466,7 +466,7 @@
                     </div>
 
                     {{-- Controls + seek --}}
-                    <div class="flex items-center gap-4 w-full sm:w-auto flex-[2] max-w-md mx-auto">
+                    <div class="flex items-center gap-4 w-full sm:w-auto flex-[2] max-w-sm mx-auto">
                         <button type="button"
                             class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_15px_rgba(195,39,32,0.4)] transition-all hover:bg-lucille-accent/90 hover:scale-105 active:scale-95"
                             @click="togglePlay()" aria-label="Reproducir o pausar">
@@ -488,7 +488,7 @@
                         <button type="button"
                             class="flex h-8 px-3 items-center gap-1.5 rounded border border-[#242424] bg-transparent text-[#777] hover:text-white hover:border-[#444] transition-colors text-[10px] uppercase tracking-[.06em] font-display"
                             @click="toggleInfoWindow($event)" aria-label="Letras e info de banda">
-                            <span>🎵</span><span class="hidden sm:inline">Info</span>
+                            <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg></span><span class="hidden sm:inline">Info</span>
                         </button>
 
                         {{-- Favorite --}}
