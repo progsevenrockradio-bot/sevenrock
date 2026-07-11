@@ -957,6 +957,8 @@ export function registerRadioPlayer(Alpine) {
                 title: widgetTrack.title || '',
                 artist: widgetTrack.artist || '',
                 cover: widgetTrack.cover || '',
+                elapsed: widgetTrack.elapsed || 0,
+                duration: widgetTrack.duration || 0,
             };
         },
 
