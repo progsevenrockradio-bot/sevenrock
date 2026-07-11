@@ -1348,7 +1348,7 @@ export function registerRadioPlayer(Alpine) {
                 artist: parsed.artist,
                 title: parsed.title,
                 elapsed: timer.elapsed || parsed.elapsed,
-                duration: timer.duration || parsed.duration,
+                duration: (timer.elapsed > 0 && timer.remaining > 0) ? (timer.elapsed + timer.remaining) : parsed.duration,
                 text: rawText,
             };
         },
@@ -1368,10 +1368,10 @@ export function registerRadioPlayer(Alpine) {
             );
 
             const elapsed = this.parseWidgetDuration(elapsedText);
-            const duration = this.parseWidgetDuration(durationText);
+            const remaining = this.parseWidgetDuration(durationText);
 
-            if (elapsed > 0 || duration > 0) {
-                return { elapsed, duration: elapsed + duration };
+            if (elapsed > 0 || remaining > 0) {
+                return { elapsed, remaining };
             }
 
             const rawText = this.cleanWidgetText(timerRoot?.innerText || timerRoot?.textContent || '');
@@ -1380,7 +1380,7 @@ export function registerRadioPlayer(Alpine) {
             const fallbackRemaining = this.parseWidgetDuration(matches[1] || '');
             return {
                 elapsed: fallbackElapsed,
-                duration: fallbackElapsed + fallbackRemaining,
+                remaining: fallbackRemaining,
             };
         },
 
@@ -1545,9 +1545,9 @@ export function registerRadioPlayer(Alpine) {
                     const timer = this.readTrackTimerWidget(timerRoot, timerElapsedEl, timerRemainingEl);
                     if (timer.elapsed > 0) {
                         this.progress.elapsed = timer.elapsed;
-                        this.progress.duration = timer.duration > 0 
-                                                ? timer.duration 
-                                                : (this.progress.duration > 0 ? this.progress.duration : timer.elapsed);
+                        if (timer.remaining > 0) {
+                            this.progress.duration = timer.elapsed + timer.remaining;
+                        }
                     } else {
                         this.progress.elapsed = Math.max(0, Math.round(this.progress.elapsed) + 0.5);
                     }
