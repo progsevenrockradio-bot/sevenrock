@@ -225,8 +225,8 @@
         </div>
 
         <div class="md:hidden w-full px-1 pb-3 pt-1 text-center">
-            <span class="inline-block max-w-full font-display text-[10px] uppercase tracking-[.24em] leading-tight text-white/80">
-                Todas las épocas del Rock, <span class="text-lucille-accent">están aquí</span>
+            <span class="inline-block max-w-full font-display text-[8.5px] uppercase tracking-[.22em] leading-tight text-white/50">
+                Todas las épocas del Rock, <span class="text-lucille-accent/70">están aquí</span>
             </span>
         </div>
 

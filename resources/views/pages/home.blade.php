@@ -80,10 +80,10 @@
     <x-sections.background-band class="home-section-texture home-section-gray">
         <div class="py-8">
             <div class="mx-auto max-w-[1200px] px-6">
-                <div class="relative w-full overflow-hidden rounded-sm border border-[#c32720]/30 bg-black shadow-lg" id="efemerides-ticker">
+                <div class="relative w-full overflow-hidden rounded-sm border border-[#c32720]/30 bg-black shadow-lg flex flex-col md:block" id="efemerides-ticker">
 
                     {{-- Etiqueta "HOY EN EL ROCK" --}}
-                    <div class="absolute left-0 top-0 z-20 flex h-full items-center justify-center bg-[#c32720] px-5 shadow-[4px_0_20px_rgba(195,39,32,.5)]">
+                    <div class="relative w-full py-2.5 flex flex-col items-center justify-center bg-[#c32720] px-5 shadow-[0_4px_15px_rgba(195,39,32,.4)] md:absolute md:left-0 md:top-0 md:h-full md:w-auto md:z-20 md:shadow-[4px_0_20px_rgba(195,39,32,.5)]">
                         <div class="flex flex-col items-center justify-center">
                             <span class="whitespace-nowrap font-display text-[10px] uppercase tracking-[.22em] text-white">
                                 🎸 Hoy en el Rock
@@ -95,7 +95,7 @@
                     </div>
 
             {{-- Track animado --}}
-            <div class="efem-track flex items-center gap-0 pl-[170px]" style="animation: efem-scroll 60s alternate linear infinite;">
+            <div class="efem-track flex items-center gap-0 pl-0 md:pl-[170px]" style="animation: efem-scroll 60s alternate linear infinite;">
             @php
                 $efemItems = $efemerides->values();
                 // Pre-cargar los tags de cada post (una sola query por post)

@@ -436,12 +436,13 @@
             class="fixed bottom-0 left-0 right-0 z-[100] flex justify-center p-3 sm:p-4 pointer-events-none"
         >
             <div class="w-full max-w-6xl pointer-events-auto relative bg-[#0b0b0c]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] overflow-hidden p-3 sm:p-4">
-                {{-- Progress Bar --}}
-                <div class="absolute top-0 left-0 right-0 h-[3px] bg-white/5 rounded-t-2xl">
+                {{-- Progress Bar (Desktop Only) --}}
+                <div class="absolute top-0 left-0 right-0 h-[3px] bg-white/5 rounded-t-2xl hidden md:block">
                     <div class="h-full bg-lucille-accent transition-all duration-100 rounded-t-2xl" :style="'width: ' + progress.ratio + '%'"></div>
                 </div>
 
-                <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+                {{-- Layout de Escritorio (Desktop) --}}
+                <div class="hidden md:flex md:flex-row items-center justify-between gap-3">
                     {{-- Cover + info --}}
                     <div class="flex items-center gap-3 min-w-0 flex-[2] sm:flex-[1.5] lg:flex-[1.2] w-full sm:w-auto">
                         <div class="group h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#2b2b2b] bg-[#111] shadow-md relative cursor-pointer" @click="toggleInfoWindow($event)" title="Ver Info">
@@ -468,7 +469,8 @@
                     {{-- Controls + seek --}}
                     <div class="flex items-center gap-4 w-full sm:w-auto flex-[2] max-w-sm mx-auto">
                         <button type="button"
-                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_15px_rgba(195,39,32,0.4)] transition-all hover:bg-lucille-accent/90 hover:scale-105 active:scale-95"
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                            :class="playing ? 'bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)] hover:bg-amber-400' : 'bg-lucille-accent shadow-[0_0_15px_rgba(195,39,32,0.4)] hover:bg-lucille-accent/90'"
                             @click="togglePlay()" aria-label="Reproducir o pausar">
                             <span class="text-base leading-none ml-0.5" x-show="!playing">▶</span>
                             <span class="text-base leading-none" x-show="playing">⏸</span>
@@ -538,10 +540,86 @@
                     </div>
                 </div>
 
+                {{-- Layout Móvil (Compacto de una línea - Inspirado en Spotify) --}}
+                <div class="flex md:hidden items-center justify-between gap-2.5 w-full">
+                    {{-- Cover + info --}}
+                    <div class="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer" @click="toggleInfoWindow($event)" title="Ver Info">
+                        <div class="group h-10 w-10 shrink-0 overflow-hidden rounded border border-white/10 bg-[#111] shadow relative">
+                            <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="track.title || defaultTitle" width="128" height="128" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
+                            <div x-show="track.is_live" class="absolute inset-0 flex items-center justify-center bg-black/60">
+                                <span class="text-[7px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
+                            </div>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="truncate font-display text-[11px] uppercase tracking-wider text-[#dcdcdc] leading-tight" x-text="track.title || defaultTitle"></div>
+                            <div class="truncate text-[9px] text-[#777] mt-0.5" x-text="track.artist || defaultArtist"></div>
+                        </div>
+                    </div>
+
+                    {{-- Controles compactos --}}
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        {{-- Info --}}
+                        <button type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                            @click="toggleInfoWindow($event)" aria-label="Letras e info de banda">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                        </button>
+
+                        {{-- Favorite --}}
+                        <button type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                            @click="toggleFavorite()" :aria-pressed="isFavoriteCurrent()" aria-label="Favorito">
+                            <span class="text-sm" x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
+                        </button>
+
+                        {{-- Share --}}
+                        <button type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                            @click="toggleSharePanel()" :aria-expanded="sharePanelOpen" aria-label="Compartir">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                            </svg>
+                        </button>
+
+                        {{-- Mute --}}
+                        <button type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                            @click="toggleMute()" aria-label="Silenciar">
+                            <span x-show="!muted" class="text-xs">🔊</span>
+                            <span x-show="muted" class="text-xs">🔇</span>
+                        </button>
+
+                        {{-- Play/Pause (Cambia dinámicamente a amarillo al reproducir) --}}
+                        <button type="button"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-md hover:scale-105 active:scale-95 transition-all duration-200"
+                            :class="playing ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)] hover:bg-amber-400' : 'bg-lucille-accent shadow-[0_0_12px_rgba(195,39,32,0.4)] hover:bg-lucille-accent/90'"
+                            @click="togglePlay()" aria-label="Reproducir o pausar">
+                            <span class="text-xs leading-none ml-0.5" x-show="!playing">▶</span>
+                            <span class="text-xs leading-none" x-show="playing">⏸</span>
+                        </button>
+
+                        {{-- Close --}}
+                        <button type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#555] transition-colors hover:text-white"
+                            @click="hideDock()" aria-label="Cerrar">
+                            <span class="text-xs leading-none">✕</span>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Barra de Progreso Fina Inferior (Móvil) --}}
+                <div class="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5 md:hidden">
+                    <div class="h-full bg-white transition-all duration-100" :style="'width: ' + progress.ratio + '%'"></div>
+                </div>
+
                 {{-- Share Panel Overlay inside Dock --}}
-                <div x-show="sharePanelOpen" x-cloak class="radio-player-share-panel radio-player-share-panel--dock border-t border-white/5 mt-3 pt-3">
-                    <span class="radio-player-share-panel-label text-[10px] text-[#555] uppercase tracking-wider block mb-2">Compartir emisión</span>
-                    <div class="flex gap-2">
+                <div x-show="sharePanelOpen" x-cloak class="radio-player-share-panel radio-player-share-panel--dock border-t border-white/5 mt-2.5 pt-2.5">
+                    <span class="radio-player-share-panel-label text-[9px] text-[#555] uppercase tracking-wider block mb-1.5 md:mb-2">Compartir emisión</span>
+                    <div class="flex gap-1.5 md:gap-2">
                         <a :href="shareTargets().facebook" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Facebook">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>

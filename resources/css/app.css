@@ -1378,10 +1378,12 @@
     .lucille-page-title {
         color: #fff;
         font-family: var(--font-display);
-        font-size: clamp(44px, 7vw, 92px);
+        font-size: clamp(26px, 6vw, 92px);
         font-weight: 700;
-        line-height: 1;
+        line-height: 1.1;
         text-transform: uppercase;
+        word-break: break-word;
+        overflow-wrap: break-word;
     }
 
     .lucille-page-subtitle {

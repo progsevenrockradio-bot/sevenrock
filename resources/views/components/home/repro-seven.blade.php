@@ -23,26 +23,28 @@
         </div>
 
         <div class="mejs-controls flex flex-col gap-3 border-t border-[#2b2b2b] pt-4">
-            <div class="flex items-center gap-3 w-full">
-                <div class="mejs-button mejs-playpause-button shrink-0">
-                    <button
-                        type="button"
-                        class="inline-flex h-10 min-w-[64px] items-center justify-center border border-lucille-accent bg-transparent px-3 py-0 text-[10px] font-display uppercase tracking-[.16em] text-lucille-accent transition-colors hover:bg-lucille-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
-                        @click="togglePlayback()"
-                        :disabled="!activeEpisode.src && !activeEpisode.archive_url"
-                    >
-                        <span x-show="!playing">Play</span>
-                        <span x-show="playing">Pause</span>
-                    </button>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
+                <div class="flex items-center justify-between w-full sm:w-auto gap-3">
+                    <div class="mejs-button mejs-playpause-button shrink-0">
+                        <button
+                            type="button"
+                            class="inline-flex h-10 min-w-[64px] items-center justify-center border border-lucille-accent bg-transparent px-3 py-0 text-[10px] font-display uppercase tracking-[.16em] text-lucille-accent transition-colors hover:bg-lucille-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
+                            @click="togglePlayback()"
+                            :disabled="!activeEpisode.src && !activeEpisode.archive_url"
+                        >
+                            <span x-show="!playing">Play</span>
+                            <span x-show="playing">Pause</span>
+                        </button>
+                    </div>
+
+                    <div class="mejs-time mejs-currenttime-container flex shrink-0 items-center gap-1 text-[10px] font-display uppercase tracking-[.18em] text-[#dcdcdc]">
+                        <span x-text="formatTime(elapsed)"></span>
+                        <span class="mx-0.5 text-[#595959]">/</span>
+                        <span x-text="formatTime(duration)"></span>
+                    </div>
                 </div>
 
-                <div class="mejs-time mejs-currenttime-container flex shrink-0 items-center gap-1 text-[10px] font-display uppercase tracking-[.18em] text-[#dcdcdc]">
-                    <span x-text="formatTime(elapsed)"></span>
-                    <span class="mx-0.5 text-[#595959]">/</span>
-                    <span x-text="formatTime(duration)"></span>
-                </div>
-
-                <div class="mejs-time-rail flex-1">
+                <div class="mejs-time-rail flex-1 w-full sm:w-auto">
                     <input
                         type="range"
                         min="0"
@@ -56,7 +58,7 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-3 w-full">
+            <div class="hidden sm:flex items-center gap-3 w-full">
                 <div class="mejs-button mejs-volume-button mejs-mute shrink-0">
                     <button
                         type="button"
