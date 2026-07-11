@@ -53,6 +53,8 @@
     @if(!empty($themeAppearance['hero_floating_text']))
         @php
             $text = $themeAppearance['hero_floating_text'];
+            $position = $themeAppearance['hero_floating_text_position'] ?? 'inferior-centro';
+            
             if (str_contains($text, '*')) {
                 $parts = explode('*', $text);
                 $firstHalf = $parts[0];
@@ -64,11 +66,27 @@
                 $secondHalf = implode(' ', array_slice($words, $half));
             }
         @endphp
-        <div class="hero-floating-text {{ $themeAppearance['hero_floating_text_position'] ?? 'inferior-centro' }}">
-            <div class="text-center">
-                {!! $firstHalf !!}@if($secondHalf) <span class="text-lucille-accent">{!! $secondHalf !!}</span>@endif
+
+        @if ($position === 'columnas-laterales')
+            <div class="hero-floating-text columna-izquierda max-md:!bottom-[80px]">
+                <div class="text-center">
+                    {!! $firstHalf !!}
+                </div>
             </div>
-        </div>
+            @if($secondHalf)
+                <div class="hero-floating-text columna-derecha max-md:!bottom-[40px]">
+                    <div class="text-center text-lucille-accent">
+                        {!! $secondHalf !!}
+                    </div>
+                </div>
+            @endif
+        @else
+            <div class="hero-floating-text {{ $position }}">
+                <div class="text-center">
+                    {!! $firstHalf !!}@if($secondHalf) <span class="text-lucille-accent">{!! $secondHalf !!}</span>@endif
+                </div>
+            </div>
+        @endif
     @endif
 
     <div class="absolute bottom-20 left-1/2 z-20 flex -translate-x-1/2">

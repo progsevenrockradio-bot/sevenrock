@@ -140,6 +140,7 @@
                                 <select name="hero_floating_text_position" class="lucille-product-field lucille-select-field w-full">
                                     <option value="columna-izquierda" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'columna-izquierda')>Columna Izquierda (Vertical)</option>
                                     <option value="columna-derecha" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'columna-derecha')>Columna Derecha (Vertical)</option>
+                                    <option value="columnas-laterales" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'columnas-laterales')>Ambas Columnas Laterales (Dividido con *)</option>
                                     <option value="inferior-izquierda" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'inferior-izquierda')>Inferior Izquierda</option>
                                     <option value="inferior-derecha" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'inferior-derecha')>Inferior Derecha</option>
                                     <option value="inferior-centro" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'inferior-centro')>Inferior Centro</option>
