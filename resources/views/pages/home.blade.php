@@ -78,7 +78,7 @@
     @if (!empty($efemerides) && $efemerides->count() > 0)
     {{-- ── CINTILLO EFEMÉRIDES ──────────────────────────────────────────────── --}}
     <div class="mx-auto max-w-[1200px] px-6 mt-8 mb-4">
-        <div class="relative w-full overflow-hidden rounded-sm border border-[#c32720]/30 bg-[#0a0a0b] shadow-lg" id="efemerides-ticker">
+        <div class="relative w-full overflow-hidden rounded-sm border border-[#c32720]/30 bg-black shadow-lg" id="efemerides-ticker">
 
             {{-- Etiqueta "HOY EN EL ROCK" --}}
             <div class="absolute left-0 top-0 z-20 flex h-full items-center bg-[#c32720] px-5 shadow-[4px_0_20px_rgba(195,39,32,.5)]">
