@@ -132,6 +132,7 @@
 </div>
 
     {{-- ── MODAL EFEMÉRIDES ────────────────────────────────────────────────── --}}
+    @push('modals')
     <div id="efem-modal" role="dialog" aria-modal="true" aria-labelledby="efem-modal-title"
          class="fixed inset-0 z-[9999] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300"
          style="background:rgba(0,0,0,.95); backdrop-filter:blur(10px);">
@@ -239,6 +240,7 @@
             });
         })();
     </script>
+    @endpush
     @endif
 
 
