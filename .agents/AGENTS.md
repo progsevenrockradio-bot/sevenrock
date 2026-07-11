@@ -63,3 +63,4 @@ Cualquier cambio de código, corrección de errores, o nueva funcionalidad **deb
 
 ---
 *Este bloque debe ser copiado íntegramente a tu archivo .agents/AGENTS.md para garantizar que todos los agentes futuros operen bajo este conocimiento centralizado.*
+*   **Controles y Deslizadores (Sliders):** Para barras de volumen o de progreso de audio, se debe utilizar obligatoriamente la clase "lucille-range-slider" (que estiliza la pista plana de 4px y el thumb del color de acento) en lugar de intentar armarlas con utilidades genericas de Tailwind, manteniendo el aspecto plano y moderno del diseno.

@@ -60,14 +60,18 @@
                 <div class="mejs-button mejs-volume-button mejs-mute shrink-0">
                     <button
                         type="button"
-                        class="inline-flex h-10 w-10 items-center justify-center border border-[#2b2b2b] bg-transparent text-[#f5f5f5] transition-colors hover:bg-white/5"
+                        class="inline-flex h-10 w-10 items-center justify-center border border-lucille-accent bg-transparent text-lucille-accent transition-colors hover:bg-lucille-accent/10"
                         @click="muted = !muted; const audio = $refs.audio; if (audio) { audio.muted = muted; }"
                         :aria-pressed="muted ? 'true' : 'false'"
                         aria-label="Mute"
                         title="Mute"
                     >
-                        <span x-show="!muted">🔊</span>
-                        <span x-show="muted">🔇</span>
+                        <svg x-show="!muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                            <path d="M5.889 6H4a1 1 0 00-1 1v6a1 1 0 001 1h1.889l4.265 4.437A.75.75 0 0011.5 17.89V2.11a.75.75 0 00-1.346-.546L5.89 6zM14.05 4.95a.75.75 0 011.06 0 7.5 7.5 0 010 10.1.75.75 0 11-1.06-1.06 6 6 0 000-8.08.75.75 0 010-1.06z" />
+                        </svg>
+                        <svg x-show="muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                            <path d="M5.889 6H4a1 1 0 00-1 1v6a1 1 0 001 1h1.889l4.265 4.437A.75.75 0 0011.5 17.89V2.11a.75.75 0 00-1.346-.546L5.89 6zM17.06 5.06a.75.75 0 10-1.06-1.06L14 6.06l-2-2a.75.75 0 10-1.06 1.06l2 2-2 2a.75.75 0 101.06 1.06l2-2 2 2a.75.75 0 101.06-1.06l-2-2 2-2z" />
+                        </svg>
                     </button>
                 </div>
 
