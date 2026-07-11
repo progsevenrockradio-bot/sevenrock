@@ -112,6 +112,9 @@ export function registerRadioPlayer(Alpine) {
         favoriteCount: 0,
         favoriteSyncInFlight: false,
         favoriteSyncReady: false,
+        fixedDuration: 0,
+        currentTime: 0,
+        syncCounter: 0,
         progress: {
             elapsed: 0,
             duration: 0,
@@ -233,7 +236,7 @@ export function registerRadioPlayer(Alpine) {
             this.queueStatusRefresh(0);
 
             this.startPolling();
-            this.progressHandle = setInterval(() => this.tickProgress(), 500);
+            this.progressHandle = setInterval(() => this.tickProgress(), 1000);
 
             this.boundHotkeys = (event) => this.handleHotkeys(event);
             window.addEventListener('keydown', this.boundHotkeys);
@@ -1291,13 +1294,14 @@ export function registerRadioPlayer(Alpine) {
                 ? Math.round(audio.currentTime)
                 : 0;
 
-            this.progress.duration = widgetDuration || audioDuration || Number(track.duration_seconds || 0);
-            this.progress.elapsed = audioElapsed || (widgetElapsed > 0
-                ? widgetElapsed
-                : (trackChanged ? 0 : Number(track.elapsed_seconds || 0)));
+            if (trackChanged) {
+                this.fixedDuration = widgetDuration || audioDuration || Number(track.duration_seconds || 0);
+                this.currentTime = audioElapsed || widgetElapsed || 0;
+                this.syncCounter = 0;
+            }
 
-            if (!this.track.is_live && this.progress.duration > 0 && this.progress.elapsed > this.progress.duration) {
-                this.progress.elapsed = 0;
+            if (!this.track.is_live && this.fixedDuration > 0 && this.currentTime > this.fixedDuration) {
+                this.currentTime = 0;
             }
             this.syncProgress();
             this.ensureAudioSource();
@@ -1543,50 +1547,55 @@ export function registerRadioPlayer(Alpine) {
 
             const audio = this.$refs.audio;
             if (audio && Number.isFinite(audio.currentTime) && audio.currentTime > 0 && !this.track.is_live) {
-                this.progress.elapsed = Math.round(audio.currentTime);
+                this.currentTime = Math.round(audio.currentTime);
             } else if (this.track.is_live) {
-                const timerRoot = document.getElementById(this.widgetIds.timerElapsed)?.closest?.('.rbcloud_tracktimer');
-                if (timerRoot) {
-                    const timerElapsedEl = document.getElementById(this.widgetIds.timerElapsed);
-                    const timerRemainingEl = document.getElementById(this.widgetIds.timerRemaining);
-                    const timer = this.readTrackTimerWidget(timerRoot, timerElapsedEl, timerRemainingEl);
-                    if (timer.elapsed > 0) {
-                        this.progress.elapsed = timer.elapsed;
-                        if (timer.remaining > 0) {
-                            this.progress.duration = timer.elapsed + timer.remaining;
+                this.currentTime += 1;
+                this.syncCounter += 1;
+
+                if (this.syncCounter >= 10) {
+                    this.syncCounter = 0;
+                    const timerRoot = document.getElementById(this.widgetIds.timerElapsed)?.closest?.('.rbcloud_tracktimer');
+                    if (timerRoot) {
+                        const timerElapsedEl = document.getElementById(this.widgetIds.timerElapsed);
+                        const timerRemainingEl = document.getElementById(this.widgetIds.timerRemaining);
+                        const timer = this.readTrackTimerWidget(timerRoot, timerElapsedEl, timerRemainingEl);
+                        if (timer.elapsed > 0) {
+                            this.currentTime = timer.elapsed;
+                            if (timer.remaining > 0) {
+                                this.fixedDuration = timer.elapsed + timer.remaining;
+                            }
                         }
-                    } else {
-                        this.progress.elapsed = Math.max(0, Math.round(this.progress.elapsed) + 0.5);
                     }
-                } else {
-                    this.progress.elapsed = Math.max(0, Math.round(this.progress.elapsed) + 0.5);
                 }
             } else {
-                this.progress.elapsed = Math.max(0, Math.round(this.progress.elapsed) + 0.5);
+                this.currentTime += 1;
             }
 
             this.syncProgress();
         },
 
         syncProgress() {
-            if (this.progress.duration <= 0) {
+            this.progress.elapsed = this.currentTime;
+            this.progress.duration = this.fixedDuration;
+
+            if (this.fixedDuration <= 0) {
                 this.progress.ratio = 0;
                 return;
             }
 
-            this.progress.ratio = Math.max(0, Math.min(100, Math.round((this.progress.elapsed / this.progress.duration) * 100)));
+            this.progress.ratio = Math.max(0, Math.min(100, Math.round((this.currentTime / this.fixedDuration) * 100)));
         },
 
         seek(event) {
             const audio = this.$refs.audio;
-            if (!audio || this.progress.duration <= 0) {
+            if (!audio || this.fixedDuration <= 0) {
                 return;
             }
 
             const rect = event.currentTarget.getBoundingClientRect();
             const ratio = (event.clientX - rect.left) / rect.width;
             const clamped = Math.max(0, Math.min(1, ratio));
-            this.progress.elapsed = Math.round(this.progress.duration * clamped);
+            this.currentTime = Math.round(this.fixedDuration * clamped);
             this.syncProgress();
 
             if (this.track.audio_url && Number.isFinite(audio.duration) && audio.duration > 0) {
