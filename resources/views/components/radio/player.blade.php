@@ -590,7 +590,6 @@
             </span>
             <span class="font-display text-[10px] uppercase tracking-[.15em] font-semibold">Escuchar en Vivo</span>
         </button>
-    @endif
 
         <template x-if="bandWindowOpen">
         <section
