@@ -68,7 +68,21 @@
         @endphp
 
         @if ($position === 'columnas-laterales' || ($position === 'columna-izquierda' && $secondHalf))
-            <div class="hero-floating-text columna-izquierda !flex-col gap-0 md:gap-2 !items-start max-md:!bottom-[80px]" style="left: 90px;">
+            <style>
+                .split-col-izq {
+                    flex-direction: column !important;
+                    align-items: flex-start !important;
+                    gap: 12px !important;
+                    left: 90px !important;
+                }
+                @media (max-width: 768px) {
+                    .split-col-izq {
+                        bottom: 80px !important;
+                        align-items: center !important;
+                    }
+                }
+            </style>
+            <div class="hero-floating-text columna-izquierda split-col-izq">
                 <div class="whitespace-nowrap">
                     {!! $firstHalf !!}
                 </div>
