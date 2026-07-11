@@ -100,6 +100,8 @@ Route::get("/programas", [SiteController::class, "programs"])->name("programs");
 Route::get("/programas/track-play", [SiteController::class, "trackPlay"])->name("programs.track-play");
 Route::get("/programas/{identifier}", [SiteController::class, "programDetail"])->name("programs.detail");
 
+Route::get("/multimedia", [SiteController::class, "multimedia"])->name("multimedia");
+
 // Rutas Públicas - Personas Desaparecidas
 Route::prefix('desaparecidos')->name('missing-persons.')->group(function (): void {
     Route::get('/', [\App\Http\Controllers\MissingPersonController::class, 'index'])->name('index');

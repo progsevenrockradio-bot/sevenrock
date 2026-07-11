@@ -445,6 +445,124 @@ class SiteController extends Controller
         ]);
     }
 
+    public function multimedia(ArchiveOrgService $archiveOrgService): View
+    {
+        // ── Reutilizamos el mismo caché de programas para no duplicar llamadas a Archive.org ──
+        $cacheVersion = $this->cacheVersion('programs');
+        $programsCache = Cache::remember(
+            "site.programs.catalog.v{$cacheVersion}",
+            now()->addMinutes(10),
+            function () use ($archiveOrgService): array {
+                $programsByDay    = [];
+                $latestEpisodes   = [];
+                $groupedEpisodes  = [];
+
+                try {
+                    $masterPrograms = MasterProgram::query()
+                        ->where('activo', true)
+                        ->orderBy('nombre')
+                        ->get();
+
+                    $dayOrder  = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+                    $dayLabels = [
+                        'LUNES' => 'Lunes', 'MARTES' => 'Martes', 'MIERCOLES' => 'Miércoles',
+                        'JUEVES' => 'Jueves', 'VIERNES' => 'Viernes', 'SABADO' => 'Sábado', 'DOMINGO' => 'Domingo',
+                    ];
+                    $grouped = [];
+                    foreach ($masterPrograms as $program) {
+                        $day = strtoupper(trim((string) $program->dia_transmision));
+                        $grouped[$day][] = [
+                            'id'                 => $program->id,
+                            'title'              => $program->nombre,
+                            'name'               => $program->nombre,
+                            'cover'              => $program->cover_url,
+                            'host'               => $program->host,
+                            'conductor'          => $program->conductor,
+                            'schedule'           => $program->schedule,
+                            'description'        => $program->description,
+                            'genre'              => $program->genero,
+                            'hora'               => $program->hora_transmision,
+                            'archive_identifier' => $program->archive_identifier,
+                            'slug'               => $program->publicSlug(),
+                        ];
+                    }
+                    foreach ($dayOrder as $day) {
+                        if (! empty($grouped[$day])) {
+                            usort($grouped[$day], fn ($a, $b) => ($a['hora'] ?? '99:99') <=> ($b['hora'] ?? '99:99'));
+                            $programsByDay[] = ['day' => $day, 'label' => $dayLabels[$day] ?? $day, 'programs' => $grouped[$day]];
+                        }
+                    }
+
+                    $payload      = $archiveOrgService->homePodcastPayload(20);
+                    $latestEpisodes = $payload['episodes'] ?? [];
+                    if (! empty($payload['featured']['src'] ?? '')) {
+                        array_unshift($latestEpisodes, $payload['featured']);
+                    }
+                    foreach ($latestEpisodes as $ep) {
+                        $progName = trim((string) ($ep['program'] ?? $ep['title'] ?? 'Sin programa'));
+                        $src = $ep['src'] ?? '';
+                        $exists = false;
+                        foreach ($groupedEpisodes[$progName] ?? [] as $ex) {
+                            if (($ex['src'] ?? '') === $src) { $exists = true; break; }
+                        }
+                        if (! $exists) { $groupedEpisodes[$progName][] = $ep; }
+                    }
+                    foreach ($groupedEpisodes as &$eps) {
+                        usort($eps, function ($a, $b) {
+                            $tsA = ($a['date'] ?? '') ? (\DateTimeImmutable::createFromFormat('d/m/Y', $a['date'])?->getTimestamp() ?? 0) : 0;
+                            $tsB = ($b['date'] ?? '') ? (\DateTimeImmutable::createFromFormat('d/m/Y', $b['date'])?->getTimestamp() ?? 0) : 0;
+                            return $tsB - $tsA;
+                        });
+                    }
+                    unset($eps);
+                    uasort($groupedEpisodes, function ($a, $b) {
+                        $tsA = ($a[0]['date'] ?? '') ? (\DateTimeImmutable::createFromFormat('d/m/Y', $a[0]['date'])?->getTimestamp() ?? 0) : 0;
+                        $tsB = ($b[0]['date'] ?? '') ? (\DateTimeImmutable::createFromFormat('d/m/Y', $b[0]['date'])?->getTimestamp() ?? 0) : 0;
+                        return $tsB - $tsA;
+                    });
+                } catch (\Throwable) {}
+
+                $programSlugMap = [];
+                try {
+                    if (isset($masterPrograms)) {
+                        $programSlugMap = $masterPrograms
+                            ->filter(fn ($p) => filled($p->archive_identifier))
+                            ->pluck('archive_identifier', 'nombre')
+                            ->toArray();
+                    }
+                } catch (\Throwable) {}
+
+                return compact('programsByDay', 'latestEpisodes', 'groupedEpisodes', 'programSlugMap');
+            }
+        );
+
+        // ── Resto de datos ──
+        $videos = $this->safeValue(fn () => Video::query()->latest()->take(12)->get(), collect());
+
+        $songs = $this->safeValue(
+            fn () => \App\Models\Song::query()
+                ->with('bandProfile')
+                ->published()
+                ->orderBy('sort_order')
+                ->orderByDesc('published_at')
+                ->take(50)
+                ->get(),
+            collect()
+        );
+
+        $galleryImages = $this->cachedGalleryImages(24, 15);
+
+        return view('pages.multimedia', [
+            'programsByDay'  => $programsCache['programsByDay']  ?? [],
+            'groupedEpisodes'=> $programsCache['groupedEpisodes'] ?? [],
+            'programSlugMap' => $programsCache['programSlugMap']  ?? [],
+            'latestEpisodes' => $programsCache['latestEpisodes']  ?? [],
+            'videos'         => $videos,
+            'songs'          => $songs,
+            'galleryImages'  => $galleryImages,
+        ]);
+    }
+
     public function programDetail(string $identifier, ArchiveOrgService $archiveOrgService): View
     {
         $program = null;

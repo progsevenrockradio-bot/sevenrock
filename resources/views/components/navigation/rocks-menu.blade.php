@@ -6,10 +6,12 @@
     $featuredAlbumUrl = $themeData['featured_album_url'] ?? route('discography');
     $items ??= [
         ['label' => 'Inicio', 'route' => 'home'],
-        ['label' => 'Multimedia', 'route' => 'discography', 'children' => [
-            ['label' => 'Galería', 'route' => 'gallery'],
-            ['label' => 'Álbum de fotos', 'route' => 'gallery.green-day'],
-            ['label' => 'Video', 'url' => route('videos.single', ['slug' => 'gold-on-the-ceiling'])],
+        ['label' => 'Multimedia', 'route' => 'multimedia', 'children' => [
+            ['label' => 'Hub Multimedia', 'route' => 'multimedia'],
+            ['label' => 'Galería de Fotos', 'url' => route('multimedia') . '#galeria'],
+            ['label' => 'Videos', 'url' => route('multimedia') . '#videos'],
+            ['label' => 'Catálogo de Música', 'url' => route('multimedia') . '#musica'],
+            ['label' => 'Podcasts', 'url' => route('multimedia') . '#podcasts'],
         ]],
         ['label' => 'Eventos', 'route' => 'events', 'children' => [
             ['label' => 'Proximos eventos', 'route' => 'events.upcoming'],
