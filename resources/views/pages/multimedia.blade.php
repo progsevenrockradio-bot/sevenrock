@@ -110,8 +110,7 @@
                 <button type="button"
                     class="w-full py-3 rounded-xl bg-lucille-accent font-display text-sm uppercase tracking-[.1em] text-white shadow-[0_4px_20px_rgba(195,39,32,.3)] hover:bg-lucille-accent/90 active:scale-98 transition-all duration-200"
                     @click="playTrack({ src: 'live', type: 'live', title: 'Seven Rock Radio', subtitle: 'En Vivo', image: 'https://c30.radioboss.fm/stationlogo/569.jpg' })">
-                    <span x-show="!isLive || !playing">▶ Escuchar en Vivo</span>
-                    <span x-show="isLive && playing">⏸ Pausar Radio</span>
+                    <span>▶ Escuchar en Vivo</span>
                 </button>
             </div>
 
