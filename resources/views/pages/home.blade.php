@@ -131,7 +131,9 @@
             @endforeach
         </div>
     </div>
-</div>
+    </div>
+    </div>
+</x-sections.background-band>
 
     {{-- ── MODAL EFEMÉRIDES ────────────────────────────────────────────────── --}}
     @push('modals')
