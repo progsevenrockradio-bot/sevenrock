@@ -1449,16 +1449,22 @@ export function registerRadioPlayer(Alpine) {
 
         parseWidgetDuration(value) {
             const text = this.cleanWidgetText(value);
-            if (!text || !/^\d{1,3}:\d{2}$/.test(text)) {
+            if (!text) {
                 return 0;
             }
 
-            const [minutes, seconds] = text.split(':').map((part) => Number(part));
-            if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+            const parts = text.split(':').map((part) => Number(part));
+            if (parts.some((p) => !Number.isFinite(p))) {
                 return 0;
             }
 
-            return (minutes * 60) + seconds;
+            if (parts.length === 3) {
+                return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+            } else if (parts.length === 2) {
+                return (parts[0] * 60) + parts[1];
+            }
+
+            return parts.length === 1 ? parts[0] : 0;
         },
 
         splitWidgetArtistTitle(value) {
