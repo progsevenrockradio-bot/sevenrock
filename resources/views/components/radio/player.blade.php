@@ -441,9 +441,9 @@
                     <div class="h-full bg-lucille-accent transition-all duration-100 rounded-t-2xl" :style="'width: ' + progress.ratio + '%'"></div>
                 </div>
 
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-3">
                     {{-- Cover + info --}}
-                    <div class="flex items-center gap-3 min-w-0 flex-[2] sm:flex-1 w-full sm:w-auto">
+                    <div class="flex items-center gap-3 min-w-0 flex-[2] sm:flex-[1.5] lg:flex-1 w-full sm:w-auto">
                         <div class="h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#2b2b2b] bg-[#111] shadow-md relative">
                             <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="track.title || defaultTitle" width="256" height="256" class="h-full w-full object-cover" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
                             <div x-show="track.is_live" class="absolute inset-0 flex items-center justify-center bg-black/60">
@@ -466,7 +466,7 @@
                     </div>
 
                     {{-- Controls + seek --}}
-                    <div class="flex items-center gap-4 w-full sm:w-auto flex-[3] max-w-lg mx-auto">
+                    <div class="flex items-center gap-4 w-full sm:w-auto flex-[2] max-w-md mx-auto">
                         <button type="button"
                             class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_15px_rgba(195,39,32,0.4)] transition-all hover:bg-lucille-accent/90 hover:scale-105 active:scale-95"
                             @click="togglePlay()" aria-label="Reproducir o pausar">
@@ -515,7 +515,12 @@
                         <button type="button"
                             class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#aaa] transition-colors hover:text-white hover:border-[#444]"
                             @click="toggleMute()" aria-label="Silenciar">
-                            <span x-show="!muted">🔊</span><span x-show="muted">🔇</span>
+                            <span x-show="!muted">
+                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                            </span>
+                            <span x-show="muted">
+                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+                            </span>
                         </button>
 
                         {{-- Volume Slider --}}
