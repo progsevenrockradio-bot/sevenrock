@@ -402,7 +402,8 @@ class ProcessIncomingEmails extends Command
                         ]);
                         $this->syncTaxonomies(
                             Post::where('slug', $slug)->first(),
-                            ['Hoy en el Rock']
+                            ['Hoy en el Rock'],
+                            $this->extractHashtags($efTitle . ' ' . $cleanItem)
                         );
                         $this->info("[OK] Efeméride creada: {$efTitle}");
                         $efemCreadas++;
@@ -457,7 +458,7 @@ class ProcessIncomingEmails extends Command
                             'author_email'   => $senderEmail,
                             'categories'     => ['Noticias Rock'],
                         ]);
-                        $this->syncTaxonomies($post, ['Noticias Rock']);
+                        $this->syncTaxonomies($post, ['Noticias Rock'], $this->extractHashtags($cleanTitle . ' ' . strip_tags($contentToSave)));
                         $this->info("[OK] Noticia Rock creada en estado [{$status}]: ID {$post->id} — {$cleanTitle}");
                     }
 
@@ -746,7 +747,7 @@ class ProcessIncomingEmails extends Command
         }
     }
 
-    private function syncTaxonomies(Post $post, array $categories): void
+    private function syncTaxonomies(Post $post, array $categories, array $tags = []): void
     {
         if (! Schema::hasTable('post_taxonomies') || ! Schema::hasTable('post_taxonomy_post')) {
             return;
@@ -758,8 +759,73 @@ class ProcessIncomingEmails extends Command
                 $ids[] = $this->ensureTaxonomy(PostTaxonomy::TYPE_CATEGORY, $category)->id;
             }
         }
+        foreach ($tags as $tag) {
+            if (trim($tag) !== '') {
+                $ids[] = $this->ensureTaxonomy(PostTaxonomy::TYPE_TAG, ltrim($tag, '#'))->id;
+            }
+        }
 
-        $post->taxonomies()->sync($ids);
+        $post->taxonomies()->sync(array_values(array_unique($ids)));
+    }
+
+    /**
+     * Extrae hashtags relevantes del texto de una noticia o efeméride.
+     * Sin llamadas a APIs externas — análisis de patrones del propio texto.
+     *
+     * @return array<int, string>  Máx. 4 hashtags sin el símbolo #
+     */
+    private function extractHashtags(string $text): array
+    {
+        $tags = [];
+
+        // 1. Año histórico  → RockNNNN
+        if (preg_match('/\b(1[89]\d{2}|20\d{2})\b/', $text, $m)) {
+            $tags[] = 'Rock' . $m[1];
+        }
+
+        // 2. Tipo de evento
+        $lower = mb_strtolower($text);
+        if (mb_strpos($lower, 'nace') !== false || mb_strpos($lower, 'cumpleaños') !== false) {
+            $tags[] = 'NaceHoy';
+        } elseif (mb_strpos($lower, 'fallece') !== false || mb_strpos($lower, 'muere') !== false) {
+            $tags[] = 'RIPRock';
+        } elseif (mb_strpos($lower, 'lanza') !== false || mb_strpos($lower, 'álbum') !== false || mb_strpos($lower, 'album') !== false) {
+            $tags[] = 'NuevoAlbum';
+        } elseif (mb_strpos($lower, 'anuncia') !== false) {
+            $tags[] = 'NoticiaRock';
+        } elseif (mb_strpos($lower, 'gira') !== false || mb_strpos($lower, 'tour') !== false) {
+            $tags[] = 'RockTour';
+        }
+
+        // 3. Bandas/artistas entre paréntesis  → "(Rainbow, Black Sabbath, Dio)"
+        if (preg_match('/\(([^)]{3,60})\)/', $text, $pm)) {
+            $names = array_slice(array_map('trim', explode(',', $pm[1])), 0, 2);
+            foreach ($names as $name) {
+                if (strlen($name) >= 2 && strlen($name) <= 30) {
+                    // CamelCase: "Black Sabbath" → "BlackSabbath"
+                    $tag = preg_replace('/\s+/', '', ucwords(mb_strtolower($name)));
+                    if ($tag && !in_array($tag, $tags, true)) {
+                        $tags[] = $tag;
+                    }
+                }
+            }
+        }
+
+        // 4. Género musical común detectado en el texto
+        $genres = [
+            'heavy metal' => 'HeavyMetal', 'metal' => 'Metal',
+            'hard rock'   => 'HardRock',   'punk'  => 'PunkRock',
+            'prog rock'   => 'ProgRock',   'blues' => 'Blues',
+            'jazz'        => 'Jazz',        'grunge' => 'Grunge',
+        ];
+        foreach ($genres as $keyword => $tagName) {
+            if (mb_strpos($lower, $keyword) !== false && !in_array($tagName, $tags, true)) {
+                $tags[] = $tagName;
+                break; // un género por post
+            }
+        }
+
+        return array_slice(array_unique($tags), 0, 4);
     }
 
     private function ensureTaxonomy(string $type, string $name): PostTaxonomy

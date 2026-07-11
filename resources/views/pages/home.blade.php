@@ -29,24 +29,24 @@
             <div class="mx-auto max-w-[1200px] px-6 mt-10">
                 <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach($noticiasRock as $post)
-                        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:border-[#c32720]/40 group">
+                        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:border-[#c32720]/40 group relative cursor-pointer">
+                            <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-10" aria-label="Leer más sobre {{ $post->title }}"></a>
                             <div>
                                 <div class="relative aspect-[4/3] overflow-hidden border border-[#2b2b2b] bg-[#111]">
                                     <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}" alt="{{ $post->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
                                 </div>
-                                <h4 class="mt-4 font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 group-hover:text-[#c32720] transition-colors">
-                                    <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-10"></a>
+                                <h4 class="mt-4 font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 group-hover:text-[#c32720] transition-colors relative z-20">
                                     {{ $post->title }}
                                 </h4>
                                 @if($post->published_at)
-                                    <p class="text-[10px] uppercase tracking-[.12em] text-[#555] mt-2">{{ $post->published_at->translatedFormat('d M, Y') }}</p>
+                                    <p class="text-[10px] uppercase tracking-[.12em] text-[#555] mt-2 relative z-20">{{ $post->published_at->translatedFormat('d M, Y') }}</p>
                                 @endif
                                 @if($post->excerpt)
                                     <p class="mt-3 text-xs leading-5 text-[#7b7b7b] line-clamp-3 relative z-20">{{ $post->excerpt }}</p>
                                 @endif
                             </div>
                             <div class="mt-4 border-t border-[#222] pt-3 text-right relative z-20">
-                                <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] hover:text-[#c32720] transition-colors">Leer más &rarr;</a>
+                                <span class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] group-hover:text-[#c32720] transition-colors">Leer más &rarr;</span>
                             </div>
                         </div>
                     @endforeach
@@ -77,22 +77,23 @@
 
     @if (!empty($efemerides) && $efemerides->count() > 0)
     {{-- ── CINTILLO EFEMÉRIDES ──────────────────────────────────────────────── --}}
-    <div class="relative w-full overflow-hidden border-y border-[#c32720]/30 bg-[#0a0a0b]" id="efemerides-ticker">
+    <div class="w-full border-y border-[#c32720]/30 bg-[#0a0a0b]">
+        <div class="relative mx-auto max-w-[1200px] overflow-hidden" id="efemerides-ticker">
 
-        {{-- Etiqueta "HOY EN EL ROCK" --}}
-        <div class="absolute left-0 top-0 z-20 flex h-full items-center bg-[#c32720] px-5 shadow-[4px_0_20px_rgba(195,39,32,.5)]">
-            <span class="whitespace-nowrap font-display text-[10px] uppercase tracking-[.22em] text-white">
-                🎸 Hoy en el Rock
-            </span>
-        </div>
+            {{-- Etiqueta "HOY EN EL ROCK" --}}
+            <div class="absolute left-0 top-0 z-20 flex h-full items-center bg-[#c32720] px-5 shadow-[4px_0_20px_rgba(195,39,32,.5)]">
+                <span class="whitespace-nowrap font-display text-[10px] uppercase tracking-[.22em] text-white">
+                    🎸 Hoy en el Rock
+                </span>
+            </div>
 
-        {{-- Gradiente de fundido izquierda --}}
-        <div class="pointer-events-none absolute left-[140px] top-0 z-10 h-full w-16 bg-gradient-to-r from-[#0a0a0b] to-transparent"></div>
-        {{-- Gradiente de fundido derecha --}}
-        <div class="pointer-events-none absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-[#0a0a0b] to-transparent"></div>
+            {{-- Gradiente de fundido izquierda --}}
+            <div class="pointer-events-none absolute left-[140px] top-0 z-10 h-full w-16 bg-gradient-to-r from-[#0a0a0b] to-transparent"></div>
+            {{-- Gradiente de fundido derecha --}}
+            <div class="pointer-events-none absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-[#0a0a0b] to-transparent"></div>
 
-        {{-- Track animado --}}
-        <div class="efem-track flex items-center gap-0 pl-[170px]" style="animation: efem-scroll 60s linear infinite;">
+            {{-- Track animado --}}
+            <div class="efem-track flex items-center gap-0 pl-[170px]" style="animation: efem-scroll 60s alternate linear infinite;">
             @php
                 $efemItems = $efemerides->values();
                 // Pre-cargar los tags de cada post (una sola query por post)
@@ -128,6 +129,7 @@
             @endforeach
         </div>
     </div>
+</div>
 
     {{-- ── MODAL EFEMÉRIDES ────────────────────────────────────────────────── --}}
     <div id="efem-modal" role="dialog" aria-modal="true" aria-labelledby="efem-modal-title"

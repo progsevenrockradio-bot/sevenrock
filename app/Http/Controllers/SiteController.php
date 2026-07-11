@@ -898,6 +898,17 @@ class SiteController extends Controller
 
                 return DB::table('posts')
                     ->where('status', 'published')
+                    ->where(function ($query) {
+                        $query->whereNull('author_email')
+                              ->orWhere('author_email', '!=', 'dark.vader.agent@gmail.com');
+                    })
+                    ->where(function ($query) {
+                        $query->whereNull('categories')
+                              ->orWhere(function ($q) {
+                                  $q->where('categories', 'not like', '%Noticias Rock%')
+                                    ->where('categories', 'not like', '%Hoy en el Rock%');
+                              });
+                    })
                     ->orderByDesc('published_at')
                     ->limit(3)
                     ->get()
