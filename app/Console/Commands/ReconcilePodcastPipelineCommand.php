@@ -78,7 +78,7 @@ final class ReconcilePodcastPipelineCommand extends Command
                 $actions[] = 'correo RadioBOSS';
             }
 
-            if ($program->sync_archive_org && $program->archive_org_status !== 'archive_verified' && $program->archive_org_status !== 'archive_skipped') {
+            if (($program->masterProgram->sync_archive_org ?? true) && $program->archive_org_status !== 'archive_verified' && $program->archive_org_status !== 'archive_skipped') {
                 UploadArchiveOrgJob::dispatch($program->id);
                 $actions[] = 'Archive.org';
             } elseif (in_array($program->archive_org_status, ['archive_verified', 'archive_pending_indexing'], true) && $program->archive_notification_sent_at === null) {

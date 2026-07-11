@@ -48,7 +48,7 @@ class UploadArchiveOrgJob implements ShouldQueue
         $attempt = method_exists($this, 'attempts') ? $this->attempts() : null;
         $startedAt = microtime(true);
 
-        if (! $radioProgram->sync_archive_org) {
+        if (! ($radioProgram->masterProgram->sync_archive_org ?? true)) {
             $this->markSkipped($radioProgram, 'La sincronización con Archive.org está desactivada.');
 
             $audit->record($radioProgram, 'ARCHIVE_SKIPPED', 'Se omitió la subida a Archive.org.', [
