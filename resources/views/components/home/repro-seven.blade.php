@@ -22,65 +22,69 @@
             </div>
         </div>
 
-        <div class="mejs-controls flex flex-wrap items-center gap-3 border-t border-[#2b2b2b] pt-4">
-            <div class="mejs-button mejs-playpause-button">
-                <button
-                    type="button"
-                    class="inline-flex h-10 min-w-[64px] items-center justify-center border border-lucille-accent bg-transparent px-3 py-0 text-[10px] font-display uppercase tracking-[.16em] text-lucille-accent transition-colors hover:bg-lucille-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
-                    @click="togglePlayback()"
-                    :disabled="!activeEpisode.src && !activeEpisode.archive_url"
-                >
-                    <span x-show="!playing">Play</span>
-                    <span x-show="playing">Pause</span>
-                </button>
+        <div class="mejs-controls flex flex-col gap-3 border-t border-[#2b2b2b] pt-4">
+            <div class="flex items-center gap-3 w-full">
+                <div class="mejs-button mejs-playpause-button shrink-0">
+                    <button
+                        type="button"
+                        class="inline-flex h-10 min-w-[64px] items-center justify-center border border-lucille-accent bg-transparent px-3 py-0 text-[10px] font-display uppercase tracking-[.16em] text-lucille-accent transition-colors hover:bg-lucille-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
+                        @click="togglePlayback()"
+                        :disabled="!activeEpisode.src && !activeEpisode.archive_url"
+                    >
+                        <span x-show="!playing">Play</span>
+                        <span x-show="playing">Pause</span>
+                    </button>
+                </div>
+
+                <div class="mejs-time mejs-currenttime-container flex shrink-0 items-center gap-1 text-[10px] font-display uppercase tracking-[.18em] text-[#dcdcdc]">
+                    <span x-text="formatTime(elapsed)"></span>
+                    <span class="mx-0.5 text-[#595959]">/</span>
+                    <span x-text="formatTime(duration)"></span>
+                </div>
+
+                <div class="mejs-time-rail flex-1">
+                    <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        :value="progress"
+                        @input="seekAudio(Number($event.target.value) || 0)"
+                        class="lucille-range-slider"
+                        aria-label="Time Slider"
+                    >
+                </div>
             </div>
 
-            <div class="mejs-time mejs-currenttime-container flex items-center gap-1 text-[10px] font-display uppercase tracking-[.18em] text-[#dcdcdc]">
-                <span x-text="formatTime(elapsed)"></span>
-                <span class="mx-0.5 text-[#595959]">/</span>
-                <span x-text="formatTime(duration)"></span>
-            </div>
+            <div class="flex items-center gap-3 w-full">
+                <div class="mejs-button mejs-volume-button mejs-mute shrink-0">
+                    <button
+                        type="button"
+                        class="inline-flex h-10 w-10 items-center justify-center border border-[#2b2b2b] bg-transparent text-[#f5f5f5] transition-colors hover:bg-white/5"
+                        @click="muted = !muted; const audio = $refs.audio; if (audio) { audio.muted = muted; }"
+                        :aria-pressed="muted ? 'true' : 'false'"
+                        aria-label="Mute"
+                        title="Mute"
+                    >
+                        <span x-show="!muted">🔊</span>
+                        <span x-show="muted">🔇</span>
+                    </button>
+                </div>
 
-            <div class="mejs-time-rail min-w-[80px] flex-1 sm:min-w-[120px]">
-                <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="1"
-                    :value="progress"
-                    @input="seekAudio(Number($event.target.value) || 0)"
-                    class="mejs-time-slider h-2 w-full cursor-pointer appearance-none rounded-full bg-[#595959] accent-lucille-accent"
-                    aria-label="Time Slider"
-                >
-            </div>
-
-            <div class="mejs-button mejs-volume-button mejs-mute">
-                <button
-                    type="button"
-                    class="inline-flex h-10 w-10 items-center justify-center border border-[#2b2b2b] bg-transparent text-[#f5f5f5] transition-colors hover:bg-white/5"
-                    @click="muted = !muted; const audio = $refs.audio; if (audio) { audio.muted = muted; }"
-                    :aria-pressed="muted ? 'true' : 'false'"
-                    aria-label="Mute"
-                    title="Mute"
-                >
-                    <span x-show="!muted">🔊</span>
-                    <span x-show="muted">🔇</span>
-                </button>
-            </div>
-
-            <div class="mejs-horizontal-volume-slider flex min-w-[60px] flex-1 sm:min-w-[80px] items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 border-t sm:border-t-0 border-[#2b2b2b] pt-3 sm:pt-0">
-                <span class="text-[9px] font-display uppercase tracking-[.16em] text-[#7b7b7b] whitespace-nowrap sm:hidden">Vol</span>
-                <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="1"
-                    :value="volume"
-                    @input="setVolume($event.target.value)"
-                    class="h-2 w-full cursor-pointer appearance-none rounded-full bg-[#595959] accent-lucille-accent"
-                    aria-label="Volume Slider"
-                >
-                <span class="text-[9px] font-display text-[#7b7b7b] w-6 text-right sm:hidden" x-text="volume + '%'"></span>
+                <div class="mejs-horizontal-volume-slider flex flex-1 items-center gap-3 w-full sm:max-w-[150px]">
+                    <span class="text-[9px] font-display uppercase tracking-[.16em] text-[#7b7b7b] whitespace-nowrap sm:hidden">Vol</span>
+                    <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        :value="volume"
+                        @input="setVolume($event.target.value)"
+                        class="lucille-range-slider"
+                        aria-label="Volume Slider"
+                    >
+                    <span class="text-[9px] font-display text-[#7b7b7b] w-6 text-right sm:hidden" x-text="volume + '%'"></span>
+                </div>
             </div>
         </div>
     </div>
