@@ -54,7 +54,7 @@ class SiteController extends Controller
         );
 
         $agencies = $this->safeValue(
-            fn () => \App\Models\Agency::query()
+            fn () => Agency::query()
                 ->where('is_active', true)
                 ->whereNotNull('logo_path')
                 ->orderBy('sort_order')
@@ -369,8 +369,8 @@ class SiteController extends Controller
                         usort($eps, function ($a, $b) {
                             $da = $a['date'] ?? '';
                             $db = $b['date'] ?? '';
-                            $tsA = $da ? (\DateTimeImmutable::createFromFormat('d/m/Y', $da)?->getTimestamp() ?? 0) : 0;
-                            $tsB = $db ? (\DateTimeImmutable::createFromFormat('d/m/Y', $db)?->getTimestamp() ?? 0) : 0;
+                            $tsA = $da ? (\Carbon\Carbon::createFromFormat('d/m/Y', $da)?->timestamp ?? 0) : 0;
+                            $tsB = $db ? (\Carbon\Carbon::createFromFormat('d/m/Y', $db)?->timestamp ?? 0) : 0;
                             return $tsB - $tsA;
                         });
                     }
@@ -379,11 +379,11 @@ class SiteController extends Controller
                     uasort($groupedEpisodes, function ($a, $b) {
                         $dateA = $a[0]['date'] ?? '';
                         $dateB = $b[0]['date'] ?? '';
-                        $tsA = $dateA ? (\DateTimeImmutable::createFromFormat('d/m/Y', $dateA)?->getTimestamp() ?? 0) : 0;
-                        $tsB = $dateB ? (\DateTimeImmutable::createFromFormat('d/m/Y', $dateB)?->getTimestamp() ?? 0) : 0;
+                        $tsA = $dateA ? (\Carbon\Carbon::createFromFormat('d/m/Y', $dateA)?->timestamp ?? 0) : 0;
+                        $tsB = $dateB ? (\Carbon\Carbon::createFromFormat('d/m/Y', $dateB)?->timestamp ?? 0) : 0;
                         return $tsB - $tsA;
                     });
-                } catch (Throwable) {
+                } catch (\Throwable) {
                 }
 
                 $programSlugMap = [];
@@ -394,7 +394,7 @@ class SiteController extends Controller
                             ->pluck('archive_identifier', 'nombre')
                             ->toArray();
                     }
-                } catch (Throwable) {
+                } catch (\Throwable) {
                 }
 
                 return [
@@ -447,7 +447,6 @@ class SiteController extends Controller
 
     public function multimedia(ArchiveOrgService $archiveOrgService): View
     {
-        // ── Reutilizamos el mismo caché de programas para no duplicar llamadas a Archive.org ──
         $cacheVersion = $this->cacheVersion('programs');
         $programsCache = Cache::remember(
             "site.programs.catalog.v{$cacheVersion}",
@@ -509,15 +508,15 @@ class SiteController extends Controller
                     }
                     foreach ($groupedEpisodes as &$eps) {
                         usort($eps, function ($a, $b) {
-                            $tsA = ($a['date'] ?? '') ? (\DateTimeImmutable::createFromFormat('d/m/Y', $a['date'])?->getTimestamp() ?? 0) : 0;
-                            $tsB = ($b['date'] ?? '') ? (\DateTimeImmutable::createFromFormat('d/m/Y', $b['date'])?->getTimestamp() ?? 0) : 0;
+                            $tsA = ($a['date'] ?? '') ? (\Carbon\Carbon::createFromFormat('d/m/Y', $a['date'])?->timestamp ?? 0) : 0;
+                            $tsB = ($b['date'] ?? '') ? (\Carbon\Carbon::createFromFormat('d/m/Y', $b['date'])?->timestamp ?? 0) : 0;
                             return $tsB - $tsA;
                         });
                     }
                     unset($eps);
                     uasort($groupedEpisodes, function ($a, $b) {
-                        $tsA = ($a[0]['date'] ?? '') ? (\DateTimeImmutable::createFromFormat('d/m/Y', $a[0]['date'])?->getTimestamp() ?? 0) : 0;
-                        $tsB = ($b[0]['date'] ?? '') ? (\DateTimeImmutable::createFromFormat('d/m/Y', $b[0]['date'])?->getTimestamp() ?? 0) : 0;
+                        $tsA = ($a[0]['date'] ?? '') ? (\Carbon\Carbon::createFromFormat('d/m/Y', $a[0]['date'])?->timestamp ?? 0) : 0;
+                        $tsB = ($b[0]['date'] ?? '') ? (\Carbon\Carbon::createFromFormat('d/m/Y', $b[0]['date'])?->timestamp ?? 0) : 0;
                         return $tsB - $tsA;
                     });
                 } catch (\Throwable) {}
@@ -536,7 +535,6 @@ class SiteController extends Controller
             }
         );
 
-        // ── Resto de datos ──
         $videos = $this->safeValue(fn () => Video::query()->latest()->take(12)->get(), collect());
 
         $songs = $this->safeValue(
@@ -572,7 +570,6 @@ class SiteController extends Controller
                 ->where('archive_identifier', $identifier)
                 ->first();
 
-            // Intentar obtener episodios desde archive.org via HTTP directo y cachearlos
             try {
                 $cacheKey = "site.program.detail.archive_data." . md5($identifier);
                 $archiveData = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($identifier, $masterProgram) {
@@ -628,11 +625,9 @@ class SiteController extends Controller
                     $episodes = $archiveData['episodes'];
                     $program = $archiveData['program'];
                 }
-            } catch (Throwable) {
-                // Fallback silencioso
+            } catch (\Throwable) {
             }
 
-            // Si fallo la API, usar datos locales
             if (!$program) {
                 $program = [
                     'id' => $identifier,
@@ -646,7 +641,7 @@ class SiteController extends Controller
                     'mixcloud' => $masterProgram?->url_mixcloud ?? '',
                 ];
             }
-        } catch (Throwable) {
+        } catch (\Throwable) {
         }
 
         if (!$program) {
@@ -673,7 +668,7 @@ class SiteController extends Controller
 
     public function talentAlbumSingle(string $id, string $slug): View
     {
-        $album = \App\Models\TalentAlbum::query()
+        $album = TalentAlbum::query()
             ->whereKey((int) $id)
             ->where('is_published', true)
             ->with('talent.media')
@@ -746,7 +741,7 @@ class SiteController extends Controller
         $page = max(1, (int) request()->integer('page', 1));
         $version = $this->cacheVersion('posts');
         $monthValue = $month !== null ? str_pad((string) ((int) $month), 2, '0', STR_PAD_LEFT) : null;
-        $monthLabel = $monthValue ? \DateTime::createFromFormat('!m', $monthValue)?->format('F') : null;
+        $monthLabel = $monthValue ? \Carbon\Carbon::createFromFormat('!m', $monthValue)?->format('F') : null;
         $archiveLabel = $monthLabel ? "{$monthLabel} {$year}" : (string) $year;
         $cacheKey = "site.blog.archives.date.{$year}." . ($monthValue ?? 'all') . ".v{$version}.page{$page}.per20";
 
@@ -973,8 +968,8 @@ class SiteController extends Controller
 
     private function contentReactionOwnerKey(): string
     {
-        if (auth()->check()) {
-            return 'user:' . (string) auth()->id();
+        if (\Illuminate\Support\Facades\Auth::check()) {
+            return 'user:' . (string) \Illuminate\Support\Facades\Auth::id();
         }
 
         $cookieValue = trim((string) request()->cookie('sr_content_reactions_owner', ''));
@@ -1110,9 +1105,7 @@ class SiteController extends Controller
     }
 
     /**
-     * @template T
-     * @param callable():T $resolver
-     * @return T
+     * @return array
      */
     private function cachedEfemeridesArchive(): array
     {
@@ -1249,34 +1242,34 @@ class SiteController extends Controller
             "site.albums.discography.v{$version}",
             now()->addMinutes(20),
             function (): array {
-                $talentAlbums = \App\Models\TalentAlbum::query()
+                $talentAlbums = TalentAlbum::query()
                     ->where('is_published', true)
                     ->with('talent')
                     ->orderByDesc('release_date')
                     ->get()
-                    ->map(fn ($a) => [
+                    ->map(fn (TalentAlbum $a) => [
                         'id' => $a->id,
                         'title' => $a->title,
                         'slug' => $a->slug,
                         'artist' => $a->talent->band_name ?? 'Artista',
                         'cover' => $a->coverUrl() ?? asset('assets/lucille/man-597179_1920.jpg'),
-                        'date' => $a->release_date?->format('F j, Y') ?? '',
+                        'date' => $a->release_date ? \Carbon\Carbon::parse($a->release_date)->format('F j, Y') : '',
                         'sort' => $a->release_date?->timestamp ?? 0,
                         'type' => 'talent',
                         'url' => route('albums.single', ['slug' => $a->slug]),
                     ]);
 
-                $adminAlbums = \App\Models\Album::query()
+                $adminAlbums = Album::query()
                     ->whereNotNull('title')
                     ->orderByDesc('released_at')
                     ->get()
-                    ->map(fn ($a) => [
+                    ->map(fn (Album $a) => [
                         'id' => $a->id,
                         'title' => $a->title,
                         'slug' => $a->slug,
                         'artist' => $a->artist ?? 'Artista',
                         'cover' => $a->cover_image_url,
-                        'date' => $a->released_at?->format('F j, Y') ?? '',
+                        'date' => $a->released_at ? \Carbon\Carbon::parse($a->released_at)->format('F j, Y') : '',
                         'sort' => $a->released_at?->timestamp ?? 0,
                         'type' => 'admin',
                         'url' => route('albums.single', ['slug' => $a->slug]),
@@ -1288,9 +1281,7 @@ class SiteController extends Controller
     }
 
     /**
-     * @param array<int, string> $values
-     * @param array<int, string> $fallback
-     * @return array<int, string>
+     * @return View
      */
     private function blogListing(string $pageTitle, ?string $pageSubtitle, string $pageDescription, mixed $posts): View
     {
@@ -1665,12 +1656,12 @@ class SiteController extends Controller
     private function discographyFallbackAlbums()
     {
         return collect([
-            ['title' => 'Nightride', 'slug' => 'nightride', 'artist' => 'Tinashe', 'cover_image' => 'assets/lucille/album1.jpg', 'released_at' => now()->subYear(3)],
-            ['title' => 'Company', 'slug' => 'company', 'artist' => 'Tinashe', 'cover_image' => 'assets/lucille/album3.jpg', 'released_at' => now()->subYear(2)],
-            ['title' => 'Stereotypes', 'slug' => 'stereotypes', 'artist' => 'Black Violin', 'cover_image' => 'assets/lucille/Stereotypes.jpg', 'released_at' => now()->subYear(2)->subMonths(3)],
-            ['title' => 'Here', 'slug' => 'here', 'artist' => 'Alicia Keys', 'cover_image' => 'assets/lucille/album2.jpg', 'released_at' => now()->subYear(4)],
-            ['title' => 'Because Of The Times', 'slug' => 'because-of-the-times', 'artist' => 'Kings of Leon', 'cover_image' => 'assets/lucille/becauseoftimes.jpg', 'released_at' => now()->subYear(5)],
-            ['title' => 'Made Up Mind', 'slug' => 'made-up-mind', 'artist' => 'Tedeschi Trucks Band', 'cover_image' => 'assets/lucille/Made-Up-Mind.jpg', 'released_at' => now()->subYear(6)],
+            ['title' => 'Nightride', 'slug' => 'nightride', 'artist' => 'Tinashe', 'cover_image' => 'assets/lucille/album1.jpg', 'released_at' => now()->subYears(3)],
+            ['title' => 'Company', 'slug' => 'company', 'artist' => 'Tinashe', 'cover_image' => 'assets/lucille/album3.jpg', 'released_at' => now()->subYears(2)],
+            ['title' => 'Stereotypes', 'slug' => 'stereotypes', 'artist' => 'Black Violin', 'cover_image' => 'assets/lucille/Stereotypes.jpg', 'released_at' => now()->subYears(2)->subMonths(3)],
+            ['title' => 'Here', 'slug' => 'here', 'artist' => 'Alicia Keys', 'cover_image' => 'assets/lucille/album2.jpg', 'released_at' => now()->subYears(4)],
+            ['title' => 'Because Of The Times', 'slug' => 'because-of-the-times', 'artist' => 'Kings of Leon', 'cover_image' => 'assets/lucille/becauseoftimes.jpg', 'released_at' => now()->subYears(5)],
+            ['title' => 'Made Up Mind', 'slug' => 'made-up-mind', 'artist' => 'Tedeschi Trucks Band', 'cover_image' => 'assets/lucille/Made-Up-Mind.jpg', 'released_at' => now()->subYears(6)],
         ])->map(function (array $album): Album {
             return Album::make($album);
         });
@@ -1697,7 +1688,7 @@ class SiteController extends Controller
             'title' => $album->title,
             'artist' => $album->artist,
             'cover' => $album->cover_image_url,
-            'date' => $album->released_at?->format('F j, Y') ?? 'N/A',
+            'date' => $album->released_at ? \Carbon\Carbon::parse($album->released_at)->format('F j, Y') : 'N/A',
             'label' => 'Seven Rock Radio',
             'producer' => 'Admin',
             'discs' => '1',
@@ -1834,7 +1825,7 @@ class SiteController extends Controller
         ];
     }
 
-    private function eventsCatalog(string $title, string $subtitle, string $description, $events): View
+    private function eventsCatalog(string $title, string $subtitle, string $description, mixed $events): View
     {
         return view('pages.events', [
             'pageTitle' => $title,
