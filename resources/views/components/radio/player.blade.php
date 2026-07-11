@@ -491,7 +491,7 @@
                         </div>
                         
                         <!-- RadioBOSS Cloud Track Timer Widget (Hidden, used as data source) -->
-                        <div class='rbcloud_tracktimer sr-only'>
+                        <div class='rbcloud_tracktimer' style="position: absolute; opacity: 0; pointer-events: none; width: 10px; height: 10px; overflow: hidden; z-index: -99;">
                             <span id='rbcloud_tracktimer_e9597'></span>
                             <span id='rbcloud_tracktimer_sep9597' hidden> &frasl; <!-- slash --> </span>
                             <span id='rbcloud_tracktimer_r9597'></span>

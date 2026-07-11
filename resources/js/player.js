@@ -1542,9 +1542,11 @@ export function registerRadioPlayer(Alpine) {
                     const timerElapsedEl = document.getElementById(this.widgetIds.timerElapsed);
                     const timerRemainingEl = document.getElementById(this.widgetIds.timerRemaining);
                     const timer = this.readTrackTimerWidget(timerRoot, timerElapsedEl, timerRemainingEl);
-                    if (timer.elapsed > 0 && timer.duration > 0) {
+                    if (timer.elapsed > 0) {
                         this.progress.elapsed = timer.elapsed;
-                        this.progress.duration = timer.duration;
+                        this.progress.duration = timer.duration > 0 
+                                                ? timer.duration 
+                                                : (this.progress.duration > 0 ? this.progress.duration : timer.elapsed);
                     } else {
                         this.progress.elapsed = Math.max(0, Math.round(this.progress.elapsed) + 0.5);
                     }
