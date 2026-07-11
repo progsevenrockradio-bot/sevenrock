@@ -233,7 +233,7 @@ export function registerRadioPlayer(Alpine) {
             this.queueStatusRefresh(0);
 
             this.startPolling();
-            this.progressHandle = setInterval(() => this.tickProgress(), 1000);
+            this.progressHandle = setInterval(() => this.tickProgress(), 500);
 
             this.boundHotkeys = (event) => this.handleHotkeys(event);
             window.addEventListener('keydown', this.boundHotkeys);
@@ -1371,14 +1371,15 @@ export function registerRadioPlayer(Alpine) {
             const duration = this.parseWidgetDuration(durationText);
 
             if (elapsed > 0 || duration > 0) {
-                return { elapsed, duration };
+                return { elapsed, duration: elapsed + duration };
             }
 
             const rawText = this.cleanWidgetText(timerRoot?.innerText || timerRoot?.textContent || '');
-            const matches = Array.from(rawText.matchAll(/\b(\d{1,3}:\d{2})\b/g), (match) => match[1]);
+            const fallbackElapsed = this.parseWidgetDuration(matches[0] || '');
+            const fallbackRemaining = this.parseWidgetDuration(matches[1] || '');
             return {
-                elapsed: this.parseWidgetDuration(matches[0] || ''),
-                duration: this.parseWidgetDuration(matches[1] || ''),
+                elapsed: fallbackElapsed,
+                duration: fallbackElapsed + fallbackRemaining,
             };
         },
 
@@ -1527,10 +1528,25 @@ export function registerRadioPlayer(Alpine) {
             }
 
             const audio = this.$refs.audio;
-            if (audio && Number.isFinite(audio.currentTime) && audio.currentTime > 0) {
+            if (audio && Number.isFinite(audio.currentTime) && audio.currentTime > 0 && !this.track.is_live) {
                 this.progress.elapsed = Math.round(audio.currentTime);
+            } else if (this.track.is_live) {
+                const timerRoot = document.getElementById(this.widgetIds.timerElapsed)?.closest?.('.rbcloud_tracktimer');
+                if (timerRoot) {
+                    const timerElapsedEl = document.getElementById(this.widgetIds.timerElapsed);
+                    const timerRemainingEl = document.getElementById(this.widgetIds.timerRemaining);
+                    const timer = this.readTrackTimerWidget(timerRoot, timerElapsedEl, timerRemainingEl);
+                    if (timer.elapsed > 0 && timer.duration > 0) {
+                        this.progress.elapsed = timer.elapsed;
+                        this.progress.duration = timer.duration;
+                    } else {
+                        this.progress.elapsed = Math.max(0, Math.round(this.progress.elapsed) + 0.5);
+                    }
+                } else {
+                    this.progress.elapsed = Math.max(0, Math.round(this.progress.elapsed) + 0.5);
+                }
             } else {
-                this.progress.elapsed = Math.max(0, Math.round(this.progress.elapsed) + 1);
+                this.progress.elapsed = Math.max(0, Math.round(this.progress.elapsed) + 0.5);
             }
 
             this.syncProgress();
