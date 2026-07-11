@@ -436,10 +436,7 @@
             class="fixed bottom-0 left-0 right-0 z-[100] flex justify-center p-3 sm:p-4 pointer-events-none"
         >
             <div class="w-full max-w-6xl pointer-events-auto relative bg-[#0b0b0c]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] overflow-hidden p-3 sm:p-4">
-                {{-- Progress Bar (Desktop Only) --}}
-                <div class="absolute top-0 left-0 right-0 h-[3px] bg-white/5 rounded-t-2xl hidden md:block">
-                    <div class="h-full bg-lucille-accent transition-all duration-100 rounded-t-2xl" :style="'width: ' + progress.ratio + '%'"></div>
-                </div>
+
 
                 {{-- Layout de Escritorio (Desktop) --}}
                 <div class="hidden md:flex md:flex-row items-center justify-between gap-3">
