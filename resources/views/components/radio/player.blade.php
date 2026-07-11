@@ -429,36 +429,80 @@
             </div>
         </div>
     @else
-        <div
-            class="radio-player-dock is-dock-default"
-            aria-label="Reproductor"
-            :class="{ 'is-expanded': !dockMinimized }"
-            :data-dock-state="dockMinimized ? 'minimized' : 'expanded'"
+        {{-- Floating smart player --}}
+        <div x-cloak x-show="dockVisible"
+            x-transition:enter="transition-all duration-400 ease-out" x-transition:enter-start="translate-y-20 opacity-0" x-transition:enter-end="translate-y-0 opacity-100"
+            x-transition:leave="transition-all duration-300 ease-in"  x-transition:leave-start="translate-y-0 opacity-100"  x-transition:leave-end="translate-y-20 opacity-0"
+            class="fixed bottom-0 left-0 right-0 z-[100] flex justify-center p-3 sm:p-4 pointer-events-none"
         >
-            <div class="rbcloud_nowplaying radio-player-dock-cover-wrap">
-                <span class="radio-player-live-pill radio-player-dock-live" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'EN VIVO' : 'PLAYBACK'"></span>
-                <button type="button" class="radio-player-dock-trigger" data-player-band-trigger @click="toggleInfoWindow($event)" aria-label="Abrir información">
-                    <img class="radio-player-cover radio-player-dock-cover" data-player-cover-image :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="cover art" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" loading="lazy">
-                </button>
-            </div>
+            <div class="w-full max-w-5xl pointer-events-auto relative bg-[#0b0b0c]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] overflow-hidden p-3 sm:p-4">
+                {{-- Progress Bar --}}
+                <div class="absolute top-0 left-0 right-0 h-[3px] bg-white/5 rounded-t-2xl">
+                    <div class="h-full bg-lucille-accent transition-all duration-100 rounded-t-2xl" :style="'width: ' + progress.ratio + '%'"></div>
+                </div>
 
-            <div class="radio-player-meta-column">
-                <div class="radio-player-dock-copy">
-                    <span x-show="!dockMinimized" x-cloak class="radio-player-dock-line" aria-hidden="true"></span>
-                    <div class="radio-player-meta radio-player-dock-meta">
-                        <strong class="radio-player-dock-title" data-player-title-text x-text="track.title || defaultTitle"></strong>
-                        <span x-show="!dockMinimized" x-cloak data-player-artist-text class="radio-player-dock-artist" x-text="track.artist || defaultArtist"></span>
-                        <small x-show="!dockMinimized && track.program_name" x-cloak data-player-program-text class="radio-player-dock-program" x-text="track.program_name"></small>
-                        <small x-show="!dockMinimized && !track.program_name && nextProgram" x-cloak data-player-next-program-text class="radio-player-dock-next-program" x-text="'Próximo: ' + (nextProgram.name || '') + (nextProgram.schedule_time ? ' a las ' + nextProgram.schedule_time : '')"></small>
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    {{-- Cover + info --}}
+                    <div class="flex items-center gap-3 min-w-0 flex-[2] sm:flex-1 w-full sm:w-auto">
+                        <div class="h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#2b2b2b] bg-[#111] shadow-md relative">
+                            <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="track.title || defaultTitle" width="256" height="256" class="h-full w-full object-cover" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
+                            <div x-show="track.is_live" class="absolute inset-0 flex items-center justify-center bg-black/60">
+                                <span class="text-[8px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
+                            </div>
+                            {{-- Mini equalizer --}}
+                            <div x-show="playing" class="absolute bottom-0 left-0 right-0 h-4 flex items-end justify-center gap-px px-1 bg-gradient-to-t from-black/80 to-transparent">
+                                <span class="mm-eq-bar" style="animation-delay:0ms"></span>
+                                <span class="mm-eq-bar" style="animation-delay:100ms"></span>
+                                <span class="mm-eq-bar" style="animation-delay:200ms"></span>
+                                <span class="mm-eq-bar" style="animation-delay:300ms"></span>
+                                <span class="mm-eq-bar" style="animation-delay:150ms"></span>
+                            </div>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="truncate font-display text-[12px] uppercase tracking-[.08em] text-[#dcdcdc] leading-tight" x-text="track.title || defaultTitle"></div>
+                            <div class="truncate text-[10px] text-[#888] mt-0.5" x-text="track.artist || defaultArtist"></div>
+                            <small x-show="track.program_name" class="block truncate text-[9px] text-[#555] font-display tracking-wider mt-0.5" x-text="track.program_name"></small>
+                        </div>
                     </div>
-                    <div x-show="!dockMinimized" x-cloak class="rbcloud_tracktimer radio-player-dock-timer">
-                        <span id="rbcloud_tracktimer_e11096"></span>
-                        <span id="rbcloud_tracktimer_sep11096" hidden> &frasl; </span>
-                        <span id="rbcloud_tracktimer_r11096"></span>
+
+                    {{-- Controls + seek --}}
+                    <div class="flex items-center gap-4 w-full sm:w-auto flex-[3] max-w-lg mx-auto">
+                        <button type="button"
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_15px_rgba(195,39,32,0.4)] transition-all hover:bg-lucille-accent/90 hover:scale-105 active:scale-95"
+                            @click="togglePlay()" aria-label="Reproducir o pausar">
+                            <span class="text-base leading-none ml-0.5" x-show="!playing">▶</span>
+                            <span class="text-base leading-none" x-show="playing">⏸</span>
+                        </button>
+                        <div class="hidden sm:flex items-center gap-2.5 w-full">
+                            <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-right" x-text="track.is_live ? '●' : formatTime(progress.elapsed)"></span>
+                            <div class="flex-1 py-2">
+                                <input type="range" min="0" max="100" step="0.1" :value="progress.ratio" @input="!track.is_live && seek($event)" :disabled="track.is_live" class="lucille-range-slider" aria-label="Progreso">
+                            </div>
+                            <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-left" x-text="track.is_live ? 'LIVE' : formatTime(progress.duration)"></span>
+                        </div>
                     </div>
-                    <div class="radio-player-share-popout radio-player-dock-share-popout-desktop" x-show="!dockMinimized" x-cloak>
-                        <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="toggleSharePanel()" :aria-expanded="sharePanelOpen" title="Compartir" aria-label="Compartir">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+
+                    {{-- Actions, Mute, Volume, Close --}}
+                    <div class="flex items-center justify-end gap-2 w-full sm:w-auto flex-1 shrink-0">
+                        {{-- Info Panel Trigger --}}
+                        <button type="button"
+                            class="flex h-8 px-3 items-center gap-1.5 rounded border border-[#242424] bg-transparent text-[#777] hover:text-white hover:border-[#444] transition-colors text-[10px] uppercase tracking-[.06em] font-display"
+                            @click="toggleInfoWindow($event)" aria-label="Letras e info de banda">
+                            <span>🎵</span><span class="hidden sm:inline">Info</span>
+                        </button>
+
+                        {{-- Favorite --}}
+                        <button type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#aaa] transition-colors hover:text-white hover:border-[#444]"
+                            @click="toggleFavorite()" :aria-pressed="isFavoriteCurrent()" aria-label="Favorito">
+                            <span x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
+                        </button>
+
+                        {{-- Share --}}
+                        <button type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#aaa] transition-colors hover:text-white hover:border-[#444]"
+                            @click="toggleSharePanel()" :aria-expanded="sharePanelOpen" aria-label="Compartir">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="18" cy="5" r="3"></circle>
                                 <circle cx="6" cy="12" r="3"></circle>
                                 <circle cx="18" cy="19" r="3"></circle>
@@ -466,66 +510,57 @@
                                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                             </svg>
                         </button>
-                        <button type="button" class="radio-player-chip radio-player-dock-share-button" @click="openPopout()" title="Reproductor emergente" aria-label="Reproductor emergente">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                                <polyline points="15 3 21 3 21 9"></polyline>
-                                <line x1="10" y1="14" x2="21" y2="3"></line>
-                            </svg>
+
+                        {{-- Mute --}}
+                        <button type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#aaa] transition-colors hover:text-white hover:border-[#444]"
+                            @click="toggleMute()" aria-label="Silenciar">
+                            <span x-show="!muted">🔊</span><span x-show="muted">🔇</span>
+                        </button>
+
+                        {{-- Volume Slider --}}
+                        <div class="w-16 sm:w-20 hidden sm:flex items-center gap-1.5">
+                            <input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" class="lucille-range-slider" aria-label="Volumen">
+                            <span class="text-[9px] font-mono text-[#666] min-w-[24px]" x-text="Math.round(volume * 100) + '%'">80%</span>
+                        </div>
+
+                        {{-- Close --}}
+                        <button type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#666] transition-colors hover:text-white hover:border-[#444]"
+                            @click="hideDock()" aria-label="Cerrar">
+                            <span class="text-sm leading-none">✕</span>
                         </button>
                     </div>
-                    <div class="radio-player-mobile-share-popout" aria-label="Acciones móviles extra" x-show="!dockMinimized" x-cloak>
-                        <button type="button" class="radio-player-chip radio-player-mobile-share" @click="toggleSharePanel()" :aria-expanded="sharePanelOpen" title="Compartir" aria-label="Compartir">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="18" cy="5" r="3"></circle>
-                                <circle cx="6" cy="12" r="3"></circle>
-                                <circle cx="18" cy="19" r="3"></circle>
-                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                            </svg>
-                        </button>
-                        <button type="button" class="radio-player-chip radio-player-mobile-popout" @click="openPopout()" title="Reproductor emergente" aria-label="Reproductor emergente">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                                <polyline points="15 3 21 3 21 9"></polyline>
-                                <line x1="10" y1="14" x2="21" y2="3"></line>
-                            </svg>
-                        </button>
-                    </div>
-                    <div x-show="sharePanelOpen && !dockMinimized" x-cloak class="radio-player-share-panel radio-player-share-panel--dock" aria-label="Compartir emisión">
-                        <span class="radio-player-share-panel-label">Compartir</span>
-                        <a :href="shareTargets().facebook" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Facebook" title="Facebook">
+                </div>
+
+                {{-- Share Panel Overlay inside Dock --}}
+                <div x-show="sharePanelOpen" x-cloak class="radio-player-share-panel radio-player-share-panel--dock border-t border-white/5 mt-3 pt-3">
+                    <span class="radio-player-share-panel-label text-[10px] text-[#555] uppercase tracking-wider block mb-2">Compartir emisión</span>
+                    <div class="flex gap-2">
+                        <a :href="shareTargets().facebook" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Facebook">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
                             </svg>
-                            <span class="radio-player-share-link-code">FB</span>
-                            <span class="radio-player-share-link-text">Facebook</span>
                         </a>
-                        <a :href="shareTargets().whatsapp" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en WhatsApp" title="WhatsApp">
+                        <a :href="shareTargets().whatsapp" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en WhatsApp">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M17 14.25c-.25-.13-1.5-.74-1.73-.82-.23-.08-.4-.12-.57.14-.17.26-.67.84-.82 1.01-.15.17-.3.19-.55.06A7.4 7.4 0 0 1 10.3 12.3a8.13 8.13 0 0 1-1.39-1.73c-.15-.26 0-.4.12-.52.1-.1.25-.3.37-.44.13-.15.17-.25.26-.42.08-.17.04-.32 0-.45C9.6 8.63 9 7.37 8.78 6.85c-.22-.5-.45-.43-.6-.44l-.52-.01c-.18 0-.47.07-.72.34C6.7 7.01 6 7.7 6 9.1s1 2.76 1.14 2.95c.14.19 1.96 3 4.75 4.2.66.29 1.18.46 1.59.59.66.21 1.27.18 1.75.11.53-.08 1.63-.67 1.86-1.31.23-.65.23-1.2.16-1.31-.07-.11-.25-.18-.5-.3z"></path>
                                 <path d="M3 21l1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
                             </svg>
-                            <span class="radio-player-share-link-code">WA</span>
-                            <span class="radio-player-share-link-text">WhatsApp</span>
                         </a>
-                        <a :href="shareTargets().telegram" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Telegram" title="Telegram">
+                        <a :href="shareTargets().telegram" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Telegram">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="22" y1="2" x2="11" y2="13"></line>
                                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                             </svg>
-                            <span class="radio-player-share-link-code">TG</span>
-                            <span class="radio-player-share-link-text">Telegram</span>
                         </a>
-                        <a :href="shareTargets().twitter" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en X" title="X">
+                        <a :href="shareTargets().twitter" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en X">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M4 4l11.733 16h4.267l-11.733 -16z"></path>
                                 <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"></path>
                             </svg>
-                            <span class="radio-player-share-link-code">X</span>
-                            <span class="radio-player-share-link-text">X</span>
                         </a>
-                        <button type="button" class="radio-player-share-link radio-player-share-link--native" @click="shareCurrent()" aria-label="Compartir nativo" title="Compartir">
+                        <button type="button" class="radio-player-share-link" @click="shareCurrent()" aria-label="Compartir nativo">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="18" cy="5" r="3"></circle>
                                 <circle cx="6" cy="12" r="3"></circle>
@@ -533,89 +568,29 @@
                                 <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
                                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                             </svg>
-                            <span class="radio-player-share-link-code">N</span>
-                            <span class="radio-player-share-link-text">Nativo</span>
                         </button>
                     </div>
                 </div>
             </div>
-
-            <span class="radio-player-actions radio-player-dock-actions">
-                <button type="button" class="radio-player-icon radio-player-dock-icon radio-player-dock-icon--details" data-player-action="details" @click.stop="toggleInfoWindow($event)" title="Detalles">i</button>
-                <div class="radio-player-actions-center radio-player-dock-actions-center">
-                    <button type="button" data-player-action="expand" @click.stop="dockMinimized = false" aria-label="Expandir" title="Expandir" x-show="dockMinimized" x-cloak class="radio-player-expand-btn radio-player-dock-icon radio-player-dock-icon--toggle">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <button type="button" class="radio-player-primary radio-player-dock-play" data-player-action="play" @click.stop="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'" title="Play / Pause">
-                        <span x-text="playing ? '❚❚' : '▶'">▶</span>
-                    </button>
-                    <button type="button" data-player-action="minimize" @click.stop="dockMinimized = true" aria-label="Minimizar" title="Minimizar" x-show="!dockMinimized" x-cloak class="radio-player-minimize-btn radio-player-dock-icon radio-player-dock-icon--toggle">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                    </button>
-                </div>
-                <div class="radio-player-actions-spacer radio-player-dock-actions-spacer" aria-hidden="true"></div>
-                <div class="radio-player-favorite-wrap">
-                    <button type="button" data-player-action="favorite" @click="toggleFavorite()" aria-label="Like o favorito" :aria-pressed="isFavoriteCurrent()" class="radio-player-dock-icon radio-player-dock-icon--favorite">
-                        <span data-player-favorite-icon x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
-                    </button>
-                    <span class="radio-player-favorite-count" x-show="favoriteCount > 0" x-cloak x-text="favoriteCount"></span>
-                </div>
-            </span>
-
-            <div class="radio-player-dock-side">
-                <div class="sr-dock-volume radio-player-dock-volume">
-                    <button type="button" class="radio-player-dock-mute" data-player-action="mute" @click.stop="toggleMute()" aria-label="Silenciar" title="Silenciar">
-                        <span data-player-mute-muted-icon x-show="muted" aria-hidden="true" class="radio-player-dock-mute-icon">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M11 5 6 9H3v6h3l5 4z"></path>
-                                <path d="M16 9l5 6"></path>
-                                <path d="M21 9l-5 6"></path>
-                            </svg>
-                        </span>
-                        <span data-player-mute-unmuted-icon x-show="!muted" aria-hidden="true" class="radio-player-dock-mute-icon">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M11 5 6 9H3v6h3l5 4z"></path>
-                                <path d="M16 9a4 4 0 0 1 0 6"></path>
-                                <path d="M19 7a8 8 0 0 1 0 10"></path>
-                            </svg>
-                        </span>
-                    </button>
-                    <input x-show="!dockMinimized" x-cloak data-player-volume-input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" class="radio-player-dock-volume-range">
-                    <span x-show="!dockMinimized" x-cloak data-player-volume-output x-text="Math.round(volume * 100) + '%'" class="radio-player-dock-volume-output">80%</span>
-                </div>
-
-                @if ($socialLinks->isNotEmpty())
-                    <div x-show="!dockMinimized" x-cloak class="radio-player-dock-socials radio-player-dock-socials--icons">
-                        @foreach ($socialLinks as $social)
-                            <a href="{{ $social['url'] }}" target="_blank" rel="noopener noreferrer" class="radio-player-dock-social-link radio-player-dock-social-link--icon" aria-label="Seguir en {{ $social['label'] }}" title="{{ $social['label'] }}">
-                                @if ($social['order'] === 'facebook')
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
-                                    </svg>
-                                @elseif ($social['order'] === 'instagram')
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                                    </svg>
-                                @elseif ($social['order'] === 'youtube')
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path>
-                                        <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
-                                    </svg>
-                                @else
-                                    <span class="radio-player-dock-social-badge">{{ $social['badge'] }}</span>
-                                    <span class="radio-player-dock-social-label">{{ $social['label'] }}</span>
-                                @endif
-                            </a>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
-
-            <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11096"></script>
-            <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11097"></script>
         </div>
+
+        {{-- Floating "Escuchar en Vivo" Button --}}
+        <button type="button"
+            x-cloak
+            x-show="!dockVisible"
+            x-transition:enter="transition-all duration-300 ease-out" x-transition:enter-start="translate-y-10 opacity-0 scale-90" x-transition:enter-end="translate-y-0 opacity-100 scale-100"
+            x-transition:leave="transition-all duration-200 ease-in"  x-transition:leave-start="translate-y-0 opacity-100 scale-100"  x-transition:leave-end="translate-y-10 opacity-0 scale-90"
+            @click="startLiveFromFAB()"
+            class="fixed bottom-6 right-6 z-[95] flex items-center gap-2 px-5 py-3 rounded-full bg-lucille-accent text-white shadow-[0_4px_25px_rgba(195,39,32,0.55)] hover:bg-lucille-accent/90 hover:scale-105 active:scale-95 transition-all duration-200 pointer-events-auto"
+            aria-label="Escuchar en vivo"
+        >
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+            </span>
+            <span class="font-display text-[10px] uppercase tracking-[.15em] font-semibold">Escuchar en Vivo</span>
+        </button>
+    @endif
 
         <template x-if="bandWindowOpen">
         <section

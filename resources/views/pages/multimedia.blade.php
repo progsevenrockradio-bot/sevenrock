@@ -22,16 +22,6 @@
 
 <section class="lucille-content-box pb-36"
     x-data="{
-        activeTrack: null,
-        playing: false,
-        muted: false,
-        volume: 85,
-        elapsed: 0,
-        duration: 0,
-        progress: 0,
-        playerVisible: false,
-        drawerOpen: false,
-        drawerTab: 'letras',
         activeTab: 'radio',
         lightboxOpen: false,
         lightboxIndex: 0,
@@ -40,63 +30,8 @@
         songSearch: '',
 
         playTrack(track) {
-            if (this.activeTrack && this.activeTrack.src === track.src && track.src !== 'live') {
-                this.togglePlayback(); return;
-            }
-            this.activeTrack = track;
-            this.playerVisible = true;
-            this.drawerOpen = false;
-            this.$nextTick(() => this.syncAudio(true));
+            window.dispatchEvent(new CustomEvent('play-multimedia-track', { detail: track }));
         },
-        syncAudio(autoplay) {
-            const audio = this.$refs.audio;
-            if (!audio || !this.activeTrack) return;
-            audio.volume = this.volume / 100;
-            audio.muted = this.muted;
-            const src = this.activeTrack.src || '';
-            if (!src || src === 'live') return;
-            if ((audio.getAttribute('src') || '') !== src) {
-                audio.pause(); audio.src = src; audio.load();
-                this.elapsed = 0; this.duration = 0; this.progress = 0;
-            }
-            if (autoplay) this.$nextTick(() => audio.play().catch(() => this.playing = false));
-        },
-        togglePlayback() {
-            if (this.activeTrack?.src === 'live') {
-                const ls = this.$refs.liveStream;
-                if (!ls) return;
-                if (this.playing) { ls.pause(); this.playing = false; }
-                else { ls.play().catch(() => {}); this.playing = true; }
-                return;
-            }
-            if (this.playing) this.$refs.audio?.pause();
-            else if (this.activeTrack) this.syncAudio(true);
-        },
-        setVolume(v) {
-            const n = Math.max(0, Math.min(100, Number(v) || 0));
-            this.volume = n;
-            const a = this.$refs.audio; if (a) a.volume = n / 100;
-            const ls = this.$refs.liveStream; if (ls) ls.volume = n / 100;
-            if (n > 0 && this.muted) { this.muted = false; if (a) a.muted = false; if (ls) ls.muted = false; }
-        },
-        seekAudio(v) {
-            const n = Math.max(0, Math.min(100, Number(v) || 0));
-            const a = this.$refs.audio;
-            if (a && Number.isFinite(a.duration) && a.duration > 0) a.currentTime = (a.duration * n) / 100;
-        },
-        onLoadedMetadata() { const a = this.$refs.audio; if (a) this.duration = Number.isFinite(a.duration) && a.duration > 0 ? Math.round(a.duration) : 0; },
-        onTimeUpdate() {
-            const a = this.$refs.audio; if (!a) return;
-            this.elapsed = Number.isFinite(a.currentTime) && a.currentTime > 0 ? Math.round(a.currentTime) : 0;
-            if (Number.isFinite(a.duration) && a.duration > 0) this.duration = Math.round(a.duration);
-        },
-        onPlay()  { this.playing = true; },
-        onPause() { this.playing = false; },
-        onEnded() { this.playing = false; this.elapsed = 0; this.progress = 0; },
-        formatTime(s) { const t = Number.isFinite(s) && s > 0 ? Math.floor(s) : 0; return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0'); },
-        get progressPct() { return this.duration > 0 ? Math.min(100,(this.elapsed/this.duration)*100) : 0; },
-        get timeLabel() { return this.formatTime(this.elapsed)+' / '+this.formatTime(this.duration); },
-        get isLive() { return this.activeTrack?.src === 'live'; },
         showImage(idx) { this.lightboxIndex = idx; this.lightboxOpen = true; },
         nextImage() { this.lightboxIndex = (this.lightboxIndex+1)%this.lightboxImages.length; },
         prevImage() { this.lightboxIndex = (this.lightboxIndex-1+this.lightboxImages.length)%this.lightboxImages.length; },
@@ -522,100 +457,7 @@
         </div>
     </template>
 
-    {{-- ════════════════════════════════════════════════════════════
-         UNIFIED SMART PLAYER — Sticky bottom bar
-         ════════════════════════════════════════════════════════════ --}}
-    <template x-teleport="body">
-        <div x-cloak x-show="playerVisible && activeTrack"
-            x-transition:enter="transition-all duration-400 ease-out" x-transition:enter-start="translate-y-20 opacity-0" x-transition:enter-end="translate-y-0 opacity-100"
-            x-transition:leave="transition-all duration-300 ease-in"  x-transition:leave-start="translate-y-0 opacity-100"  x-transition:leave-end="translate-y-20 opacity-0"
-            class="fixed bottom-0 left-0 right-0 z-[100] flex justify-center p-3 sm:p-4 pointer-events-none">
-            <div class="w-full max-w-5xl pointer-events-auto relative bg-[#0b0b0c]/90 backdrop-blur-md border border-white/8 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.75)] overflow-hidden p-3 sm:p-4">
-                <div class="absolute top-0 left-0 right-0 h-[3px] bg-white/5 rounded-t-2xl">
-                    <div class="h-full bg-lucille-accent transition-all duration-100 rounded-t-2xl" :style="'width:'+progressPct+'%'"></div>
-                </div>
-                <template x-if="activeTrack">
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-                        {{-- Cover + info --}}
-                        <div class="flex items-center gap-3 min-w-0 flex-[2] sm:flex-1 w-full sm:w-auto">
-                            <div class="h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#2b2b2b] bg-[#111] shadow-md relative">
-                                <img :src="activeTrack.image||'{{ $fallbackImage }}'" :alt="activeTrack.title" width="256" height="256" class="h-full w-full object-cover">
-                                <div x-show="isLive" class="absolute inset-0 flex items-center justify-center bg-black/60">
-                                    <span class="text-[8px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
-                                </div>
-                                {{-- Mini equalizer --}}
-                                <div x-show="!isLive && playing" class="absolute bottom-0 left-0 right-0 h-4 flex items-end justify-center gap-px px-1 bg-gradient-to-t from-black/80 to-transparent">
-                                    <span class="mm-eq-bar" style="animation-delay:0ms"></span>
-                                    <span class="mm-eq-bar" style="animation-delay:100ms"></span>
-                                    <span class="mm-eq-bar" style="animation-delay:200ms"></span>
-                                    <span class="mm-eq-bar" style="animation-delay:300ms"></span>
-                                    <span class="mm-eq-bar" style="animation-delay:150ms"></span>
-                                </div>
-                            </div>
-                            <div class="min-w-0">
-                                <div class="truncate font-display text-[12px] uppercase tracking-[.08em] text-[#dcdcdc] leading-tight" x-text="activeTrack.title"></div>
-                                <div class="truncate text-[10px] text-[#888] mt-0.5" x-text="activeTrack.subtitle || (activeTrack.album ? '💿 '+activeTrack.album : '')"></div>
-                                <div class="sm:hidden text-[9px] text-[#555] font-display tracking-[.12em] mt-0.5" x-text="isLive ? 'En Vivo' : timeLabel"></div>
-                            </div>
-                        </div>
-                        {{-- Controls + seek --}}
-                        <div class="flex items-center gap-4 w-full sm:w-auto flex-[3] max-w-lg mx-auto">
-                            <button type="button"
-                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_15px_rgba(195,39,32,0.4)] transition-all hover:bg-lucille-accent/90 hover:scale-105 active:scale-95"
-                                @click="togglePlayback()" aria-label="Reproducir o pausar">
-                                <span class="text-base leading-none ml-0.5" x-show="!playing">▶</span>
-                                <span class="text-base leading-none" x-show="playing">⏸</span>
-                            </button>
-                            <div class="hidden sm:flex items-center gap-2.5 w-full">
-                                <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-right" x-text="isLive ? '●' : formatTime(elapsed)"></span>
-                                <div class="flex-1 py-2">
-                                    <input type="range" min="0" max="100" step="0.1" :value="progressPct" @input="!isLive && seekAudio($event.target.value)" :disabled="isLive" class="lucille-range-slider" aria-label="Progreso">
-                                </div>
-                                <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-left" x-text="isLive ? 'LIVE' : formatTime(duration)"></span>
-                            </div>
-                        </div>
-                        {{-- Letras, mute, vol, close --}}
-                        <div class="flex items-center justify-end gap-2 w-full sm:w-auto flex-1 shrink-0">
-                            <button type="button"
-                                class="flex h-8 px-3 items-center gap-1.5 rounded border transition-colors text-[10px] uppercase tracking-[.06em] font-display"
-                                :class="drawerOpen ? 'border-lucille-accent/60 bg-lucille-accent/10 text-lucille-accent' : 'border-[#242424] bg-transparent text-[#777] hover:text-white hover:border-[#444]'"
-                                @click="drawerOpen = !drawerOpen" aria-label="Letras e info de banda">
-                                <span>🎵</span><span class="hidden sm:inline">Info</span>
-                            </button>
-                            <button type="button"
-                                class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#aaa] transition-colors hover:text-white hover:border-[#444]"
-                                @click="muted = !muted; [$refs.audio, $refs.liveStream].forEach(a => a && (a.muted = muted))" aria-label="Silenciar">
-                                <span x-show="!muted">🔊</span><span x-show="muted">🔇</span>
-                            </button>
-                            <div class="w-16 sm:w-20 hidden sm:block">
-                                <input type="range" min="0" max="100" step="1" :value="volume" @input="setVolume($event.target.value)" class="lucille-range-slider" aria-label="Volumen">
-                            </div>
-                            <button type="button"
-                                class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#666] transition-colors hover:text-white hover:border-[#444]"
-                                @click="playerVisible=false; drawerOpen=false; $refs.audio?.pause(); $refs.liveStream?.pause(); playing=false" aria-label="Cerrar">
-                                <span class="text-sm leading-none">✕</span>
-                            </button>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </div>
-    </template>
 
-    {{-- Live stream audio element --}}
-    <template x-teleport="body">
-        <audio x-ref="liveStream" preload="none">
-            <source src="{{ config('player.streams.direct', 'https://c30.radioboss.fm:8569/stream') }}" type="audio/mpeg">
-            <source src="{{ config('player.streams.alt_direct', 'https://c30.radioboss.fm:18569/stream') }}" type="audio/mpeg">
-        </audio>
-    </template>
-
-    {{-- Normal audio for podcasts & songs --}}
-    <audio x-ref="audio" preload="metadata" playsinline
-        @loadedmetadata="onLoadedMetadata()"
-        @timeupdate="onTimeUpdate()"
-        @play="onPlay()" @pause="onPause()" @ended="onEnded()">
-    </audio>
 
 </section>
 

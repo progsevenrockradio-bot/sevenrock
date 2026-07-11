@@ -98,6 +98,7 @@ export function registerRadioPlayer(Alpine) {
         bandWindowTab: 'bio',
         bandWindowSnapshot: null,
         dockMinimized: true,
+        dockVisible: false,
         activeTab: 'lyrics',
         playing: false,
         loading: true,
@@ -186,6 +187,7 @@ export function registerRadioPlayer(Alpine) {
             this.bandWindowOpen = false;
             this.bandWindowTab = 'bio';
             this.dockMinimized = true;
+            this.dockVisible = false;
             this.activeTab = safeRead('sr-player-tab', 'lyrics');
             this.isMobile = window.innerWidth < 640;
             this.toast.visible = false;
@@ -207,6 +209,26 @@ export function registerRadioPlayer(Alpine) {
             window.addEventListener('sr-force-close-modals', () => {
                 this.closeTransientOverlays();
             }, { once: true });
+
+            // Show/hide dock based on playback state
+            this.$watch('playing', (isPlaying) => {
+                if (this.mode === 'dock') {
+                    if (isPlaying) {
+                        this.dockVisible = true;
+                    } else {
+                        // Small delay so the pause animation is visible before hiding
+                        setTimeout(() => {
+                            if (!this.playing) this.dockVisible = false;
+                        }, 400);
+                    }
+                }
+            });
+
+            // Listen for multimedia hub track requests
+            window.addEventListener('play-multimedia-track', (e) => {
+                this.handleMultimediaTrack(e.detail);
+            });
+
             this.watchNowPlayingWidget();
             this.queueStatusRefresh(0);
 
@@ -554,6 +576,37 @@ export function registerRadioPlayer(Alpine) {
 
         togglePlay() {
             return this.attemptPlayWithFallback();
+        },
+
+        startLiveFromFAB() {
+            this.dockVisible = true;
+            this.dockMinimized = false;
+            if (!this.playing) {
+                this.attemptPlayWithFallback();
+            }
+        },
+
+        hideDock() {
+            const audio = this.$refs.audio;
+            if (audio) {
+                audio.pause();
+            }
+            this.playing = false;
+            this.dockVisible = false;
+            this.panelOpen = false;
+            this.closeTransientOverlays();
+        },
+
+        handleMultimediaTrack(detail) {
+            if (!detail) return;
+            // If it's a live stream request
+            if (detail.src === 'live' || detail.type === 'live') {
+                this.startLiveFromFAB();
+                return;
+            }
+            // For podcasts/songs from multimedia hub — not handled yet, future extension
+            this.dockVisible = true;
+            this.dockMinimized = false;
         },
 
         togglePanel() {
