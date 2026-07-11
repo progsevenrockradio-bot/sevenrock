@@ -124,7 +124,7 @@
         <p class="text-sm text-[#7b7b7b]">Todavía no hay episodios en esta sección.</p>
     @endforelse
 
-    @if ($recentUploads->hasPages())
+    @if (method_exists($recentUploads, 'hasPages') && $recentUploads->hasPages())
         <div class="mt-8">
             {{ $recentUploads->links() }}
         </div>
