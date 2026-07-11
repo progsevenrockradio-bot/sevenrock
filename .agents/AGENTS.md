@@ -54,12 +54,13 @@ Cualquier cambio de código, corrección de errores, o nueva funcionalidad **deb
 1. **Código Local a GitHub:** La IA debe realizar y testear los cambios en el entorno de desarrollo local y usar el terminal interactivo para subir los cambios al repositorio remoto (`progsevenrockradio-bot/sevenrock`).
     - Comandos internos de IA: `git add .`, `git commit -m "Descripción"`, `git push`.
 2. **Comandos Entregables:** Una vez los cambios estén subidos a la rama `main`, la IA **no debe divagar** ni dar instrucciones genéricas. Debe proveer inmediatamente el bloque de comandos exacto que el usuario debe copiar y pegar en su terminal SSH de Hostinger.
-3. **Bloque de Producción Estándar:**
+3. **Bloque de Producción Estándar (Si se han compilado o modificado assets de Vite, SIEMPRE incluye el comando de copiado a public_html):**
 
     ```bash
     git pull
     php artisan cache:clear
     php artisan view:clear
+    cp -r /home/u531780502/domains/sevenrockradio.com/sevenrockradio/public/build /home/u531780502/domains/sevenrockradio.com/public_html/
     ```
 
 4. No se deben recomendar comandos perjudiciales como el refresco destructivo de base de datos (`migrate:fresh`) a menos que el usuario lo solicite explícitamente en desarrollo.
