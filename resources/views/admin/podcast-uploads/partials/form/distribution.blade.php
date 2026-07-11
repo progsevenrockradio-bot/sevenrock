@@ -45,13 +45,7 @@
                 </span>
             </label>
 
-            <label class="mt-4 flex items-start gap-3 text-sm text-[#dcdcdc]">
-                <input type="checkbox" name="sync_archive_org" value="1" @checked(old('sync_archive_org', true)) class="mt-1 h-4 w-4">
-                <span>
-                    <span class="block font-medium text-white">Sincronizar también con Archive.org</span>
-                    <span class="mt-1 block text-xs leading-5 text-[#7b7b7b]">Activa la subida al archivo público además de RadioBOSS.</span>
-                </span>
-            </label>
+
 
             <div class="mt-4 border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
                 <h4 class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Notas técnicas</h4>

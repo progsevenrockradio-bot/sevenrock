@@ -236,6 +236,21 @@ final class PodcastUploadController extends Controller
             }
         }
 
+        $durationSeconds = 0;
+        if (! $isR2 && $request->hasFile('archivo_mp3')) {
+            try {
+                $getID3 = new \getID3();
+                $fileInfo = $getID3->analyze($request->file('archivo_mp3')->getRealPath());
+                if (isset($fileInfo['playtime_seconds'])) {
+                    $baseSeconds = (int) ceil((float) $fileInfo['playtime_seconds']);
+                    // Se suman 5 minutos (300 segundos) adicionales según solicitud del usuario.
+                    $durationSeconds = $baseSeconds + 300;
+                }
+            } catch (\Throwable) {
+                // Ignore duration read failures
+            }
+        }
+
         $imagePath = $this->resolveEpisodeImageValue($request, $master, $data);
         $manualEpisodeNumber = isset($data['numero_episodio']) && $data['numero_episodio'] !== ''
             ? max(1, (int) $data['numero_episodio'])
@@ -264,6 +279,7 @@ final class PodcastUploadController extends Controller
                 'live_title' => (string) $data['live_title'],
                 'live_description' => trim((string) ($data['resena'] ?? '')) ?: null,
                 'comentario_episodio' => trim((string) ($data['resena'] ?? '')) ?: null,
+                'duration_seconds' => $durationSeconds > 0 ? $durationSeconds : (int) ($master->duracion_minutos * 60),
                 'archivo_mp3' => $rawPath,
                 'archivo_mp3_disk' => $disk,
                 'enviado_radioboss' => false,

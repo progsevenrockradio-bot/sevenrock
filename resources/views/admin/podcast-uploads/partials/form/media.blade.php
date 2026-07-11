@@ -38,6 +38,14 @@
                     <span x-text="uploadEtaLabel"></span>
                 </div>
             </div>
+
+            <label class="mt-6 flex items-start gap-3 text-sm text-[#dcdcdc] border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
+                <input type="checkbox" name="sync_archive_org" value="1" @checked(old('sync_archive_org', true)) class="mt-1 h-4 w-4 accent-[var(--color-lucille-accent)]">
+                <span>
+                    <span class="block font-medium text-white">Sincronizar también con Archive.org</span>
+                    <span class="mt-1 block text-xs leading-5 text-[#7b7b7b]">Activa la subida al archivo público además de RadioBOSS. Se sincronizará el MP3 procesado con su metadata.</span>
+                </span>
+            </label>
         </div>
 
         <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] p-5">
