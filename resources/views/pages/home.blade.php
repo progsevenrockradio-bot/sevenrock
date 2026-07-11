@@ -30,7 +30,7 @@
                 <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach($noticiasRock as $post)
                         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:border-[#c32720]/40 group relative cursor-pointer">
-                            <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-10" aria-label="Leer más sobre {{ $post->title }}"></a>
+                            <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-30" aria-label="Leer más sobre {{ $post->title }}"></a>
                             <div>
                                 <div class="relative aspect-[4/3] overflow-hidden border border-[#2b2b2b] bg-[#111]">
                                     <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}" alt="{{ $post->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">

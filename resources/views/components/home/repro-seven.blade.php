@@ -17,7 +17,7 @@
                     <div class="text-[10px] uppercase tracking-[.28em] text-[#7b7b7b]">
                         ReproSeven
                     </div>
-                    <p class="mt-1 truncate font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent" x-text="activeEpisode.episode_title || 'Último episodio'"></p>
+                    <p class="mt-1 truncate font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent" x-text="(activeEpisode.episode_title || 'Último episodio').split(' ').slice(0, 2).join(' ')"></p>
                 </div>
             </div>
         </div>
@@ -26,7 +26,7 @@
             <div class="mejs-button mejs-playpause-button">
                 <button
                     type="button"
-                    class="inline-flex h-10 min-w-[64px] items-center justify-center border border-[#dcdcdc] bg-transparent px-3 py-0 text-[10px] font-display uppercase tracking-[.16em] text-[#f5f5f5] transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                    class="inline-flex h-10 min-w-[64px] items-center justify-center border border-lucille-accent bg-transparent px-3 py-0 text-[10px] font-display uppercase tracking-[.16em] text-lucille-accent transition-colors hover:bg-lucille-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
                     @click="togglePlayback()"
                     :disabled="!activeEpisode.src && !activeEpisode.archive_url"
                 >
@@ -49,7 +49,7 @@
                     step="1"
                     :value="progress"
                     @input="seekAudio(Number($event.target.value) || 0)"
-                    class="mejs-time-slider h-2 w-full cursor-pointer appearance-none rounded-full bg-[#595959] accent-white"
+                    class="mejs-time-slider h-2 w-full cursor-pointer appearance-none rounded-full bg-[#595959] accent-lucille-accent"
                     aria-label="Time Slider"
                 >
             </div>
@@ -77,7 +77,7 @@
                     step="1"
                     :value="volume"
                     @input="setVolume($event.target.value)"
-                    class="h-2 w-full cursor-pointer appearance-none rounded-full bg-[#595959] accent-[#f5f5f5]"
+                    class="h-2 w-full cursor-pointer appearance-none rounded-full bg-[#595959] accent-lucille-accent"
                     aria-label="Volume Slider"
                 >
                 <span class="text-[9px] font-display text-[#7b7b7b] w-6 text-right sm:hidden" x-text="volume + '%'"></span>

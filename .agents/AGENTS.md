@@ -2,3 +2,64 @@
 
 ## Entorno de Producción
 - El directorio de la aplicación en el servidor de producción se ha cambiado de `public_html` a la carpeta `sevenrockradio` (ubicada fuera de `public_html`) por motivos de seguridad. Ten en cuenta esta ruta cuando des instrucciones de despliegue o rutas relativas para el entorno de producción.
+# Reporte y Documentación del Proyecto: Seven Rock Radio
+
+Este documento detalla la estructura, integraciones, estética y flujo de trabajo para el proyecto "Seven Rock Radio". Está diseñado para ser agregado directamente a tu archivo `.agents/AGENTS.md` para que cualquier asistente de IA entienda tu ecosistema de inmediato sin tener que preguntarte.
+
+---
+
+## 🎨 Diseño y Sistema Visual (Tema "Lucille")
+
+El proyecto utiliza **Tailwind CSS** extendido con variables nativas para lograr una estética oscura, profesional y muy orientada al rock.
+
+**Colores Principales:**
+*   **Acento (Rojo Rock):** `#c32720` (Usado en botones, bordes decorativos, iconos activos y el cintillo).
+*   **Fondos (Oscuros):**
+    *   Fondo base del sitio (`body`): `#151515` o `#0a0a0b`.
+    *   Superficies/Tarjetas (`surface`): `#101012`.
+*   **Navegación:** `#081a24`.
+*   **Tipografías y Textos:**
+    *   **Títulos/Display (`font-display`):** `Oswald`, ui-sans-serif, system-ui.
+    *   **Cuerpo (`font-sans`):** `Open Sans`, ui-sans-serif, system-ui.
+    *   **Color Títulos:** `#dcdcdc` (Gris claro / Blanco tenue).
+    *   **Color Párrafos:** `#7b7b7b` (Gris medio).
+    *   **Líneas / Separadores:** `#757575` o `#1a1a1a`.
+
+**Efectos Estándar:**
+*   Sombras intensas para elementos flotantes (Modal/Reproductores): `shadow-[0_28px_72px_rgba(0,0,0,.58)]`.
+*   Difuminado de fondo en modales (`backdrop-filter: blur()`) con fondos negros muy opacos (`bg-black` o `rgba(0,0,0,0.95)`).
+
+## ⚙️ Integraciones y APIs (Configuradas en `.env`)
+
+1.  **Podcasts y Programas de Audio (Archive.org):** 
+    Todo el audio pesado de podcasts y programas de radio se aloja en un bucket privado de **Archive.org** (`sevenrockradio` en `us-east-1`). El sistema utiliza `ArchiveOrgService.php` para sincronizar episodios de forma dinámica.
+2.  **Transmisión / Radio Streaming (RadioBoss):** 
+    Integrado fuertemente con la API de RadioBoss (`https://c30.radioboss.fm/`, Estación ID `569`) para lectura de metadata, y control de la estación y horarios a través de su servidor FTP y API web.
+3.  **Metadatos de Música:** 
+    Se consume la API de **Discogs** y **Last.fm** para extraer imágenes, letras y datos relacionados a los álbumes y artistas.
+4.  **Correos Electrónicos (IMAP / SMTP):**
+    *   **Correos Oficiales del Sistema:** `prog.sevenrockradio@gmail.com` se utiliza para el envío SMTP y buzón principal IMAP de notificaciones y contactos comerciales.
+    *   **Bot de Generación de Contenido:** El sistema procesa los correos enviados por **`dark.vader.agent@gmail.com`** mediante `ProcessIncomingEmails.php` para convertirlos automáticamente en Posts del blog (categorías como "Hoy en el Rock" y "Noticias Rock"). **Todo correo proveniente de otra dirección NO será procesado como contenido automático de Dark Vader.**
+
+## 📂 Estructura del Servidor (Hostinger)
+
+*   **Ruta de la Aplicación:** Por motivos estrictos de seguridad, todo el código fuente de Laravel (`app`, `routes`, `.env`, etc.) está alojado en una carpeta llamada **`sevenrockradio`**, la cual se encuentra **FUERA** del directorio público (`public_html`) de Hostinger.
+*   **Dominio Público:** Los archivos estáticos y el punto de entrada (`index.php`) se conectan a esta carpeta interna para servir la web. 
+
+## 🚀 Flujo de Trabajo (Reglas de Implementación para la IA)
+
+Cualquier cambio de código, corrección de errores, o nueva funcionalidad **debe seguir este protocolo estricto**:
+
+1.  **Código Local a GitHub:** La IA debe realizar y testear los cambios en el entorno de desarrollo local y usar el terminal interactivo para subir los cambios al repositorio remoto (`progsevenrockradio-bot/sevenrock`).
+    *   Comandos internos de IA: `git add .`, `git commit -m "Descripción"`, `git push`.
+2.  **Comandos Entregables:** Una vez los cambios estén subidos a la rama `main`, la IA **no debe divagar** ni dar instrucciones genéricas. Debe proveer inmediatamente el bloque de comandos exacto que el usuario debe copiar y pegar en su terminal SSH de Hostinger.
+3.  **Bloque de Producción Estándar:**
+    ```bash
+    git pull
+    php artisan cache:clear
+    php artisan view:clear
+    ```
+4.  No se deben recomendar comandos perjudiciales como el refresco destructivo de base de datos (`migrate:fresh`) a menos que el usuario lo solicite explícitamente en desarrollo.
+
+---
+*Este bloque debe ser copiado íntegramente a tu archivo .agents/AGENTS.md para garantizar que todos los agentes futuros operen bajo este conocimiento centralizado.*
