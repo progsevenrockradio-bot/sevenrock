@@ -68,7 +68,7 @@
         @endphp
 
         @if ($position === 'columnas-laterales')
-            <div class="hero-floating-text columna-izquierda !flex-col gap-2 md:gap-4">
+            <div class="hero-floating-text columna-izquierda !flex-col gap-0 md:gap-2 !items-start max-md:!bottom-[80px]" style="left: 90px;">
                 <div class="whitespace-nowrap">
                     {!! $firstHalf !!}
                 </div>
