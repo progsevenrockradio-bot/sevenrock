@@ -479,20 +479,20 @@
                             </span>
                         </button>
                         <div class="hidden sm:flex items-center gap-2.5 w-full">
-                            <span x-show="!track.is_live" class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-right" x-text="formatTime(progress.elapsed)"></span>
-                            <div x-show="!track.is_live" class="flex-1 py-2">
-                                <input type="range" min="0" max="100" step="0.1" :value="progress.ratio" @input="seek($event)" class="lucille-range-slider" aria-label="Progreso">
+                            <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-right" x-text="track.is_live ? formatTime(progress.elapsed) : formatTime(progress.elapsed)"></span>
+                            <div class="flex-1 py-2">
+                                <input type="range" min="0" max="100" step="0.1" :value="progress.ratio" @input="!track.is_live && seek($event)" :disabled="track.is_live" class="lucille-range-slider" aria-label="Progreso">
                             </div>
-                            <span x-show="!track.is_live" class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-left" x-text="formatTime(progress.duration)"></span>
-                            
-                            <div x-show="track.is_live" class="flex-1 flex items-center justify-center gap-2">
-                                <span class="relative flex h-2 w-2">
-                                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lucille-accent opacity-75"></span>
-                                  <span class="relative inline-flex rounded-full h-2 w-2 bg-lucille-accent"></span>
-                                </span>
-                                <span class="text-[10px] font-display uppercase tracking-widest text-[#dcdcdc]">Transmisión en Vivo</span>
-                            </div>
+                            <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-left" x-text="track.is_live ? formatTime(progress.duration) : formatTime(progress.duration)"></span>
                         </div>
+                        
+                        <!-- RadioBOSS Cloud Track Timer Widget (Hidden, used as data source) -->
+                        <div class='rbcloud_tracktimer' style="display: none;">
+                            <span id='rbcloud_tracktimer_e9597'></span>
+                            <span id='rbcloud_tracktimer_sep9597' hidden> &frasl; <!-- slash --> </span>
+                            <span id='rbcloud_tracktimer_r9597'></span>
+                        </div>
+                        <script src='https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=9597' defer></script>
                     </div>
 
                     {{-- Actions, Mute, Volume, Close --}}

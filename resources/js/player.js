@@ -161,9 +161,9 @@ export function registerRadioPlayer(Alpine) {
         widgetIds: {
             root: 'rbcloud_nowplaying15715',
             cover: 'rbcloud_cover8795',
-            timerElapsed: 'rbcloud_tracktimer_e11096',
-            timerSeparator: 'rbcloud_tracktimer_sep11096',
-            timerRemaining: 'rbcloud_tracktimer_r11096',
+            timerElapsed: 'rbcloud_tracktimer_e9597',
+            timerSeparator: 'rbcloud_tracktimer_sep9597',
+            timerRemaining: 'rbcloud_tracktimer_r9597',
         },
         toast: {
             visible: false,
