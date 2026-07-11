@@ -138,10 +138,11 @@
         playing: false,
         muted: false,
         volume: 85,
-        elapsed: 0,
-        duration: 0,
+        currentTime: 0,
+        fixedDuration: 0,
         progress: 0,
         failedAudioSources: [],
+        progressInterval: null,
         init() {
             this.syncAudio(false);
             window.addEventListener('sr-force-close-modals', () => {
@@ -150,6 +151,17 @@
             window.addEventListener('pageshow', () => {
                 this.closeInfoModal();
             }, { once: true });
+            
+            this.progressInterval = setInterval(() => {
+                if (this.playing && this.fixedDuration > 0) {
+                    if (this.currentTime >= this.fixedDuration) {
+                        this.currentTime = this.fixedDuration;
+                    } else {
+                        this.currentTime += 1;
+                    }
+                    this.progress = Math.min(100, (this.currentTime / this.fixedDuration) * 100);
+                }
+            }, 1000);
         },
         episodeKey(episode) {
             return [episode?.id || '', episode?.src || '', episode?.archive_url || '', episode?.program || '', episode?.episode_title || ''].join('|');
@@ -209,8 +221,8 @@
                 audio.removeAttribute('src');
                 audio.load();
                 this.playing = false;
-                this.elapsed = 0;
-                this.duration = 0;
+                this.currentTime = 0;
+                this.fixedDuration = 0;
                 this.progress = 0;
                 return;
             }
@@ -221,8 +233,8 @@
                 audio.src = source;
                 audio.load();
                 this.failedAudioSources = [];
-                this.elapsed = 0;
-                this.duration = 0;
+                this.currentTime = 0;
+                this.fixedDuration = 0;
                 this.progress = 0;
             }
 
@@ -369,34 +381,48 @@
 
             this.muted = audio.muted;
         },
-        seekAudio(value) {
+        seekAudio(event) {
             const audio = this.$refs.audio;
-            const next = Math.max(0, Math.min(100, Number(value) || 0));
-            this.progress = next;
+            if (!audio || !this.fixedDuration) return;
+            
+            let percentage = 0;
+            if (event && event.type === 'click') {
+                const rect = event.currentTarget.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+            } else {
+                percentage = Math.max(0, Math.min(100, Number(event) || 0));
+            }
+            
+            this.progress = percentage;
+            const targetTime = (this.fixedDuration * percentage) / 100;
+            this.currentTime = targetTime;
 
-            if (audio && Number.isFinite(audio.duration) && audio.duration > 0) {
-                audio.currentTime = (audio.duration * next) / 100;
+            if (Number.isFinite(audio.duration) && audio.duration > 0) {
+                audio.currentTime = targetTime;
             }
         },
         onLoadedMetadata() {
             const audio = this.$refs.audio;
-            if (!audio) {
-                return;
-            }
+            if (!audio) return;
 
-            this.duration = Number.isFinite(audio.duration) && audio.duration > 0 ? Math.round(audio.duration) : 0;
-            this.progress = this.duration > 0 ? Math.min(100, (this.elapsed / this.duration) * 100) : 0;
+            this.fixedDuration = Number.isFinite(audio.duration) && audio.duration > 0 ? Math.round(audio.duration) : 0;
+            this.progress = this.fixedDuration > 0 ? Math.min(100, (this.currentTime / this.fixedDuration) * 100) : 0;
         },
         onTimeUpdate() {
             const audio = this.$refs.audio;
-            if (!audio) {
-                return;
-            }
+            if (!audio) return;
 
-            this.elapsed = Number.isFinite(audio.currentTime) && audio.currentTime > 0 ? Math.round(audio.currentTime) : 0;
+            const audioTime = Number.isFinite(audio.currentTime) && audio.currentTime > 0 ? Math.round(audio.currentTime) : 0;
+            const diff = Math.abs(this.currentTime - audioTime);
+            
+            if (diff > 3) {
+                this.currentTime = audioTime;
+            }
+            
             if (Number.isFinite(audio.duration) && audio.duration > 0) {
-                this.duration = Math.round(audio.duration);
-                this.progress = Math.min(100, (audio.currentTime / audio.duration) * 100);
+                this.fixedDuration = Math.round(audio.duration);
+                this.progress = Math.min(100, (this.currentTime / this.fixedDuration) * 100);
             }
         },
         onPlay() {
@@ -407,7 +433,7 @@
         },
         onEnded() {
             this.playing = false;
-            this.elapsed = 0;
+            this.currentTime = 0;
             this.progress = 0;
         },
         formatTime(seconds) {
@@ -420,7 +446,7 @@
             return `${Math.max(0, Math.min(100, this.progress))}%`;
         },
         get timeLabel() {
-            return `${this.formatTime(this.elapsed)} / ${this.formatTime(this.duration)}`;
+            return `${this.formatTime(this.currentTime)} / ${this.formatTime(this.fixedDuration)}`;
         },
     }"
 >
