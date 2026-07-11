@@ -68,18 +68,16 @@
         @endphp
 
         @if ($position === 'columnas-laterales')
-            <div class="hero-floating-text columna-izquierda max-md:!bottom-[80px]">
-                <div class="text-center">
+            <div class="hero-floating-text columna-izquierda !flex-col gap-2 md:gap-4">
+                <div class="whitespace-nowrap">
                     {!! $firstHalf !!}
                 </div>
-            </div>
-            @if($secondHalf)
-                <div class="hero-floating-text columna-derecha max-md:!bottom-[40px]">
-                    <div class="text-center text-lucille-accent">
+                @if($secondHalf)
+                    <div class="text-lucille-accent whitespace-nowrap">
                         {!! $secondHalf !!}
                     </div>
-                </div>
-            @endif
+                @endif
+            </div>
         @else
             <div class="hero-floating-text {{ $position }}">
                 <div class="text-center">
