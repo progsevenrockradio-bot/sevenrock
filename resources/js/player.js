@@ -1007,20 +1007,17 @@ export function registerRadioPlayer(Alpine) {
             };
 
             if (widgetTrack.elapsed > 0) {
-                this.progress.elapsed = widgetTrack.elapsed;
+                this.currentTime = widgetTrack.elapsed;
             }
 
             if (widgetTrack.duration > 0) {
-                this.progress.duration = widgetTrack.duration;
+                this.fixedDuration = widgetTrack.duration;
             }
 
             if (previousSignature !== nextSignature) {
-                this.progress.elapsed = 0;
-                if (widgetTrack.duration > 0) {
-                    this.progress.duration = widgetTrack.duration;
-                } else {
-                    this.progress.duration = 0;
-                }
+                this.currentTime = widgetTrack.elapsed > 0 ? widgetTrack.elapsed : 0;
+                this.fixedDuration = widgetTrack.duration > 0 ? widgetTrack.duration : 0;
+                this.syncCounter = 0;
                 this.bandLookupArtist = '';
                 this.bandPanel = this.bandWindowOpen
                     ? {
@@ -1549,7 +1546,11 @@ export function registerRadioPlayer(Alpine) {
             if (audio && Number.isFinite(audio.currentTime) && audio.currentTime > 0 && !this.track.is_live) {
                 this.currentTime = Math.round(audio.currentTime);
             } else if (this.track.is_live) {
-                this.currentTime += 1;
+                if (this.fixedDuration > 0 && this.currentTime >= this.fixedDuration) {
+                    this.currentTime = this.fixedDuration;
+                } else {
+                    this.currentTime += 1;
+                }
                 this.syncCounter += 1;
 
                 if (this.syncCounter >= 10) {
