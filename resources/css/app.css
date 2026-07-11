@@ -1104,11 +1104,20 @@
         -webkit-appearance: none;
         appearance: none;
         width: 100%;
-        height: 4px;
-        border-radius: 9999px;
-        background: rgba(255, 255, 255, 0.12);
+        height: 16px;
+        background: transparent;
         outline: none;
+        cursor: pointer;
     }
+    
+    .lucille-range-slider::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 9999px;
+        border: none;
+    }
+    
     .lucille-range-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
@@ -1118,10 +1127,21 @@
         background: var(--color-lucille-accent, #c32720);
         cursor: pointer;
         transition: transform 0.15s ease;
+        margin-top: -4px;
+        border: none;
     }
     .lucille-range-slider::-webkit-slider-thumb:hover {
         transform: scale(1.35);
     }
+    
+    .lucille-range-slider::-moz-range-track {
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 9999px;
+        border: none;
+    }
+    
     .lucille-range-slider::-moz-range-thumb {
         width: 12px;
         height: 12px;
