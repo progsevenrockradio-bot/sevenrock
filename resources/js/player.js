@@ -1451,7 +1451,12 @@ export function registerRadioPlayer(Alpine) {
         },
 
         parseWidgetDuration(value) {
-            const text = this.cleanWidgetText(value);
+            const strValue = String(value || '');
+            if (strValue.toLowerCase() === 'undefined') {
+                return 0;
+            }
+
+            const text = strValue.replace(/[^\d:]/g, '');
             if (!text) {
                 return 0;
             }
@@ -1524,7 +1529,7 @@ export function registerRadioPlayer(Alpine) {
 
         cleanWidgetText(value) {
             const text = String(value || '').replace(/\s+/g, ' ').trim();
-            if (!text || text === '...' || text === '&nbsp;' || text.toLowerCase() === 'cargando...') {
+            if (!text || text === '...' || text === '&nbsp;' || text.toLowerCase() === 'cargando...' || text.toLowerCase() === 'undefined') {
                 return '';
             }
 
