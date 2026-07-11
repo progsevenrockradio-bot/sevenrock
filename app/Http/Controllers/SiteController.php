@@ -957,6 +957,11 @@ class SiteController extends Controller
             function () use ($perPage, $page) {
                 $query = Post::query()->published()->orderByDesc('published_at');
 
+                // Excluir "Hoy en el Rock" del feed principal
+                $query->whereDoesntHave('taxonomies', function ($q) {
+                    $q->where('name', 'Hoy en el Rock');
+                });
+
                 if (Schema::hasTable('post_reactions')) {
                     $query->withCount([
                         'reactions as likes_count' => fn ($reactionQuery) => $reactionQuery->where('reaction_type', 'like'),
@@ -991,6 +996,41 @@ class SiteController extends Controller
      * @param callable():T $resolver
      * @return T
      */
+    private function cachedEfemeridesArchive(): array
+    {
+        $version = $this->cacheVersion('posts');
+        return Cache::remember("site.sidebar.efemerides.v{$version}", now()->addHours(1), function () {
+            try {
+                return Post::query()
+                    ->published()
+                    ->whereHas('taxonomies', function ($q) {
+                        $q->where('name', 'Hoy en el Rock');
+                    })
+                    ->orderByDesc('published_at')
+                    ->limit(5)
+                    ->get()
+                    ->map(function ($post) {
+                        $publishedAt = $post->published_at;
+                        return [
+                            'id' => $post->id,
+                            'title' => $post->title,
+                            'content' => $post->excerpt ?: $post->title,
+                            'date_formatted' => $publishedAt ? $publishedAt->format('F j, Y') : now()->format('F j, Y'),
+                            'url' => route('posts.single', [
+                                'year' => $publishedAt?->format('Y') ?? now()->format('Y'),
+                                'month' => $publishedAt?->format('m') ?? now()->format('m'),
+                                'day' => $publishedAt?->format('d') ?? now()->format('d'),
+                                'slug' => (string) $post->slug,
+                            ]),
+                        ];
+                    })
+                    ->all();
+            } catch (\Throwable) {
+                return [];
+            }
+        });
+    }
+
     private function cachedEvents(string $scope, callable $resolver, int $minutes = 15): mixed
     {
         $version = $this->cacheVersion('events');
@@ -1143,6 +1183,7 @@ class SiteController extends Controller
             'pageSubtitle' => $pageSubtitle,
             'pageDescription' => $pageDescription,
             'posts' => $posts,
+            'sidebarEfemerides' => $this->cachedEfemeridesArchive(),
             'recentPosts' => Cache::remember(
                 "site.posts.recent.v{$version}",
                 now()->addMinutes(10),

@@ -77,8 +77,8 @@
 
     @if (!empty($efemerides) && $efemerides->count() > 0)
     {{-- ── CINTILLO EFEMÉRIDES ──────────────────────────────────────────────── --}}
-    <div class="w-full border-y border-[#c32720]/30 bg-[#0a0a0b]">
-        <div class="relative mx-auto max-w-[1200px] overflow-hidden" id="efemerides-ticker">
+    <div class="w-full bg-[#0a0a0b]">
+        <div class="relative mx-auto max-w-[1200px] overflow-hidden border-y border-[#c32720]/30" id="efemerides-ticker">
 
             {{-- Etiqueta "HOY EN EL ROCK" --}}
             <div class="absolute left-0 top-0 z-20 flex h-full items-center bg-[#c32720] px-5 shadow-[4px_0_20px_rgba(195,39,32,.5)]">
@@ -134,10 +134,10 @@
     {{-- ── MODAL EFEMÉRIDES ────────────────────────────────────────────────── --}}
     <div id="efem-modal" role="dialog" aria-modal="true" aria-labelledby="efem-modal-title"
          class="fixed inset-0 z-[9999] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300"
-         style="background:rgba(0,0,0,.82); backdrop-filter:blur(6px);">
+         style="background:rgba(0,0,0,.95); backdrop-filter:blur(10px);">
 
         <div id="efem-modal-box"
-             class="relative w-full max-w-lg scale-95 rounded-sm border border-[#c32720]/30 bg-[#0d0d0f] p-8 shadow-[0_0_60px_rgba(195,39,32,.25)] transition-transform duration-300">
+             class="relative w-full max-w-lg scale-95 rounded-sm border border-[#c32720]/30 bg-black p-8 shadow-[0_0_60px_rgba(195,39,32,.4)] transition-transform duration-300">
 
             {{-- Línea decorativa superior --}}
             <div class="absolute left-0 top-0 h-[2px] w-full bg-gradient-to-r from-[#c32720] via-[#ff4a42] to-transparent rounded-t-sm"></div>

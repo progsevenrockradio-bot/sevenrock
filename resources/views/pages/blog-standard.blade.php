@@ -301,6 +301,39 @@
                             @endforeach
                         </div>
                     </div>
+
+                    @if(isset($sidebarEfemerides) && count($sidebarEfemerides) > 0)
+                    <div class="lucille-sidebar-widget">
+                        <h3 class="lucille-sidebar-title flex items-center gap-2">
+                            🎸 Hoy en el Rock
+                        </h3>
+                        <div class="mt-4 p-5 border border-[#c32720]/20 bg-[#0d0d0f] rounded-sm shadow-[0_5px_20px_rgba(0,0,0,.5)]">
+                            <h4 class="text-lucille-accent text-[10px] font-display uppercase tracking-[.15em] mb-2">{{ $sidebarEfemerides[0]['date_formatted'] }}</h4>
+                            <a href="{{ $sidebarEfemerides[0]['url'] }}" class="block text-[#dcdcdc] text-[14px] font-medium leading-snug hover:text-lucille-accent transition-colors mb-3">
+                                {{ $sidebarEfemerides[0]['title'] }}
+                            </a>
+                            <p class="text-[#7b7b7b] text-[12px] leading-relaxed line-clamp-3">
+                                {{ $sidebarEfemerides[0]['content'] }}
+                            </p>
+                            
+                            @if(count($sidebarEfemerides) > 1)
+                            <div class="mt-5 pt-4 border-t border-[#1a1a1a]">
+                                <span class="block text-[10px] text-[#666] font-display uppercase tracking-widest mb-3">Fechas Anteriores</span>
+                                <ul class="space-y-2.5">
+                                    @foreach(array_slice($sidebarEfemerides, 1) as $oldEfem)
+                                    <li>
+                                        <a href="{{ $oldEfem['url'] }}" class="text-[12px] text-[#888] hover:text-[#dcdcdc] flex items-center gap-2 transition-colors group">
+                                            <span class="w-1.5 h-1.5 bg-[#c32720]/40 group-hover:bg-[#c32720] rounded-full transition-colors shrink-0"></span>
+                                            {{ $oldEfem['date_formatted'] }}
+                                        </a>
+                                    </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
                 </aside>
             </div>
 
