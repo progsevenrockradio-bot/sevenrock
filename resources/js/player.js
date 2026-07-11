@@ -1289,9 +1289,7 @@ export function registerRadioPlayer(Alpine) {
                 ? Math.round(audio.currentTime)
                 : 0;
 
-            this.progress.duration = this.track.is_live
-                ? 0
-                : (audioDuration || widgetDuration || Number(track.duration_seconds || 0));
+            this.progress.duration = widgetDuration || audioDuration || Number(track.duration_seconds || 0);
             this.progress.elapsed = audioElapsed || (widgetElapsed > 0
                 ? widgetElapsed
                 : (trackChanged ? 0 : Number(track.elapsed_seconds || 0)));

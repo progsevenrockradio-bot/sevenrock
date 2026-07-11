@@ -479,11 +479,13 @@
                             </span>
                         </button>
                         <div class="hidden sm:flex items-center gap-2.5 w-full">
-                            <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-right" x-text="track.is_live ? formatTime(progress.elapsed) : formatTime(progress.elapsed)"></span>
-                            <div class="flex-1 py-2">
-                                <input type="range" min="0" max="100" step="0.1" :value="progress.ratio" @input="!track.is_live && seek($event)" :disabled="track.is_live" class="lucille-range-slider" aria-label="Progreso">
+                            <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-right" x-text="formatTime(progress.elapsed)"></span>
+                            <div class="flex-1 py-2 flex items-center cursor-pointer group" @click="!track.is_live && seek($event)" :title="track.is_live ? '' : 'Adelantar/Atrasar'">
+                                <div class="w-full h-1 bg-white/10 rounded-full overflow-hidden relative">
+                                    <div class="absolute left-0 top-0 bottom-0 bg-lucille-accent rounded-full transition-all duration-100" :style="'width: ' + progress.ratio + '%'"></div>
+                                </div>
                             </div>
-                            <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-left" x-text="track.is_live ? formatTime(progress.duration) : formatTime(progress.duration)"></span>
+                            <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-left" x-text="formatTime(progress.duration)"></span>
                         </div>
                         
                         <!-- RadioBOSS Cloud Track Timer Widget (Hidden, used as data source) -->
