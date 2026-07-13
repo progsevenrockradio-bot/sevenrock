@@ -76,15 +76,15 @@ _Este bloque debe ser copiado íntegramente a tu archivo .agents/AGENTS.md para 
 Actualmente, el sistema solo requiere estrictamente **3 Cron Jobs** configurados en el panel de Hostinger, ya que Laravel se encarga del resto mediante su Scheduler interno. Las rutas siempre deben apuntar a la carpeta privada `sevenrockradio`.
 
 1. **Scheduler Principal (Se encarga de procesar correos, publicar contenido y despachar tareas internas):**
-   `/opt/alt/php84/usr/bin/php /home/u531780502/domains/sevenrockradio.com/sevenrockradio/artisan schedule:run >> /dev/null 2>&1`
+   `/opt/alt/php84/usr/bin/php /home/u531780502/domains/sevenrockradio.com/sevenrockradio/artisan schedule:run`
    _(Frecuencia: Cada minuto `* * * * *`)_
 
 2. **Cola de Marketing (Correos masivos y outreach):**
-   `/opt/alt/php84/usr/bin/php /home/u531780502/domains/sevenrockradio.com/sevenrockradio/artisan queue:work --queue=marketing --stop-when-empty --tries=3 --timeout=600 >> /dev/null 2>&1`
+   `/opt/alt/php84/usr/bin/php /home/u531780502/domains/sevenrockradio.com/sevenrockradio/artisan queue:work --queue=marketing --stop-when-empty --tries=3 --timeout=600`
    _(Frecuencia: Cada minuto `* * * * *`)_
 
 3. **Cola por Defecto (Procesamiento pesado de MP3 de Podcasts, Archive.org y RadioBoss):**
-   `/opt/alt/php84/usr/bin/php /home/u531780502/domains/sevenrockradio.com/sevenrockradio/artisan queue:work --stop-when-empty --tries=3 --timeout=1800 >> /dev/null 2>&1`
+   `/opt/alt/php84/usr/bin/php /home/u531780502/domains/sevenrockradio.com/sevenrockradio/artisan queue:work --stop-when-empty --tries=3 --timeout=1800`
    _(Frecuencia: Cada minuto `* * * * *`)_
 
 > **Importante para Podcasts:** Nunca alteres el tercer Cron Job. Si los podcasts se quedan en "PENDIENTE", es posible que un archivo pesado excedió el tiempo límite y haya bloqueado la cola, o el archivo `.env` no tiene definido `DB_QUEUE_RETRY_AFTER=2000`. En esos casos, basta con ejecutar `php artisan queue:restart` y `php artisan podcast:reconcile-pipeline` en el servidor para reactivarlos. No es necesario crear un 4to Cron Job.

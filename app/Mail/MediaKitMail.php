@@ -96,16 +96,24 @@ class MediaKitMail extends Mailable
     {
         $theme = $this->getFilteredTheme();
 
-        $pdf = \App::make('dompdf.wrapper');
-        $pdf->setOption(['isRemoteEnabled' => true]);
-        $pdf->loadView('pdf.media-kit', [
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('isHtml5ParserEnabled', true);
+
+        $dompdf = new \Dompdf\Dompdf($options);
+
+        $html = view('pdf.media-kit', [
             'theme'         => $theme,
             'recipientName' => $this->recipientName,
             'includeLogo'   => $this->options['include_logo'] ?? true,
-        ]);
+        ])->render();
+
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
 
         $attachments = [
-            Attachment::fromData(fn () => $pdf->output(), 'Media_Kit_Seven_Rock_Radio.pdf')
+            Attachment::fromData(fn () => $dompdf->output(), 'Media_Kit_Seven_Rock_Radio.pdf')
                 ->withMime('application/pdf')
         ];
 
