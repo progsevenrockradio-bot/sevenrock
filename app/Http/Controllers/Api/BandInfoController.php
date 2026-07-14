@@ -421,10 +421,6 @@ class BandInfoController extends Controller
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = str_replace(["\r\n", "\r"], "\n", $text);
         $text = trim(strip_tags($text));
-        
-        // Remove Discogs artist links: [a=Artist Name] or [a=Artist Name (2)] -> Artist Name
-        $text = preg_replace('/\[a=([^\]]+?)(\s+\(\d+\))?\]/u', '$1', $text) ?? $text;
-        
         $text = preg_replace('/\[(?:[A-Za-z]{1,3}\d+|\d+)\]/u', '', $text) ?? $text;
         $text = preg_replace('/[ \t]+/u', ' ', $text) ?? $text;
         $text = preg_replace('/ *\n */u', "\n", $text) ?? $text;
