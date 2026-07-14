@@ -620,6 +620,7 @@ export function registerRadioPlayer(Alpine) {
             if (!detail) return;
             // If it's a live stream request
             if (detail.src === 'live' || detail.type === 'live') {
+                window.dispatchEvent(new CustomEvent('sr-catalog-stopped'));
                 this.startLiveFromFAB();
                 return;
             }
@@ -660,6 +661,11 @@ export function registerRadioPlayer(Alpine) {
             };
 
             if (hasValidAudio) {
+                // Notify the catalog list which song is now active
+                if (detail.type === 'song') {
+                    window.dispatchEvent(new CustomEvent('sr-catalog-playing', { detail: { audioUrl: srcStr } }));
+                }
+
                 this.streamCandidates = [srcStr].filter(Boolean);
                 this.currentStreamIndex = 0;
                 

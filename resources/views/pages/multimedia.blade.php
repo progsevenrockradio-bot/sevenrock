@@ -28,9 +28,7 @@
         lightboxImages: {{ Js::from($lightboxImages) }},
         get lightboxCurrent() { return this.lightboxImages[this.lightboxIndex] ?? null; },
         songSearch: '',
-        isPlayingTrack(audioUrl) {
-            return window.MusicPlayer && window.MusicPlayer.playing && window.MusicPlayer.track && window.MusicPlayer.track.audio_url === audioUrl;
-        },
+        currentlyPlayingUrl: '',
 
         playTrack(track) {
             window.dispatchEvent(new CustomEvent('play-multimedia-track', { detail: track }));
@@ -43,6 +41,8 @@
     @keydown.escape.window="drawerOpen = false; lightboxOpen && closeGallery()"
     @keydown.arrow-right.window="lightboxOpen && nextImage()"
     @keydown.arrow-left.window="lightboxOpen && prevImage()"
+    @sr-catalog-playing.window="currentlyPlayingUrl = $event.detail.audioUrl"
+    @sr-catalog-stopped.window="currentlyPlayingUrl = ''"
 >
 
     {{-- ─────────── TAB NAVIGATION ─────────── --}}
@@ -310,10 +310,10 @@
                             bandMembers: [],
                             socialLinks: {{ Js::from($socialLinks) }}
                         })">
-                        <span class="text-[12px] font-mono text-[#444] w-6 text-center shrink-0 group-hover/song:hidden" 
-                              x-show="!isPlayingTrack('{{ addslashes($audioUrl) }}')">{{ $visibleIndex++ }}</span>
-                        <span class="text-lucille-accent w-6 justify-center shrink-0"
-                              x-show="isPlayingTrack('{{ addslashes($audioUrl) }}')"
+                        <span class="text-[12px] font-mono text-[#444] w-6 text-center shrink-0 group-hover/song:hidden"
+                              x-show="currentlyPlayingUrl !== '{{ addslashes($audioUrl) }}'">{{ $visibleIndex++ }}</span>
+                        <span class="text-lucille-accent flex w-6 justify-center shrink-0"
+                              x-show="currentlyPlayingUrl === '{{ addslashes($audioUrl) }}'"
                               x-cloak>
                             <div class="flex items-end justify-center gap-0.5 h-3 w-4">
                                 <span class="mm-eq-bar" style="animation-delay:0ms"></span>
@@ -322,16 +322,16 @@
                             </div>
                         </span>
                         <span class="hidden group-hover/song:flex text-lucille-accent w-6 justify-center shrink-0"
-                              x-show="!isPlayingTrack('{{ addslashes($audioUrl) }}')">▶</span>
+                              x-show="currentlyPlayingUrl !== '{{ addslashes($audioUrl) }}'">▶</span>
                         <div class="w-10 h-10 rounded overflow-hidden border border-[#2a2a2a] shrink-0">
                             <img src="{{ $coverUrl }}" alt="{{ $song->title }}" class="w-full h-full object-cover" loading="lazy">
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="font-display text-[13px] text-[#dcdcdc] truncate group-hover/song:text-lucille-accent transition-colors"
-                                 :class="{ 'text-lucille-accent': isPlayingTrack('{{ addslashes($audioUrl) }}') }">{{ $song->title }}</div>
+                                 :class="{ 'text-lucille-accent': currentlyPlayingUrl === '{{ addslashes($audioUrl) }}' }">{{ $song->title }}</div>
                             <div class="text-[11px] text-[#777] truncate">{{ $song->artist_name }}</div>
                         </div>
-                        <div x-show="isPlayingTrack('{{ addslashes($audioUrl) }}')" class="text-[10px] text-lucille-accent font-display tracking-wider uppercase hidden sm:block mr-2" x-cloak>
+                        <div x-show="currentlyPlayingUrl === '{{ addslashes($audioUrl) }}'" class="text-[10px] text-lucille-accent font-display tracking-wider uppercase hidden sm:block mr-2" x-cloak>
                             Sonando
                         </div>
 
