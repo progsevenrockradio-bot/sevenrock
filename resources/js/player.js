@@ -547,7 +547,6 @@ export function registerRadioPlayer(Alpine) {
             try {
                 this.loading = true;
                 this.playing = true;
-                audio.load();
                 await audio.play();
                 this.loading = false;
                 this.queueStatusRefresh(0);
@@ -559,7 +558,6 @@ export function registerRadioPlayer(Alpine) {
                     try {
                         this.loading = true;
                         this.playing = true;
-                        audio.load();
                         await audio.play();
                         this.loading = false;
                         this.queueStatusRefresh(0);
@@ -573,7 +571,23 @@ export function registerRadioPlayer(Alpine) {
                 this.playing = false;
                 this.loading = false;
                 this.queueStatusRefresh(0);
-                this.toastMessage('No se pudo iniciar el audio');
+                
+                let errorMessage = 'No se pudo iniciar el audio (' + (error.name || 'Error') + ')';
+                if (audio.src && audio.src.includes('archive.org/details/')) {
+                    errorMessage = 'Error: Enlace de archive.org incorrecto';
+                } else if (error.name === 'NotSupportedError') {
+                    errorMessage = 'Formato de audio no soportado o enlace roto';
+                } else if (error.name === 'NotAllowedError') {
+                    errorMessage = 'El navegador bloqueó el audio automático';
+                } else if (error.name === 'AbortError') {
+                    errorMessage = 'Carga abortada por el navegador';
+                } else if (error.message) {
+                    errorMessage = 'Error: ' + error.message;
+                }
+
+                if (typeof this.toastMessage === 'function') {
+                    this.toastMessage(errorMessage);
+                }
             }
         },
 
