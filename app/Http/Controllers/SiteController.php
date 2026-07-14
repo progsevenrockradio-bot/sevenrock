@@ -156,6 +156,8 @@ class SiteController extends Controller
     {
         $newReleases = NewRelease::query()
             ->where('is_active', true)
+            ->whereNotNull('audio_path')
+            ->where('audio_path', '!=', '')
             ->orderByDesc('released_at')
             ->latest()
             ->paginate(12);
