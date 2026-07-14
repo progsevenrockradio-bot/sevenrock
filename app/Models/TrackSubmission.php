@@ -22,6 +22,7 @@ class TrackSubmission extends Model
         'social_link',
         'file_path',
         'status',
+        'published_to_hub',
     ];
 
     /**

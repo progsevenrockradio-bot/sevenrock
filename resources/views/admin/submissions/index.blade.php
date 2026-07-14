@@ -135,6 +135,17 @@
                                                 <button type="submit" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-[#4d1e1e]/20 hover:bg-[#4d1e1e]/60" style="border-color: #4d1e1e; color: #e6b8b8;">Rechazar</button>
                                             </form>
                                             @endif
+
+                                            @if($submission->status === 'approved')
+                                                @if(!$submission->published_to_hub)
+                                                    <form action="{{ route('admin.submissions.publish', $submission) }}" method="POST">
+                                                        @csrf
+                                                        <button type="submit" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-lucille-accent/20 hover:bg-lucille-accent/60" style="border-color: var(--lucille-accent); color: #fff;" title="Publicar en Catálogo Musical (Hub)">Publicar al Hub</button>
+                                                    </form>
+                                                @else
+                                                    <span class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border border-transparent bg-white/10 text-[#dcdcdc] opacity-75 cursor-default select-none" title="Ya fue publicada en el Hub">Publicado en Hub</span>
+                                                @endif
+                                            @endif
                                         </div>
 
                                         <form

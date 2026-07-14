@@ -151,6 +151,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::patch('/{submission}/status', 'updateStatus')->name('updateStatus');
         Route::delete('/{submission}', 'destroy')->name('destroy');
         Route::get('/{submission}/download', 'download')->name('download');
+        Route::post('/{submission}/publish', 'publishToHub')->name('publish');
     });
 
     Route::controller(AdminPostController::class)->prefix('posts')->name('posts.')->group(function (): void {

@@ -145,4 +145,60 @@ class AdminTrackSubmissionController extends Controller
             return redirect()->back()->with('error', 'Ocurrió un error al intentar descargar el archivo.');
         }
     }
+
+    /**
+     * Publish the approved submission to the NewReleases Hub catalog.
+     */
+    public function publishToHub(TrackSubmission $submission): RedirectResponse
+    {
+        if ($submission->status !== 'approved') {
+            return redirect()->back()->with('error', 'Solo las maquetas aprobadas pueden publicarse en el Hub.');
+        }
+
+        if ($submission->published_to_hub) {
+            return redirect()->back()->with('error', 'Esta maqueta ya ha sido publicada en el Hub.');
+        }
+
+        try {
+            // Generar slug basado en título y artista
+            $slugBase = \Illuminate\Support\Str::slug($submission->song_title . '-' . $submission->band_name);
+            $slug = $slugBase;
+            $count = 1;
+            while (\App\Models\NewRelease::where('slug', $slug)->exists()) {
+                $slug = $slugBase . '-' . $count;
+                $count++;
+            }
+
+            // Mapear enlace social a youtube/spotify
+            $youtubeUrl = null;
+            $spotifyUrl = null;
+            if ($submission->social_link) {
+                if (str_contains(strtolower($submission->social_link), 'youtube.com') || str_contains(strtolower($submission->social_link), 'youtu.be')) {
+                    $youtubeUrl = $submission->social_link;
+                } elseif (str_contains(strtolower($submission->social_link), 'spotify.com')) {
+                    $spotifyUrl = $submission->social_link;
+                }
+            }
+
+            \App\Models\NewRelease::create([
+                'title' => $submission->song_title,
+                'slug' => $slug,
+                'artist_name' => $submission->band_name,
+                'released_at' => now(),
+                'audio_path' => $submission->file_path, // Uses same path in R2
+                'youtube_url' => $youtubeUrl,
+                'spotify_url' => $spotifyUrl,
+                'description' => 'Maqueta descubierta y promocionada por el A&R de Seven Rock Radio.',
+                'is_active' => true,
+                'author_email' => $submission->contact_email,
+            ]);
+
+            $submission->update(['published_to_hub' => true]);
+
+            return redirect()->back()->with('success', 'Maqueta publicada exitosamente en el Catálogo Musical (Hub).');
+        } catch (\Throwable $e) {
+            Log::error('Error al publicar maqueta al hub ID ' . $submission->id . ': ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Ocurrió un error al publicar la maqueta.');
+        }
+    }
 }
