@@ -121,25 +121,22 @@ class BandInfoController extends Controller
 
         try {
             if ($newRelease) {
-                // If it is a Multimedia Hub NewRelease song, skip external lookup overrides 
+                // Multimedia Hub track — never expose formed_year or external metadata
                 $song = null;
                 $bandProfile = $newRelease->radioArtist;
                 if ($bandProfile) {
-                    $payload['thumbnail'] = $bandProfile->normalizedImageUrl() ?: $payload['thumbnail'];
-                    $payload['social_links'] = $bandProfile->official_links ?: $payload['social_links'];
-                    $payload['formed_year'] = $this->yearFromBandProfile($bandProfile);
-                    $payload['formed_label'] = $payload['formed_year'] ? sprintf('Se formó en %d', $payload['formed_year']) : '';
-                } else {
-                    $payload['formed_year'] = null;
-                    $payload['formed_label'] = '';
-                    $payload['logo_path'] = '';
-                    $payload['country'] = '';
-                    $payload['genre'] = '';
-                    $payload['members_count'] = null;
-                    $payload['status'] = '';
-                    $payload['labels'] = '';
-                    $payload['facts'] = [];
+                    // Only use the artist image if the release itself has no cover
+                    if (empty($payload['thumbnail'])) {
+                        $payload['thumbnail'] = $bandProfile->normalizedImageUrl() ?: '';
+                    }
+                    // Merge social links but never overwrite Spotify/YouTube already set
+                    if (empty($payload['social_links'])) {
+                        $payload['social_links'] = $bandProfile->official_links ?: [];
+                    }
                 }
+                // Always clear year — we never show founding date for catalog releases
+                $payload['formed_year']  = null;
+                $payload['formed_label'] = '';
             } else {
                 $song = $this->resolveSong($artist, $title);
                 if ($song && $artist === '') {
