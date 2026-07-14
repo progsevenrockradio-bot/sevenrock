@@ -1037,6 +1037,9 @@ export function registerRadioPlayer(Alpine) {
         },
 
         syncTrackFromWidget(force = false) {
+            if (this.track && !this.track.is_live) {
+                return false;
+            }
             const widgetTrack = this.resolveWidgetTrack();
             if (!widgetTrack) {
                 return false;
