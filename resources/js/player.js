@@ -660,6 +660,10 @@ export function registerRadioPlayer(Alpine) {
             if (hasValidAudio) {
                 this.streamCandidates = [srcStr].filter(Boolean);
                 this.currentStreamIndex = 0;
+                
+                // Force play instead of toggling pause if something was already playing
+                this.playing = false;
+                
                 this.attemptPlayWithFallback();
             } else {
                 if (audio) audio.pause();

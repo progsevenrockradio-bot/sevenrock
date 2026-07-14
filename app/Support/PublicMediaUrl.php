@@ -194,7 +194,11 @@ class PublicMediaUrl
 
     public static function normalizePublicUrl(mixed $value): string
     {
-        return self::normalize($value) ?? '';
+        $url = self::normalize($value) ?? '';
+        if (str_starts_with($url, 'http://') && (str_contains($url, 'sevenrockradio.com') || str_contains($url, 'localhost') === false)) {
+            $url = str_replace('http://', 'https://', $url);
+        }
+        return $url;
     }
 
     public static function rewriteLegacyWordPressUploadsInHtml(string $html): string
