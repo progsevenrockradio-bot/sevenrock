@@ -607,9 +607,42 @@ export function registerRadioPlayer(Alpine) {
                 this.startLiveFromFAB();
                 return;
             }
-            // For podcasts/songs from multimedia hub — not handled yet, future extension
+            // For podcasts/songs from multimedia hub
             this.dockVisible = true;
             this.dockMinimized = false;
+
+            const audio = this.$refs.audio;
+            if (audio) {
+                audio.pause();
+            }
+
+            this.track = {
+                title: detail.title || '',
+                artist: detail.subtitle || '',
+                cover: detail.image || this.fallbackCover || this.logoUrl,
+                lyrics: detail.lyrics || '',
+                band_info: detail.bandInfo || '',
+                band_biography: detail.bandInfo || '',
+                band_biography_source: '',
+                band_thumbnail: detail.image || '',
+                comment: '',
+                band_members: detail.bandMembers || [],
+                social_links: detail.socialLinks || [],
+                audio_url: detail.src || '',
+                is_live: false,
+                signature: detail.src || '',
+                program_name: detail.type === 'podcast' ? detail.subtitle : '',
+                program_description: detail.bandInfo || '',
+                program_host: '',
+                program_schedule: '',
+                program_id: null,
+                es_bloque_programa: false,
+            };
+
+            this.streamCandidates = [detail.src].filter(Boolean);
+            this.currentStreamIndex = 0;
+
+            this.attemptPlayWithFallback();
         },
 
         togglePanel() {
@@ -1141,6 +1174,10 @@ export function registerRadioPlayer(Alpine) {
         },
 
         async refreshStatus(silent = false, skipBandEnrichment = false) {
+            if (!this.track.is_live) {
+                return;
+            }
+
             if (this.statusInFlight) {
                 return;
             }

@@ -538,11 +538,10 @@ class SiteController extends Controller
         $videos = $this->safeValue(fn () => Video::query()->latest()->take(12)->get(), collect());
 
         $songs = $this->safeValue(
-            fn () => \App\Models\Song::query()
-                ->with('bandProfile')
-                ->published()
-                ->orderBy('sort_order')
-                ->orderByDesc('published_at')
+            fn () => NewRelease::query()
+                ->where('is_active', true)
+                ->orderByDesc('released_at')
+                ->orderByDesc('id')
                 ->take(50)
                 ->get(),
             collect()

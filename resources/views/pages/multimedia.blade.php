@@ -275,12 +275,18 @@
             <div class="divide-y divide-[#1a1a1a]">
                 @foreach ($songs as $index => $song)
                     @php
-                        $coverUrl  = $song->cover_url ?: $fallbackImage;
-                        $audioUrl  = \App\Support\PublicMediaUrl::normalizePublicUrl($song->audio_url) ?: ($song->audio_url ?? '');
-                        $bandName  = $song->bandProfile?->name ?? '';
-                        $hasLyrics = !empty($song->lyrics);
-                        $hasBio    = !empty($song->band_info) || !empty($bandName);
-                        $searchStr = strtolower($song->title . ' ' . $song->artist . ' ' . ($song->album ?? ''));
+                        $coverUrl  = $song->cover_image_url ?: $fallbackImage;
+                        $audioUrl  = $song->audio_url;
+                        $bandName  = $song->artist_name;
+                        $hasBio    = !empty($song->description);
+                        $searchStr = strtolower($song->title . ' ' . $song->artist_name);
+                        $socialLinks = [];
+                        if (!empty($song->spotify_url)) {
+                            $socialLinks['spotify'] = $song->spotify_url;
+                        }
+                        if (!empty($song->youtube_url)) {
+                            $socialLinks['youtube'] = $song->youtube_url;
+                        }
                     @endphp
                     <div class="group/song flex items-center gap-4 py-3 px-2 rounded-lg hover:bg-[#101012] transition-all duration-200 cursor-pointer"
                         x-show="songSearch === '' || '{{ addslashes($searchStr) }}'.includes(songSearch.toLowerCase())"
@@ -288,14 +294,14 @@
                             type: 'song',
                             src: '{{ addslashes($audioUrl) }}',
                             title: '{{ addslashes($song->title) }}',
-                            subtitle: '{{ addslashes($song->artist) }}',
+                            subtitle: '{{ addslashes($song->artist_name) }}',
                             image: '{{ $coverUrl }}',
-                            album: '{{ addslashes($song->album ?? '') }}',
-                            lyrics: {{ $hasLyrics ? Js::from($song->lyrics) : 'null' }},
-                            bandInfo: {{ $hasBio ? Js::from($song->band_info ?? '') : 'null' }},
-                            bandName: '{{ addslashes($bandName) }}',
-                            bandMembers: {{ Js::from($song->band_members ?? []) }},
-                            socialLinks: {{ Js::from(is_array($song->social_links ?? null) ? $song->social_links : []) }}
+                            album: '',
+                            lyrics: null,
+                            bandInfo: {{ $hasBio ? Js::from($song->description ?? '') : 'null' }},
+                            bandName: '{{ addslashes($song->artist_name) }}',
+                            bandMembers: [],
+                            socialLinks: {{ Js::from($socialLinks) }}
                         })">
                         <span class="text-[12px] font-mono text-[#444] w-6 text-center shrink-0 group-hover/song:hidden">{{ $index + 1 }}</span>
                         <span class="hidden group-hover/song:flex text-lucille-accent w-6 justify-center shrink-0">▶</span>
@@ -304,15 +310,16 @@
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="font-display text-[13px] text-[#dcdcdc] truncate group-hover/song:text-lucille-accent transition-colors">{{ $song->title }}</div>
-                            <div class="text-[11px] text-[#777] truncate">{{ $song->artist }}@if($song->album) · <em>{{ $song->album }}</em>@endif</div>
+                            <div class="text-[11px] text-[#777] truncate">{{ $song->artist_name }}</div>
                         </div>
                         <div class="hidden sm:flex items-center gap-2 shrink-0">
-                            @if ($hasLyrics) <span class="text-[9px] uppercase tracking-[.08em] text-[#555] border border-[#222] px-1.5 py-0.5 rounded">Letras</span> @endif
-                            @if ($hasBio)    <span class="text-[9px] uppercase tracking-[.08em] text-[#555] border border-[#222] px-1.5 py-0.5 rounded">Bio</span>    @endif
+                            @if (!empty($song->spotify_url) || !empty($song->youtube_url))
+                                <span class="text-[9px] uppercase tracking-[.08em] text-[#555] border border-[#222] px-1.5 py-0.5 rounded">Enlaces</span>
+                            @endif
+                            @if ($hasBio)
+                                <span class="text-[9px] uppercase tracking-[.08em] text-[#555] border border-[#222] px-1.5 py-0.5 rounded">Reseña</span>
+                            @endif
                         </div>
-                        @if ($song->duration_seconds)
-                            <span class="text-[11px] font-mono text-[#555] shrink-0 w-10 text-right">{{ sprintf('%d:%02d', floor($song->duration_seconds/60), $song->duration_seconds%60) }}</span>
-                        @endif
                     </div>
                 @endforeach
             </div>

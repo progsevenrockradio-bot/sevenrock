@@ -893,50 +893,52 @@
 
                 <template x-if="programInfo">
                     <div class="radio-modal-content radio-modal-content--program">
-                        <div class="radio-modal-header radio-modal-header--program">
-                            <img class="radio-modal-cover radio-modal-cover--program" :src="programInfo.cover || fallbackCover" :alt="programInfo.name || ''" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" loading="lazy">
-                            <div class="radio-modal-copy radio-modal-copy--program">
-                                <span x-show="track.is_live" class="radio-modal-live-badge">
-                                    <span class="radio-modal-live-dot sr-pulse"></span>
-                                    EN VIVO
-                                </span>
-                                <span class="radio-modal-program-genre" x-text="programInfo.genre || ''"></span>
-                                <h2 class="radio-modal-program-title" x-text="track.program_name || programInfo.name || ''"></h2>
-                                <p class="radio-modal-program-host" x-text="programInfo.host ? 'Conduce: ' + programInfo.host : ''"></p>
-                                <p class="radio-modal-program-schedule" x-text="programInfo.schedule || ''"></p>
-                                <div x-show="programInfo.social_links && (programInfo.social_links.facebook || programInfo.social_links.instagram)" class="radio-modal-program-socials">
-                                    <a x-show="programInfo.social_links?.facebook" :href="programInfo.social_links.facebook" target="_blank" rel="noopener noreferrer" class="radio-modal-program-social">Facebook</a>
-                                    <a x-show="programInfo.social_links?.instagram" :href="programInfo.social_links.instagram" target="_blank" rel="noopener noreferrer" class="radio-modal-program-social">Instagram</a>
+                        <div class="radio-modal-scroll">
+                            <div class="radio-modal-header radio-modal-header--program">
+                                <img class="radio-modal-cover radio-modal-cover--program" :src="programInfo.cover || fallbackCover" :alt="programInfo.name || ''" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" loading="lazy">
+                                <div class="radio-modal-copy radio-modal-copy--program">
+                                    <span x-show="track.is_live" class="radio-modal-live-badge">
+                                        <span class="radio-modal-live-dot sr-pulse"></span>
+                                        EN VIVO
+                                    </span>
+                                    <span class="radio-modal-program-genre" x-text="programInfo.genre || ''"></span>
+                                    <h2 class="radio-modal-program-title" x-text="track.program_name || programInfo.name || ''"></h2>
+                                    <p class="radio-modal-program-host" x-text="programInfo.host ? 'Conduce: ' + programInfo.host : ''"></p>
+                                    <p class="radio-modal-program-schedule" x-text="programInfo.schedule || ''"></p>
+                                    <div x-show="programInfo.social_links && (programInfo.social_links.facebook || programInfo.social_links.instagram)" class="radio-modal-program-socials">
+                                        <a x-show="programInfo.social_links?.facebook" :href="programInfo.social_links.facebook" target="_blank" rel="noopener noreferrer" class="radio-modal-program-social">Facebook</a>
+                                        <a x-show="programInfo.social_links?.instagram" :href="programInfo.social_links.instagram" target="_blank" rel="noopener noreferrer" class="radio-modal-program-social">Instagram</a>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="radio-modal-divider"></div>
+                            <div class="radio-modal-divider"></div>
 
-                        <div class="radio-modal-body radio-modal-body--program">
-                            <template x-if="programInfo.episode">
-                                <div>
-                                    <div x-show="programInfo.episode.guest_image" class="radio-modal-guest-image-wrap">
-                                        <img class="radio-modal-guest-image" :src="programInfo.episode.guest_image" :alt="programInfo.episode.title || ''" onerror="this.hidden = true; this.onerror = null;" loading="lazy">
+                            <div class="radio-modal-body radio-modal-body--program">
+                                <template x-if="programInfo.episode">
+                                    <div>
+                                        <div x-show="programInfo.episode.guest_image" class="radio-modal-guest-image-wrap">
+                                            <img class="radio-modal-guest-image" :src="programInfo.episode.guest_image" :alt="programInfo.episode.title || ''" onerror="this.hidden = true; this.onerror = null;" loading="lazy">
+                                        </div>
+                                        <h3 class="radio-modal-episode-title" x-text="programInfo.episode.title || ''"></h3>
+                                        <p class="radio-modal-episode-text" x-text="programInfo.episode.description || track.program_description || programInfo.description || 'Información del programa no disponible.'"></p>
+                                        
+                                        <div x-show="programInfo.episode.guest_bio" class="mt-3 border-t border-white/5 pt-2">
+                                            <span class="text-[10px] uppercase tracking-wider text-[#7b7b7b]">Invitado</span>
+                                            <p class="text-xs text-[#b4b4b4]" x-text="programInfo.episode.guest_bio"></p>
+                                        </div>
+                                        
+                                        <small x-show="programInfo.episode.episode_number" class="radio-modal-episode-meta block mt-3" x-text="'Episodio ' + programInfo.episode.episode_number"></small>
                                     </div>
-                                    <h3 class="radio-modal-episode-title" x-text="programInfo.episode.title || ''"></h3>
-                                    <p class="radio-modal-episode-text" x-text="programInfo.episode.description || track.program_description || programInfo.description || 'Información del programa no disponible.'"></p>
-                                    
-                                    <div x-show="programInfo.episode.guest_bio" class="mt-3 border-t border-white/5 pt-2">
-                                        <span class="text-[10px] uppercase tracking-wider text-[#7b7b7b]">Invitado</span>
-                                        <p class="text-xs text-[#b4b4b4]" x-text="programInfo.episode.guest_bio"></p>
-                                    </div>
-                                    
-                                    <small x-show="programInfo.episode.episode_number" class="radio-modal-episode-meta block mt-3" x-text="'Episodio ' + programInfo.episode.episode_number"></small>
-                                </div>
-                            </template>
+                                </template>
 
-                            <template x-if="!programInfo.episode">
-                                <div>
-                                    <h3 class="radio-modal-episode-title">Acerca del programa</h3>
-                                    <p class="radio-modal-episode-text" x-text="track.program_description || programInfo.description || 'Información del programa no disponible.'"></p>
-                                </div>
-                            </template>
+                                <template x-if="!programInfo.episode">
+                                    <div>
+                                        <h3 class="radio-modal-episode-title">Acerca del programa</h3>
+                                        <p class="radio-modal-episode-text" x-text="track.program_description || programInfo.description || 'Información del programa no disponible.'"></p>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
                     </div>
                 </template>
