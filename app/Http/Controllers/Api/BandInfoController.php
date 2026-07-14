@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\RadioArtist;
 use App\Models\Song;
+use App\Models\NewRelease;
 use App\Support\BandProfileMatcher;
 use App\Support\BandInfoResolver;
 use App\Support\LyricsResolver;
@@ -60,48 +61,97 @@ class BandInfoController extends Controller
         $payload = $this->resolver->resolve($artist);
         $lyrics = '';
         $bandProfile = null;
+        
+        // Lookup in NewReleases first (specifically for Multimedia Hub tracks)
+        $newRelease = null;
+        if ($title !== '' && $artist !== '') {
+            $newRelease = NewRelease::query()
+                ->where('is_active', true)
+                ->whereRaw('LOWER(title) = ?', [mb_strtolower($title)])
+                ->whereRaw('LOWER(artist_name) = ?', [mb_strtolower($artist)])
+                ->first();
+        }
+        if (!$newRelease && $title !== '') {
+            $newRelease = NewRelease::query()
+                ->where('is_active', true)
+                ->whereRaw('LOWER(title) = ?', [mb_strtolower($title)])
+                ->first();
+        }
+
+        if ($newRelease) {
+            if ($newRelease->description && trim((string) $newRelease->description) !== '') {
+                $payload['summary'] = $this->formatSummaryText((string) $newRelease->description);
+                $payload['biography'] = $payload['summary'];
+                $payload['biography_source'] = 'real';
+            }
+            if ($newRelease->cover_image) {
+                $payload['thumbnail'] = $newRelease->cover_image_url;
+            }
+            $socials = [];
+            if ($newRelease->spotify_url) {
+                $socials[] = ['label' => 'Spotify', 'url' => $newRelease->spotify_url];
+            }
+            if ($newRelease->youtube_url) {
+                $socials[] = ['label' => 'YouTube', 'url' => $newRelease->youtube_url];
+            }
+            if (!empty($socials)) {
+                $payload['social_links'] = $socials;
+            }
+        }
 
         try {
-            $song = $this->resolveSong($artist, $title);
-            if ($song && $artist === '') {
-                $artist = trim((string) $song->artist);
-            }
-            $songMatchesArtist = $song ? $this->songArtistMatchesLookup($song, $artist) : false;
-            $songBandProfileMatchesArtist = $song?->bandProfile
-                ? $this->bandProfileMatchesArtist($song->bandProfile, $artist)
-                : true;
-
-            if ($songMatchesArtist && $songBandProfileMatchesArtist && $song?->band_info && trim((string) $song->band_info) !== '' && ! $this->isFallbackSummary((string) $song->band_info, $artist)) {
-                $payload['summary'] = $this->formatSummaryText((string) $song->band_info);
-                $bioPayload = $this->resolveBiographyPayload($song?->bandProfile, (string) $payload['summary']);
-                $payload['biography'] = $bioPayload['biography'];
-                $payload['biography_source'] = $bioPayload['biography_source'];
-            } elseif ($songMatchesArtist && $songBandProfileMatchesArtist && $song?->bandProfile) {
-                $bandProfile = $song->bandProfile;
-                $payload['summary'] = $this->formatSummaryText((string) ($song->bandProfile->editorial_summary ?: $song->bandProfile->biography ?: $payload['summary']));
-                $bioPayload = $this->resolveBiographyPayload($song->bandProfile, (string) $payload['summary']);
-                $payload['biography'] = $bioPayload['biography'];
-                $payload['biography_source'] = $bioPayload['biography_source'];
-                $payload['thumbnail'] = $song->bandProfile->normalizedImageUrl() ?: $payload['thumbnail'];
-                $payload['social_links'] = $song->bandProfile->official_links ?: $payload['social_links'];
-            } else {
-                $bandProfile = $this->resolveBandProfile($artist);
+            if ($newRelease) {
+                // If it is a Multimedia Hub NewRelease song, skip external lookup overrides 
+                $song = null;
+                $bandProfile = $newRelease->radioArtist;
                 if ($bandProfile) {
-                    $payload['summary'] = $this->formatSummaryText((string) ($bandProfile->editorial_summary ?: $bandProfile->biography ?: $payload['summary']));
-                    $bioPayload = $this->resolveBiographyPayload($bandProfile, (string) $payload['summary']);
-                    $payload['biography'] = $bioPayload['biography'];
-                    $payload['biography_source'] = $bioPayload['biography_source'];
                     $payload['thumbnail'] = $bandProfile->normalizedImageUrl() ?: $payload['thumbnail'];
                     $payload['social_links'] = $bandProfile->official_links ?: $payload['social_links'];
-                    $payload['formed_year'] = $payload['formed_year'] ?: $this->yearFromBandProfile($bandProfile);
-                    $payload['formed_label'] = $payload['formed_label'] ?: ($payload['formed_year'] ? sprintf('Se formó en %d', $payload['formed_year']) : '');
+                    $payload['formed_year'] = $this->yearFromBandProfile($bandProfile);
+                    $payload['formed_label'] = $payload['formed_year'] ? sprintf('Se formó en %d', $payload['formed_year']) : '';
                 }
-            }
+            } else {
+                $song = $this->resolveSong($artist, $title);
+                if ($song && $artist === '') {
+                    $artist = trim((string) $song->artist);
+                }
+                $songMatchesArtist = $song ? $this->songArtistMatchesLookup($song, $artist) : false;
+                $songBandProfileMatchesArtist = $song?->bandProfile
+                    ? $this->bandProfileMatchesArtist($song->bandProfile, $artist)
+                    : true;
 
-            if (! isset($payload['biography_source']) || ! is_string($payload['biography_source'])) {
-                $bioPayload = $this->resolveBiographyPayload($bandProfile, (string) ($payload['summary'] ?? ''));
-                $payload['biography'] = $bioPayload['biography'];
-                $payload['biography_source'] = $bioPayload['biography_source'];
+                if ($songMatchesArtist && $songBandProfileMatchesArtist && $song?->band_info && trim((string) $song->band_info) !== '' && ! $this->isFallbackSummary((string) $song->band_info, $artist)) {
+                    $payload['summary'] = $this->formatSummaryText((string) $song->band_info);
+                    $bioPayload = $this->resolveBiographyPayload($song?->bandProfile, (string) $payload['summary']);
+                    $payload['biography'] = $bioPayload['biography'];
+                    $payload['biography_source'] = $bioPayload['biography_source'];
+                } elseif ($songMatchesArtist && $songBandProfileMatchesArtist && $song?->bandProfile) {
+                    $bandProfile = $song->bandProfile;
+                    $payload['summary'] = $this->formatSummaryText((string) ($song->bandProfile->editorial_summary ?: $song->bandProfile->biography ?: $payload['summary']));
+                    $bioPayload = $this->resolveBiographyPayload($song->bandProfile, (string) $payload['summary']);
+                    $payload['biography'] = $bioPayload['biography'];
+                    $payload['biography_source'] = $bioPayload['biography_source'];
+                    $payload['thumbnail'] = $song->bandProfile->normalizedImageUrl() ?: $payload['thumbnail'];
+                    $payload['social_links'] = $song->bandProfile->official_links ?: $payload['social_links'];
+                } else {
+                    $bandProfile = $this->resolveBandProfile($artist);
+                    if ($bandProfile) {
+                        $payload['summary'] = $this->formatSummaryText((string) ($bandProfile->editorial_summary ?: $bandProfile->biography ?: $payload['summary']));
+                        $bioPayload = $this->resolveBiographyPayload($bandProfile, (string) $payload['summary']);
+                        $payload['biography'] = $bioPayload['biography'];
+                        $payload['biography_source'] = $bioPayload['biography_source'];
+                        $payload['thumbnail'] = $bandProfile->normalizedImageUrl() ?: $payload['thumbnail'];
+                        $payload['social_links'] = $bandProfile->official_links ?: $payload['social_links'];
+                        $payload['formed_year'] = $payload['formed_year'] ?: $this->yearFromBandProfile($bandProfile);
+                        $payload['formed_label'] = $payload['formed_label'] ?: ($payload['formed_year'] ? sprintf('Se formó en %d', $payload['formed_year']) : '');
+                    }
+                }
+
+                if (! isset($payload['biography_source']) || ! is_string($payload['biography_source'])) {
+                    $bioPayload = $this->resolveBiographyPayload($bandProfile, (string) ($payload['summary'] ?? ''));
+                    $payload['biography'] = $bioPayload['biography'];
+                    $payload['biography_source'] = $bioPayload['biography_source'];
+                }
             }
 
             if ($songMatchesArtist && $song?->lyrics) {
