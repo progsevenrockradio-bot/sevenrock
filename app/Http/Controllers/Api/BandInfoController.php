@@ -58,11 +58,10 @@ class BandInfoController extends Controller
         ]);
         }
 
-        $payload = $this->resolver->resolve($artist);
         $lyrics = '';
         $bandProfile = null;
-        
-        // Lookup in NewReleases first (specifically for Multimedia Hub tracks)
+
+        // Lookup in NewReleases FIRST (Multimedia Hub tracks bypass all external APIs)
         $newRelease = null;
         if ($title !== '' && $artist !== '') {
             $newRelease = NewRelease::query()
@@ -79,10 +78,28 @@ class BandInfoController extends Controller
         }
 
         if ($newRelease) {
+            // For Multimedia Hub tracks: start from a completely clean payload,
+            // never call external APIs (Last.fm, Discogs, etc.)
+            $payload = [
+                'summary'          => '',
+                'biography'        => '',
+                'biography_source' => 'real',
+                'thumbnail'        => '',
+                'logo_path'        => '',
+                'country'          => '',
+                'genre'            => '',
+                'members_count'    => null,
+                'status'           => '',
+                'labels'           => '',
+                'social_links'     => [],
+                'formed_year'      => null,
+                'formed_label'     => '',
+                'facts'            => [],
+                'lyrics'           => '',
+            ];
             if ($newRelease->description && trim((string) $newRelease->description) !== '') {
-                $payload['summary'] = $this->formatSummaryText((string) $newRelease->description);
+                $payload['summary']   = $this->formatSummaryText((string) $newRelease->description);
                 $payload['biography'] = $payload['summary'];
-                $payload['biography_source'] = 'real';
             }
             if ($newRelease->cover_image) {
                 $payload['thumbnail'] = $newRelease->cover_image_url;
@@ -97,6 +114,9 @@ class BandInfoController extends Controller
             if (!empty($socials)) {
                 $payload['social_links'] = $socials;
             }
+        } else {
+            // Regular radio track: use the external resolver (Last.fm / Discogs)
+            $payload = $this->resolver->resolve($artist);
         }
 
         try {
