@@ -708,7 +708,8 @@ export function registerRadioPlayer(Alpine) {
         },
 
         toggleInfoWindow(event = null) {
-            if (!this.interactionReady || !this.hasUserGesture() || (event && event.isTrusted === false)) {
+            const isTrusted = event && event.isTrusted;
+            if (!this.interactionReady || (!isTrusted && !this.hasUserGesture())) {
                 return;
             }
 
@@ -735,7 +736,7 @@ export function registerRadioPlayer(Alpine) {
         },
 
         async openBandWindow() {
-            if (!this.interactionReady || !this.hasUserGesture()) {
+            if (!this.interactionReady) {
                 return;
             }
 
@@ -773,7 +774,7 @@ export function registerRadioPlayer(Alpine) {
         },
 
         async openProgramWindow(programId = null) {
-            if (!this.interactionReady || !this.hasUserGesture()) {
+            if (!this.interactionReady) {
                 return;
             }
 
