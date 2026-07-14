@@ -665,13 +665,6 @@ export function registerRadioPlayer(Alpine) {
                 this.playing = false;
                 
                 this.attemptPlayWithFallback();
-                
-                // Open info window automatically to show details
-                setTimeout(() => {
-                    if (this.interactionReady) {
-                        this.toggleInfoWindow({ isTrusted: true });
-                    }
-                }, 300);
             } else {
                 if (audio) audio.pause();
                 this.playing = false;
