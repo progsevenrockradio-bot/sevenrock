@@ -539,6 +539,7 @@ class SiteController extends Controller
 
         $songs = $this->safeValue(
             fn () => NewRelease::query()
+                ->with('radioArtist')
                 ->where('is_active', true)
                 ->orderByDesc('released_at')
                 ->orderByDesc('id')

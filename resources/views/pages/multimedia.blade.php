@@ -298,7 +298,7 @@
                             image: '{{ $coverUrl }}',
                             album: '',
                             lyrics: null,
-                            bandInfo: {{ $hasBio ? Js::from($song->description ?? '') : 'null' }},
+                            bandInfo: {{ !empty($song->description) ? Js::from($song->description) : ($song->radioArtist && !empty($song->radioArtist->biography) ? Js::from($song->radioArtist->biography) : 'null') }},
                             bandName: '{{ addslashes($song->artist_name) }}',
                             bandMembers: [],
                             socialLinks: {{ Js::from($socialLinks) }}
