@@ -310,16 +310,19 @@
                             bandMembers: [],
                             socialLinks: {{ Js::from($socialLinks) }}
                         })">
-                        <span class="text-[12px] font-mono text-[#444] w-6 text-center shrink-0 group-hover/song:hidden"
-                              x-show="currentlyPlayingUrl !== '{{ addslashes($audioUrl) }}'">{{ $visibleIndex++ }}</span>
-                        <span class="text-lucille-accent flex w-6 justify-center shrink-0"
+                        <span class="text-[12px] font-mono text-[#444] w-6 text-center shrink-0"
+                              x-show="currentlyPlayingUrl !== '{{ addslashes($audioUrl) }}'"
+                              :class="currentlyPlayingUrl !== '{{ addslashes($audioUrl) }}' ? 'group-hover/song:hidden' : 'hidden'">{{ $visibleIndex++ }}</span>
+                        {{-- Equalizer animado activo --}}
+                        <span class="w-6 flex items-end justify-center gap-px shrink-0"
                               x-show="currentlyPlayingUrl === '{{ addslashes($audioUrl) }}'"
-                              x-cloak>
-                            <div class="flex items-end justify-center gap-0.5 h-3 w-4">
-                                <span class="mm-eq-bar" style="animation-delay:0ms"></span>
-                                <span class="mm-eq-bar" style="animation-delay:150ms"></span>
-                                <span class="mm-eq-bar" style="animation-delay:300ms"></span>
-                            </div>
+                              x-cloak
+                              style="height:24px">
+                            <span class="sr-eq-bar" style="--d:0ms;  --h:60%"></span>
+                            <span class="sr-eq-bar" style="--d:120ms; --h:100%"></span>
+                            <span class="sr-eq-bar" style="--d:60ms;  --h:45%"></span>
+                            <span class="sr-eq-bar" style="--d:200ms; --h:80%"></span>
+                            <span class="sr-eq-bar" style="--d:40ms;  --h:55%"></span>
                         </span>
                         <span class="hidden group-hover/song:flex text-lucille-accent w-6 justify-center shrink-0"
                               x-show="currentlyPlayingUrl !== '{{ addslashes($audioUrl) }}'">▶</span>
@@ -330,9 +333,6 @@
                             <div class="font-display text-[13px] text-[#dcdcdc] truncate group-hover/song:text-lucille-accent transition-colors"
                                  :class="{ 'text-lucille-accent': currentlyPlayingUrl === '{{ addslashes($audioUrl) }}' }">{{ $song->title }}</div>
                             <div class="text-[11px] text-[#777] truncate">{{ $song->artist_name }}</div>
-                        </div>
-                        <div x-show="currentlyPlayingUrl === '{{ addslashes($audioUrl) }}'" class="text-[10px] text-lucille-accent font-display tracking-wider uppercase hidden sm:block mr-2" x-cloak>
-                            Sonando
                         </div>
 
                     </div>
@@ -484,15 +484,30 @@
 
 @push('styles')
 <style>
-.mm-eq-bar {
+/* ── Equalizer animado de fila activa ── */
+.sr-eq-bar {
     display: inline-block;
-    width: 2px;
+    width: 3px;
+    min-height: 3px;
     background: #c32720;
-    border-radius: 1px;
-    animation: mm-eq 0.6s ease-in-out infinite alternate;
-    min-height: 2px;
+    border-radius: 2px;
+    transform-origin: bottom;
+    animation: sr-eq-bounce var(--spd, 0.55s) ease-in-out infinite alternate;
+    animation-delay: var(--d, 0ms);
+    height: var(--h, 50%);
+    box-shadow: 0 0 4px rgba(195,39,32,.7);
 }
-@keyframes mm-eq { from { height: 2px; } to { height: 12px; } }
+/* Each bar gets a slightly different speed via nth-child */
+.sr-eq-bar:nth-child(1) { --spd: 0.52s; }
+.sr-eq-bar:nth-child(2) { --spd: 0.38s; }
+.sr-eq-bar:nth-child(3) { --spd: 0.65s; }
+.sr-eq-bar:nth-child(4) { --spd: 0.44s; }
+.sr-eq-bar:nth-child(5) { --spd: 0.58s; }
+
+@keyframes sr-eq-bounce {
+    0%   { transform: scaleY(0.15); }
+    100% { transform: scaleY(1); }
+}
 </style>
 @endpush
 
