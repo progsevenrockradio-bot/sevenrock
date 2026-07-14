@@ -180,7 +180,7 @@ class AdminTrackSubmissionController extends Controller
                 }
             }
 
-            \App\Models\NewRelease::create([
+            $newRelease = \App\Models\NewRelease::create([
                 'title' => $submission->song_title,
                 'slug' => $slug,
                 'artist_name' => $submission->band_name,
@@ -195,7 +195,22 @@ class AdminTrackSubmissionController extends Controller
 
             $submission->update(['published_to_hub' => true]);
 
-            return redirect()->back()->with('success', 'Maqueta publicada exitosamente en el Catálogo Musical (Hub).');
+            try {
+                $mail = new \App\Mail\SubmissionPublishedToHub($submission, $newRelease);
+                \Illuminate\Support\Facades\Mail::to($submission->contact_email)->send($mail);
+
+                \App\Models\EmailLog::create([
+                    'track_submission_id' => $submission->id,
+                    'to_email' => $submission->contact_email,
+                    'subject' => $mail->envelope()->subject,
+                    'body' => $mail->render(),
+                    'status' => 'sent',
+                ]);
+            } catch (\Throwable $mailException) {
+                Log::error('Error sending hub publication email', ['error' => $mailException->getMessage(), 'submission_id' => $submission->id]);
+            }
+
+            return redirect()->back()->with('success', 'Maqueta publicada exitosamente en el Catálogo Musical (Hub). Se ha enviado un correo a la banda.');
         } catch (\Throwable $e) {
             Log::error('Error al publicar maqueta al hub ID ' . $submission->id . ': ' . $e->getMessage());
             return redirect()->back()->with('error', 'Ocurrió un error al publicar la maqueta.');
