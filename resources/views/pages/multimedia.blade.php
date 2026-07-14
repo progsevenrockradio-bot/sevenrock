@@ -307,23 +307,31 @@
                             bandMembers: [],
                             socialLinks: {{ Js::from($socialLinks) }}
                         })">
-                        <span class="text-[12px] font-mono text-[#444] w-6 text-center shrink-0 group-hover/song:hidden">{{ $visibleIndex++ }}</span>
-                        <span class="hidden group-hover/song:flex text-lucille-accent w-6 justify-center shrink-0">▶</span>
+                        <span class="text-[12px] font-mono text-[#444] w-6 text-center shrink-0 group-hover/song:hidden" 
+                              x-show="!(playing && track.audio_url === '{{ addslashes($audioUrl) }}')">{{ $visibleIndex++ }}</span>
+                        <span class="text-lucille-accent w-6 justify-center shrink-0"
+                              x-show="playing && track.audio_url === '{{ addslashes($audioUrl) }}'"
+                              x-cloak>
+                            <div class="flex items-end justify-center gap-0.5 h-3 w-4">
+                                <span class="mm-eq-bar mm-eq-bar--active" style="width:2px; height:100%; background-color:#c32720; display:inline-block; animation:eq-bounce 0.8s ease-in-out infinite alternate; animation-delay:0ms"></span>
+                                <span class="mm-eq-bar mm-eq-bar--active" style="width:2px; height:100%; background-color:#c32720; display:inline-block; animation:eq-bounce 0.8s ease-in-out infinite alternate; animation-delay:150ms"></span>
+                                <span class="mm-eq-bar mm-eq-bar--active" style="width:2px; height:100%; background-color:#c32720; display:inline-block; animation:eq-bounce 0.8s ease-in-out infinite alternate; animation-delay:300ms"></span>
+                            </div>
+                        </span>
+                        <span class="hidden group-hover/song:flex text-lucille-accent w-6 justify-center shrink-0"
+                              x-show="!(playing && track.audio_url === '{{ addslashes($audioUrl) }}')">▶</span>
                         <div class="w-10 h-10 rounded overflow-hidden border border-[#2a2a2a] shrink-0">
                             <img src="{{ $coverUrl }}" alt="{{ $song->title }}" class="w-full h-full object-cover" loading="lazy">
                         </div>
                         <div class="min-w-0 flex-1">
-                            <div class="font-display text-[13px] text-[#dcdcdc] truncate group-hover/song:text-lucille-accent transition-colors">{{ $song->title }}</div>
+                            <div class="font-display text-[13px] text-[#dcdcdc] truncate group-hover/song:text-lucille-accent transition-colors"
+                                 :class="{ 'text-lucille-accent': playing && track.audio_url === '{{ addslashes($audioUrl) }}' }">{{ $song->title }}</div>
                             <div class="text-[11px] text-[#777] truncate">{{ $song->artist_name }}</div>
                         </div>
-                        <div class="hidden sm:flex items-center gap-2 shrink-0">
-                            @if (!empty($song->spotify_url) || !empty($song->youtube_url))
-                                <span class="text-[9px] uppercase tracking-[.08em] text-[#555] border border-[#222] px-1.5 py-0.5 rounded">Enlaces</span>
-                            @endif
-                            @if ($hasBio)
-                                <span class="text-[9px] uppercase tracking-[.08em] text-[#555] border border-[#222] px-1.5 py-0.5 rounded">Reseña</span>
-                            @endif
+                        <div x-show="playing && track.audio_url === '{{ addslashes($audioUrl) }}'" class="text-[10px] text-lucille-accent font-display tracking-wider uppercase hidden sm:block mr-2" x-cloak>
+                            Sonando
                         </div>
+
                     </div>
                 @endforeach
             </div>
