@@ -216,6 +216,7 @@
             --lucille-bg-image: url('{{ $theme['media']['background_url'] }}');
         }
     </style>
+    @stack('styles')
 </head>
 <body class="antialiased">
     <div class="lucille-fixed-bg" aria-hidden="true"></div>
