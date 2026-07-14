@@ -213,6 +213,8 @@ export function registerRadioPlayer(Alpine) {
                 this.closeTransientOverlays();
             }, { once: true });
 
+            window.MusicPlayer = this;
+
             // Show/hide dock based on playback state
             this.$watch('playing', (isPlaying) => {
                 if (this.mode === 'dock') {

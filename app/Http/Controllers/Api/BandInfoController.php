@@ -109,6 +109,16 @@ class BandInfoController extends Controller
                     $payload['social_links'] = $bandProfile->official_links ?: $payload['social_links'];
                     $payload['formed_year'] = $this->yearFromBandProfile($bandProfile);
                     $payload['formed_label'] = $payload['formed_year'] ? sprintf('Se formó en %d', $payload['formed_year']) : '';
+                } else {
+                    $payload['formed_year'] = null;
+                    $payload['formed_label'] = '';
+                    $payload['logo_path'] = '';
+                    $payload['country'] = '';
+                    $payload['genre'] = '';
+                    $payload['members_count'] = null;
+                    $payload['status'] = '';
+                    $payload['labels'] = '';
+                    $payload['facts'] = [];
                 }
             } else {
                 $song = $this->resolveSong($artist, $title);
