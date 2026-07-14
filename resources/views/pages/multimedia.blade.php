@@ -313,9 +313,9 @@
                               x-show="playing && track.audio_url === '{{ addslashes($audioUrl) }}'"
                               x-cloak>
                             <div class="flex items-end justify-center gap-0.5 h-3 w-4">
-                                <span class="mm-eq-bar mm-eq-bar--active" style="width:2px; height:100%; background-color:#c32720; display:inline-block; animation:eq-bounce 0.8s ease-in-out infinite alternate; animation-delay:0ms"></span>
-                                <span class="mm-eq-bar mm-eq-bar--active" style="width:2px; height:100%; background-color:#c32720; display:inline-block; animation:eq-bounce 0.8s ease-in-out infinite alternate; animation-delay:150ms"></span>
-                                <span class="mm-eq-bar mm-eq-bar--active" style="width:2px; height:100%; background-color:#c32720; display:inline-block; animation:eq-bounce 0.8s ease-in-out infinite alternate; animation-delay:300ms"></span>
+                                <span class="mm-eq-bar" style="animation-delay:0ms"></span>
+                                <span class="mm-eq-bar" style="animation-delay:150ms"></span>
+                                <span class="mm-eq-bar" style="animation-delay:300ms"></span>
                             </div>
                         </span>
                         <span class="hidden group-hover/song:flex text-lucille-accent w-6 justify-center shrink-0"

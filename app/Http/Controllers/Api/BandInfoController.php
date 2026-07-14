@@ -475,6 +475,9 @@ class BandInfoController extends Controller
         // Remove Discogs artist links: [a=Artist Name] or [a=Artist Name (2)] -> Artist Name
         $text = preg_replace('/\[a=([^\]]+?)(\s+\(\d+\))?\]/u', '$1', $text) ?? $text;
         
+        // Remove Last.fm "Read more on Last.fm" trailing link text
+        $text = preg_replace('/(Read more on Last\.fm|User-contributed text is available under the Creative Commons By-SA License; additional terms may apply\.)/iu', '', $text) ?? $text;
+
         $text = preg_replace('/\[(?:[A-Za-z]{1,3}\d+|\d+)\]/u', '', $text) ?? $text;
         $text = preg_replace('/[ \t]+/u', ' ', $text) ?? $text;
         $text = preg_replace('/ *\n */u', "\n", $text) ?? $text;
