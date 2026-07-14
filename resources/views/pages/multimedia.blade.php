@@ -273,10 +273,14 @@
             <div class="py-16 text-center text-sm text-[#7b7b7b]">No hay canciones publicadas todavía.</div>
         @else
             <div class="divide-y divide-[#1a1a1a]">
-                @foreach ($songs as $index => $song)
+                @php $visibleIndex = 1; @endphp
+                @foreach ($songs as $song)
                     @php
-                        $coverUrl  = $song->cover_image_url ?: $fallbackImage;
                         $audioUrl  = $song->audio_url;
+                        if (empty($audioUrl)) {
+                            continue;
+                        }
+                        $coverUrl  = $song->cover_image_url ?: $fallbackImage;
                         $bandName  = $song->artist_name;
                         $hasBio    = !empty($song->description);
                         $searchStr = strtolower($song->title . ' ' . $song->artist_name);
@@ -303,7 +307,7 @@
                             bandMembers: [],
                             socialLinks: {{ Js::from($socialLinks) }}
                         })">
-                        <span class="text-[12px] font-mono text-[#444] w-6 text-center shrink-0 group-hover/song:hidden">{{ $index + 1 }}</span>
+                        <span class="text-[12px] font-mono text-[#444] w-6 text-center shrink-0 group-hover/song:hidden">{{ $visibleIndex++ }}</span>
                         <span class="hidden group-hover/song:flex text-lucille-accent w-6 justify-center shrink-0">▶</span>
                         <div class="w-10 h-10 rounded overflow-hidden border border-[#2a2a2a] shrink-0">
                             <img src="{{ $coverUrl }}" alt="{{ $song->title }}" class="w-full h-full object-cover" loading="lazy">
