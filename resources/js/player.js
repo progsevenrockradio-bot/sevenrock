@@ -607,12 +607,16 @@ export function registerRadioPlayer(Alpine) {
                 this.startLiveFromFAB();
                 return;
             }
+            
+            const srcStr = String(detail.src || '').trim();
+            const hasValidAudio = srcStr !== '' && !srcStr.includes('youtube.com') && !srcStr.includes('youtu.be');
+
             // For podcasts/songs from multimedia hub
             this.dockVisible = true;
             this.dockMinimized = false;
 
             const audio = this.$refs.audio;
-            if (audio) {
+            if (audio && hasValidAudio) {
                 audio.pause();
             }
 
@@ -628,9 +632,9 @@ export function registerRadioPlayer(Alpine) {
                 comment: '',
                 band_members: detail.bandMembers || [],
                 social_links: detail.socialLinks || [],
-                audio_url: detail.src || '',
+                audio_url: hasValidAudio ? srcStr : '',
                 is_live: false,
-                signature: detail.src || '',
+                signature: srcStr || Date.now().toString(),
                 program_name: detail.type === 'podcast' ? detail.subtitle : '',
                 program_description: detail.bandInfo || '',
                 program_host: '',
@@ -639,10 +643,26 @@ export function registerRadioPlayer(Alpine) {
                 es_bloque_programa: false,
             };
 
-            this.streamCandidates = [detail.src].filter(Boolean);
-            this.currentStreamIndex = 0;
-
-            this.attemptPlayWithFallback();
+            if (hasValidAudio) {
+                this.streamCandidates = [srcStr].filter(Boolean);
+                this.currentStreamIndex = 0;
+                this.attemptPlayWithFallback();
+            } else {
+                if (audio) audio.pause();
+                this.playing = false;
+                this.loading = false;
+                
+                if (typeof this.toastMessage === 'function') {
+                    this.toastMessage('Audio no disponible. Mostrando info de banda.');
+                }
+                
+                // Open info window automatically to show links/bio
+                setTimeout(() => {
+                    if (this.interactionReady) {
+                        this.toggleInfoWindow({ isTrusted: true });
+                    }
+                }, 400);
+            }
         },
 
         togglePanel() {
