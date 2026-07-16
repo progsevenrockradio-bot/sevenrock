@@ -1,6 +1,6 @@
 @php $admin = $themeAppearance['admin_texts'] ?? []; @endphp
 <x-layouts.admin :title="'Maquetas Recibidas - '.$themeSettings->site_name">
-    <div x-data="{ activeTab: 'maquetas', showEmailModal: false, currentEmailContent: '', openEmailModal(content) { this.currentEmailContent = content; this.showEmailModal = true; } }">
+    <div x-data="{ activeTab: 'maquetas', showEmailModal: false, currentEmailContent: '', selectedMaquetas: [], openEmailModal(content) { this.currentEmailContent = content; this.showEmailModal = true; }, toggleAll() { const checkboxes = document.querySelectorAll('.maqueta-checkbox'); if (this.selectedMaquetas.length === checkboxes.length && checkboxes.length > 0) { this.selectedMaquetas = []; } else { this.selectedMaquetas = Array.from(checkboxes).map(cb => cb.value); } }, toggleFeed(submissionId, checkboxElement) { const isChecked = checkboxElement.checked; fetch(`/admin/submissions/${submissionId}/toggle-feed`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ show_in_feed: isChecked ? 1 : 0 }) }).then(res => res.json()).then(data => { if (!data.success) { alert('Error: ' + data.message); checkboxElement.checked = !isChecked; } }).catch(err => { console.error(err); checkboxElement.checked = !isChecked; }); } }">
         @if (session('success'))
             <div class="mb-6 border border-[#1e4d2b] bg-[rgba(16,64,30,.2)] px-4 py-3 text-sm text-[#b8e6c3]">
                 {{ session('success') }}
@@ -40,10 +40,27 @@
 
         <!-- Tab 1: Maquetas Recibidas -->
         <div x-show="activeTab === 'maquetas'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" class="overflow-hidden border border-[#2b2b2b] bg-[rgba(16,16,18,.88)]" x-cloak>
+            
+            <!-- Bulk Action Form -->
+            <form action="{{ route('admin.submissions.bulkPublish') }}" method="POST" x-show="selectedMaquetas.length > 0" x-cloak class="flex gap-4 items-center p-4 bg-[rgba(255,255,255,0.03)] border-b border-[#2b2b2b]">
+                @csrf
+                <template x-for="id in selectedMaquetas" :key="id">
+                    <input type="hidden" name="submissions[]" :value="id">
+                </template>
+                <span class="text-sm text-[#dcdcdc] font-semibold"><span x-text="selectedMaquetas.length"></span> seleccionadas</span>
+                <div class="flex gap-2 ml-auto">
+                    <button type="submit" name="action" value="publish_hidden" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-[#1a1a1a] hover:bg-[#333]" style="border-color: #555; color: #ccc;" title="Publicar al catálogo de música pero sin mostrar en el feed público">Publicar (Ocultos)</button>
+                    <button type="submit" name="action" value="publish_visible" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-lucille-accent/20 hover:bg-lucille-accent/60" style="border-color: var(--lucille-accent); color: #fff;" title="Publicar al catálogo y mostrar en portada">Publicar (En Feed)</button>
+                </div>
+            </form>
+
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead class="border-b border-[#2b2b2b] text-[#dcdcdc] whitespace-nowrap">
                         <tr>
+                            <th class="px-5 py-4 w-10 text-center">
+                                <input type="checkbox" @change="toggleAll()" :checked="selectedMaquetas.length > 0 && selectedMaquetas.length === document.querySelectorAll('.maqueta-checkbox').length" class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012] cursor-pointer" title="Seleccionar todas las aprobadas">
+                            </th>
                             <th class="px-5 py-4">Información</th>
                             <th class="px-5 py-4 w-1/3 min-w-[280px]">Audio</th>
                             <th class="px-5 py-4">Contacto</th>
@@ -54,6 +71,11 @@
                     <tbody class="divide-y divide-[#2b2b2b] text-[#7b7b7b]">
                         @forelse ($submissions as $submission)
                             <tr class="hover:bg-[rgba(255,255,255,.02)] transition-colors">
+                                <td class="px-5 py-5 align-top text-center">
+                                    @if($submission->status === 'approved' && !$submission->published_to_hub)
+                                        <input type="checkbox" value="{{ $submission->id }}" x-model="selectedMaquetas" class="maqueta-checkbox rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012] cursor-pointer">
+                                    @endif
+                                </td>
                                 <td class="px-5 py-5 align-top">
                                     <div class="font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] mb-1">
                                         {{ $submission->band_name }}
@@ -137,18 +159,29 @@
                                             @endif
 
                                             @if($submission->status === 'approved')
-                                                @if(!$submission->published_to_hub)
-                                                    <form action="{{ route('admin.submissions.publish', $submission) }}" method="POST" class="flex flex-col gap-2 items-end">
-                                                        @csrf
-                                                        <label class="flex items-center gap-1.5 cursor-pointer" title="Si lo marcas, saldrá en la portada de la web">
-                                                            <input type="checkbox" name="show_in_feed" value="1" class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012]">
-                                                            <span class="text-xs text-[#7b7b7b] uppercase tracking-wider">Mostrar en feed</span>
-                                                        </label>
-                                                        <button type="submit" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-lucille-accent/20 hover:bg-lucille-accent/60 w-full" style="border-color: var(--lucille-accent); color: #fff;" title="Publicar en Catálogo Musical (Hub)">Publicar al Hub</button>
-                                                    </form>
-                                                @else
-                                                    <span class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border border-transparent bg-white/10 text-[#dcdcdc] opacity-75 cursor-default select-none" title="Ya fue publicada en el Hub">Publicado en Hub</span>
-                                                @endif
+                                                <div class="flex flex-col gap-2 items-end">
+                                                    <label class="flex items-center gap-1.5 cursor-pointer" title="Mostrar u ocultar en el feed público">
+                                                        @if(!$submission->published_to_hub)
+                                                            <input type="checkbox" form="publish-form-{{ $submission->id }}" name="show_in_feed" value="1" class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012]">
+                                                        @else
+                                                            @php
+                                                                $linkedRelease = \App\Models\NewRelease::where('audio_path', $submission->file_path)->first();
+                                                                $showInFeed = $linkedRelease ? $linkedRelease->show_in_feed : false;
+                                                            @endphp
+                                                            <input type="checkbox" @change="toggleFeed({{ $submission->id }}, $event.target)" {{ $showInFeed ? 'checked' : '' }} class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012]">
+                                                        @endif
+                                                        <span class="text-[10px] text-[#7b7b7b] uppercase tracking-wider font-semibold">Feed</span>
+                                                    </label>
+
+                                                    @if(!$submission->published_to_hub)
+                                                        <form id="publish-form-{{ $submission->id }}" action="{{ route('admin.submissions.publish', $submission) }}" method="POST">
+                                                            @csrf
+                                                            <button type="submit" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-lucille-accent/20 hover:bg-lucille-accent/60 w-full" style="border-color: var(--lucille-accent); color: #fff;" title="Publicar en Catálogo Musical (Hub)">Publicar al Hub</button>
+                                                        </form>
+                                                    @else
+                                                        <span class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border border-transparent bg-white/10 text-[#dcdcdc] opacity-75 cursor-default select-none" title="Ya fue publicada en el Hub">Publicado en Hub</span>
+                                                    @endif
+                                                </div>
                                             @endif
                                         </div>
 

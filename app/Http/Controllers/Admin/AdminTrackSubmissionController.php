@@ -217,4 +217,93 @@ class AdminTrackSubmissionController extends Controller
             return redirect()->back()->with('error', 'Ocurrió un error al publicar la maqueta.');
         }
     }
+
+    public function toggleFeed(\Illuminate\Http\Request $request, TrackSubmission $submission)
+    {
+        if (!$submission->published_to_hub) {
+            return response()->json(['success' => false, 'message' => 'La maqueta no está publicada en el Hub.']);
+        }
+
+        $newRelease = \App\Models\NewRelease::where('audio_path', $submission->file_path)->first();
+        if ($newRelease) {
+            $newRelease->update(['show_in_feed' => $request->boolean('show_in_feed')]);
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'No se encontró el lanzamiento asociado.']);
+    }
+
+    public function bulkPublish(\Illuminate\Http\Request $request): RedirectResponse
+    {
+        $action = $request->input('action');
+        $submissionIds = $request->input('submissions', []);
+
+        if (empty($submissionIds)) {
+            return redirect()->back()->with('error', 'No se seleccionaron maquetas.');
+        }
+
+        $submissions = TrackSubmission::whereIn('id', $submissionIds)->where('status', 'approved')->where('published_to_hub', false)->get();
+        
+        if ($submissions->isEmpty()) {
+            return redirect()->back()->with('error', 'Ninguna de las maquetas seleccionadas es válida para publicar (deben estar aprobadas y no publicadas).');
+        }
+
+        $showInFeed = $action === 'publish_visible';
+        $publishedCount = 0;
+
+        foreach ($submissions as $submission) {
+            // Re-use logic from publishToHub (inline for bulk)
+            $slugBase = \Illuminate\Support\Str::slug($submission->song_title . '-' . $submission->band_name);
+            $slug = $slugBase;
+            $count = 1;
+            while (\App\Models\NewRelease::where('slug', $slug)->exists()) {
+                $slug = $slugBase . '-' . $count;
+                $count++;
+            }
+
+            $youtubeUrl = null;
+            $spotifyUrl = null;
+            if ($submission->social_link) {
+                if (str_contains(strtolower($submission->social_link), 'youtube.com') || str_contains(strtolower($submission->social_link), 'youtu.be')) {
+                    $youtubeUrl = $submission->social_link;
+                } elseif (str_contains(strtolower($submission->social_link), 'spotify.com')) {
+                    $spotifyUrl = $submission->social_link;
+                }
+            }
+
+            $newRelease = \App\Models\NewRelease::create([
+                'title' => $submission->song_title,
+                'slug' => $slug,
+                'artist_name' => $submission->band_name,
+                'released_at' => now(),
+                'audio_path' => $submission->file_path,
+                'youtube_url' => $youtubeUrl,
+                'spotify_url' => $spotifyUrl,
+                'description' => 'Maqueta descubierta y promocionada por el A&R de Seven Rock Radio.',
+                'is_active' => true,
+                'show_in_feed' => $showInFeed,
+                'author_email' => $submission->contact_email,
+            ]);
+
+            $submission->update(['published_to_hub' => true]);
+            $publishedCount++;
+
+            try {
+                $mail = new \App\Mail\SubmissionPublishedToHub($submission, $newRelease);
+                \Illuminate\Support\Facades\Mail::to($submission->contact_email)->send($mail);
+
+                \App\Models\EmailLog::create([
+                    'track_submission_id' => $submission->id,
+                    'to_email' => $submission->contact_email,
+                    'subject' => $mail->envelope()->subject,
+                    'body' => $mail->render(),
+                    'status' => 'sent',
+                ]);
+            } catch (\Throwable $mailException) {
+                Log::error('Error sending hub publication email', ['error' => $mailException->getMessage(), 'submission_id' => $submission->id]);
+            }
+        }
+
+        return redirect()->back()->with('success', "Se publicaron $publishedCount maquetas al Hub correctamente.");
+    }
 }

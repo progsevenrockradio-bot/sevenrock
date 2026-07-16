@@ -152,6 +152,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::delete('/{submission}', 'destroy')->name('destroy');
         Route::get('/{submission}/download', 'download')->name('download');
         Route::post('/{submission}/publish', 'publishToHub')->name('publish');
+        Route::post('/bulk-publish', 'bulkPublish')->name('bulkPublish');
+        Route::patch('/{submission}/toggle-feed', 'toggleFeed')->name('toggleFeed');
     });
 
     Route::controller(AdminPostController::class)->prefix('posts')->name('posts.')->group(function (): void {
