@@ -1,6 +1,6 @@
 @php $admin = $themeAppearance['admin_texts'] ?? []; @endphp
 <x-layouts.admin :title="'Maquetas Recibidas - '.$themeSettings->site_name">
-    <div x-data="{ activeTab: 'maquetas', showEmailModal: false, currentEmailContent: '', selectedMaquetas: [], openEmailModal(content) { this.currentEmailContent = content; this.showEmailModal = true; }, toggleAll() { const checkboxes = document.querySelectorAll('.maqueta-checkbox'); if (this.selectedMaquetas.length === checkboxes.length && checkboxes.length > 0) { this.selectedMaquetas = []; } else { this.selectedMaquetas = Array.from(checkboxes).map(cb => cb.value); } }, toggleFeed(submissionId, checkboxElement) { const isChecked = checkboxElement.checked; fetch(`/admin/submissions/${submissionId}/toggle-feed`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ show_in_feed: isChecked ? 1 : 0 }) }).then(res => res.json()).then(data => { if (!data.success) { alert('Error: ' + data.message); checkboxElement.checked = !isChecked; } }).catch(err => { console.error(err); checkboxElement.checked = !isChecked; }); } }">
+    <div x-data="{ activeTab: 'maquetas', showEmailModal: false, currentEmailContent: '', selectedMaquetas: [], openEmailModal(content) { this.currentEmailContent = content; this.showEmailModal = true; }, toggleAll() { const checkboxes = document.querySelectorAll('.maqueta-checkbox'); if (this.selectedMaquetas.length === checkboxes.length && checkboxes.length > 0) { this.selectedMaquetas = []; } else { this.selectedMaquetas = Array.from(checkboxes).map(cb => cb.value); } }, toggleFeed(submissionId, checkboxElement) { const isChecked = checkboxElement.checked; fetch(`/admin/submissions/${submissionId}/toggle-feed`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ show_in_feed: isChecked ? 1 : 0 }) }).then(res => res.json()).then(data => { if (!data.success) { alert('Error: ' + data.message); checkboxElement.checked = !isChecked; } else { const span = checkboxElement.nextElementSibling; if (span) { const oldText = span.innerText; span.innerText = 'Guardado'; span.style.color = '#fff'; setTimeout(() => { span.innerText = oldText; span.style.color = ''; }, 2000); } } }).catch(err => { console.error(err); checkboxElement.checked = !isChecked; }); } }">
         @if (session('success'))
             <div class="mb-6 border border-[#1e4d2b] bg-[rgba(16,64,30,.2)] px-4 py-3 text-sm text-[#b8e6c3]">
                 {{ session('success') }}
@@ -58,9 +58,13 @@
                 <table class="w-full text-left text-sm">
                     <thead class="border-b border-[#2b2b2b] text-[#dcdcdc] whitespace-nowrap">
                         <tr>
+                            @if($submissions->where('status', 'approved')->where('published_to_hub', false)->count() > 0)
                             <th class="px-5 py-4 w-10 text-center">
                                 <input type="checkbox" @change="toggleAll()" :checked="selectedMaquetas.length > 0 && selectedMaquetas.length === document.querySelectorAll('.maqueta-checkbox').length" class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012] cursor-pointer" title="Seleccionar todas las aprobadas">
                             </th>
+                            @else
+                            <th class="px-5 py-4 w-10"></th>
+                            @endif
                             <th class="px-5 py-4">Información</th>
                             <th class="px-5 py-4 w-1/3 min-w-[280px]">Audio</th>
                             <th class="px-5 py-4">Contacto</th>
