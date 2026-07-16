@@ -138,9 +138,13 @@
 
                                             @if($submission->status === 'approved')
                                                 @if(!$submission->published_to_hub)
-                                                    <form action="{{ route('admin.submissions.publish', $submission) }}" method="POST">
+                                                    <form action="{{ route('admin.submissions.publish', $submission) }}" method="POST" class="flex flex-col gap-2 items-end">
                                                         @csrf
-                                                        <button type="submit" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-lucille-accent/20 hover:bg-lucille-accent/60" style="border-color: var(--lucille-accent); color: #fff;" title="Publicar en Catálogo Musical (Hub)">Publicar al Hub</button>
+                                                        <label class="flex items-center gap-1.5 cursor-pointer" title="Si lo marcas, saldrá en la portada de la web">
+                                                            <input type="checkbox" name="show_in_feed" value="1" class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012]">
+                                                            <span class="text-xs text-[#7b7b7b] uppercase tracking-wider">Mostrar en feed</span>
+                                                        </label>
+                                                        <button type="submit" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-lucille-accent/20 hover:bg-lucille-accent/60 w-full" style="border-color: var(--lucille-accent); color: #fff;" title="Publicar en Catálogo Musical (Hub)">Publicar al Hub</button>
                                                     </form>
                                                 @else
                                                     <span class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border border-transparent bg-white/10 text-[#dcdcdc] opacity-75 cursor-default select-none" title="Ya fue publicada en el Hub">Publicado en Hub</span>

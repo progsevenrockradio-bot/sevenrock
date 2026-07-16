@@ -149,7 +149,7 @@ class AdminTrackSubmissionController extends Controller
     /**
      * Publish the approved submission to the NewReleases Hub catalog.
      */
-    public function publishToHub(TrackSubmission $submission): RedirectResponse
+    public function publishToHub(\Illuminate\Http\Request $request, TrackSubmission $submission): RedirectResponse
     {
         if ($submission->status !== 'approved') {
             return redirect()->back()->with('error', 'Solo las maquetas aprobadas pueden publicarse en el Hub.');
@@ -190,6 +190,7 @@ class AdminTrackSubmissionController extends Controller
                 'spotify_url' => $spotifyUrl,
                 'description' => 'Maqueta descubierta y promocionada por el A&R de Seven Rock Radio.',
                 'is_active' => true,
+                'show_in_feed' => $request->boolean('show_in_feed'),
                 'author_email' => $submission->contact_email,
             ]);
 

@@ -46,6 +46,7 @@ class SiteController extends Controller
         $newReleases = $this->safeValue(
             fn () => NewRelease::query()
                 ->where('is_active', true)
+                ->where('show_in_feed', true)
                 ->orderByDesc('released_at')
                 ->latest()
                 ->take(4)
@@ -156,6 +157,7 @@ class SiteController extends Controller
     {
         $newReleases = NewRelease::query()
             ->where('is_active', true)
+            ->where('show_in_feed', true)
             ->whereNotNull('audio_path')
             ->where('audio_path', '!=', '')
             ->orderByDesc('released_at')

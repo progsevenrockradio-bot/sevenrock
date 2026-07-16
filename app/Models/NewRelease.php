@@ -35,7 +35,8 @@ class NewRelease extends Model
             if ($newlyActive || $updatedToActive) {
                 $newRelease->sendPublishedNotification();
 
-                try {
+                if ($newRelease->show_in_feed) {
+                    try {
                     \App\Models\CommunityPost::query()->create([
                         'user_id' => null,
                         'talent_id' => null,
@@ -44,6 +45,7 @@ class NewRelease extends Model
                     ]);
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::error("Fallo al crear post automático en Muro para lanzamiento ID {$newRelease->id}: " . $e->getMessage());
+                }
                 }
             }
         });
@@ -61,6 +63,7 @@ class NewRelease extends Model
         'spotify_url',
         'description',
         'is_active',
+        'show_in_feed',
         'author_email',
         'notification_sender',
     ];
@@ -70,6 +73,7 @@ class NewRelease extends Model
         return [
             'released_at' => 'date',
             'is_active' => 'boolean',
+            'show_in_feed' => 'boolean',
         ];
     }
 
