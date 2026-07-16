@@ -159,6 +159,15 @@ class AdminTrackSubmissionController extends Controller
             return redirect()->back()->with('error', 'Esta maqueta ya ha sido publicada en el Hub.');
         }
 
+        $existing = \App\Models\NewRelease::where('title', $submission->song_title)
+            ->where('artist_name', $submission->band_name)
+            ->exists();
+
+        if ($existing) {
+            $submission->update(['published_to_hub' => true]);
+            return redirect()->back()->with('error', 'Ya existe un lanzamiento con este artista y título (Duplicado prevenido).');
+        }
+
         try {
             // Generar slug basado en título y artista
             $slugBase = \Illuminate\Support\Str::slug($submission->song_title . '-' . $submission->band_name);
@@ -254,6 +263,15 @@ class AdminTrackSubmissionController extends Controller
         $publishedCount = 0;
 
         foreach ($submissions as $submission) {
+            $existing = \App\Models\NewRelease::where('title', $submission->song_title)
+                ->where('artist_name', $submission->band_name)
+                ->exists();
+
+            if ($existing) {
+                $submission->update(['published_to_hub' => true]);
+                continue;
+            }
+
             // Re-use logic from publishToHub (inline for bulk)
             $slugBase = \Illuminate\Support\Str::slug($submission->song_title . '-' . $submission->band_name);
             $slug = $slugBase;
