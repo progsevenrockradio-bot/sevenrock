@@ -109,6 +109,15 @@ Route::prefix('desaparecidos')->name('missing-persons.')->group(function (): voi
     Route::post('/', [\App\Http\Controllers\MissingPersonController::class, 'store'])->name('store');
     
     // Rutas de Moderación - Protegidas
+    Route::get('/debug-feed', function () {
+    $releases = \App\Models\NewRelease::whereIn('artist_name', ['ALBASTARDO', 'MENTES EN FUGA'])->get(['id', 'title', 'artist_name', 'audio_path', 'show_in_feed']);
+    $submissions = \App\Models\TrackSubmission::whereIn('band_name', ['ALBASTARDO', 'MENTES EN FUGA'])->get(['id', 'song_title', 'band_name', 'file_path']);
+    return response()->json([
+        'releases' => $releases,
+        'submissions' => $submissions,
+    ]);
+});
+
     Route::middleware(['auth', 'admin'])->prefix('moderacion')->name('moderation.')->group(function (): void {
         Route::get('/', [\App\Http\Controllers\MissingPersonController::class, 'moderationIndex'])->name('index');
         Route::get('/{missingPerson}/edit', [\App\Http\Controllers\MissingPersonController::class, 'edit'])->name('edit');
