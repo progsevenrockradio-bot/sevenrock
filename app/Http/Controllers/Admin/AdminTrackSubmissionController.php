@@ -224,12 +224,11 @@ class AdminTrackSubmissionController extends Controller
             return response()->json(['success' => false, 'message' => 'La maqueta no está publicada en el Hub.']);
         }
 
-        $newRelease = \App\Models\NewRelease::where('title', $submission->song_title)
+        $updatedCount = \App\Models\NewRelease::where('title', $submission->song_title)
             ->where('artist_name', $submission->band_name)
-            ->first();
+            ->update(['show_in_feed' => $request->boolean('show_in_feed')]);
             
-        if ($newRelease) {
-            $newRelease->update(['show_in_feed' => $request->boolean('show_in_feed')]);
+        if ($updatedCount > 0) {
             return response()->json(['success' => true]);
         }
 

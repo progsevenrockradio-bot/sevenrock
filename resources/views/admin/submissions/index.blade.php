@@ -169,12 +169,12 @@
                                                             <input type="checkbox" form="publish-form-{{ $submission->id }}" name="show_in_feed" value="1" class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012]">
                                                         @else
                                                             @php
-                                                                $linkedRelease = \App\Models\NewRelease::where('title', $submission->song_title)
+                                                                $hasActiveFeed = \App\Models\NewRelease::where('title', $submission->song_title)
                                                                     ->where('artist_name', $submission->band_name)
-                                                                    ->first();
-                                                                $showInFeed = $linkedRelease ? $linkedRelease->show_in_feed : false;
+                                                                    ->where('show_in_feed', true)
+                                                                    ->exists();
                                                             @endphp
-                                                            <input type="checkbox" @change="toggleFeed({{ $submission->id }}, $event.target)" {{ $showInFeed ? 'checked' : '' }} class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012]">
+                                                            <input type="checkbox" @change="toggleFeed({{ $submission->id }}, $event.target)" {{ $hasActiveFeed ? 'checked' : '' }} class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012]">
                                                         @endif
                                                         <span class="text-[10px] text-[#7b7b7b] uppercase tracking-wider font-semibold">Feed</span>
                                                     </label>
