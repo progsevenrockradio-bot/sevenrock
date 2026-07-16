@@ -58,6 +58,14 @@
                     </div>
 
                     <div>
+                        <label class="mb-2 flex items-center gap-3 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                            <input type="checkbox" name="is_cancelled" value="1" x-model="is_cancelled" class="lucille-product-checkbox h-4 w-4 rounded border-[#2b2b2b] bg-black/40 text-[var(--lucille-accent)] focus:ring-[var(--lucille-accent)] focus:ring-offset-0">
+                            Evento Cancelado
+                        </label>
+                        <p class="mt-1.5 text-xs text-[#7b7b7b]">Muestra el evento como CANCELADO en la página.</p>
+                    </div>
+
+                    <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Categorías</label>
                         <input
                             name="categories_text"
@@ -236,7 +244,12 @@
                 </div>
 
                 <!-- Event Title -->
-                <h1 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] break-words leading-tight" x-text="title || 'Título del Evento'"></h1>
+                <div class="relative inline-block mt-3">
+                    <h1 class="font-display text-2xl uppercase tracking-[.12em] break-words leading-tight" :class="is_cancelled ? 'text-[#7b7b7b] line-through' : 'text-[#dcdcdc]'" x-text="title || 'Título del Evento'"></h1>
+                    <template x-if="is_cancelled">
+                        <span class="absolute -top-3 -right-6 rotate-[15deg] border-2 border-[#c32720] bg-black/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#c32720] shadow-[0_5px_15px_rgba(195,39,32,0.4)]">Cancelado</span>
+                    </template>
+                </div>
                 <p class="mt-1.5 text-[9px] uppercase tracking-[.36em] text-[#7b7b7b]">Upcoming shows 2026</p>
 
                 <!-- Date & Time badges -->
@@ -370,6 +383,7 @@
             facebook_url: {!! json_encode(old('facebook_url', $event->facebook_url)) !!},
             slugManuallyEdited: {!! json_encode($isEdit) !!},
             localPosterPreview: {!! json_encode($posterPreview) !!},
+            is_cancelled: {!! json_encode(old('is_cancelled', $event->is_cancelled)) !!},
 
             slugify(text) {
                 if (!text) return '';

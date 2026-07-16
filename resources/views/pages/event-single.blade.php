@@ -22,7 +22,10 @@
 >
     <section class="lucille-event-single-shell">
         <div class="mx-auto max-w-[1200px] px-6 pt-6">
-            <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.62)] px-6 py-8 text-center md:px-10 md:py-10">
+            <div class="relative overflow-hidden border border-[#2b2b2b] bg-[rgba(16,16,18,.62)] px-6 py-8 text-center md:px-10 md:py-10">
+                @if(!empty($event['is_cancelled']))
+                    <div class="absolute top-6 -right-10 rotate-45 bg-[#c32720] px-12 py-1.5 text-[11px] font-bold uppercase tracking-widest text-black shadow-lg">Cancelado</div>
+                @endif
                 @if (! empty($categories))
                     <div class="mb-4 flex flex-wrap justify-center gap-2 text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">
                         @foreach ($categories as $category)
@@ -31,7 +34,7 @@
                     </div>
                 @endif
 
-                <h1 class="font-display text-4xl uppercase tracking-[.12em] text-[#dcdcdc] md:text-[4.35rem]">{{ $event['title'] }}</h1>
+                <h1 class="font-display text-4xl uppercase tracking-[.12em] md:text-[4.35rem] {{ !empty($event['is_cancelled']) ? 'text-[#7b7b7b] line-through' : 'text-[#dcdcdc]' }}">{{ $event['title'] }}</h1>
                 <p class="mt-3 text-[11px] uppercase tracking-[.36em] text-[#7b7b7b]">Upcoming shows 2026</p>
                 <div class="mt-5 flex flex-wrap justify-center gap-3 text-[12px] uppercase tracking-[.18em] text-[#dcdcdc]">
                     <span class="border border-[#2b2b2b] px-4 py-2">{{ $event['date'] }}</span>

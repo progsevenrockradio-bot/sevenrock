@@ -37,6 +37,7 @@ class Event extends Model
         'embed_url',
         'map_url',
         'content',
+        'is_cancelled',
     ];
 
     protected $casts = [
@@ -44,6 +45,7 @@ class Event extends Model
         'ends_at' => 'datetime',
         'categories' => 'array',
         'content' => 'array',
+        'is_cancelled' => 'boolean',
     ];
 
     protected function casts(): array
@@ -53,6 +55,7 @@ class Event extends Model
             'ends_at' => 'datetime',
             'categories' => 'array',
             'content' => 'array',
+            'is_cancelled' => 'boolean',
         ];
     }
 

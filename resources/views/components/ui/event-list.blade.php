@@ -11,7 +11,7 @@
                 ? route('events.single', $eventSlug)
                 : (string) data_get($event, 'url', '#');
         @endphp
-        <li class="lucille-event-row">
+        <li class="lucille-event-row {{ data_get($event, 'is_cancelled') ? 'opacity-50 grayscale' : '' }}">
             <a href="{{ $eventUrl }}" class="lucille-event-link">
                 <div class="lucille-event-date uppercase">
                     @if ($startsAt && $emphasized)
@@ -26,7 +26,13 @@
                 </div>
                 <div class="lucille-event-location">{{ data_get($event, 'location') }}</div>
                 <div class="lucille-event-venue">{{ data_get($event, 'venue') }}</div>
-                <div class="lucille-event-buy">{{ data_get($event, 'ticket_label', 'Details') }}</div>
+                <div class="lucille-event-buy">
+                    @if(data_get($event, 'is_cancelled'))
+                        <span class="text-[var(--lucille-accent)] font-bold text-[10px] tracking-widest border border-[var(--lucille-accent)] px-2 py-1">CANCELADO</span>
+                    @else
+                        {{ data_get($event, 'ticket_label', 'Details') }}
+                    @endif
+                </div>
             </a>
         </li>
     @endforeach

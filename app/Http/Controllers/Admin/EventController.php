@@ -108,6 +108,7 @@ class EventController extends Controller
             'map_url' => ['nullable', 'url', 'max:4096'],
             'categories_text' => ['nullable', 'string'],
             'content_text' => ['nullable', 'string'],
+            'is_cancelled' => ['nullable', 'boolean'],
         ]);
 
         $validated['starts_at'] = Carbon::parse($validated['starts_at']);
@@ -116,6 +117,7 @@ class EventController extends Controller
         $validated['venue'] = trim((string) ($validated['venue'] ?? ''));
         $validated['categories'] = $this->splitTerms((string) ($validated['categories_text'] ?? ''));
         $validated['content'] = $this->splitParagraphs((string) ($validated['content_text'] ?? ''));
+        $validated['is_cancelled'] = $request->boolean('is_cancelled');
 
         unset($validated['categories_text'], $validated['content_text'], $validated['poster_file']);
 
