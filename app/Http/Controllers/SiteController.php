@@ -49,7 +49,7 @@ class SiteController extends Controller
                 ->where('show_in_feed', true)
                 ->orderByDesc('released_at')
                 ->latest()
-                ->take(4)
+                ->take(10)
                 ->get(),
             collect()
         );

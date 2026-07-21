@@ -55,6 +55,9 @@
         </div>
     </x-sections.background-band>
     @endif
+
+    <x-home.new-releases-slider :releases="$newReleases" />
+
     {{-- <x-home.partners-slider :agencies="$agencies" /> --}}
 
     @if (data_get($featuredStories, 'enabled', false))
