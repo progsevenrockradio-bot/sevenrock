@@ -2,10 +2,10 @@
 
 @if($releases && $releases->isNotEmpty())
 <x-sections.background-band class="home-section-texture home-section-dark border-t border-[#222]">
-    <div class="pt-[80px] pb-[80px]">
+    <div class="pt-12 pb-12">
         <div class="mx-auto max-w-[1200px] px-6">
             <div class="flex items-center justify-between">
-                <x-ui.section-heading title="Nuevos" accent="Lanzamientos" subtitle="Música fresca de la escena independiente y del rock" />
+                <x-ui.section-heading title="Novedades" accent="Discográficas" subtitle="Música fresca de la escena independiente y del rock" />
                 <a href="{{ route('new-releases.index') }}" class="hidden sm:inline-flex items-center text-xs font-display uppercase tracking-[.18em] text-[#dcdcdc] hover:text-[#c32720] transition-colors">
                     Ver todos los lanzamientos &rarr;
                 </a>
@@ -43,17 +43,17 @@
 
                 <!-- Track de Swiper/Scroll horizontal -->
                 <div x-ref="carousel" 
-                     class="flex gap-6 overflow-x-auto scroll-smooth no-scrollbar py-4 px-1 snap-x snap-mandatory">
+                     class="flex gap-4 overflow-x-auto scroll-smooth no-scrollbar py-2 px-1 snap-x snap-mandatory">
                     @foreach($releases as $release)
-                        <div class="snap-start shrink-0 w-[240px] sm:w-[260px] md:w-[270px] border border-[#2b2b2b] bg-[rgba(16,16,18,.9)] p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:border-[#c32720]/50 group rounded-[12px] shadow-[0_10px_30px_rgba(0,0,0,0.5)] relative">
+                        <div class="snap-start shrink-0 w-[180px] sm:w-[195px] md:w-[210px] border border-[#2b2b2b] bg-[rgba(16,16,18,.9)] p-3 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:border-[#c32720]/50 group rounded-[10px] shadow-[0_8px_24px_rgba(0,0,0,0.5)] relative">
                             <div>
                                 <!-- Badge "NUEVO" -->
-                                <div class="absolute top-6 right-6 z-20 bg-[#c32720] text-white font-display text-[9px] uppercase tracking-wider px-2 py-0.5 rounded shadow">
+                                <div class="absolute top-4 right-4 z-20 bg-[#c32720] text-white font-display text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded shadow">
                                     Nuevo
                                 </div>
 
                                 <!-- Portada -->
-                                <div class="relative aspect-square overflow-hidden border border-[#2b2b2b] bg-[#111] rounded-[8px]">
+                                <div class="relative aspect-square overflow-hidden border border-[#2b2b2b] bg-[#111] rounded-[6px]">
                                     <img src="{{ $release->cover_image_url }}" 
                                          alt="{{ $release->title }}" 
                                          class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" 
