@@ -9,7 +9,7 @@
         overlay="rgba(16,16,18,.85)"
     />
 
-    <section class="py-16 bg-[#0a0a0c]" x-data="{ activeAudioId: null, activeAudioEl: null }">
+    <section class="py-16 bg-[#0a0a0c]" x-data="{ activeAudioId: null }">
         <div class="mx-auto max-w-[1200px] px-6">
             
             @if ($newReleases->isEmpty())
@@ -17,100 +17,72 @@
                     <p class="text-sm">No hay lanzamientos publicados todavía. ¡Vuelve pronto!</p>
                 </div>
             @else
-                <!-- Mosaico Asimétrico Masonry Grid (grid-auto-flow: dense) -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[280px] grid-flow-row-dense">
-                    @foreach($newReleases as $index => $release)
-                        @php
-                            // Patrón asimétrico de celdas (celdas destacadas 2x2, 2x1 o 1x2)
-                            $spanClass = 'col-span-1 row-span-1';
-                            if ($index % 5 === 0) {
-                                $spanClass = 'sm:col-span-2 sm:row-span-2'; // Tarjeta Grande
-                            } elseif ($index % 5 === 2) {
-                                $spanClass = 'sm:col-span-2 sm:row-span-1'; // Tarjeta Ancha
-                            } elseif ($index % 5 === 4) {
-                                $spanClass = 'sm:col-span-1 sm:row-span-2'; // Tarjeta Alta
-                            }
-                        @endphp
-
+                <!-- Mosaico Asimétrico Masonry Real (CSS Column Count) -->
+                <div class="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-6 space-y-6">
+                    @foreach($newReleases as $release)
                         <div id="release-card-{{ $release->id }}"
                              :class="{
-                                 'border-[#d946ef] ring-4 ring-[#d946ef]/40 shadow-[0_0_30px_rgba(217,70,239,0.5)] z-30 font-bold scale-[1.02]': activeAudioId === {{ $release->id }},
-                                 'border-[#2b2b2b] hover:border-[#d946ef]/60 hover:shadow-[0_0_20px_rgba(217,70,239,0.25)]': activeAudioId !== {{ $release->id }}
+                                 'is-playing border-[#d946ef] ring-4 ring-[#d946ef]/50 shadow-[0_0_35px_rgba(217,70,239,0.6)] z-30 scale-[1.02]': activeAudioId === {{ $release->id }},
+                                 'border-white/10 hover:border-[#d946ef]/60 hover:shadow-[0_0_25px_rgba(217,70,239,0.3)]': activeAudioId !== {{ $release->id }}
                              }"
-                             class="{{ $spanClass }} relative bg-[#121215] border p-4 flex flex-col justify-between transition-all duration-500 rounded-[14px] overflow-hidden group">
+                             class="break-inside-avoid relative bg-[#121215] border p-3.5 transition-all duration-500 rounded-[16px] overflow-hidden group flex flex-col justify-between">
                             
-                            <!-- Indicador Sonando (Fucsia Badge) -->
-                            <div x-show="activeAudioId === {{ $release->id }}" x-cloak class="absolute top-3 left-3 z-30 bg-[#d946ef] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1.5 animate-pulse">
+                            <!-- Indicador Sonando / Play (Fucsia Badge) -->
+                            <div x-show="activeAudioId === {{ $release->id }}" x-cloak class="absolute top-5 left-5 z-30 bg-[#d946ef] text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-xl flex items-center gap-1.5 animate-pulse">
                                 <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
-                                Sonando Ahora
+                                Sonando
                             </div>
 
-                            <div class="relative h-full flex flex-col justify-between z-20">
-                                <!-- Portada e Imagen con Glow Fucsia en Hover -->
-                                <div class="relative w-full h-full min-h-[140px] overflow-hidden border border-white/10 bg-[#000] rounded-[10px]">
-                                    <img src="{{ $release->cover_image_url }}" alt="{{ $release->title }}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy">
-                                    
+                            <!-- Portada Limpia de Altura Variable / Aspect Ratio -->
+                            <div class="relative w-full overflow-hidden border border-white/10 bg-black rounded-[12px] group/cover">
+                                <img src="{{ $release->cover_image_url }}" alt="{{ $release->title }}" class="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy">
+                                
+                                <!-- Overlay Interactivo de Reproducción -->
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                                    @if($release->audio_url)
+                                        <button type="button"
+                                                @click="
+                                                    if (activeAudioId === {{ $release->id }}) {
+                                                        activeAudioId = null;
+                                                    } else {
+                                                        activeAudioId = {{ $release->id }};
+                                                    }
+                                                "
+                                                class="w-12 h-12 rounded-full bg-[#d946ef] text-white flex items-center justify-center shadow-[0_0_20px_rgba(217,70,239,0.8)] hover:scale-110 transition-transform"
+                                                title="Reproducir / Pausar">
+                                            <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                                                <path x-show="activeAudioId !== {{ $release->id }}" d="M8 5v14l11-7z"/>
+                                                <path x-show="activeAudioId === {{ $release->id }}" x-cloak d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                                            </svg>
+                                        </button>
+                                    @endif
+
                                     @if($release->youtube_url)
-                                        <a href="{{ $release->youtube_url }}" target="_blank" rel="noreferrer" class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[10px]">
-                                            <svg class="h-12 w-12 text-[#d946ef] hover:scale-110 transition-transform filter drop-shadow-[0_0_10px_rgba(217,70,239,0.8)]" fill="currentColor" viewBox="0 0 24 24">
+                                        <a href="{{ $release->youtube_url }}" target="_blank" rel="noreferrer" class="w-10 h-10 rounded-full bg-black/80 border border-white/20 text-[#FF0000] flex items-center justify-center hover:scale-110 transition-transform" title="Ver en YouTube">
+                                            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
                                                 <path d="M23.498 6.163a3.003 3.003 0 00-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 00-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 002.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 002.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                                             </svg>
                                         </a>
                                     @endif
                                 </div>
-
-                                <!-- Metadata -->
-                                <div class="mt-3">
-                                    <h4 class="font-display text-[16px] uppercase tracking-[.08em] text-[#e4e4e7] line-clamp-1 group-hover:text-[#d946ef] transition-colors">{{ $release->title }}</h4>
-                                    <p class="text-[12px] uppercase tracking-[.18em] text-[#d946ef] line-clamp-1 mt-0.5 font-semibold">{{ $release->artist_name }}</p>
-
-                                    @if($release->released_at)
-                                        <p class="text-[10px] uppercase tracking-[.12em] text-gray-500 mt-0.5">{{ $release->released_at->translatedFormat('d M, Y') }}</p>
-                                    @endif
-                                </div>
                             </div>
 
-                            <div class="mt-3 z-20">
-                                <!-- Audio Player Conectado a Eventos y Anclaje -->
-                                @if($release->audio_url)
-                                    <div class="border-t border-white/10 pt-3">
-                                        <audio id="audio-rel-{{ $release->id }}"
-                                               src="{{ $release->audio_url }}" 
-                                               controls 
-                                               class="w-full h-8 accent-[#d946ef] dark-audio" 
-                                               controlsList="nodownload"
-                                               @play="
-                                                    if (activeAudioEl && activeAudioEl !== $el) { activeAudioEl.pause(); }
-                                                    activeAudioId = {{ $release->id }};
-                                                    activeAudioEl = $el;
-                                               "
-                                               @pause="if (activeAudioId === {{ $release->id }}) { activeAudioId = null; }"
-                                               @ended="if (activeAudioId === {{ $release->id }}) { activeAudioId = null; }">
-                                        </audio>
-                                    </div>
-                                @endif
-
-                                <!-- Action Links -->
-                                <div class="mt-3 flex items-center justify-between border-t border-white/10 pt-2.5">
-                                    <div class="flex gap-3">
-                                        @if($release->spotify_url)
-                                            <a href="{{ $release->spotify_url }}" target="_blank" rel="noreferrer" class="text-[#1DB954] hover:scale-110 transition-transform" title="Escuchar en Spotify">
-                                                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.02.24-2.82-1.74-6.36-2.129-10.56-1.17-.419.09-.81-.179-.9-.6-.09-.42.18-.81.6-.9 4.62-1.051 8.58-.6 11.76 1.348.36.24.48.66.24 1.022zm1.44-3.3c-.3.42-.84.6-1.26.3-3.24-1.98-8.16-2.58-12-1.38-.479.12-.99-.12-1.11-.6-.12-.48.12-.99.6-1.11 4.38-1.32 9.78-.6 13.5 1.68.42.24.6.78.27 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.3c-.6.18-1.26-.18-1.44-.78-.18-.6.18-1.26.78-1.44 4.26-1.29 11.34-1.02 15.84 1.65.54.3.72 1.02.42 1.56-.3.48-1.02.72-1.56.42z"/>
-                                                </svg>
-                                            </a>
-                                        @endif
-                                        @if($release->youtube_url)
-                                            <a href="{{ $release->youtube_url }}" target="_blank" rel="noreferrer" class="text-[#FF0000] hover:scale-110 transition-transform" title="Ver en YouTube">
-                                                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M23.498 6.163a3.003 3.003 0 00-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 00-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 002.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 002.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                                                </svg>
-                                            </a>
-                                        @endif
-                                    </div>
-                                    <a href="{{ route('new-releases.single', $release->slug) }}" class="text-[11px] uppercase tracking-[.18em] text-gray-300 hover:text-[#d946ef] transition-colors font-medium">Ver Detalles &rarr;</a>
+                            <!-- Información Estética Limpia (Sin reproductores nativos pesados) -->
+                            <div class="mt-3 flex items-start justify-between gap-2">
+                                <div class="overflow-hidden">
+                                    <h4 class="font-display text-[15px] uppercase tracking-[.06em] text-[#e4e4e7] truncate group-hover:text-[#d946ef] transition-colors" title="{{ $release->title }}">
+                                        {{ $release->title }}
+                                    </h4>
+                                    <p class="text-[12px] uppercase tracking-[.15em] text-[#d946ef] truncate font-semibold mt-0.5" title="{{ $release->artist_name }}">
+                                        {{ $release->artist_name }}
+                                    </p>
                                 </div>
+
+                                <a href="{{ route('new-releases.single', $release->slug) }}" class="shrink-0 text-[10px] uppercase tracking-[.18em] text-gray-400 hover:text-[#d946ef] transition-colors font-medium border border-white/10 px-2 py-1 rounded">
+                                    Ver &rarr;
+                                </a>
                             </div>
+
                         </div>
                     @endforeach
                 </div>
@@ -124,4 +96,3 @@
         </div>
     </section>
 </x-layouts.site>
-
