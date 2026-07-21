@@ -9,7 +9,7 @@
         overlay="rgba(16,16,18,.85)"
     />
 
-    <section class="py-16 bg-[#0c0c0e]">
+    <section class="py-16 bg-[#0a0a0c]" x-data="{ activeAudioId: null, activeAudioEl: null }">
         <div class="mx-auto max-w-[1200px] px-6">
             
             @if ($newReleases->isEmpty())
@@ -17,45 +17,81 @@
                     <p class="text-sm">No hay lanzamientos publicados todavía. ¡Vuelve pronto!</p>
                 </div>
             @else
-                <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    @foreach($newReleases as $release)
-                        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:border-[#c32720]/40 group rounded-[12px] shadow-lg">
-                            <div>
-                                <!-- Portada -->
-                                <div class="relative aspect-square overflow-hidden border border-[#2b2b2b] bg-[#111] rounded-[8px]">
-                                    <img src="{{ $release->cover_image_url }}" alt="{{ $release->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                <!-- Mosaico Asimétrico Masonry Grid (grid-auto-flow: dense) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[280px] grid-flow-row-dense">
+                    @foreach($newReleases as $index => $release)
+                        @php
+                            // Patrón asimétrico de celdas (celdas destacadas 2x2, 2x1 o 1x2)
+                            $spanClass = 'col-span-1 row-span-1';
+                            if ($index % 5 === 0) {
+                                $spanClass = 'sm:col-span-2 sm:row-span-2'; // Tarjeta Grande
+                            } elseif ($index % 5 === 2) {
+                                $spanClass = 'sm:col-span-2 sm:row-span-1'; // Tarjeta Ancha
+                            } elseif ($index % 5 === 4) {
+                                $spanClass = 'sm:col-span-1 sm:row-span-2'; // Tarjeta Alta
+                            }
+                        @endphp
+
+                        <div id="release-card-{{ $release->id }}"
+                             :class="{
+                                 'border-[#d946ef] ring-4 ring-[#d946ef]/40 shadow-[0_0_30px_rgba(217,70,239,0.5)] z-30 font-bold scale-[1.02]': activeAudioId === {{ $release->id }},
+                                 'border-[#2b2b2b] hover:border-[#d946ef]/60 hover:shadow-[0_0_20px_rgba(217,70,239,0.25)]': activeAudioId !== {{ $release->id }}
+                             }"
+                             class="{{ $spanClass }} relative bg-[#121215] border p-4 flex flex-col justify-between transition-all duration-500 rounded-[14px] overflow-hidden group">
+                            
+                            <!-- Indicador Sonando (Fucsia Badge) -->
+                            <div x-show="activeAudioId === {{ $release->id }}" x-cloak class="absolute top-3 left-3 z-30 bg-[#d946ef] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1.5 animate-pulse">
+                                <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                                Sonando Ahora
+                            </div>
+
+                            <div class="relative h-full flex flex-col justify-between z-20">
+                                <!-- Portada e Imagen con Glow Fucsia en Hover -->
+                                <div class="relative w-full h-full min-h-[140px] overflow-hidden border border-white/10 bg-[#000] rounded-[10px]">
+                                    <img src="{{ $release->cover_image_url }}" alt="{{ $release->title }}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy">
+                                    
                                     @if($release->youtube_url)
-                                        <a href="{{ $release->youtube_url }}" target="_blank" rel="noreferrer" class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[8px]">
-                                            <svg class="h-12 w-12 text-[#c32720] hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+                                        <a href="{{ $release->youtube_url }}" target="_blank" rel="noreferrer" class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[10px]">
+                                            <svg class="h-12 w-12 text-[#d946ef] hover:scale-110 transition-transform filter drop-shadow-[0_0_10px_rgba(217,70,239,0.8)]" fill="currentColor" viewBox="0 0 24 24">
                                                 <path d="M23.498 6.163a3.003 3.003 0 00-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 00-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 002.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 002.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                                             </svg>
                                         </a>
                                     @endif
                                 </div>
 
-                                <!-- Meta -->
-                                <h4 class="mt-4 font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-1 group-hover:text-[#c32720] transition-colors">{{ $release->title }}</h4>
-                                <p class="text-[12px] uppercase tracking-[.18em] text-[#c32720] line-clamp-1 mt-1">{{ $release->artist_name }}</p>
+                                <!-- Metadata -->
+                                <div class="mt-3">
+                                    <h4 class="font-display text-[16px] uppercase tracking-[.08em] text-[#e4e4e7] line-clamp-1 group-hover:text-[#d946ef] transition-colors">{{ $release->title }}</h4>
+                                    <p class="text-[12px] uppercase tracking-[.18em] text-[#d946ef] line-clamp-1 mt-0.5 font-semibold">{{ $release->artist_name }}</p>
 
-                                @if($release->released_at)
-                                    <p class="text-[10px] uppercase tracking-[.12em] text-[#555] mt-1">{{ $release->released_at->translatedFormat('d M, Y') }}</p>
-                                @endif
-
-                                @if($release->description)
-                                    <p class="mt-3 text-xs leading-5 text-[#7b7b7b] line-clamp-3 select-text">{{ strip_tags(str_replace(['\r\n', '\r', '\n'], ' ', $release->description ?? '')) }}</p>
-                                @endif
+                                    @if($release->released_at)
+                                        <p class="text-[10px] uppercase tracking-[.12em] text-gray-500 mt-0.5">{{ $release->released_at->translatedFormat('d M, Y') }}</p>
+                                    @endif
+                                </div>
                             </div>
 
-                            <div>
-                                <!-- Audio Player -->
+                            <div class="mt-3 z-20">
+                                <!-- Audio Player Conectado a Eventos y Anclaje -->
                                 @if($release->audio_url)
-                                    <div class="mt-4 border-t border-[#222] pt-4">
-                                        <audio src="{{ $release->audio_url }}" controls class="w-full h-8 accent-[#c32720] dark-audio" controlsList="nodownload"></audio>
+                                    <div class="border-t border-white/10 pt-3">
+                                        <audio id="audio-rel-{{ $release->id }}"
+                                               src="{{ $release->audio_url }}" 
+                                               controls 
+                                               class="w-full h-8 accent-[#d946ef] dark-audio" 
+                                               controlsList="nodownload"
+                                               @play="
+                                                    if (activeAudioEl && activeAudioEl !== $el) { activeAudioEl.pause(); }
+                                                    activeAudioId = {{ $release->id }};
+                                                    activeAudioEl = $el;
+                                               "
+                                               @pause="if (activeAudioId === {{ $release->id }}) { activeAudioId = null; }"
+                                               @ended="if (activeAudioId === {{ $release->id }}) { activeAudioId = null; }">
+                                        </audio>
                                     </div>
                                 @endif
 
                                 <!-- Action Links -->
-                                <div class="mt-4 flex items-center justify-between border-t border-[#222] pt-3">
+                                <div class="mt-3 flex items-center justify-between border-t border-white/10 pt-2.5">
                                     <div class="flex gap-3">
                                         @if($release->spotify_url)
                                             <a href="{{ $release->spotify_url }}" target="_blank" rel="noreferrer" class="text-[#1DB954] hover:scale-110 transition-transform" title="Escuchar en Spotify">
@@ -72,7 +108,7 @@
                                             </a>
                                         @endif
                                     </div>
-                                    <a href="{{ route('new-releases.single', $release->slug) }}" class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] hover:text-[#c32720] transition-colors">Ver Detalles &rarr;</a>
+                                    <a href="{{ route('new-releases.single', $release->slug) }}" class="text-[11px] uppercase tracking-[.18em] text-gray-300 hover:text-[#d946ef] transition-colors font-medium">Ver Detalles &rarr;</a>
                                 </div>
                             </div>
                         </div>
@@ -88,3 +124,4 @@
         </div>
     </section>
 </x-layouts.site>
+
