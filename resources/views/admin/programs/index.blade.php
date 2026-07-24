@@ -112,8 +112,8 @@
             <div class="p-6">
                 <form @submit.prevent="sendEmail" class="space-y-5">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Destinatario (Email) *</label>
-                        <input type="email" x-model="emailForm.email" required class="lucille-product-field w-full" :disabled="isSending">
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Destinatario(s) *</label>
+                        <input type="text" x-model="emailForm.email" required placeholder="ej: productor@mail.com, locutor@mail.com" class="lucille-product-field w-full" :disabled="isSending">
                         <template x-if="errors.email">
                             <p class="mt-1 text-xs text-[#c32720]" x-text="errors.email[0]"></p>
                         </template>

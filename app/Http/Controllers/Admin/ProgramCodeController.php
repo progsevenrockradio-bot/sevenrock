@@ -94,7 +94,17 @@ class ProgramCodeController extends Controller
     public function sendEmail(Request $request, ProgramScheduleFormatter $formatter)
     {
         $data = $request->validate([
-            'email' => ['required', 'email'],
+            'email' => ['required', 'string', function ($attribute, $value, $fail) {
+                $emails = array_filter(array_map('trim', explode(',', $value)));
+                if (empty($emails)) {
+                    $fail('Debes proporcionar al menos un correo electrónico.');
+                }
+                foreach ($emails as $email) {
+                    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $fail("El correo '{$email}' no es válido.");
+                    }
+                }
+            }],
             'subject' => ['required', 'string', 'max:255'],
             'message' => ['nullable', 'string'],
             'ids' => ['required', 'array', 'min:1'],
@@ -116,8 +126,10 @@ class ProgramCodeController extends Controller
         $dompdf->render();
         $pdfOutput = base64_encode($dompdf->output());
 
+        $emails = array_filter(array_map('trim', explode(',', $data['email'])));
+
         // Send Email
-        Mail::to($data['email'])->queue(new ProgramScheduleMail(
+        Mail::to($emails)->queue(new ProgramScheduleMail(
             subjectLine: $data['subject'],
             customMessage: $data['message'] ?? '',
             groupedPrograms: $formattedData,
