@@ -114,7 +114,7 @@ class ProgramCodeController extends Controller
         $dompdf->loadHtml($htmlPdf);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
-        $pdfOutput = $dompdf->output();
+        $pdfOutput = base64_encode($dompdf->output());
 
         // Send Email
         Mail::to($data['email'])->queue(new ProgramScheduleMail(

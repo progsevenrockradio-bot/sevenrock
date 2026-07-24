@@ -43,7 +43,7 @@ class ProgramScheduleMail extends Mailable
     public function attachments(): array
     {
         return [
-            Attachment::fromData(fn() => $this->pdfAttachment, 'Horarios_Programas_Seven_Rock_Radio.pdf')
+            Attachment::fromData(fn() => base64_decode($this->pdfAttachment, true), 'Horarios_Programas_Seven_Rock_Radio.pdf')
                 ->withMime('application/pdf'),
         ];
     }

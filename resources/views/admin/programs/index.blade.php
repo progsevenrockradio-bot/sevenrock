@@ -1,23 +1,48 @@
 <x-layouts.admin title="Programas con código">
     <div x-data="programSelection()">
-    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Programas</h1>
-                <p class="mt-3 max-w-3xl text-sm text-[#7b7b7b]">Gestiona códigos únicos y envíos de invitación a productores.</p>
+    <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+            <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Programas</h1>
+            <p class="mt-2 max-w-3xl text-sm text-[#7b7b7b]">Gestiona códigos únicos y envíos de invitación a productores.</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ route('admin.master-programs.index') }}" class="lucille-button">CRUD programas</a>
+            <a href="{{ route('admin.programs.invitations') }}" class="lucille-button-solid">Invitaciones</a>
+        </div>
+    </div>
+
+    <!-- Toolbar Unificada -->
+    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        
+        <!-- Izquierda: Master Checkbox y Acciones Masivas -->
+        <div class="flex flex-wrap items-center gap-4">
+            <div class="flex items-center gap-3 border-r border-[#2b2b2b] pr-4">
+                <input type="checkbox" x-model="selectAll" @change="toggleAll()" class="lucille-checkbox h-5 w-5">
+                <span class="text-xs uppercase tracking-[.1em] text-[#7b7b7b] select-none">
+                    <span x-text="selectedPrograms.length"></span> seleccionado(s)
+                </span>
             </div>
-            <div class="flex flex-wrap gap-3">
-                <button @click="generatePdf()" :disabled="selectedPrograms.length === 0" :class="selectedPrograms.length > 0 ? 'lucille-button' : 'lucille-button opacity-50 cursor-not-allowed'">Generar PDF</button>
-                <button @click="showEmailModal = true" :disabled="selectedPrograms.length === 0" :class="selectedPrograms.length > 0 ? 'lucille-button-solid' : 'lucille-button-solid opacity-50 cursor-not-allowed'">Enviar por correo</button>
-                <a href="{{ route('admin.master-programs.index') }}" class="lucille-button">CRUD programas</a>
-                <a href="{{ route('admin.programs.invitations') }}" class="lucille-button-solid">Invitaciones</a>
+            
+            <div class="flex items-center gap-2">
+                <button @click="generatePdf()" :disabled="selectedPrograms.length === 0" :class="selectedPrograms.length > 0 ? 'lucille-button text-xs py-1.5' : 'lucille-button text-xs py-1.5 opacity-50 cursor-not-allowed'">Generar PDF</button>
+                <button @click="showEmailModal = true" :disabled="selectedPrograms.length === 0" :class="selectedPrograms.length > 0 ? 'lucille-button-solid text-xs py-1.5' : 'lucille-button-solid text-xs py-1.5 opacity-50 cursor-not-allowed'">Enviar por correo</button>
             </div>
         </div>
 
-        <form method="GET" class="mt-6 flex flex-wrap gap-3">
-            <input name="search" value="{{ $search }}" class="lucille-product-field min-w-[260px] flex-1" placeholder="Buscar por nombre, código, productor o email">
-            <button type="submit" class="lucille-button-solid">Filtrar</button>
-            <a href="{{ route('admin.programs.index') }}" class="lucille-button">Limpiar</a>
+        <!-- Derecha: Búsqueda y Filtros -->
+        <form method="GET" class="flex flex-1 lg:max-w-md items-center gap-2">
+            <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <svg class="w-4 h-4 text-[#7b7b7b]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                    </svg>
+                </div>
+                <input name="search" value="{{ $search }}" class="lucille-product-field w-full pl-10 py-1.5 text-sm" placeholder="Buscar programa, conductor...">
+            </div>
+            <button type="submit" class="lucille-button-solid text-xs py-1.5">Buscar</button>
+            @if($search)
+                <a href="{{ route('admin.programs.index') }}" class="lucille-button text-xs py-1.5">Limpiar</a>
+            @endif
         </form>
     </div>
 
