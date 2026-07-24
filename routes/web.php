@@ -43,6 +43,7 @@ use App\Http\Controllers\AffiliateAuthController;
 use App\Http\Controllers\CommunityWallController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\EmailTemplateController as AdminEmailTemplateController;
+use App\Http\Controllers\Admin\DirectEmailController as AdminDirectEmailController;
 use App\Http\Controllers\Admin\EmailLogController as AdminEmailLogController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ContractSigningController;
@@ -349,6 +350,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/campaigns/create', 'campaignsCreate')->name('campaigns.create');
         Route::post('/campaigns', 'campaignsStore')->name('campaigns.store');
         Route::get('/campaigns/{campaign}', 'campaignsShow')->name('campaigns.show');
+    });
+
+    Route::controller(AdminDirectEmailController::class)->prefix('direct-email')->name('direct-email.')->group(function (): void {
+        Route::get('/', 'create')->name('create');
+        Route::post('/send', 'send')->name('send');
     });
 
     Route::controller(AdminMarketingController::class)->prefix('marketing')->name('marketing.')->group(function (): void {
