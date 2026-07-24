@@ -146,6 +146,29 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Notificación Corporativa -->
+    <div x-show="showNotificationModal" style="display: none;" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/80 p-4 sm:p-0 backdrop-blur-sm">
+        <div @click.away="showNotificationModal = false" class="relative w-full max-w-md border border-[#2b2b2b] bg-[rgba(16,16,18,0.96)] shadow-[0_30px_90px_rgba(0,0,0,.72)]">
+            <div class="h-1 w-full" :class="notificationType === 'success' ? 'bg-[#3B82F6]' : 'bg-[#c32720]'"></div>
+            <div class="p-5 sm:p-6">
+                <div class="flex items-start gap-3">
+                    <div x-show="notificationType === 'success'" class="mt-1 flex h-10 w-10 shrink-0 items-center justify-center border border-[#1e3a8a] bg-[rgba(59,130,246,.12)] text-[#93c5fd] text-[10px] font-bold uppercase tracking-[.22em]">✓</div>
+                    <div x-show="notificationType === 'error'" class="mt-1 flex h-10 w-10 shrink-0 items-center justify-center border border-[#5c2a2a] bg-[rgba(195,39,32,.12)] text-[#ffd0d0] text-[10px] font-bold uppercase tracking-[.22em]">!</div>
+                    
+                    <div class="min-w-0 flex-1">
+                        <p class="font-display text-[9px] uppercase tracking-[.28em] text-[#8a8a8a]" x-text="notificationType === 'success' ? 'Confirmación' : 'Atención'"></p>
+                        <h2 class="mt-1 font-display text-[1.45rem] uppercase tracking-[.06em] text-[#f2f2f2]" x-text="notificationTitle"></h2>
+                        <p class="mt-2 text-[13px] leading-6 text-[#c3c3c3]" x-text="notificationMessage"></p>
+                    </div>
+                </div>
+
+                <div class="mt-5 flex flex-wrap justify-end gap-2">
+                    <button type="button" @click="showNotificationModal = false" class="lucille-button-solid">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
     </div>
 
     <script>
@@ -155,10 +178,21 @@
                 selectAll: false,
                 isSending: false,
                 showEmailModal: false,
+                showNotificationModal: false,
+                notificationTitle: '',
+                notificationMessage: '',
+                notificationType: 'success', // 'success' or 'error'
                 emailForm: { email: '', subject: 'Horarios de Programas - Seven Rock Radio', message: '' },
                 errors: {},
                 allProgramIds: @json($programs->pluck('id')),
                 
+                showNotify(title, message, type = 'success') {
+                    this.notificationTitle = title;
+                    this.notificationMessage = message;
+                    this.notificationType = type;
+                    this.showNotificationModal = true;
+                },
+
                 toggleAll() {
                     if (this.selectAll) {
                         this.selectedPrograms = [...this.allProgramIds];
@@ -167,10 +201,34 @@
                     }
                 },
                 
-                generatePdf() {
+                async generatePdf() {
                     if (this.selectedPrograms.length === 0) return;
                     const query = this.selectedPrograms.map(id => `ids[]=${id}`).join('&');
-                    window.open(`{{ route('admin.programs.export-pdf') }}?${query}`, '_blank');
+                    const url = `{{ route('admin.programs.export-pdf') }}?${query}`;
+                    
+                    const newWindow = window.open('', '_blank');
+                    if (newWindow) {
+                        newWindow.document.write('<!DOCTYPE html><html><head><title>Generando PDF...</title><style>body{background:#151515;color:#dcdcdc;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;}</style></head><body><h2>Generando documento, por favor espere...</h2></body></html>');
+                    }
+                    
+                    try {
+                        const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        if (!response.ok) {
+                            if (newWindow) newWindow.close();
+                            const data = await response.json().catch(() => ({}));
+                            this.showNotify('Error', 'No se pudo generar el PDF. ' + (data.message || 'Inténtelo de nuevo.'), 'error');
+                            return;
+                        }
+                        
+                        if (newWindow) {
+                            newWindow.location.href = url;
+                        } else {
+                            window.location.href = url;
+                        }
+                    } catch (error) {
+                        if (newWindow) newWindow.close();
+                        this.showNotify('Error', 'Error de red al generar el PDF.', 'error');
+                    }
                 },
                 
                 async sendEmail() {
@@ -200,19 +258,18 @@
                             if (response.status === 422) {
                                 this.errors = data.errors || {};
                             } else {
-                                alert('Error al enviar el correo: ' + (data.message || 'Desconocido'));
+                                this.showEmailModal = false;
+                                this.showNotify('Error', 'Error al enviar el correo: ' + (data.message || 'Desconocido'), 'error');
                             }
                         } else {
-                            alert(data.message || 'Correo encolado para envío con éxito.');
                             this.showEmailModal = false;
+                            this.showNotify('Operación exitosa', data.message || 'El correo ha sido enviado correctamente.', 'success');
                             this.emailForm.email = '';
                             this.emailForm.message = '';
-                            // Optionally clear selection:
-                            // this.selectedPrograms = [];
-                            // this.selectAll = false;
                         }
                     } catch (error) {
-                        alert('Error de red al enviar el correo.');
+                        this.showEmailModal = false;
+                        this.showNotify('Error', 'Error de red al enviar el correo.', 'error');
                     } finally {
                         this.isSending = false;
                     }
