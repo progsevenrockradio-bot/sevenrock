@@ -7,8 +7,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendProducerInvitationJob;
 use App\Models\MasterProgram;
+use App\Services\ProgramScheduleFormatter;
+use App\Mail\ProgramScheduleMail;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class ProgramCodeController extends Controller
@@ -54,5 +59,71 @@ class ProgramCodeController extends Controller
             'programs' => MasterProgram::query()->orderBy('nombre')->get(),
             'templates' => collect(), // OutreachTemplate model removed — templates disabled
         ]);
+    }
+
+    public function exportPdf(Request $request, ProgramScheduleFormatter $formatter)
+    {
+        $ids = $request->input('ids', []);
+        if (empty($ids) || !is_array($ids)) {
+            return back()->with('error', 'No se seleccionaron programas.');
+        }
+
+        $programs = MasterProgram::query()->whereIn('id', $ids)->get();
+        if ($programs->isEmpty()) {
+            return back()->with('error', 'No se encontraron los programas.');
+        }
+
+        $formattedData = $formatter->format($programs);
+
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+
+        $dompdf = new Dompdf($options);
+        $html = view('pdf.program-schedule', ['groupedPrograms' => $formattedData])->render();
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="horarios-programas.pdf"',
+        ]);
+    }
+
+    public function sendEmail(Request $request, ProgramScheduleFormatter $formatter)
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'subject' => ['required', 'string', 'max:255'],
+            'message' => ['nullable', 'string'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:master_programs,id'],
+        ]);
+
+        $programs = MasterProgram::query()->whereIn('id', $data['ids'])->get();
+        $formattedData = $formatter->format($programs);
+
+        // Generate PDF
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+
+        $dompdf = new Dompdf($options);
+        $htmlPdf = view('pdf.program-schedule', ['groupedPrograms' => $formattedData])->render();
+        $dompdf->loadHtml($htmlPdf);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $pdfOutput = $dompdf->output();
+
+        // Send Email
+        Mail::to($data['email'])->queue(new ProgramScheduleMail(
+            subjectLine: $data['subject'],
+            customMessage: $data['message'] ?? '',
+            groupedPrograms: $formattedData,
+            pdfAttachment: $pdfOutput
+        ));
+
+        return response()->json(['message' => 'El correo ha sido enviado correctamente.']);
     }
 }

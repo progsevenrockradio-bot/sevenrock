@@ -240,6 +240,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
 
     Route::prefix('programs')->name('programs.')->controller(AdminProgramCodeController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::get('/export-pdf', 'exportPdf')->name('export-pdf');
+        Route::post('/send-email', 'sendEmail')->name('send-email')->middleware('throttle:5,1');
         Route::get('/invitations', 'invitations')->name('invitations');
         Route::post('/{program}/generate-code', 'generateCode')->name('generate-code');
         Route::post('/{program}/send-invitation', 'sendInvitation')->name('send-invitation');
