@@ -380,7 +380,11 @@
                 <a href="{{ route('privacy-policy') }}" class="transition hover:text-lucille-accent">Política de privacidad</a>
                 <span class="text-white/10 hidden sm:inline">|</span>
                 <button type="button" onclick="openCookieSettings()" class="transition hover:text-lucille-accent focus:outline-none">Preferencias de cookies</button>
+                <span class="text-white/10 hidden sm:inline">|</span>
+                <button type="button" @click="$dispatch('open-affiliate-modal')" class="transition hover:text-lucille-accent focus:outline-none text-lucille-accent font-bold">Patrocinador: RadioBoss</button>
             </div>
+            
+            <x-home.affiliate-modal />
             
             {{-- Texto de Copyright Detallado --}}
             <div class="text-[11px] max-w-[850px] leading-relaxed text-[#5c5c5c] mt-2 select-none">
