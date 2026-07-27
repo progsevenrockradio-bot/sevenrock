@@ -286,6 +286,18 @@
 
         {{-- Controles de cabecera --}}
         <div class="flex items-center gap-2">
+            {{-- Botón Instalar App (Oculto por defecto, se muestra si se detecta beforeinstallprompt) --}}
+            <button x-show="deferredPrompt"
+                    x-transition
+                    @click="installPwa()"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-red-500 transition-colors shadow-lg"
+                    title="Instalar Seven Rock Radio">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                <span>Instalar</span>
+            </button>
+
             {{-- Botón notificaciones push --}}
             <button id="pwa-push-btn"
                     @click="togglePushSubscription()"
@@ -608,6 +620,7 @@
             progressPercent: 0,
             nowPlayingTimer: null,
             pushSubscribed:  false,   // ← estado de la suscripción push
+            deferredPrompt:  null,    // ← prompt de instalación PWA
 
             currentTrack: {
                 src:    '',
@@ -636,6 +649,14 @@
                     // No auto-play por política de autoplay de browsers
                 }
 
+                // Capturar el evento de instalación de la PWA
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    // Prevenir el banner mini de información en móviles
+                    e.preventDefault();
+                    // Guardar el evento para dispararlo luego
+                    this.deferredPrompt = e;
+                });
+
                 // Escuchar evento push-subscribed (disparado cuando el SW detecta suscripción activa)
                 document.addEventListener('pwa:push-subscribed', () => {
                     this.pushSubscribed = true;
@@ -650,6 +671,22 @@
                     }).catch(() => {});
                 }
             },
+
+            // ── Instalación de PWA ───────────────────────────
+            async installPwa() {
+                if (!this.deferredPrompt) return;
+
+                // Mostrar el prompt nativo
+                this.deferredPrompt.prompt();
+
+                // Esperar la decisión del usuario
+                const { outcome } = await this.deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('El usuario aceptó instalar la PWA');
+                    this.deferredPrompt = null;
+                }
+            },
+
 
             // ── Push Notifications ──────────────────────────
             async togglePushSubscription() {
