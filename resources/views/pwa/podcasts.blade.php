@@ -91,7 +91,7 @@
          LISTA DE PROGRAMAS
     ═══════════════════════════════════════════════ --}}
     {{-- Banner de Instalación (Oculto en PWA instalada) --}}
-    <div x-show="!isStandalone()" class="px-4 mb-6" x-cloak>
+    <div class="px-4 mb-6 hide-in-pwa">
         <div class="bg-gradient-to-r from-red-600/20 to-[#1e1e1e] border border-red-600/30 rounded-2xl p-4 flex items-center justify-between shadow-lg">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0">

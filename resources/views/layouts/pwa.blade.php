@@ -260,6 +260,14 @@
             animation: shimmer 1.5s infinite;
             border-radius: 6px;
         }
+
+        /* Ocultar elementos si ya estamos dentro de la app instalada */
+        @media all and (display-mode: standalone) {
+            .hide-in-pwa { display: none !important; }
+        }
+        @media all and (display-mode: fullscreen) {
+            .hide-in-pwa { display: none !important; }
+        }
     </style>
 </head>
 
@@ -287,10 +295,8 @@
         {{-- Controles de cabecera --}}
         <div class="flex items-center gap-2">
             {{-- Botón Instalar App (Oculto por defecto, se muestra si se detecta beforeinstallprompt) --}}
-            <button x-show="deferredPrompt"
-                    x-transition
+            <button class="hide-in-pwa flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-red-500 transition-colors shadow-lg"
                     @click="installPwa()"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-red-500 transition-colors shadow-lg"
                     title="Instalar Seven Rock Radio">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -475,7 +481,7 @@
         </div>
 
         {{-- Botón Instalar App Prominente en el Reproductor --}}
-        <div class="w-full px-8 mt-4" x-show="!isStandalone()">
+        <div class="w-full px-8 mt-4 hide-in-pwa">
             <button @click="installPwa()" class="w-full py-3 rounded-xl bg-[#1e1e1e] border border-[#3a3a3a] text-gray-200 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-[#2a2a2a] transition-colors">
                 <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
