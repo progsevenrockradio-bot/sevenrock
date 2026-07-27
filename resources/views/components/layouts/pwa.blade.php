@@ -1025,10 +1025,7 @@
             // Carga los favoritos guardados o array vacío
             items: JSON.parse(localStorage.getItem('pwa_favorites') || '[]'),
 
-            /**
-             * Añade o quita un episodio de favoritos.
-             * @param {{ id:string, title:string, artist:string, src:string, cover:string }} ep
-             */
+            // Añade o quita un episodio de favoritos
             toggle(ep) {
                 const idx = this.items.findIndex(i => i.id === ep.id);
                 if (idx >= 0) {
