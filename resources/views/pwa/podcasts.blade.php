@@ -90,6 +90,26 @@
     {{-- ═══════════════════════════════════════════════
          LISTA DE PROGRAMAS
     ═══════════════════════════════════════════════ --}}
+    {{-- Banner de Instalación (Oculto en PWA instalada) --}}
+    <div x-show="!isStandalone()" class="px-4 mb-6" x-cloak>
+        <div class="bg-gradient-to-r from-red-600/20 to-[#1e1e1e] border border-red-600/30 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-display font-bold text-white text-sm">Seven Rock en tu Móvil</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Instala la App oficial</p>
+                </div>
+            </div>
+            <button @click="installPwa()" class="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors">
+                Instalar
+            </button>
+        </div>
+    </div>
+
     <div class="px-4">
         <h2 class="section-heading mb-3">Programas</h2>
 

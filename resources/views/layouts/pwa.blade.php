@@ -474,6 +474,16 @@
                x-text="currentTrack.artist || 'En Vivo'"></p>
         </div>
 
+        {{-- Botón Instalar App Prominente en el Reproductor --}}
+        <div class="w-full px-8 mt-4" x-show="!isStandalone()">
+            <button @click="installPwa()" class="w-full py-3 rounded-xl bg-[#1e1e1e] border border-[#3a3a3a] text-gray-200 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-[#2a2a2a] transition-colors">
+                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Instalar App Oficial
+            </button>
+        </div>
+
         {{-- Barra de progreso (podcast/canción) --}}
         <div class="w-full px-8 mt-6" x-show="!isLive">
             <input type="range"
@@ -673,8 +683,20 @@
             },
 
             // ── Instalación de PWA ───────────────────────────
+            isStandalone() {
+                return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            },
             async installPwa() {
-                if (!this.deferredPrompt) return;
+                if (!this.deferredPrompt) {
+                    // Fallback para iOS o navegadores que no soportan beforeinstallprompt
+                    const isIos = /ipad|iphone|ipod/.test(navigator.userAgent.toLowerCase());
+                    if (isIos) {
+                        alert('Para instalar en iPhone/iPad: Toca el botón "Compartir" en la barra inferior de Safari y elige "Agregar a inicio".');
+                    } else {
+                        alert('Para instalar: Ve al menú de tu navegador y selecciona "Instalar aplicación" o "Añadir a la pantalla de inicio".');
+                    }
+                    return;
+                }
 
                 // Mostrar el prompt nativo
                 this.deferredPrompt.prompt();
