@@ -180,13 +180,18 @@
 
         <div class="space-y-2">
             @foreach(array_slice($episodes, 1, 10) as $ep)
+            @php
+                $epData = [
+                    'id'      => $ep['id']      ?? md5(($ep['title'] ?? '') . ($ep['program'] ?? '')),
+                    'src'     => $ep['src']     ?? '',
+                    'title'   => $ep['title']   ?? 'Episodio',
+                    'program' => $ep['program'] ?? 'Podcast',
+                    'artist'  => $ep['program'] ?? 'Podcast',
+                    'cover'   => $ep['cover']   ?? asset('assets/lucille/podcats.webp'),
+                ];
+            @endphp
             <div class="pwa-card flex items-center gap-3 p-3 cursor-pointer"
-                 @click="playEpisode({{ Js::from([
-                     'src'     => $ep['src'] ?? '',
-                     'title'   => $ep['title'] ?? 'Episodio',
-                     'program' => $ep['program'] ?? 'Podcast',
-                     'cover'   => $ep['cover'] ?? asset('assets/lucille/podcats.webp'),
-                 ]) }})">
+                 @click="playEpisode({{ Js::from($epData) }})">
 
                 <div class="w-12 h-12 rounded-lg overflow-hidden bg-[#1e1e1e] shrink-0">
                     <img src="{{ $ep['cover'] ?? asset('assets/lucille/podcats.webp') }}"
@@ -206,16 +211,30 @@
                     </p>
                 </div>
 
-                <div class="w-8 h-8 rounded-full border border-red-600/40 flex items-center justify-center shrink-0">
-                    <svg class="w-3.5 h-3.5 text-red-500 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                    </svg>
+                {{-- Favorito + Play --}}
+                <div class="flex items-center gap-1.5 shrink-0">
+                    {{-- Botón corazón favorito --}}
+                    <button @click.stop="$store.favorites.toggle({{ Js::from($epData) }})"
+                            class="w-7 h-7 flex items-center justify-center transition-colors"
+                            :class="$store.favorites.has('{{ $epData['id'] }}') ? 'text-red-500' : 'text-gray-600 hover:text-red-400'">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                    </button>
+
+                    {{-- Botón play --}}
+                    <div class="w-8 h-8 rounded-full border border-red-600/40 flex items-center justify-center">
+                        <svg class="w-3.5 h-3.5 text-red-500 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </div>
                 </div>
             </div>
             @endforeach
         </div>
     </div>
     @endif
+
 
 </div>
 

@@ -16,7 +16,7 @@
     <meta name="apple-mobile-web-app-title" content="7RockRadio">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/assets/lucille/logo.png">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 
     {{-- Fuentes Oswald + Open Sans (sistema Lucille) --}}
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -285,7 +285,23 @@
         </a>
 
         {{-- Controles de cabecera --}}
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+            {{-- Botón notificaciones push --}}
+            <button id="pwa-push-btn"
+                    @click="togglePushSubscription()"
+                    title="Activar notificaciones En Vivo"
+                    class="w-8 h-8 rounded-full border border-[#3a3a3a] flex items-center justify-center overflow-hidden hover:border-red-600/40 transition-colors"
+                    :class="pushSubscribed ? 'bg-red-600/10 border-red-600/40' : 'bg-[#2a2a2a]'">
+                {{-- Campana activa --}}
+                <svg x-show="pushSubscribed" class="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                </svg>
+                {{-- Campana inactiva --}}
+                <svg x-show="!pushSubscribed" class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+            </button>
+
             {{-- Indicador En Vivo --}}
             <button @click="playLive()"
                     class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-red-600/50 text-red-500 text-xs font-bold uppercase tracking-wider hover:bg-red-600/10 transition-colors live-indicator"
@@ -569,12 +585,7 @@
         </a>
 
         {{-- Mi Música --}}
-        <a href="/app/library"
-           class="nav-tab pwa-nav-link {{ request()->is('app/library') ? 'active' : '' }}"
-           data-href="/app/library"
-           id="nav-library">
-            <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
             </svg>
             <span>Mi Música</span>
         </a>
@@ -596,6 +607,7 @@
             duration:        0,
             progressPercent: 0,
             nowPlayingTimer: null,
+            pushSubscribed:  false,   // ← estado de la suscripción push
 
             currentTrack: {
                 src:    '',
@@ -623,6 +635,91 @@
                     this.currentTrack = savedTrack;
                     // No auto-play por política de autoplay de browsers
                 }
+
+                // Escuchar evento push-subscribed (disparado cuando el SW detecta suscripción activa)
+                document.addEventListener('pwa:push-subscribed', () => {
+                    this.pushSubscribed = true;
+                });
+
+                // Verificar suscripción push existente
+                if ('serviceWorker' in navigator && 'PushManager' in window) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        reg.pushManager.getSubscription().then(sub => {
+                            this.pushSubscribed = !!sub;
+                        });
+                    }).catch(() => {});
+                }
+            },
+
+            // ── Push Notifications ──────────────────────────
+            async togglePushSubscription() {
+                if (!('Notification' in window) || !('PushManager' in window)) {
+                    alert('Tu navegador no soporta notificaciones push.');
+                    return;
+                }
+
+                const reg = await navigator.serviceWorker.ready.catch(() => null);
+                if (!reg) return;
+
+                if (this.pushSubscribed) {
+                    // Desuscribir
+                    const sub = await reg.pushManager.getSubscription();
+                    if (sub) {
+                        await fetch('/app/push/unsubscribe', {
+                            method:  'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                            },
+                            body: JSON.stringify({ endpoint: sub.endpoint })
+                        });
+                        await sub.unsubscribe();
+                    }
+                    this.pushSubscribed = false;
+                    return;
+                }
+
+                // Pedir permiso al usuario
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') return;
+
+                // Obtener clave pública VAPID del servidor
+                const vapidRes = await fetch('/app/push/vapid-key').catch(() => null);
+                if (!vapidRes?.ok) return;
+                const { publicKey } = await vapidRes.json();
+                if (!publicKey) return;
+
+                // Suscribirse al Push Manager del navegador
+                const subscription = await reg.pushManager.subscribe({
+                    userVisibleOnly:      true,
+                    applicationServerKey: this._urlBase64ToUint8Array(publicKey),
+                }).catch(err => { console.warn('[PWA Push]', err); return null; });
+
+                if (!subscription) return;
+
+                // Guardar suscripción en el servidor
+                const { endpoint, keys } = subscription.toJSON();
+                const res = await fetch('/app/push/subscribe', {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({
+                        endpoint,
+                        keys: { p256dh: keys.p256dh, auth: keys.auth }
+                    })
+                });
+
+                this.pushSubscribed = res.ok;
+            },
+
+            /** Convierte base64url VAPID string a Uint8Array. */
+            _urlBase64ToUint8Array(base64String) {
+                const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const raw     = atob(base64);
+                return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
             },
 
             // ── Controles de reproducción ──────────────────
@@ -857,12 +954,72 @@
         }));
     });
 
-    // Registrar Service Worker
+    // ── Alpine Store: Favoritos (localStorage) ────────────────────────────
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('favorites', {
+            // Carga los favoritos guardados o array vacío
+            items: JSON.parse(localStorage.getItem('pwa_favorites') || '[]'),
+
+            /**
+             * Añade o quita un episodio de favoritos.
+             * @param {{ id:string, title:string, artist:string, src:string, cover:string }} ep
+             */
+            toggle(ep) {
+                const idx = this.items.findIndex(i => i.id === ep.id);
+                if (idx >= 0) {
+                    this.items.splice(idx, 1);
+                } else {
+                    this.items.unshift({ ...ep, savedAt: Date.now() });
+                }
+                this.persist();
+            },
+
+            /** Comprueba si un episodio está en favoritos. */
+            has(id) {
+                return this.items.some(i => i.id === id);
+            },
+
+            /** Elimina todos los favoritos. */
+            clear() {
+                this.items = [];
+                this.persist();
+            },
+
+            persist() {
+                try {
+                    localStorage.setItem('pwa_favorites', JSON.stringify(this.items));
+                } catch { /* Cuota excedida */ }
+            },
+        });
+    });
+
+    // ── Push Notifications: suscripción VAPID ─────────────────────────────
+    // La lógica de subscribe/unsubscribe se inyecta en el componente pwaPlayer
+    // como métodos adicionales. Aquí solo se extiende Alpine.
+    document.addEventListener('alpine:init', () => {
+        // Extendemos el data del body para acceder a pushSubscribed
+        // desde el botón de campana en el header.
+        // El método real está en pwaPlayer (declarado arriba).
+    });
+
+    // ── Registrar Service Worker (scope global /)
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js', { scope: '/app' })
-                .then(reg => console.log('[PWA] Service Worker registrado:', reg.scope))
-                .catch(err => console.warn('[PWA] SW error:', err));
+        window.addEventListener('load', async () => {
+            try {
+                const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+                console.log('[PWA] Service Worker v2 registrado:', reg.scope);
+
+                // Inicializar estado de Push Notifications
+                if ('Notification' in window && 'PushManager' in window) {
+                    const sub = await reg.pushManager.getSubscription();
+                    // Notificar al componente Alpine que ya hay suscripción activa
+                    if (sub) {
+                        document.dispatchEvent(new CustomEvent('pwa:push-subscribed', { detail: sub }));
+                    }
+                }
+            } catch (err) {
+                console.warn('[PWA] SW error:', err);
+            }
         });
     }
     </script>

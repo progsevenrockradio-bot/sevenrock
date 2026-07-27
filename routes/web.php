@@ -107,16 +107,46 @@ Route::get("/multimedia", [SiteController::class, "multimedia"])->name("multimed
 // PWA — Progressive Web App (experiencia móvil /app)
 // ─────────────────────────────────────────────────────────────────────────────
 Route::prefix('app')->name('pwa.')->group(function (): void {
+    // ── Vistas principales ──────────────────────────────────────────────────
     Route::get('/',         [\App\Http\Controllers\PwaAppController::class, 'index'])->name('index');
     Route::get('/live',     [\App\Http\Controllers\PwaAppController::class, 'live'])->name('live');
     Route::get('/podcasts', [\App\Http\Controllers\PwaAppController::class, 'podcasts'])->name('podcasts');
     Route::get('/library',  [\App\Http\Controllers\PwaAppController::class, 'library'])->name('library');
 
-    // API JSON interna: metadata "Now Playing" (consumida por el Mini Player cada ~15 s)
-    Route::get('/api/now-playing', [\App\Http\Controllers\PwaAppController::class, 'nowPlaying'])
-        ->name('api.now-playing')
-        ->middleware('throttle:120,1');
+    // ── Página offline (pre-cacheada por el Service Worker) ─────────────────
+    Route::view('/offline', 'pwa.offline')->name('offline');
+
+    // ── API JSON interna ─────────────────────────────────────────────────────
+    Route::prefix('api')->name('api.')->middleware('throttle:120,1')->group(function (): void {
+        // Now Playing — metadata del stream en vivo (polled cada ~15s)
+        Route::get('/now-playing',   [\App\Http\Controllers\PwaAppController::class, 'nowPlaying'])->name('now-playing');
+
+        // Recent Tracks — historial real de RadioBoss (polled cada ~30s)
+        Route::get('/recent-tracks', [\App\Http\Controllers\PwaAppController::class, 'recentTracks'])->name('recent-tracks');
+    });
+
+    // ── Push Notifications (Web Push / VAPID) ───────────────────────────────
+    Route::prefix('push')->name('push.')->group(function (): void {
+        // Clave pública VAPID (la necesita el frontend para suscribirse)
+        Route::get('/vapid-key', [\App\Http\Controllers\PwaPushController::class, 'vapidPublicKey'])->name('vapid-key');
+
+        // Suscribir este dispositivo
+        Route::post('/subscribe', [\App\Http\Controllers\PwaPushController::class, 'subscribe'])
+            ->name('subscribe')
+            ->middleware('throttle:10,1');
+
+        // Desuscribir este dispositivo
+        Route::delete('/unsubscribe', [\App\Http\Controllers\PwaPushController::class, 'unsubscribe'])
+            ->name('unsubscribe')
+            ->middleware('throttle:10,1');
+
+        // Enviar alerta "En Vivo" a todos (webhook/admin)
+        Route::post('/live-alert', [\App\Http\Controllers\PwaPushController::class, 'sendLiveAlert'])
+            ->name('live-alert')
+            ->middleware('throttle:5,1');
+    });
 });
+
 
 // Rutas Públicas - Personas Desaparecidas
 Route::prefix('desaparecidos')->name('missing-persons.')->group(function (): void {

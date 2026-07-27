@@ -152,46 +152,99 @@ class PwaAppController extends Controller
     /**
      * Devuelve los metadatos "Now Playing" de RadioBoss en formato JSON.
      * El Mini Player llama a este endpoint cada ~15 segundos via fetch().
+     * Cascada de endpoints: nowplaying2 → nowplaying → widget JSON.
      */
     public function nowPlaying(): JsonResponse
     {
         $stationId = config('player.radioboss.station_id', '569');
         $apiUrl    = config('player.radioboss.api_url', 'https://c30.radioboss.fm');
 
-        $data = Cache::remember('pwa.now_playing', 14, function () use ($apiUrl, $stationId): array {
-            try {
-                $response = Http::timeout(5)
-                    ->withoutVerifying()
-                    ->get("{$apiUrl}/w/api.php", [
-                        'u'    => $stationId,
-                        'mode' => 'nowplaying',
-                    ]);
-
-                if ($response->successful()) {
-                    $json = $response->json();
-
-                    return [
-                        'title'    => $json['current']['title']  ?? $json['title']  ?? config('player.defaults.title'),
-                        'artist'   => $json['current']['artist'] ?? $json['artist'] ?? config('player.defaults.artist'),
-                        'cover'    => "{$apiUrl}/w/artwork/{$stationId}.jpg?t=" . time(),
-                        'is_live'  => true,
-                    ];
-                }
-            } catch (\Throwable) {
-                // Fallback silencioso
-            }
-
-            return [
-                'title'  => config('player.defaults.title', 'Transmisión oficial'),
-                'artist' => config('player.defaults.artist', 'Seven Rock Radio'),
-                'cover'  => asset('assets/lucille/album3.jpg'),
-                'is_live'=> true,
+        $data = Cache::remember('pwa.now_playing', 12, function () use ($apiUrl, $stationId): array {
+            $defaults = [
+                'title'    => config('player.defaults.title',  'Transmisión oficial'),
+                'artist'   => config('player.defaults.artist', 'Seven Rock Radio'),
+                'cover'    => "{$apiUrl}/w/artwork/{$stationId}.jpg",
+                'program'  => config('player.defaults.show',   'Programación habitual'),
+                'is_live'  => true,
+                'duration' => null,
             ];
+
+            // Endpoint 1: API v2 (más completa)
+            try {
+                $r = Http::timeout(4)->withoutVerifying()
+                    ->get("{$apiUrl}/w/api.php", ['u' => $stationId, 'mode' => 'nowplaying2']);
+                if ($r->successful()) {
+                    $j = $r->json();
+                    $title  = trim((string)($j['current']['title']   ?? $j['title']   ?? ''));
+                    $artist = trim((string)($j['current']['artist']  ?? $j['artist']  ?? ''));
+                    $show   = trim((string)($j['current']['program'] ?? $j['show']    ?? ''));
+                    if ($title) {
+                        return array_merge($defaults, array_filter(compact('title', 'artist', 'show')));
+                    }
+                }
+            } catch (\Throwable) {}
+
+            // Endpoint 2: API v1 (fallback)
+            try {
+                $r = Http::timeout(4)->withoutVerifying()
+                    ->get("{$apiUrl}/w/api.php", ['u' => $stationId, 'mode' => 'nowplaying']);
+                if ($r->successful()) {
+                    $j = $r->json();
+                    $title  = trim((string)($j['current']['title']  ?? $j['title']  ?? ''));
+                    $artist = trim((string)($j['current']['artist'] ?? $j['artist'] ?? ''));
+                    if ($title) {
+                        return array_merge($defaults, array_filter(compact('title', 'artist')));
+                    }
+                }
+            } catch (\Throwable) {}
+
+            return $defaults;
         });
 
         return response()->json($data)
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
+
+    /**
+     * Devuelve el historial reciente de tracks reproducidos en RadioBoss.
+     * Usado por la vista En Vivo para mostrar la lista de tracks.
+     */
+    public function recentTracks(): JsonResponse
+    {
+        $stationId = config('player.radioboss.station_id', '569');
+        $apiUrl    = config('player.radioboss.api_url', 'https://c30.radioboss.fm');
+
+        $tracks = Cache::remember('pwa.recent_tracks', 25, function () use ($apiUrl, $stationId): array {
+            try {
+                $r = Http::timeout(5)->withoutVerifying()
+                    ->get("{$apiUrl}/w/api.php", [
+                        'u'     => $stationId,
+                        'mode'  => 'recent',
+                        'limit' => 8,
+                    ]);
+
+                if ($r->successful()) {
+                    $json    = $r->json();
+                    $history = $json['history'] ?? $json['recent'] ?? $json['tracks'] ?? [];
+
+                    return array_map(fn ($t) => [
+                        'title'     => trim((string)($t['title']   ?? $t['song']   ?? 'Canción')),
+                        'artist'    => trim((string)($t['artist']  ?? '')),
+                        'played_at' => trim((string)($t['time']    ?? $t['date']   ?? '')),
+                        'duration'  => trim((string)($t['duration'] ?? '')),
+                        'cover'     => "{$apiUrl}/w/artwork/{$stationId}.jpg",
+                    ], array_slice($history, 0, 8));
+                }
+            } catch (\Throwable) {}
+
+            return [];
+        });
+
+        return response()->json(['tracks' => $tracks])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // Helpers internos

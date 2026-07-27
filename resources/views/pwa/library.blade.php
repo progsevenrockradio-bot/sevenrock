@@ -16,6 +16,58 @@
     </div>
 
     {{-- ═══════════════════════════════════════════════
+         SECCIÓN: EPISODIOS FAVORITOS (localStorage)
+    ═══════════════════════════════════════════════ --}}
+    <section class="mb-6" x-data x-show="$store.favorites && $store.favorites.items.length > 0">
+        <div class="flex items-center justify-between px-4 mb-3">
+            <h2 class="section-heading">❤ Mis Favoritos</h2>
+            <button class="text-xs text-gray-600 hover:text-red-400 transition-colors"
+                    @click="if(confirm('¿Borrar todos los favoritos?')) $store.favorites.clear()">
+                Borrar todo
+            </button>
+        </div>
+
+        <div class="space-y-2 px-4">
+            <template x-for="ep in $store.favorites.items" :key="ep.id">
+                <div class="pwa-card flex items-center gap-3 p-3 cursor-pointer group"
+                     @click="playEpisode(ep)">
+                    {{-- Carátula --}}
+                    <div class="w-12 h-12 rounded-xl overflow-hidden bg-[#1e1e1e] shrink-0">
+                        <img :src="ep.cover || '{{ asset('assets/lucille/podcats.webp') }}'"
+                             :alt="ep.title"
+                             class="w-full h-full object-cover"
+                             loading="lazy">
+                    </div>
+
+                    {{-- Info --}}
+                    <div class="flex-1 min-w-0">
+                        <p class="font-display text-sm font-semibold text-white truncate leading-tight" x-text="ep.title"></p>
+                        <p class="text-xs text-gray-500 truncate mt-0.5" x-text="ep.program || ep.artist || ''"></p>
+                    </div>
+
+                    {{-- Botones --}}
+                    <div class="flex items-center gap-2 shrink-0">
+                        {{-- Quitar de favoritos --}}
+                        <button @click.stop="$store.favorites.toggle(ep)"
+                                class="w-7 h-7 flex items-center justify-center text-red-500 hover:text-red-400 transition-colors">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                        </button>
+
+                        {{-- Play --}}
+                        <div class="w-8 h-8 rounded-full border border-red-600/40 flex items-center justify-center hover:bg-red-600/10 transition-colors">
+                            <svg class="w-3.5 h-3.5 text-red-500 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </section>
+
+    {{-- ═══════════════════════════════════════════════
          SECCIÓN: ARTISTAS
     ═══════════════════════════════════════════════ --}}
     @if($artists->isNotEmpty())

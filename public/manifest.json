@@ -3,7 +3,7 @@
     "short_name": "7RockRadio",
     "description": "Tu radio de rock online. Noticias, podcasts, artistas y señal en vivo.",
     "start_url": "/app",
-    "scope": "/app",
+    "scope": "/",
     "display": "standalone",
     "orientation": "portrait",
     "theme_color": "#DC2626",
@@ -12,16 +12,33 @@
     "categories": ["music", "entertainment", "news"],
     "icons": [
         {
-            "src": "/assets/lucille/logo.png",
+            "src": "/icons/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
-            "src": "/assets/lucille/logo.png",
+            "src": "/icons/icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
         }
     ],
     "screenshots": [],
@@ -29,12 +46,14 @@
         {
             "name": "En Vivo",
             "url": "/app/live",
-            "description": "Radio en señal en vivo"
+            "description": "Radio en señal en vivo",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
         },
         {
             "name": "Podcasts",
             "url": "/app/podcasts",
-            "description": "Episodios y programas"
+            "description": "Episodios y programas",
+            "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
         }
     ],
     "related_applications": [],
