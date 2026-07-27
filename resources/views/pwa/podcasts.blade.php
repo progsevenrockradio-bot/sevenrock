@@ -128,7 +128,7 @@
                                      :alt="program.title"
                                      class="w-full h-full object-cover"
                                      loading="lazy"
-                                     @error="$el.src='{{ asset('assets/lucille/podcats.webp') }}'">
+                                     x-on:error="$el.src='{{ asset('assets/lucille/podcats.webp') }}'">
                             </div>
 
                             {{-- Info --}}

@@ -372,7 +372,7 @@
                 <img :src="currentTrack.cover || '{{ asset('assets/lucille/album3.jpg') }}'"
                      class="w-12 h-12 rounded-lg object-cover border border-[#2a2a2a]"
                      alt="Carátula"
-                     @error="$el.src='{{ asset('assets/lucille/album3.jpg') }}'">
+                     x-on:error="$el.src='{{ asset('assets/lucille/album3.jpg') }}'">
                 {{-- Indicador "Live" --}}
                 <span x-show="isLive && isPlaying"
                       class="absolute -top-1 -right-1 bg-red-600 text-white text-[8px] font-bold px-1 py-0.5 rounded uppercase tracking-wider leading-none">
