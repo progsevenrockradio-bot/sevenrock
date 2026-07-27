@@ -1,0 +1,42 @@
+{
+    "name": "Seven Rock Radio",
+    "short_name": "7RockRadio",
+    "description": "Tu radio de rock online. Noticias, podcasts, artistas y señal en vivo.",
+    "start_url": "/app",
+    "scope": "/app",
+    "display": "standalone",
+    "orientation": "portrait",
+    "theme_color": "#DC2626",
+    "background_color": "#121212",
+    "lang": "es",
+    "categories": ["music", "entertainment", "news"],
+    "icons": [
+        {
+            "src": "/assets/lucille/logo.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/assets/lucille/logo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "En Vivo",
+            "url": "/app/live",
+            "description": "Radio en señal en vivo"
+        },
+        {
+            "name": "Podcasts",
+            "url": "/app/podcasts",
+            "description": "Episodios y programas"
+        }
+    ],
+    "related_applications": [],
+    "prefer_related_applications": false
+}

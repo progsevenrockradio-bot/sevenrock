@@ -103,6 +103,21 @@ Route::get("/programas/{identifier}", [SiteController::class, "programDetail"])-
 
 Route::get("/multimedia", [SiteController::class, "multimedia"])->name("multimedia");
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PWA — Progressive Web App (experiencia móvil /app)
+// ─────────────────────────────────────────────────────────────────────────────
+Route::prefix('app')->name('pwa.')->group(function (): void {
+    Route::get('/',         [\App\Http\Controllers\PwaAppController::class, 'index'])->name('index');
+    Route::get('/live',     [\App\Http\Controllers\PwaAppController::class, 'live'])->name('live');
+    Route::get('/podcasts', [\App\Http\Controllers\PwaAppController::class, 'podcasts'])->name('podcasts');
+    Route::get('/library',  [\App\Http\Controllers\PwaAppController::class, 'library'])->name('library');
+
+    // API JSON interna: metadata "Now Playing" (consumida por el Mini Player cada ~15 s)
+    Route::get('/api/now-playing', [\App\Http\Controllers\PwaAppController::class, 'nowPlaying'])
+        ->name('api.now-playing')
+        ->middleware('throttle:120,1');
+});
+
 // Rutas Públicas - Personas Desaparecidas
 Route::prefix('desaparecidos')->name('missing-persons.')->group(function (): void {
     Route::get('/', [\App\Http\Controllers\MissingPersonController::class, 'index'])->name('index');
