@@ -464,7 +464,7 @@
                 <img :src="currentTrack.cover || '{{ asset('assets/lucille/album3.jpg') }}'"
                      class="w-full h-full rounded-2xl object-cover shadow-[0_20px_60px_rgba(0,0,0,.7)] border border-[#2a2a2a]"
                      alt="Carátula"
-                     @error="$el.src='{{ asset('assets/lucille/album3.jpg') }}'">
+                     x-on:error="$el.src='{{ asset('assets/lucille/album3.jpg') }}'">
                 {{-- Overlay Live badge --}}
                 <div x-show="isLive" class="absolute bottom-3 left-3 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                     🔴 En Vivo
