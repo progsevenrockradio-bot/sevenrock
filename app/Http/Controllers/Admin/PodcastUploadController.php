@@ -358,12 +358,25 @@ final class PodcastUploadController extends Controller
             $retryPlan = $this->buildSelectiveRetryPlan($radioProgram);
 
             if ($retryPlan['jobs'] === []) {
-                return back()->with('status', 'No hay errores pendientes que reprocesar.');
+                return back()->with('status', 'No hay tareas que reprocesar.');
             }
 
-            $radioProgram->forceFill([
-                'status_message' => 'Reintento selectivo solicitado desde el panel.',
-            ])->saveQuietly();
+            // Actualizar estados a pendiente inmediatamente para reflejar el trabajo en la UI
+            $updates = [];
+            foreach ($retryPlan['jobs'] as $job) {
+                if ($job instanceof UploadRadiobossJob) {
+                    $updates['radioboss_status'] = 'radioboss_pending';
+                    $updates['enviado_radioboss'] = false;
+                }
+                if ($job instanceof UploadArchiveOrgJob) {
+                    $updates['archive_org_status'] = 'archive_pending';
+                }
+            }
+            if ($updates !== []) {
+                $updates['status_message'] = 'Procesando reintento solicitado desde el panel...';
+                $updates['delivery_status'] = 'delivery_pending';
+                $radioProgram->forceFill($updates)->saveQuietly();
+            }
 
             foreach ($retryPlan['jobs'] as $job) {
                 dispatch($job);
@@ -461,6 +474,13 @@ final class PodcastUploadController extends Controller
         $retryRadioboss = ! in_array($radiobossStatus, ['radioboss_verified'], true);
         $retryArchive = ! in_array($archiveStatus, ['archive_verified'], true);
 
+        // Si ambos están marcados como verificados, pero el usuario presiona "REPROCESAR",
+        // forzamos el reintento de ambos para permitir corregir rutas o configuraciones cambiadas.
+        if (! $retryRadioboss && ! $retryArchive) {
+            $retryRadioboss = true;
+            $retryArchive = true;
+        }
+
         if ($retryRadioboss) {
             $jobs[] = new UploadRadiobossJob($radioProgram->id);
             $labels[] = 'RadioBOSS';
@@ -472,8 +492,8 @@ final class PodcastUploadController extends Controller
         }
 
         $message = $labels !== []
-            ? 'Reintento selectivo enviado para ' . implode(', ', $labels) . '.'
-            : 'No hay errores pendientes que reprocesar.';
+            ? 'Procesando reintento para: ' . implode(', ', $labels) . '.'
+            : 'No hay tareas que reprocesar.';
 
         return [
             'jobs' => $jobs,
