@@ -176,7 +176,7 @@
         @keydown.escape.window="closeInfoModal()"
         @click.self="closeInfoModal()"
     >
-        <div class="w-full border border-[#2b2b2b] bg-[#111] p-5 shadow-[0_24px_80px_rgba(0,0,0,.65)]" style="width:min(560px, calc(100vw - 32px)); max-width:none;">
+        <div class="relative w-full border border-[#2b2b2b] bg-[#111] p-6 shadow-[0_24px_80px_rgba(0,0,0,.65)] max-h-[90vh] overflow-y-auto custom-scrollbar" style="width:min(560px, calc(100vw - 32px)); max-width:none;">
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <div class="home-badge" x-text="activeProgram.badge || 'On deck'"></div>
