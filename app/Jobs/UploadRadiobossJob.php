@@ -176,9 +176,10 @@ class UploadRadiobossJob implements ShouldQueue
     private function resolveRemoteFolder(RadioProgram $radioProgram): string
     {
         $folder = trim((string) ($radioProgram->ruta_ftp_radioboss ?: $radioProgram->masterProgram?->ruta_ftp ?: 'Programas'));
-        $folder = str_replace(['..', '\\'], '', $folder);
+        $folder = str_replace('\\', '/', $folder);
+        $folder = str_replace('..', '', $folder);
 
-        return trim($folder, '/\\') !== '' ? trim($folder, '/\\') : 'Programas';
+        return trim($folder, '/') !== '' ? trim($folder, '/') : 'Programas';
     }
 
     /**
