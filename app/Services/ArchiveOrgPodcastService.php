@@ -431,14 +431,14 @@ final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
 
     public function resolveIdentifier(RadioProgram $episode, ?MasterProgram $master = null): string
     {
-        $bucket = trim((string) config('services.archive_org.bucket', ''));
-        if ($bucket !== '') {
-            return $bucket;
-        }
-
         $configured = trim((string) ($master?->archive_identifier ?? ''));
         if ($configured !== '') {
             return $configured;
+        }
+
+        $bucket = trim((string) config('services.archive_org.bucket', ''));
+        if ($bucket !== '') {
+            return $bucket;
         }
 
         $base = trim((string) ($master?->nombre ?? $episode->titulo_programa ?? 'podcast'));
