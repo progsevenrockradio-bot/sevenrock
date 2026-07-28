@@ -8,6 +8,7 @@
             </div>
 
             <div class="flex flex-wrap gap-3">
+                <a href="{{ route('admin.master-programs.grid') }}" class="lucille-button border-red-800 text-red-500 hover:bg-red-900/20">Ver Parrilla</a>
                 <a href="{{ route('admin.master-programs.report') }}" class="lucille-button">Reporte de Horarios</a>
                 <a href="{{ route('admin.programs.index') }}" class="lucille-button">Panel códigos</a>
                 <a href="{{ route('admin.master-programs.create') }}" class="lucille-button-solid">Nuevo programa</a>

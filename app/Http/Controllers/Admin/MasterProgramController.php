@@ -81,6 +81,63 @@ final class MasterProgramController extends Controller
         ]);
     }
 
+    public function grid(): View
+    {
+        $masterPrograms = MasterProgram::adminListing()->where('activo', true);
+
+        $dayTabs = [
+            'LUNES' => 'Lunes',
+            'MARTES' => 'Martes',
+            'MIERCOLES' => 'Miercoles',
+            'JUEVES' => 'Jueves',
+            'VIERNES' => 'Viernes',
+            'SABADO' => 'Sábado',
+            'DOMINGO' => 'Domingo',
+        ];
+
+        $uniqueTimes = $masterPrograms->pluck('hora_transmision')->filter()->unique()->sort()->values();
+
+        $blocks = [
+            'MADRUGADA' => [],
+            'MAÑANA' => [],
+            'MEDIODIA' => [],
+            'TARDE' => [],
+            'NOCHE' => [],
+        ];
+
+        foreach ($uniqueTimes as $time) {
+            $hour = (int) substr($time, 0, 2);
+            if ($hour >= 6 && $hour < 12) {
+                $blocks['MAÑANA'][] = $time;
+            } elseif ($hour >= 12 && $hour < 14) {
+                $blocks['MEDIODIA'][] = $time;
+            } elseif ($hour >= 14 && $hour < 19) {
+                $blocks['TARDE'][] = $time;
+            } elseif ($hour >= 19 && $hour <= 23) {
+                $blocks['NOCHE'][] = $time;
+            } else {
+                $blocks['MADRUGADA'][] = $time;
+            }
+        }
+
+        $blocks = array_filter($blocks, fn($times) => count($times) > 0);
+
+        $programsGrid = [];
+        foreach ($masterPrograms as $program) {
+            $time = $program->hora_transmision;
+            $day = $program->dia_transmision;
+            if ($time && $day) {
+                $programsGrid[$time][$day][] = $program;
+            }
+        }
+
+        return view('admin.master-programs.grid', [
+            'dayTabs' => $dayTabs,
+            'blocks' => $blocks,
+            'programsGrid' => $programsGrid,
+        ]);
+    }
+
     public function create(): View
     {
         $masterProgram = new MasterProgram([

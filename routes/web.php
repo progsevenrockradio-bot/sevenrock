@@ -273,6 +273,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/reporte', 'report')->name('report');
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
+        Route::get('/parrilla', 'grid')->name('grid');
         Route::get('/{masterProgram}/edit', 'edit')->name('edit');
         Route::put('/{masterProgram}', 'update')->name('update');
         Route::delete('/{masterProgram}', 'destroy')->name('destroy');
