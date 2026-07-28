@@ -348,14 +348,15 @@ final class PodcastUploadController extends Controller
         return back()->with('status', $message);
     }
 
-    public function retry(RadioProgram $radioProgram): RedirectResponse
+    public function retry(\Illuminate\Http\Request $request, RadioProgram $radioProgram): RedirectResponse
     {
         if (blank($radioProgram->archivo_mp3)) {
             return back()->with('status', 'Ese episodio no tiene un MP3 local asociado.');
         }
 
         try {
-            $retryPlan = $this->buildSelectiveRetryPlan($radioProgram);
+            $target = (string) $request->input('target', 'all');
+            $retryPlan = $this->buildSelectiveRetryPlan($radioProgram, $target);
 
             if ($retryPlan['jobs'] === []) {
                 return back()->with('status', 'No hay tareas que reprocesar.');
@@ -463,7 +464,7 @@ final class PodcastUploadController extends Controller
     /**
      * @return array{jobs: array<int, object>, message: string}
      */
-    private function buildSelectiveRetryPlan(RadioProgram $radioProgram): array
+    private function buildSelectiveRetryPlan(RadioProgram $radioProgram, string $target = 'all'): array
     {
         $jobs = [];
         $labels = [];
@@ -474,9 +475,18 @@ final class PodcastUploadController extends Controller
         $retryRadioboss = ! in_array($radiobossStatus, ['radioboss_verified'], true);
         $retryArchive = ! in_array($archiveStatus, ['archive_verified'], true);
 
-        // Si ambos están marcados como verificados, pero el usuario presiona "REPROCESAR",
-        // forzamos el reintento de ambos para permitir corregir rutas o configuraciones cambiadas.
-        if (! $retryRadioboss && ! $retryArchive) {
+        // Lógica manual basada en target
+        if ($target === 'radioboss') {
+            $retryRadioboss = true;
+            $retryArchive = false;
+        } elseif ($target === 'archive') {
+            $retryRadioboss = false;
+            $retryArchive = true;
+        } elseif ($target === 'all') {
+            $retryRadioboss = true;
+            $retryArchive = true;
+        } elseif (! $retryRadioboss && ! $retryArchive) {
+            // Fallback si no hay errores y no especificó target, forzamos ambos
             $retryRadioboss = true;
             $retryArchive = true;
         }

@@ -101,9 +101,11 @@
             </div>
 
             <div class="mt-4 flex flex-wrap gap-2">
-                <form action="{{ route('admin.podcast-uploads.retry', $upload) }}" method="POST">
+                <form action="{{ route('admin.podcast-uploads.retry', $upload) }}" method="POST" class="flex gap-[1px]">
                     @csrf
-                    <button type="submit" class="lucille-button">Reprocesar</button>
+                    <button type="submit" name="target" value="all" class="lucille-button !rounded-r-none" title="Reprocesar Ambos">Reprocesar</button>
+                    <button type="submit" name="target" value="radioboss" class="lucille-button !rounded-none !px-2.5" title="Reprocesar solo RadioBOSS">RB</button>
+                    <button type="submit" name="target" value="archive" class="lucille-button !rounded-l-none !px-2.5" title="Reprocesar solo Archive.org">Arc</button>
                 </form>
                 <a href="{{ route('admin.podcast-uploads.download', $upload) }}" class="lucille-button">Descargar MP3</a>
                 <form
