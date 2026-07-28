@@ -56,7 +56,7 @@
                                     @if ($index === 0)
                                         <td rowspan="{{ count($times) }}" class="border border-[#2b2b2b] bg-[#141416] p-2 text-center align-middle">
                                             <!-- Texto rotado -->
-                                            <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b] [writing-mode:vertical-lr] rotate-180 mx-auto flex items-center justify-center" style="height: 100px;">
+                                            <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b] [writing-mode:vertical-rl] mx-auto flex items-center justify-center" style="height: 100px;">
                                                 {{ $blockName }}
                                             </div>
                                         </td>
