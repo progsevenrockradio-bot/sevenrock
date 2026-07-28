@@ -473,10 +473,18 @@ final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
 
         $basename = basename(str_replace('\\', '/', $stored));
         $master = $episode->masterProgram;
-        $base = trim((string) ($master?->nombre ?? $episode->titulo_programa ?? 'podcast'));
-        $slug = Str::slug($base, '-');
+        $identifier = $this->resolveIdentifier($episode, $master);
+        $globalBucket = trim((string) config('services.archive_org.bucket', ''));
 
-        return ($slug !== '' ? $slug : 'podcast') . '/' . $basename;
+        // Si se sube al cubo global 'sevenrockradio', lo ordenamos en una subcarpeta
+        // Si el programa tiene su propio identificador (ej: 'rock-al-palo'), subimos directo al root del item
+        if ($identifier === $globalBucket) {
+            $base = trim((string) ($master?->nombre ?? $episode->titulo_programa ?? 'podcast'));
+            $slug = Str::slug($base, '-');
+            return ($slug !== '' ? $slug : 'podcast') . '/' . $basename;
+        }
+
+        return $basename;
     }
 
     private function cleanupLocalPath(string $absolutePath, string $disk): void
