@@ -1,5 +1,5 @@
 <div id="affiliate-modal" class="fixed inset-0 z-[120] hidden items-center justify-center px-4 py-8" style="background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px);">
-    <div class="relative mx-auto w-full max-w-[650px] border border-[#2b2b2b] bg-[#111] p-6 shadow-[0_24px_80px_rgba(0,0,0,.65)] max-h-[90vh] overflow-y-auto custom-scrollbar">
+    <div class="relative mx-auto w-full max-w-xl border border-[#2b2b2b] bg-[#111] p-6 md:p-8 shadow-[0_24px_80px_rgba(0,0,0,.65)] max-h-[90vh] overflow-y-auto custom-scrollbar">
         <div class="flex items-start justify-between gap-4">
             <div>
                 <div class="home-badge">Patrocinador</div>
