@@ -381,7 +381,7 @@
                 <span class="text-white/10 hidden sm:inline">|</span>
                 <button type="button" onclick="openCookieSettings()" class="transition hover:text-lucille-accent focus:outline-none">Preferencias de cookies</button>
                 <span class="text-white/10 hidden sm:inline">|</span>
-                <button type="button" onclick="document.getElementById('affiliate-modal').style.display = 'flex'" class="transition hover:text-lucille-accent focus:outline-none text-lucille-accent font-bold">Patrocinador: RadioBoss</button>
+                <button type="button" onclick="document.getElementById('affiliate-modal').style.display = 'flex'" class="transition hover:text-lucille-accent focus:outline-none">Patrocinador: RadioBoss</button>
             </div>
             
             <x-home.affiliate-modal />
