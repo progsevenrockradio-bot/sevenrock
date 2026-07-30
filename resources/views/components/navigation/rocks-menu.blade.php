@@ -239,7 +239,7 @@
                     <li class="group relative flex h-full items-center">
                         <a
                             href="{{ $item['url'] ?? route($item['route']) }}"
-                            class="flex h-full items-center px-1.5 xl:px-4 font-display text-[9px] xl:text-[11px] font-medium uppercase tracking-[.1em] text-white/90 transition-colors duration-300 hover:text-lucille-accent"
+                            class="flex h-full items-center px-[clamp(6px,0.6vw,16px)] font-display text-[clamp(9px,0.75vw,12px)] font-medium uppercase tracking-[.1em] text-white/90 transition-all duration-300 ease-in-out whitespace-nowrap hover:text-lucille-accent"
                         >
                             {{ $item['label'] }}
                         </a>
@@ -323,7 +323,7 @@
                 </a>
             @endauth
 
-            <a href="{{ route('app.download') }}" class="ml-2 flex items-center gap-1.5 rounded-full border border-lucille-accent/60 px-3 py-1.5 text-[9px] font-display font-medium uppercase tracking-[.1em] text-lucille-accent transition-all duration-300 hover:bg-lucille-accent hover:text-white" aria-label="Descargar la aplicación de la radio" title="Descargar App">
+            <a href="{{ route('app.download') }}" class="ml-2 flex items-center gap-1.5 rounded-full border border-lucille-accent/60 px-[clamp(8px,0.8vw,12px)] py-[clamp(4px,0.4vw,6px)] text-[clamp(8px,0.75vw,11px)] font-display font-medium uppercase tracking-[.1em] text-lucille-accent transition-all duration-300 ease-in-out whitespace-nowrap hover:bg-lucille-accent hover:text-white" aria-label="Descargar la aplicación de la radio" title="Descargar App">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7 10 12 15 17 10"></polyline>
