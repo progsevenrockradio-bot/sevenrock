@@ -3,7 +3,7 @@
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Plantillas</h1>
-                <p class="mt-3 max-w-3xl text-sm text-[#7b7b7b]">Crea mensajes reutilizables con placeholders para personalizar la invitación.</p>
+                <p class="mt-3 max-w-3xl text-sm text-[#9a9a9a]">Crea mensajes reutilizables con placeholders para personalizar la invitación.</p>
             </div>
             <div class="flex flex-wrap gap-3">
                 <a href="{{ route('admin.outreach.index') }}" class="lucille-button">Panel</a>
@@ -27,7 +27,7 @@
     <section class="mt-8 border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
         <div class="overflow-x-auto">
             <table class="w-full min-w-[860px] text-left text-sm">
-                <thead class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                <thead class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                     <tr>
                         <th class="py-3 pr-4">Nombre</th>
                         <th class="py-3 pr-4">Asunto</th>
@@ -54,7 +54,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="py-8 text-center text-[#7b7b7b]">No hay plantillas todavía.</td>
+                            <td colspan="4" class="py-8 text-center text-[#9a9a9a]">No hay plantillas todavía.</td>
                         </tr>
                     @endforelse
                 </tbody>

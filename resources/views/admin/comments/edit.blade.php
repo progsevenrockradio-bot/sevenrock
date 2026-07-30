@@ -8,7 +8,7 @@
 
     <div class="mb-6">
         <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Editar comentario</h1>
-        <p class="mt-2 text-[#7b7b7b]">
+        <p class="mt-2 text-[#9a9a9a]">
             Comentario de <strong class="text-[#dcdcdc]">{{ $comment->author_name ?: 'Anónimo' }}</strong>
             en <strong class="text-[#dcdcdc]">{{ $comment->post?->title ?: '—' }}</strong>
         </p>

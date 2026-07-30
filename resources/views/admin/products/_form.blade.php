@@ -5,39 +5,39 @@
 
 <div class="grid gap-5 md:grid-cols-2">
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['form_title_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['form_title_label'] }}</label>
         <input name="title" value="{{ old('title', $product->title) }}" class="lucille-product-field w-full">
     </div>
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['form_slug_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['form_slug_label'] }}</label>
         <input name="slug" value="{{ old('slug', $product->slug) }}" class="lucille-product-field w-full">
     </div>
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['price_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['price_label'] }}</label>
         <input type="number" step="0.01" min="0" name="price" value="{{ old('price', $product->price) }}" class="lucille-product-field w-full">
     </div>
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['regular_price_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['regular_price_label'] }}</label>
         <input type="number" step="0.01" min="0" name="regular_price" value="{{ old('regular_price', $product->regular_price) }}" class="lucille-product-field w-full">
     </div>
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['category_field_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['category_field_label'] }}</label>
         <input name="category" value="{{ old('category', $product->category) }}" class="lucille-product-field w-full">
     </div>
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['sort_order_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['sort_order_label'] }}</label>
         <input type="number" step="1" min="0" name="sort_order" value="{{ old('sort_order', $product->sort_order ?? 0) }}" class="lucille-product-field w-full">
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['image_path_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['image_path_label'] }}</label>
         <input name="image" value="{{ old('image', $product->image) }}" class="lucille-product-field w-full">
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['image_file_label'] }}</label>
-        <input type="file" name="image_file" class="block w-full text-sm text-[#7b7b7b]">
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['image_file_label'] }}</label>
+        <input type="file" name="image_file" class="block w-full text-sm text-[#9a9a9a]">
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['description_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['description_label'] }}</label>
         <textarea name="description" rows="6" class="lucille-product-field w-full">{{ old('description', $product->description) }}</textarea>
     </div>
     <label class="flex items-center gap-3 text-sm text-[#dcdcdc] md:col-span-2">

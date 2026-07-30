@@ -9,7 +9,7 @@
     <div class="mb-6 flex items-center justify-between">
         <div>
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Comentarios</h1>
-            <p class="mt-2 text-[#7b7b7b]">
+            <p class="mt-2 text-[#9a9a9a]">
                 {{ $comments->count() }} comentarios en total
                 @if ($pendingCount > 0)
                     · <span class="text-[#e6b800]">{{ $pendingCount }} pendientes de aprobar</span>
@@ -30,7 +30,7 @@
                     <th class="px-5 py-4">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-[#2b2b2b] text-[#7b7b7b]">
+            <tbody class="divide-y divide-[#2b2b2b] text-[#9a9a9a]">
                 @forelse ($comments as $comment)
                     <tr class="hover:bg-[rgba(255,255,255,.02)]">
                         <td class="px-5 py-4">
@@ -38,7 +38,7 @@
                                 {{ $comment->author_name ?: 'Anónimo' }}
                             </div>
                             @if ($comment->author_email)
-                                <div class="mt-1 text-xs text-[#7b7b7b]">{{ $comment->author_email }}</div>
+                                <div class="mt-1 text-xs text-[#9a9a9a]">{{ $comment->author_email }}</div>
                             @endif
                         </td>
                         <td class="px-5 py-4 max-w-xs">
@@ -91,7 +91,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-5 py-10 text-center text-[#7b7b7b]">No hay comentarios todavía.</td>
+                        <td colspan="6" class="px-5 py-10 text-center text-[#9a9a9a]">No hay comentarios todavía.</td>
                     </tr>
                 @endforelse
             </tbody>

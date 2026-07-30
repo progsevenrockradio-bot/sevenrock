@@ -2,7 +2,7 @@
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="font-display text-2xl uppercase tracking-[.08em] text-[#dcdcdc]">Páginas en Espera (Coming Soon)</h1>
-            <p class="text-sm text-[#7b7b7b] mt-1">Configura qué rutas están bloqueadas temporalmente al público.</p>
+            <p class="text-sm text-[#9a9a9a] mt-1">Configura qué rutas están bloqueadas temporalmente al público.</p>
         </div>
         <a href="{{ route('admin.page-countdowns.create') }}" class="lucille-button-solid">Agregar Página</a>
     </div>
@@ -29,7 +29,7 @@
                         <tr class="hover:bg-white/[0.02] transition-colors">
                             <td class="p-4">
                                 <span class="font-medium text-[#dcdcdc]">{{ $countdown->route_path }}</span>
-                                <div class="text-xs text-[#7b7b7b] mt-1">{{ $countdown->title }}</div>
+                                <div class="text-xs text-[#9a9a9a] mt-1">{{ $countdown->title }}</div>
                             </td>
                             <td class="p-4">
                                 @if($countdown->is_enabled)
@@ -46,7 +46,7 @@
                                         <span class="text-green-400">Ya activa ({{ $countdown->active_at->format('d/m/Y') }})</span>
                                     @endif
                                 @else
-                                    <span class="text-[#7b7b7b]">Desconocida (Bloqueo indefinido)</span>
+                                    <span class="text-[#9a9a9a]">Desconocida (Bloqueo indefinido)</span>
                                 @endif
                             </td>
                             <td class="p-4 flex gap-3">
@@ -64,7 +64,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="p-8 text-center text-[#7b7b7b] text-sm">No hay páginas en espera configuradas.</td>
+                            <td colspan="4" class="p-8 text-center text-[#9a9a9a] text-sm">No hay páginas en espera configuradas.</td>
                         </tr>
                     @endforelse
                 </tbody>

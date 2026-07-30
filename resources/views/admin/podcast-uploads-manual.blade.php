@@ -125,7 +125,7 @@
                         <p class="text-[10px] uppercase tracking-[.28em] text-[#8b8b8b]">Bloque 1</p>
                         <h2 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">1. Datos editoriales</h2>
                         <p class="mt-2 text-xs uppercase tracking-[.18em] text-[#8b8b8b]">Programa, fecha y título</p>
-                        <p class="mt-3 max-w-3xl text-sm leading-7 text-[#7b7b7b]">
+                        <p class="mt-3 max-w-3xl text-sm leading-7 text-[#9a9a9a]">
                             Define el contenido visible del episodio antes de procesarlo.
                         </p>
                     </div>
@@ -159,7 +159,7 @@
                         <p class="text-[10px] uppercase tracking-[.28em] text-[#8b8b8b]">Bloque 2</p>
                         <h2 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">2. Multimedia pesada</h2>
                         <p class="mt-2 text-xs uppercase tracking-[.18em] text-[#8b8b8b]">MP3 y carátula</p>
-                        <p class="mt-3 max-w-3xl text-sm leading-7 text-[#7b7b7b]">
+                        <p class="mt-3 max-w-3xl text-sm leading-7 text-[#9a9a9a]">
                             Estos campos son la entrada principal de la pantalla y los más pesados de procesar.
                         </p>
                     </div>
@@ -190,7 +190,7 @@
                         <p class="text-[10px] uppercase tracking-[.28em] text-[#8b8b8b]">Bloque 3</p>
                         <h2 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">3. Distribución técnica</h2>
                         <p class="mt-2 text-xs uppercase tracking-[.18em] text-[#8b8b8b]">Copia y sincronización</p>
-                        <p class="mt-3 max-w-3xl text-sm leading-7 text-[#7b7b7b]">
+                        <p class="mt-3 max-w-3xl text-sm leading-7 text-[#9a9a9a]">
                             Opciones de entrega y conservación del archivo.
                         </p>
                     </div>
@@ -215,15 +215,15 @@
 
                 <div class="mt-6 grid gap-4 md:grid-cols-3">
                     <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] p-4">
-                        <div class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Borrador</div>
+                        <div class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Borrador</div>
                         <div class="mt-2 text-sm text-[#e0e0e0]">Estado implícito antes de completar la subida.</div>
                     </div>
                     <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] p-4">
-                        <div class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Procesando</div>
+                        <div class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Procesando</div>
                         <div class="mt-2 text-sm text-[#e0e0e0]">MP3, RadioBOSS o Archive.org en ejecución.</div>
                     </div>
                     <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] p-4">
-                        <div class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Publicado</div>
+                        <div class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Publicado</div>
                         <div class="mt-2 text-sm text-[#e0e0e0]">Todo el pipeline terminó correctamente.</div>
                     </div>
                 </div>
@@ -231,7 +231,7 @@
 
             <section id="recent" class="manual-section border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
                 <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">4. Últimos episodios</h2>
-                <p class="mt-3 text-sm leading-7 text-[#7b7b7b]">
+                <p class="mt-3 text-sm leading-7 text-[#9a9a9a]">
                     Esta zona no guarda datos nuevos. Solo lista los últimos episodios procesados y permite reintentar, descargar o eliminar.
                 </p>
                 <ul class="mt-4 space-y-2 text-sm leading-6 text-[#c7c7c7]">

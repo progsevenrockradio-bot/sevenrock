@@ -5,7 +5,7 @@
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">
                     Historial de Correos
                 </h1>
-                <p class="mt-2 text-sm text-[#7b7b7b]">
+                <p class="mt-2 text-sm text-[#9a9a9a]">
                     Registro de todos los correos electrónicos enviados por la plataforma.
                 </p>
             </div>
@@ -13,7 +13,7 @@
 
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-[#cbcbcb]">
-                <thead class="bg-[rgba(255,255,255,0.02)] text-[10px] uppercase tracking-[.18em] text-[#7b7b7b]">
+                <thead class="bg-[rgba(255,255,255,0.02)] text-[10px] uppercase tracking-[.18em] text-[#9a9a9a]">
                     <tr>
                         <th class="px-4 py-3 font-medium">Fecha</th>
                         <th class="px-4 py-3 font-medium">Destinatario</th>
@@ -37,7 +37,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-4 py-8 text-center text-[#7b7b7b]">
+                            <td colspan="4" class="px-4 py-8 text-center text-[#9a9a9a]">
                                 No hay registros de correos enviados todavía.
                             </td>
                         </tr>

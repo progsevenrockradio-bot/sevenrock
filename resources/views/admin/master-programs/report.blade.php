@@ -5,7 +5,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[#242424] pb-6">
             <div>
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Reporte de Programación</h1>
-                <p class="mt-1 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Consulta y exportación de horarios de transmisión en vivo</p>
+                <p class="mt-1 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Consulta y exportación de horarios de transmisión en vivo</p>
             </div>
 
             <div class="flex flex-wrap gap-3">
@@ -28,7 +28,7 @@
                         <div class="flex items-center gap-3 border-b border-[#2b2b2b] pb-2">
                             <span class="h-6 w-1 bg-[var(--lucille-accent)] rounded-full"></span>
                             <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $dayLabel }}</h2>
-                            <span class="text-xs uppercase tracking-[.18em] text-[#7b7b7b] ml-auto">
+                            <span class="text-xs uppercase tracking-[.18em] text-[#9a9a9a] ml-auto">
                                 {{ $dayPrograms->count() }} programa{{ $dayPrograms->count() === 1 ? '' : 's' }}
                             </span>
                         </div>
@@ -49,7 +49,7 @@
                                         <div>
                                             <h3 class="font-display text-base uppercase tracking-[.06em] text-[#dcdcdc] truncate">{{ $program->name }}</h3>
                                             <p class="text-xs text-[#9d9d9d] mt-0.5 truncate">
-                                                <span class="text-[#7b7b7b] uppercase tracking-wider text-[10px]">Conductor:</span> {{ $program->conductor }}
+                                                <span class="text-[#9a9a9a] uppercase tracking-wider text-[10px]">Conductor:</span> {{ $program->conductor }}
                                             </p>
                                         </div>
                                         <div class="mt-2 flex items-center gap-2 text-xs font-mono text-[var(--lucille-accent)]">
@@ -70,7 +70,7 @@
             @endforeach
 
             @if ($masterPrograms->where('activo', true)->isEmpty())
-                <div class="border border-dashed border-[#2b2b2b] p-12 text-center text-[#7b7b7b] rounded-lg">
+                <div class="border border-dashed border-[#2b2b2b] p-12 text-center text-[#9a9a9a] rounded-lg">
                     No hay programas de transmisión en vivo activos registrados actualmente.
                 </div>
             @endif

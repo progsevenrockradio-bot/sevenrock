@@ -8,7 +8,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[#242424] pb-6">
             <div>
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Parrilla de Programación</h1>
-                <p class="mt-1 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Vista global de todos los horarios de transmisión</p>
+                <p class="mt-1 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Vista global de todos los horarios de transmisión</p>
             </div>
 
             <div class="flex flex-wrap gap-3">
@@ -56,7 +56,7 @@
                                     @if ($index === 0)
                                         <td rowspan="{{ count($times) }}" class="border border-[#2b2b2b] bg-[#141416] p-2 text-center align-middle">
                                             <!-- Texto rotado -->
-                                            <div class="font-display text-xs uppercase tracking-[.2em] text-[#7b7b7b] [writing-mode:vertical-rl] mx-auto flex items-center justify-center" style="height: 100px;">
+                                            <div class="font-display text-xs uppercase tracking-[.2em] text-[#9a9a9a] [writing-mode:vertical-rl] mx-auto flex items-center justify-center" style="height: 100px;">
                                                 {{ $blockName }}
                                             </div>
                                         </td>
@@ -72,7 +72,7 @@
                                                         <div class="flex flex-col border-l-2 border-[var(--lucille-accent)] bg-[#18181a] p-2 text-xs h-full">
                                                             <strong class="font-display uppercase tracking-[.06em] text-[#dcdcdc] text-[11px] leading-tight mb-1">{{ $program->name }}</strong>
                                                             @if($program->conductor)
-                                                                <span class="text-[#7b7b7b] text-[9px] uppercase leading-tight truncate" title="{{ $program->conductor }}">{{ $program->conductor }}</span>
+                                                                <span class="text-[#9a9a9a] text-[9px] uppercase leading-tight truncate" title="{{ $program->conductor }}">{{ $program->conductor }}</span>
                                                             @endif
                                                         </div>
                                                     @endforeach
@@ -87,7 +87,7 @@
                 </table>
 
                 @if (empty($blocks))
-                    <div class="border border-dashed border-[#2b2b2b] p-12 text-center text-[#7b7b7b] rounded-lg mt-4">
+                    <div class="border border-dashed border-[#2b2b2b] p-12 text-center text-[#9a9a9a] rounded-lg mt-4">
                         No hay programas de transmisión en vivo activos con hora asignada.
                     </div>
                 @endif

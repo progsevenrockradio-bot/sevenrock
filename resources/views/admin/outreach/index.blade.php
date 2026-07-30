@@ -3,7 +3,7 @@
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Band Outreach Manager</h1>
-                <p class="mt-3 max-w-3xl text-sm text-[#7b7b7b]">
+                <p class="mt-3 max-w-3xl text-sm text-[#9a9a9a]">
                     Gestiona contactos, plantillas, programas y campañas para invitar bandas a registrarse como talentos.
                 </p>
             </div>
@@ -22,7 +22,7 @@
                 ['label' => 'Semana', 'value' => $stats['week_sent']],
             ] as $card)
                 <div class="border border-[#2b2b2b] bg-[#151515] p-5">
-                    <div class="text-xs uppercase tracking-[.2em] text-[#7b7b7b]">{{ $card['label'] }}</div>
+                    <div class="text-xs uppercase tracking-[.2em] text-[#9a9a9a]">{{ $card['label'] }}</div>
                     <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ $card['value'] }}</div>
                 </div>
             @endforeach
@@ -41,9 +41,9 @@
                         <div class="flex items-center justify-between gap-4">
                             <div>
                                 <div class="text-sm text-[#dcdcdc]">{{ $row['program']->program_code }} - {{ $row['program']->name }}</div>
-                                <div class="text-xs text-[#7b7b7b]">{{ $row['program']->conductor }}</div>
+                                <div class="text-xs text-[#9a9a9a]">{{ $row['program']->conductor }}</div>
                             </div>
-                            <div class="text-right text-xs text-[#7b7b7b]">
+                            <div class="text-right text-xs text-[#9a9a9a]">
                                 <div>{{ $row['total'] }} contactos</div>
                                 <div>{{ $row['ratio'] }}% conversion</div>
                             </div>
@@ -53,7 +53,7 @@
                         </div>
                     </div>
                 @empty
-                    <p class="text-sm text-[#7b7b7b]">No hay programas con contactos todavía.</p>
+                    <p class="text-sm text-[#9a9a9a]">No hay programas con contactos todavía.</p>
                 @endforelse
             </div>
         </section>
@@ -67,11 +67,11 @@
                 @forelse ($recentSubmissions as $contact)
                     <div class="border border-[#2b2b2b] bg-[#151515] p-4">
                         <div class="text-sm text-[#dcdcdc]">{{ $contact->displayName() }}</div>
-                        <div class="text-xs text-[#7b7b7b]">{{ $contact->programLabel() }} · {{ $contact->materials_received_at?->format('Y-m-d H:i') }}</div>
+                        <div class="text-xs text-[#9a9a9a]">{{ $contact->programLabel() }} · {{ $contact->materials_received_at?->format('Y-m-d H:i') }}</div>
                         <div class="mt-1 text-xs text-[#9f9f9f]">{{ $contact->specsBadge() }}</div>
                     </div>
                 @empty
-                    <p class="text-sm text-[#7b7b7b]">Todavía no hay materiales recibidos.</p>
+                    <p class="text-sm text-[#9a9a9a]">Todavía no hay materiales recibidos.</p>
                 @endforelse
             </div>
         </section>
@@ -89,16 +89,16 @@
                         <div class="flex items-center justify-between gap-4">
                             <div>
                                 <div class="text-sm text-[#dcdcdc]">{{ $campaign->name }}</div>
-                                <div class="text-xs text-[#7b7b7b]">{{ $campaign->template?->name ?? 'Sin plantilla' }}</div>
+                                <div class="text-xs text-[#9a9a9a]">{{ $campaign->template?->name ?? 'Sin plantilla' }}</div>
                             </div>
-                            <div class="text-right text-xs text-[#7b7b7b]">
+                            <div class="text-right text-xs text-[#9a9a9a]">
                                 <div>{{ $campaign->sent_count }} enviados</div>
                                 <div>{{ $campaign->completed_at ? 'Completada' : 'En cola' }}</div>
                             </div>
                         </div>
                     </a>
                 @empty
-                    <p class="text-sm text-[#7b7b7b]">Todavía no hay campañas.</p>
+                    <p class="text-sm text-[#9a9a9a]">Todavía no hay campañas.</p>
                 @endforelse
             </div>
         </section>
@@ -112,10 +112,10 @@
                 @forelse ($recentContacts as $contact)
                     <div class="border border-[#2b2b2b] bg-[#151515] p-4">
                         <div class="text-sm text-[#dcdcdc]">{{ $contact->displayName() }}</div>
-                        <div class="text-xs text-[#7b7b7b]">{{ $contact->programLabel() }} · {{ $contact->email ?: 'Sin email' }} · {{ $contact->status }}</div>
+                        <div class="text-xs text-[#9a9a9a]">{{ $contact->programLabel() }} · {{ $contact->email ?: 'Sin email' }} · {{ $contact->status }}</div>
                     </div>
                 @empty
-                    <p class="text-sm text-[#7b7b7b]">Aún no hay contactos.</p>
+                    <p class="text-sm text-[#9a9a9a]">Aún no hay contactos.</p>
                 @endforelse
             </div>
         </section>

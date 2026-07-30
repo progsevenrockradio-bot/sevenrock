@@ -5,7 +5,7 @@
             <div class="text-3xl">🎨</div>
             <div>
                 <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Apariencia y Multimedia</h2>
-                <p class="mt-1 text-sm leading-7 text-[#7b7b7b]">Aquí se controla la identidad visual del sitio: marca, fuentes, colores y media principal.</p>
+                <p class="mt-1 text-sm leading-7 text-[#9a9a9a]">Aquí se controla la identidad visual del sitio: marca, fuentes, colores y media principal.</p>
             </div>
         </div>
     </div>
@@ -18,21 +18,21 @@
                 <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-6">📢 Branding e Identidad</h3>
                 <div class="space-y-5">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['site_name_label'] }}</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['site_name_label'] }}</label>
                         <input name="site_name" value="{{ old('site_name', $settings->site_name) }}" class="lucille-product-field w-full" placeholder="Nombre de tu emisora">
                         @error('site_name')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['brand_mark_label'] }}</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['brand_mark_label'] }}</label>
                         <input name="brand_mark" value="{{ old('brand_mark', $settings->brand_mark) }}" x-model="brandMark" class="lucille-product-field w-full" placeholder="Texto de la marca (Header)">
-                        <p class="mt-2 text-[11px] text-[#7b7b7b]">Texto visible del logo del header público.</p>
+                        <p class="mt-2 text-[11px] text-[#9a9a9a]">Texto visible del logo del header público.</p>
                         @error('brand_mark')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                     </div>
 
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
-                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['brand_mark_font_label'] }}</label>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['brand_mark_font_label'] }}</label>
                             <select name="brand_mark_font" x-model="brandMarkFont" class="lucille-product-field lucille-select-field w-full">
                                 @foreach ($brandMarkFonts as $value => $label)
                                     <option value="{{ $value }}" @selected(old('brand_mark_font', $settings->brand_mark_font) === $value)>{{ $label }}</option>
@@ -41,7 +41,7 @@
                             @error('brand_mark_font')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                         </div>
                         <div>
-                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Altura del Logo (Cabecera)</label>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Altura del Logo (Cabecera)</label>
                             <select name="logo_height" class="lucille-product-field lucille-select-field w-full">
                                 <option value="45" @selected(old('logo_height', $settings->logo_height) == 45)>Compacto (45px)</option>
                                 <option value="62" @selected(old('logo_height', $settings->logo_height) == 62)>Estándar (62px)</option>
@@ -53,13 +53,13 @@
                     </div>
 
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['brand_display_mode_label'] }}</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['brand_display_mode_label'] }}</label>
                         <select name="brand_display_mode" x-model="brandDisplayMode" class="lucille-product-field lucille-select-field w-full">
                             <option value="mark" @selected(old('brand_display_mode', $settings->brand_display_mode) === 'mark')>Wordmark (Solo texto)</option>
                             <option value="logo" @selected(old('brand_display_mode', $settings->brand_display_mode) === 'logo')>Logo image (Solo imagen)</option>
                             <option value="both" @selected(old('brand_display_mode', $settings->brand_display_mode) === 'both')>Logo & Wordmark (Ambos)</option>
                         </select>
-                        <p class="mt-2 text-[11px] text-[#7b7b7b]">{{ $admin['brand_display_mode_help'] }}</p>
+                        <p class="mt-2 text-[11px] text-[#9a9a9a]">{{ $admin['brand_display_mode_help'] }}</p>
                         @error('brand_display_mode')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                     </div>
                 </div>
@@ -67,19 +67,19 @@
 
             <!-- LOGO UPLOAD COMPONENT -->
             <div class="mt-6 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-5 rounded-lg">
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['logo_label'] }}</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['logo_label'] }}</label>
                 <div class="flex flex-col sm:flex-row gap-4 items-center">
                     @if($settings->logo_path)
                         <div class="relative group shrink-0 border border-[#3b3b3b] p-3 bg-[rgba(0,0,0,.4)] rounded">
                             <img src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($settings->logo_path) }}" class="h-14 max-w-[120px] object-contain">
-                            <div class="text-[9px] text-center mt-1 text-[#7b7b7b] font-mono truncate max-w-[120px]">{{ basename($settings->logo_path) }}</div>
+                            <div class="text-[9px] text-center mt-1 text-[#9a9a9a] font-mono truncate max-w-[120px]">{{ basename($settings->logo_path) }}</div>
                         </div>
                     @else
-                        <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#7b7b7b] uppercase text-center p-1 leading-tight rounded shrink-0">Sin logo</div>
+                        <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#9a9a9a] uppercase text-center p-1 leading-tight rounded shrink-0">Sin logo</div>
                     @endif
                     <div class="flex-1 w-full">
                         <input type="file" name="logo" class="lucille-product-field w-full text-xs file:bg-[#16161a] file:border-[#2b2b2b] file:text-[#dcdcdc] file:text-xs">
-                        <p class="mt-2 text-[10px] text-[#7b7b7b]">Formato recomendado: PNG transparente o SVG. Máx 4MB.</p>
+                        <p class="mt-2 text-[10px] text-[#9a9a9a]">Formato recomendado: PNG transparente o SVG. Máx 4MB.</p>
                     </div>
                 </div>
                 @error('logo')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
@@ -93,16 +93,16 @@
                 
                 <div class="space-y-5">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['hero_video_url_label'] }}</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['hero_video_url_label'] }}</label>
                         <input name="hero_video_url" value="{{ old('hero_video_url', $settings->hero_video_url) }}" class="lucille-product-field w-full" placeholder="https://www.youtube.com/... o enlace de video directo">
                         @error('hero_video_url')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                     </div>
 
                     <!-- VIDEO UPLOAD COMPONENT -->
                     <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-4 rounded">
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['hero_video_file_label'] }}</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['hero_video_file_label'] }}</label>
                         <div class="flex flex-col sm:flex-row gap-4 items-center">
-                            <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex flex-col items-center justify-center text-[#7b7b7b] rounded shrink-0">
+                            <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex flex-col items-center justify-center text-[#9a9a9a] rounded shrink-0">
                                 <span class="text-2xl">📽️</span>
                                 @if($settings->hero_video_path)
                                     <span class="text-[9px] text-[#b8e6c3] uppercase mt-1">Activo</span>
@@ -113,7 +113,7 @@
                             <div class="flex-1 w-full">
                                 <input type="file" name="hero_video" class="lucille-product-field w-full text-xs file:bg-[#16161a] file:border-[#2b2b2b] file:text-[#dcdcdc] file:text-xs">
                                 @if($settings->hero_video_path)
-                                    <p class="mt-1 text-[10px] text-[#7b7b7b] font-mono truncate">Actual: {{ basename($settings->hero_video_path) }}</p>
+                                    <p class="mt-1 text-[10px] text-[#9a9a9a] font-mono truncate">Actual: {{ basename($settings->hero_video_path) }}</p>
                                 @endif
                             </div>
                         </div>
@@ -130,13 +130,13 @@
                         <h4 class="font-display text-lg uppercase tracking-[.12em] text-[#dcdcdc] mb-4">📝 Texto Flotante (Slider)</h4>
                         <div class="space-y-4">
                             <div>
-                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Texto Flotante</label>
+                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Texto Flotante</label>
                                 <input name="hero_floating_text" value="{{ old('hero_floating_text', $settings->hero_floating_text) }}" class="lucille-product-field w-full" placeholder="Ej. Todas las épocas del rock, están aquí.">
-                                <p class="mt-2 text-[11px] text-[#7b7b7b]">Nota: Usa un asterisco (*) para indicar qué parte del texto debe ir en rojo. Ej: Todas las épocas del *rock, están aquí!!</p>
+                                <p class="mt-2 text-[11px] text-[#9a9a9a]">Nota: Usa un asterisco (*) para indicar qué parte del texto debe ir en rojo. Ej: Todas las épocas del *rock, están aquí!!</p>
                                 @error('hero_floating_text')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                             </div>
                             <div>
-                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Posición del Texto</label>
+                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Posición del Texto</label>
                                 <select name="hero_floating_text_position" class="lucille-product-field lucille-select-field w-full">
                                     <option value="columna-izquierda" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'columna-izquierda')>Columna Izquierda (Vertical)</option>
                                     <option value="columna-derecha" @selected(old('hero_floating_text_position', $settings->hero_floating_text_position) === 'columna-derecha')>Columna Derecha (Vertical)</option>
@@ -165,7 +165,7 @@
             <h3 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-6">🔤 Tipografía</h3>
             <div class="grid gap-5 md:grid-cols-2">
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['body_font_label'] }}</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['body_font_label'] }}</label>
                     <select name="body_font" x-model="bodyFont" class="lucille-product-field lucille-select-field w-full">
                         @foreach ($bodyFonts as $value => $label)
                             <option value="{{ $value }}" @selected(old('body_font', $settings->body_font) === $value)>{{ $label }}</option>
@@ -174,7 +174,7 @@
                     @error('body_font')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['heading_font_label'] }}</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['heading_font_label'] }}</label>
                     <select name="heading_font" x-model="headingFont" class="lucille-product-field lucille-select-field w-full">
                         @foreach ($headingFonts as $value => $label)
                             <option value="{{ $value }}" @selected(old('heading_font', $settings->heading_font) === $value)>{{ $label }}</option>
@@ -295,19 +295,19 @@
         <div class="grid gap-6 lg:grid-cols-2">
             <!-- BACKGROUND DEL SITIO -->
             <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-5 rounded">
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['background_label'] }}</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['background_label'] }}</label>
                 <div class="flex flex-col sm:flex-row gap-4 items-center">
                     @if($settings->background_path)
                         <div class="relative group shrink-0 border border-[#3b3b3b] p-2 bg-[rgba(0,0,0,.4)] rounded">
                             <img src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($settings->background_path) }}" class="h-14 w-24 object-cover">
-                            <div class="text-[9px] text-center mt-1 text-[#7b7b7b] font-mono truncate max-w-[96px]">{{ basename($settings->background_path) }}</div>
+                            <div class="text-[9px] text-center mt-1 text-[#9a9a9a] font-mono truncate max-w-[96px]">{{ basename($settings->background_path) }}</div>
                         </div>
                     @else
-                        <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#7b7b7b] uppercase text-center p-1 leading-tight rounded shrink-0">Sin fondo</div>
+                        <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#9a9a9a] uppercase text-center p-1 leading-tight rounded shrink-0">Sin fondo</div>
                     @endif
                     <div class="flex-1 w-full">
                         <input type="file" name="background" class="lucille-product-field w-full text-xs file:bg-[#16161a] file:border-[#2b2b2b] file:text-[#dcdcdc] file:text-xs">
-                        <p class="mt-2 text-[10px] text-[#7b7b7b]">Imagen principal de fondo de toda la web. Máx 6MB.</p>
+                        <p class="mt-2 text-[10px] text-[#9a9a9a]">Imagen principal de fondo de toda la web. Máx 6MB.</p>
                     </div>
                 </div>
                 @error('background')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
@@ -315,19 +315,19 @@
 
             <!-- PORTADA ÁLBUM HOME -->
             <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-5 rounded">
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['album_cover_label'] }}</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['album_cover_label'] }}</label>
                 <div class="flex flex-col sm:flex-row gap-4 items-center">
                     @if($settings->home_album_cover_path)
                         <div class="relative group shrink-0 border border-[#3b3b3b] p-2 bg-[rgba(0,0,0,.4)] rounded">
                             <img src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($settings->home_album_cover_path) }}" class="h-14 w-14 object-cover">
-                            <div class="text-[9px] text-center mt-1 text-[#7b7b7b] font-mono truncate max-w-[56px]">{{ basename($settings->home_album_cover_path) }}</div>
+                            <div class="text-[9px] text-center mt-1 text-[#9a9a9a] font-mono truncate max-w-[56px]">{{ basename($settings->home_album_cover_path) }}</div>
                         </div>
                     @else
-                        <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#7b7b7b] uppercase text-center p-1 leading-tight rounded shrink-0">Sin portada</div>
+                        <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#9a9a9a] uppercase text-center p-1 leading-tight rounded shrink-0">Sin portada</div>
                     @endif
                     <div class="flex-1 w-full">
                         <input type="file" name="home_album_cover" class="lucille-product-field w-full text-xs file:bg-[#16161a] file:border-[#2b2b2b] file:text-[#dcdcdc] file:text-xs">
-                        <p class="mt-2 text-[10px] text-[#7b7b7b]">Carátula del álbum mostrada en la sección principal del Home. Máx 6MB.</p>
+                        <p class="mt-2 text-[10px] text-[#9a9a9a]">Carátula del álbum mostrada en la sección principal del Home. Máx 6MB.</p>
                     </div>
                 </div>
                 @error('home_album_cover')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
@@ -335,7 +335,7 @@
 
             <!-- ÁLBUM DESTACADO SELECT -->
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Álbum destacado del menú</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Álbum destacado del menú</label>
                 <select name="featured_album_slug" class="lucille-product-field lucille-select-field w-full">
                     <option value="">Usar el más reciente automáticamente</option>
                     @foreach ($featuredAlbums ?? [] as $featuredAlbum)
@@ -344,25 +344,25 @@
                         </option>
                     @endforeach
                 </select>
-                <p class="mt-2 text-xs text-[#7b7b7b]">Si eliges uno, el bloque "Álbum" del menú irá siempre a ese detalle.</p>
+                <p class="mt-2 text-xs text-[#9a9a9a]">Si eliges uno, el bloque "Álbum" del menú irá siempre a ese detalle.</p>
                 @error('featured_album_slug')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
             </div>
 
             <!-- PORTADA VIDEO HOME -->
             <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-5 rounded">
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['featured_video_image_label'] }}</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['featured_video_image_label'] }}</label>
                 <div class="flex flex-col sm:flex-row gap-4 items-center">
                     @if($settings->home_video_image_path)
                         <div class="relative group shrink-0 border border-[#3b3b3b] p-2 bg-[rgba(0,0,0,.4)] rounded">
                             <img src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($settings->home_video_image_path) }}" class="h-14 w-24 object-cover">
-                            <div class="text-[9px] text-center mt-1 text-[#7b7b7b] font-mono truncate max-w-[96px]">{{ basename($settings->home_video_image_path) }}</div>
+                            <div class="text-[9px] text-center mt-1 text-[#9a9a9a] font-mono truncate max-w-[96px]">{{ basename($settings->home_video_image_path) }}</div>
                         </div>
                     @else
-                        <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#7b7b7b] uppercase text-center p-1 leading-tight rounded shrink-0">Sin fondo video</div>
+                        <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#9a9a9a] uppercase text-center p-1 leading-tight rounded shrink-0">Sin fondo video</div>
                     @endif
                     <div class="flex-1 w-full">
                         <input type="file" name="home_video_image" class="lucille-product-field w-full text-xs file:bg-[#16161a] file:border-[#2b2b2b] file:text-[#dcdcdc] file:text-xs">
-                        <p class="mt-2 text-[10px] text-[#7b7b7b]">Imagen miniatura de portada para el bloque de Video del Home. Máx 6MB.</p>
+                        <p class="mt-2 text-[10px] text-[#9a9a9a]">Imagen miniatura de portada para el bloque de Video del Home. Máx 6MB.</p>
                     </div>
                 </div>
                 @error('home_video_image')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
@@ -374,7 +374,7 @@
                     <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-3">
                         <div>
                             <h4 class="font-display text-sm uppercase tracking-[.18em] text-[#dcdcdc]">🌄 Carrusel de Diapositivas (Hero Slides)</h4>
-                            <p class="text-[11px] text-[#7b7b7b] mt-1">Sube y organiza las imágenes del banner principal giratorio de tu emisora.</p>
+                            <p class="text-[11px] text-[#9a9a9a] mt-1">Sube y organiza las imágenes del banner principal giratorio de tu emisora.</p>
                         </div>
                         <button type="button" @click="addSlide()" class="lucille-button-solid text-xs py-1 px-3 bg-[#1e4d2b] border-[#1e4d2b] hover:bg-[#15361e] hover:border-[#15361e]">+ Agregar Slide</button>
                     </div>
@@ -382,7 +382,7 @@
                     <div class="space-y-3 max-h-[350px] overflow-y-auto pr-2">
                         <template x-for="(slide, index) in slides" :key="index">
                             <div class="flex items-center gap-3 border border-[#2b2b2b] bg-[#101012] p-4 rounded hover:border-[#3b3b3b] transition-all">
-                                <span class="w-8 font-bold text-xs text-[#7b7b7b] font-mono text-center" x-text="'#' + (index + 1)"></span>
+                                <span class="w-8 font-bold text-xs text-[#9a9a9a] font-mono text-center" x-text="'#' + (index + 1)"></span>
                                 <input type="file" :name="'hero_slides[' + index + '][file]'" class="lucille-product-field flex-1 text-xs file:bg-[#16161a] file:border-[#2b2b2b] file:text-[#dcdcdc] file:text-xs">
                                 <input type="hidden" :name="'hero_slides[' + index + '][image]'" :value="slide.image || ''">
                                 <template x-if="slide.image">
@@ -399,7 +399,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-[#2b2b2b] pt-4 mt-2">
                         <div class="flex items-center gap-3 justify-between bg-[rgba(0,0,0,.2)] p-3 border border-[#2b2b2b] rounded">
                             <div class="flex-1">
-                                <label class="block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Intervalo de Giro</label>
+                                <label class="block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Intervalo de Giro</label>
                                 <span class="text-[10px] text-[#555]">Segundos entre transiciones automáticas</span>
                             </div>
                             <div class="flex items-center gap-2">
@@ -410,7 +410,7 @@
                         </div>
                         <div class="flex items-center gap-3 justify-between bg-[rgba(0,0,0,.2)] p-3 border border-[#2b2b2b] rounded">
                             <div>
-                                <label class="block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Efecto de Transición</label>
+                                <label class="block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Efecto de Transición</label>
                                 <span class="text-[10px] text-[#555]">Estilo visual al cambiar la diapositiva</span>
                             </div>
                             <select name="hero_slides_transition" class="lucille-product-field text-xs py-1.5">

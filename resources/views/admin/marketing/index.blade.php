@@ -27,7 +27,7 @@
             <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div class="max-w-3xl">
                     <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Email Marketing & Contactos</h1>
-                    <p class="mt-3 text-sm leading-7 text-[#7b7b7b]">
+                    <p class="mt-3 text-sm leading-7 text-[#9a9a9a]">
                         Administra tu base de datos de remitentes, importa contactos desde tus bandejas de Gmail enriquecidos por Inteligencia Artificial y envía campañas de correo electrónico con plantillas personalizadas.
                     </p>
                 </div>
@@ -81,7 +81,7 @@
                                     ⚡ Procesar Cola Manualmente
                                 </button>
                             </form>
-                            <span class="text-xs text-[#7b7b7b]">o</span>
+                            <span class="text-xs text-[#9a9a9a]">o</span>
                             <button type="button" class="text-xs text-[#ffd580] underline hover:text-white" @click="showCronModal = true">
                                 Configurar Cron Job automático en Hostinger
                             </button>
@@ -90,7 +90,7 @@
                 @else
                     <!-- Enlace discreto a la guía si no hay tareas pendientes -->
                     <div class="flex justify-end mb-4">
-                        <button type="button" class="text-xs text-[#7b7b7b] hover:text-[#dcdcdc] flex items-center gap-1" @click="showCronModal = true">
+                        <button type="button" class="text-xs text-[#9a9a9a] hover:text-[#dcdcdc] flex items-center gap-1" @click="showCronModal = true">
                             🔧 Configuración de Cron Job y Cola
                         </button>
                     </div>
@@ -128,7 +128,7 @@
                 <div class="overflow-x-auto">
                     <table class="w-full border-collapse text-left text-sm text-[#dcdcdc]">
                         <thead>
-                            <tr class="border-b border-[#2b2b2b] bg-[rgba(0,0,0,.2)] text-xs uppercase tracking-wider text-[#7b7b7b]">
+                            <tr class="border-b border-[#2b2b2b] bg-[rgba(0,0,0,.2)] text-xs uppercase tracking-wider text-[#9a9a9a]">
                                 <th class="p-4">Contacto</th>
                                 <th class="p-4">Empresa / Banda</th>
                                 <th class="p-4">Cargo / Rol</th>
@@ -142,7 +142,7 @@
                                 <tr class="hover:bg-[rgba(255,255,255,.02)]">
                                     <td class="p-4">
                                         <div class="font-bold text-[#ffffff]">{{ $contact->name ?: 'Sin Nombre' }}</div>
-                                        <div class="text-xs text-[#7b7b7b]">{{ $contact->email }}</div>
+                                        <div class="text-xs text-[#9a9a9a]">{{ $contact->email }}</div>
                                     </td>
                                     <td class="p-4">
                                         <span class="px-2 py-1 text-xs border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] text-[#e0e0e0]">
@@ -157,10 +157,10 @@
                                             {{ $contact->source_type }}
                                         </div>
                                         @if($contact->sourceAccount)
-                                            <div class="text-[10px] text-[#7b7b7b]">{{ $contact->sourceAccount->email }}</div>
+                                            <div class="text-[10px] text-[#9a9a9a]">{{ $contact->sourceAccount->email }}</div>
                                         @endif
                                     </td>
-                                    <td class="p-4 text-xs text-[#7b7b7b]">
+                                    <td class="p-4 text-xs text-[#9a9a9a]">
                                         {{ $contact->created_at->format('d/m/Y H:i') }}
                                     </td>
                                     <td class="p-4 text-right">
@@ -180,7 +180,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="p-8 text-center text-[#7b7b7b]">
+                                    <td colspan="6" class="p-8 text-center text-[#9a9a9a]">
                                         No se encontraron contactos en tu base de datos.
                                     </td>
                                 </tr>
@@ -219,48 +219,48 @@
                     <div class="grid gap-6 md:grid-cols-2">
                         <!-- Asunto -->
                         <div class="md:col-span-2">
-                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Asunto del Correo</label>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Asunto del Correo</label>
                             <input type="text" name="subject" value="{{ old('subject') }}" required class="lucille-product-field w-full" placeholder="ej. ¡Gran lanzamiento rockero esta semana en Seven Rock Radio!">
                             @error('subject')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                         </div>
 
                         <!-- Remitente -->
                         <div>
-                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Cuenta Remitente</label>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Cuenta Remitente</label>
                             <select name="sender_account_id" class="lucille-product-field lucille-select-field w-full">
                                 @foreach($accounts as $acc)
                                     <option value="{{ $acc->id }}">{{ $acc->sender_name }} ({{ $acc->email }})</option>
                                 @endforeach
                             </select>
-                            <p class="mt-2 text-xs text-[#7b7b7b]">Los correos se despacharán usando la configuración SMTP de esta cuenta.</p>
+                            <p class="mt-2 text-xs text-[#9a9a9a]">Los correos se despacharán usando la configuración SMTP de esta cuenta.</p>
                         </div>
 
                         <!-- Plantilla -->
                         <div>
-                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Plantilla de Diseño</label>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Plantilla de Diseño</label>
                             <select name="template" class="lucille-product-field lucille-select-field w-full">
                                 @foreach($templates as $key => $name)
                                     <option value="{{ $key }}">{{ $name }}</option>
                                 @endforeach
                             </select>
-                            <p class="mt-2 text-xs text-[#7b7b7b]">Elige la estructura visual de la campaña.</p>
+                            <p class="mt-2 text-xs text-[#9a9a9a]">Elige la estructura visual de la campaña.</p>
                         </div>
 
                         <!-- Contenido -->
                         <div class="md:col-span-2">
-                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Mensaje / Cuerpo del Correo</label>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Mensaje / Cuerpo del Correo</label>
                             <textarea name="body_content" rows="10" required class="lucille-product-field w-full" placeholder="Escribe el mensaje aquí. Puedes usar saltos de línea normales para estructurar los párrafos."></textarea>
                             @error('body_content')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                         </div>
 
                         <!-- Botón CTA (Llamado a la acción) -->
                         <div>
-                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Texto del Botón (Opcional)</label>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Texto del Botón (Opcional)</label>
                             <input type="text" name="button_text" value="{{ old('button_text') }}" class="lucille-product-field w-full" placeholder="ej. Visitar Sitio Web">
                         </div>
 
                         <div>
-                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Enlace / URL del Botón (Opcional)</label>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Enlace / URL del Botón (Opcional)</label>
                             <input type="url" name="button_url" value="{{ old('button_url') }}" class="lucille-product-field w-full" placeholder="ej. https://sevenrockradio.com">
                         </div>
                     </div>
@@ -294,7 +294,7 @@
                                         {{ $acc->is_active ? 'Activa' : 'Inactiva' }}
                                     </span>
                                 </div>
-                                <div class="text-sm text-[#7b7b7b] font-mono break-all">{{ $acc->email }}</div>
+                                <div class="text-sm text-[#9a9a9a] font-mono break-all">{{ $acc->email }}</div>
 
                                 <div class="mt-4 space-y-2 border-t border-[#2b2b2b] pt-3 text-xs text-[#e0e0e0]">
                                     <div><strong>Host IMAP:</strong> {{ $acc->imap_host }}:{{ $acc->imap_port }} ({{ $acc->imap_encryption }})</div>
@@ -325,7 +325,7 @@
                             </div>
                         </div>
                     @empty
-                        <div class="col-span-full border border-[#2b2b2b] p-8 text-center text-[#7b7b7b]">
+                        <div class="col-span-full border border-[#2b2b2b] p-8 text-center text-[#9a9a9a]">
                             No tienes ninguna cuenta de correo agregada. ¡Configura una para poder sincronizar contactos y enviar boletines!
                         </div>
                     @endforelse
@@ -341,7 +341,7 @@
                 <div class="overflow-x-auto">
                     <table class="w-full border-collapse text-left text-sm text-[#dcdcdc]">
                         <thead>
-                            <tr class="border-b border-[#2b2b2b] bg-[rgba(0,0,0,.2)] text-xs uppercase tracking-wider text-[#7b7b7b]">
+                            <tr class="border-b border-[#2b2b2b] bg-[rgba(0,0,0,.2)] text-xs uppercase tracking-wider text-[#9a9a9a]">
                                 <th class="p-4">Campaña / Asunto</th>
                                 <th class="p-4">Remitente</th>
                                 <th class="p-4">Plantilla</th>
@@ -374,13 +374,13 @@
                                     <td class="p-4 text-xs text-[#e0e0e0]">
                                         <strong>{{ $camp->sent_contacts }}</strong> / {{ $camp->total_contacts }} enviados
                                     </td>
-                                    <td class="p-4 text-xs text-[#7b7b7b]">
+                                    <td class="p-4 text-xs text-[#9a9a9a]">
                                         {{ $camp->created_at->format('d/m/Y H:i') }}
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="p-8 text-center text-[#7b7b7b]">
+                                    <td colspan="6" class="p-8 text-center text-[#9a9a9a]">
                                         No has enviado ninguna campaña promocional aún.
                                     </td>
                                 </tr>
@@ -396,7 +396,7 @@
             <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8 space-y-8">
                 <div>
                     <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-4 mb-4">📖 Manual de Uso del Módulo de Marketing</h2>
-                    <p class="text-sm text-[#7b7b7b]">
+                    <p class="text-sm text-[#9a9a9a]">
                         Aprende a gestionar tus cuentas de correo, recolectar contactos mediante Inteligencia Artificial y enviar boletines informativos o campañas promocionales profesionales.
                     </p>
                 </div>
@@ -442,7 +442,7 @@
                             </li>
                             <li>
                                 <strong>Sincronización Inteligente con IA (Recomendado)</strong>:
-                                <ul class="list-disc pl-5 mt-1 space-y-1 text-[#7b7b7b]">
+                                <ul class="list-disc pl-5 mt-1 space-y-1 text-[#9a9a9a]">
                                     <li>Haz clic en el botón <strong class="text-white">🔄 Sincronizar desde Gmail</strong>.</li>
                                     <li>Elige cuál de tus cuentas configuradas deseas analizar y la carpeta a leer (ej. <code>INBOX</code> para la bandeja de entrada o <code>[Gmail]/Papelera</code> para escanear correos borrados).</li>
                                     <li>El sistema analizará los correos de remitentes que no tengas guardados, extraerá el contenido y usará la <strong>IA de Google Gemini</strong> para identificar automáticamente el Nombre del remitente, el Nombre de la Banda de Rock o Empresa, y su Rol/Cargo (ej. Vocalista, Manager, Prensa).</li>
@@ -467,7 +467,7 @@
                             </li>
                             <li>
                                 <strong>Plantillas de Diseño Lucille</strong>: Selecciona el estilo visual que mejor se adapte a tu mensaje:
-                                <ul class="list-disc pl-5 mt-1 space-y-1 text-[#7b7b7b]">
+                                <ul class="list-disc pl-5 mt-1 space-y-1 text-[#9a9a9a]">
                                     <li><strong class="text-[#e0e0e0]">Servicio (Dark Rock)</strong>: Diseño premium de fondo oscuro con detalles en verde bosque, ideal para destacar tu marca o servicios de radio.</li>
                                     <li><strong class="text-[#e0e0e0]">Boletín de Noticias (Newsletter)</strong>: Formato editorial limpio de estilo prensa para resúmenes de noticias y actualizaciones.</li>
                                     <li><strong class="text-[#e0e0e0]">Oferta Especial</strong>: Caja destacada y visual para anunciar promociones, descuentos o patrocinios.</li>
@@ -510,7 +510,7 @@
                             @forelse($logs as $logLine)
                                 <div class="whitespace-pre-wrap leading-normal py-0.5 border-b border-[rgba(255,255,255,.03)] hover:bg-[rgba(255,255,255,.02)]">{{ $logLine }}</div>
                             @empty
-                                <div class="text-[#7b7b7b] italic">No hay registros de actividad recientes en laravel.log.</div>
+                                <div class="text-[#9a9a9a] italic">No hay registros de actividad recientes en laravel.log.</div>
                             @endforelse
                         </div>
                     </div>
@@ -528,19 +528,19 @@
                 <form action="{{ route('admin.marketing.contacts.store') }}" method="POST" class="space-y-4">
                     @csrf
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Correo Electrónico *</label>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#9a9a9a]">Correo Electrónico *</label>
                         <input type="email" name="email" required class="lucille-product-field w-full">
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nombre del Contacto</label>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#9a9a9a]">Nombre del Contacto</label>
                         <input type="text" name="name" class="lucille-product-field w-full">
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Empresa o Banda</label>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#9a9a9a]">Empresa o Banda</label>
                         <input type="text" name="company_or_band" class="lucille-product-field w-full">
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Cargo o Rol</label>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#9a9a9a]">Cargo o Rol</label>
                         <input type="text" name="role" class="lucille-product-field w-full">
                     </div>
                     <div class="flex justify-end gap-3 pt-4 border-t border-[#2b2b2b]">
@@ -555,12 +555,12 @@
         <div x-cloak x-show="showScrapeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
             <div class="border border-[#2b2b2b] bg-[#101012] p-8 max-w-md w-full rounded-lg shadow-2xl space-y-6" @click.away="showScrapeModal = false">
                 <h3 class="font-display text-xl uppercase tracking-wider text-[#dcdcdc]">Sincronizar Contactos con IA</h3>
-                <p class="text-xs text-[#7b7b7b]">Esta acción leerá la bandeja IMAP seleccionada, descubrirá remitentes que no tengas en tu base de datos y usará la API de Gemini para clasificar y extraer sus cargos y bandas de rock.</p>
+                <p class="text-xs text-[#9a9a9a]">Esta acción leerá la bandeja IMAP seleccionada, descubrirá remitentes que no tengas en tu base de datos y usará la API de Gemini para clasificar y extraer sus cargos y bandas de rock.</p>
 
                 <form action="{{ route('admin.marketing.contacts.scrape') }}" method="POST" class="space-y-4">
                     @csrf
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Elegir Cuenta de Correo</label>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#9a9a9a]">Elegir Cuenta de Correo</label>
                         <select name="account_id" class="lucille-product-field lucille-select-field w-full">
                             @foreach($accounts as $acc)
                                 <option value="{{ $acc->id }}">{{ $acc->sender_name }} ({{ $acc->email }})</option>
@@ -568,12 +568,12 @@
                         </select>
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Carpeta a Escanear</label>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#9a9a9a]">Carpeta a Escanear</label>
                         <input type="text" name="folder" value="INBOX" required class="lucille-product-field w-full" placeholder="INBOX, [Gmail]/Papelera, Trash...">
-                        <p class="mt-1 text-[10px] text-[#7b7b7b]">Escribe "INBOX" para bandeja de entrada, o "[Gmail]/Papelera" para la papelera de Gmail.</p>
+                        <p class="mt-1 text-[10px] text-[#9a9a9a]">Escribe "INBOX" para bandeja de entrada, o "[Gmail]/Papelera" para la papelera de Gmail.</p>
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#7b7b7b]">Límite de Correos a Analizar</label>
+                        <label class="mb-2 block text-xs uppercase tracking-wider text-[#9a9a9a]">Límite de Correos a Analizar</label>
                         <select name="limit" class="lucille-product-field lucille-select-field w-full">
                             <option value="50">50 correos más recientes</option>
                             <option value="100" selected>100 correos más recientes (Recomendado)</option>
@@ -596,7 +596,7 @@
                     <h3 class="font-display text-xl uppercase tracking-wider text-[#dcdcdc] flex items-center gap-2">
                         🔧 Guía: Automatización de Cola en Hostinger
                     </h3>
-                    <button type="button" class="text-xs text-[#7b7b7b] hover:text-white" @click="showCronModal = false">✕ Cerrar</button>
+                    <button type="button" class="text-xs text-[#9a9a9a] hover:text-white" @click="showCronModal = false">✕ Cerrar</button>
                 </div>
 
                 <div class="space-y-4 text-xs text-[#dcdcdc] leading-relaxed">
@@ -609,7 +609,7 @@
                         <p>
                             En tu panel de Hostinger (sección de Tareas Programadas / Cron Jobs), crea una nueva tarea programada con los siguientes valores:
                         </p>
-                        <ul class="list-disc pl-4 space-y-1 mt-1 text-[#7b7b7b]">
+                        <ul class="list-disc pl-4 space-y-1 mt-1 text-[#9a9a9a]">
                             <li><strong>Tipo:</strong> Comando personalizado / Custom</li>
                             <li><strong>Intervalo / Frecuencia:</strong> Cada 1 minuto (o cada 5 minutos) <code>* * * * *</code></li>
                             <li><strong>Comando:</strong> Copia y pega la siguiente línea exacta:</li>
@@ -617,7 +617,7 @@
                         <div class="mt-3 p-3 bg-black border border-[#2b2b2b] rounded font-mono text-[10px] text-[#ffd580] select-all break-all leading-normal">
                             /opt/alt/php84/usr/bin/php /home/u531780502/domains/sevenrockradio.com/public_html/artisan queue:work --queue=marketing --stop-when-empty --tries=3 --timeout=600 &gt;&gt; /dev/null 2&gt;&amp;1
                         </div>
-                        <p class="text-[10px] text-[#7b7b7b] mt-1">
+                        <p class="text-[10px] text-[#9a9a9a] mt-1">
                             *Nota: Usamos <code>--stop-when-empty</code> y un timeout alto de 10 minutos (<code>--timeout=600</code>) porque el scraping con Gemini tarda unos segundos por correo. De esta forma, el worker se apagará limpiamente al terminar y no consumirá recursos extra.
                         </p>
                     </div>
@@ -654,11 +654,11 @@
                 <form action="{{ route('admin.marketing.accounts.store') }}" method="POST" class="grid gap-4 md:grid-cols-2">
                     @csrf
                     <div class="md:col-span-2">
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Correo Electrónico</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Correo Electrónico</label>
                         <input type="email" name="email" required class="lucille-product-field w-full" placeholder="ej. press.sevenrockradio@gmail.com">
                     </div>
                     <div class="md:col-span-2">
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nombre del Remitente</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Nombre del Remitente</label>
                         <input type="text" name="sender_name" required class="lucille-product-field w-full" placeholder="ej. Seven Rock Press">
                     </div>
 
@@ -667,16 +667,16 @@
                         <h4 class="text-xs uppercase font-bold text-[#c32720]">Configuración Entrada (IMAP)</h4>
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Servidor IMAP</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Servidor IMAP</label>
                         <input type="text" name="imap_host" value="imap.gmail.com" required class="lucille-product-field w-full">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Puerto</label>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Puerto</label>
                             <input type="number" name="imap_port" value="993" required class="lucille-product-field w-full">
                         </div>
                         <div>
-                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Cifrado</label>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Cifrado</label>
                             <select name="imap_encryption" class="lucille-product-field lucille-select-field w-full">
                                 <option value="ssl" selected>SSL</option>
                                 <option value="tls">TLS</option>
@@ -685,7 +685,7 @@
                         </div>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Contraseña de Aplicación IMAP</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Contraseña de Aplicación IMAP</label>
                         <input type="password" name="imap_password" required autocomplete="new-password" class="lucille-product-field w-full" placeholder="Contraseña de aplicación de 16 caracteres de Google">
                     </div>
 
@@ -694,16 +694,16 @@
                         <h4 class="text-xs uppercase font-bold text-[#c32720]">Configuración Salida (SMTP)</h4>
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Servidor SMTP</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Servidor SMTP</label>
                         <input type="text" name="smtp_host" value="smtp.gmail.com" required class="lucille-product-field w-full">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Puerto</label>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Puerto</label>
                             <input type="number" name="smtp_port" value="465" required class="lucille-product-field w-full">
                         </div>
                         <div>
-                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Cifrado</label>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Cifrado</label>
                             <select name="smtp_encryption" class="lucille-product-field lucille-select-field w-full">
                                 <option value="ssl" selected>SSL</option>
                                 <option value="tls">TLS</option>
@@ -712,7 +712,7 @@
                         </div>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Contraseña de Aplicación SMTP</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Contraseña de Aplicación SMTP</label>
                         <input type="password" name="smtp_password" required autocomplete="new-password" class="lucille-product-field w-full" placeholder="Normalmente la misma contraseña de aplicación">
                     </div>
 
@@ -733,11 +733,11 @@
                     @csrf
                     @method('PUT')
                     <div class="md:col-span-2">
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Correo Electrónico (No modificable)</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Correo Electrónico (No modificable)</label>
                         <input type="email" disabled :value="editAccountData ? editAccountData.email : ''" class="lucille-product-field w-full opacity-60">
                     </div>
                     <div class="md:col-span-2">
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nombre del Remitente</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Nombre del Remitente</label>
                         <input type="text" name="sender_name" required :value="editAccountData ? editAccountData.sender_name : ''" class="lucille-product-field w-full">
                     </div>
 
@@ -746,16 +746,16 @@
                         <h4 class="text-xs uppercase font-bold text-[#c32720]">Configuración Entrada (IMAP)</h4>
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Servidor IMAP</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Servidor IMAP</label>
                         <input type="text" name="imap_host" required :value="editAccountData ? editAccountData.imap_host : ''" class="lucille-product-field w-full">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Puerto</label>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Puerto</label>
                             <input type="number" name="imap_port" required :value="editAccountData ? editAccountData.imap_port : ''" class="lucille-product-field w-full">
                         </div>
                         <div>
-                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Cifrado</label>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Cifrado</label>
                             <select name="imap_encryption" class="lucille-product-field lucille-select-field w-full">
                                 <option value="ssl" :selected="editAccountData && editAccountData.imap_encryption == 'ssl'">SSL</option>
                                 <option value="tls" :selected="editAccountData && editAccountData.imap_encryption == 'tls'">TLS</option>
@@ -764,7 +764,7 @@
                         </div>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nueva Contraseña de Aplicación IMAP (Dejar vacío para no cambiar)</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Nueva Contraseña de Aplicación IMAP (Dejar vacío para no cambiar)</label>
                         <input type="password" name="imap_password" autocomplete="new-password" class="lucille-product-field w-full" placeholder="Omitir si no deseas cambiarla">
                     </div>
 
@@ -773,16 +773,16 @@
                         <h4 class="text-xs uppercase font-bold text-[#c32720]">Configuración Salida (SMTP)</h4>
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Servidor SMTP</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Servidor SMTP</label>
                         <input type="text" name="smtp_host" required :value="editAccountData ? editAccountData.smtp_host : ''" class="lucille-product-field w-full">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Puerto</label>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Puerto</label>
                             <input type="number" name="smtp_port" required :value="editAccountData ? editAccountData.smtp_port : ''" class="lucille-product-field w-full">
                         </div>
                         <div>
-                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Cifrado</label>
+                            <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Cifrado</label>
                             <select name="smtp_encryption" class="lucille-product-field lucille-select-field w-full">
                                 <option value="ssl" :selected="editAccountData && editAccountData.smtp_encryption == 'ssl'">SSL</option>
                                 <option value="tls" :selected="editAccountData && editAccountData.smtp_encryption == 'tls'">TLS</option>
@@ -791,7 +791,7 @@
                         </div>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#7b7b7b]">Nueva Contraseña de Aplicación SMTP (Dejar vacío para no cambiar)</label>
+                        <label class="mb-1 block text-xs uppercase tracking-wider text-[#9a9a9a]">Nueva Contraseña de Aplicación SMTP (Dejar vacío para no cambiar)</label>
                         <input type="password" name="smtp_password" autocomplete="new-password" class="lucille-product-field w-full" placeholder="Omitir si no deseas cambiarla">
                     </div>
 

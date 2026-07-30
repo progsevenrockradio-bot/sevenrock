@@ -94,7 +94,7 @@
                     <span class="rounded border border-[#2b2b2b] px-3 py-1 text-[11px] uppercase tracking-[.18em] text-[#9d9d9d]">
                         Ep. {{ $upload->numero_episodio }}
                     </span>
-                    <span class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">
+                    <span class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">
                         {{ optional($upload->fecha_emision)->format('d/m/Y') }}
                     </span>
                 </div>
@@ -123,7 +123,7 @@
             </div>
         </article>
     @empty
-        <p class="text-sm text-[#7b7b7b]">Todavía no hay episodios en esta sección.</p>
+        <p class="text-sm text-[#9a9a9a]">Todavía no hay episodios en esta sección.</p>
     @endforelse
 
     @if (method_exists($recentUploads, 'hasPages') && $recentUploads->hasPages())

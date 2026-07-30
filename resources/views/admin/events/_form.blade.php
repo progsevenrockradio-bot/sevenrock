@@ -21,13 +21,13 @@
     <div class="space-y-6">
         <!-- Tabs Buttons Navigation -->
         <div class="mb-4 border-b border-[#2b2b2b] flex gap-2 overflow-x-auto pb-px">
-            <button type="button" @click="tab = 'general'" :class="tab === 'general' ? 'border-b-2 border-[var(--lucille-accent)] text-[#dcdcdc]' : 'text-[#7b7b7b] hover:text-[#bcbcbc]'" class="pb-3 px-4 text-xs font-display uppercase tracking-[.18em] transition-colors focus:outline-none whitespace-nowrap">
+            <button type="button" @click="tab = 'general'" :class="tab === 'general' ? 'border-b-2 border-[var(--lucille-accent)] text-[#dcdcdc]' : 'text-[#9a9a9a] hover:text-[#bcbcbc]'" class="pb-3 px-4 text-xs font-display uppercase tracking-[.18em] transition-colors focus:outline-none whitespace-nowrap">
                 Información General
             </button>
-            <button type="button" @click="tab = 'details'" :class="tab === 'details' ? 'border-b-2 border-[var(--lucille-accent)] text-[#dcdcdc]' : 'text-[#7b7b7b] hover:text-[#bcbcbc]'" class="pb-3 px-4 text-xs font-display uppercase tracking-[.18em] transition-colors focus:outline-none whitespace-nowrap">
+            <button type="button" @click="tab = 'details'" :class="tab === 'details' ? 'border-b-2 border-[var(--lucille-accent)] text-[#dcdcdc]' : 'text-[#9a9a9a] hover:text-[#bcbcbc]'" class="pb-3 px-4 text-xs font-display uppercase tracking-[.18em] transition-colors focus:outline-none whitespace-nowrap">
                 Detalles & Enlaces
             </button>
-            <button type="button" @click="tab = 'media'" :class="tab === 'media' ? 'border-b-2 border-[var(--lucille-accent)] text-[#dcdcdc]' : 'text-[#7b7b7b] hover:text-[#bcbcbc]'" class="pb-3 px-4 text-xs font-display uppercase tracking-[.18em] transition-colors focus:outline-none whitespace-nowrap">
+            <button type="button" @click="tab = 'media'" :class="tab === 'media' ? 'border-b-2 border-[var(--lucille-accent)] text-[#dcdcdc]' : 'text-[#9a9a9a] hover:text-[#bcbcbc]'" class="pb-3 px-4 text-xs font-display uppercase tracking-[.18em] transition-colors focus:outline-none whitespace-nowrap">
                 Póster & Multimedia
             </button>
         </div>
@@ -37,12 +37,12 @@
             <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6 space-y-5">
                 <div>
                     <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Información General</h2>
-                    <p class="mt-1 text-xs text-[#7b7b7b]">Datos esenciales y clasificación del evento.</p>
+                    <p class="mt-1 text-xs text-[#9a9a9a]">Datos esenciales y clasificación del evento.</p>
                 </div>
 
                 <div class="grid gap-5">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['form_title_label'] }} <span class="text-[var(--lucille-accent)]">*</span></label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['form_title_label'] }} <span class="text-[var(--lucille-accent)]">*</span></label>
                         <input name="title" x-model="title" @input="updateSlug" class="lucille-product-field w-full @error('title') border-red-500/80 bg-red-950/10 @enderror">
                         @error('title')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
@@ -50,7 +50,7 @@
                     </div>
 
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['form_slug_label'] }}</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['form_slug_label'] }}</label>
                         <input name="slug" x-model="slug" @input="slugManuallyEdited = true" class="lucille-product-field w-full @error('slug') border-red-500/80 bg-red-950/10 @enderror">
                         @error('slug')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
@@ -58,22 +58,22 @@
                     </div>
 
                     <div>
-                        <label class="mb-2 flex items-center gap-3 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                        <label class="mb-2 flex items-center gap-3 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                             <input type="checkbox" name="is_cancelled" value="1" x-model="is_cancelled" class="lucille-product-checkbox h-4 w-4 rounded border-[#2b2b2b] bg-black/40 text-[var(--lucille-accent)] focus:ring-[var(--lucille-accent)] focus:ring-offset-0">
                             Evento Cancelado
                         </label>
-                        <p class="mt-1.5 text-xs text-[#7b7b7b]">Muestra el evento como CANCELADO en la página.</p>
+                        <p class="mt-1.5 text-xs text-[#9a9a9a]">Muestra el evento como CANCELADO en la página.</p>
                     </div>
 
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Categorías</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Categorías</label>
                         <input
                             name="categories_text"
                             x-model="categories"
                             class="lucille-product-field w-full"
                             placeholder="Guest Appearance, Music Festivals"
                         >
-                        <p class="mt-2 text-xs uppercase tracking-[.14em] text-[#7b7b7b]">Separa los nombres con comas.</p>
+                        <p class="mt-2 text-xs uppercase tracking-[.14em] text-[#9a9a9a]">Separa los nombres con comas.</p>
                     </div>
                 </div>
             </section>
@@ -81,10 +81,10 @@
             <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6">
                 <div class="mb-5">
                     <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Descripción del Evento</h2>
-                    <p class="mt-1 text-xs text-[#7b7b7b]">Cada párrafo se guarda de manera independiente para formatear la página pública del show.</p>
+                    <p class="mt-1 text-xs text-[#9a9a9a]">Cada párrafo se guarda de manera independiente para formatear la página pública del show.</p>
                 </div>
 
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Párrafos descriptivos</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Párrafos descriptivos</label>
                 <textarea
                     name="content_text"
                     x-model="content"
@@ -100,30 +100,30 @@
             <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6 space-y-5">
                 <div>
                     <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Fecha & Ubicación</h2>
-                    <p class="mt-1 text-xs text-[#7b7b7b]">Detalles de horarios y lugar del espectáculo.</p>
+                    <p class="mt-1 text-xs text-[#9a9a9a]">Detalles de horarios y lugar del espectáculo.</p>
                 </div>
 
                 <div class="grid gap-5 md:grid-cols-2">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['starts_at_label'] }} <span class="text-[var(--lucille-accent)]">*</span></label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['starts_at_label'] }} <span class="text-[var(--lucille-accent)]">*</span></label>
                         <input type="datetime-local" name="starts_at" x-model="starts_at" class="lucille-product-field w-full @error('starts_at') border-red-500/80 bg-red-950/10 @enderror">
                         @error('starts_at')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['ends_at_label'] }}</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['ends_at_label'] }}</label>
                         <input type="datetime-local" name="ends_at" x-model="ends_at" class="lucille-product-field w-full @error('ends_at') border-red-500/80 bg-red-950/10 @enderror">
                         @error('ends_at')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['location_label'] }}</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['location_label'] }}</label>
                         <input name="location" x-model="location" class="lucille-product-field w-full" placeholder="Loch Ness, UK">
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['venue_label'] }}</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['venue_label'] }}</label>
                         <input name="venue" x-model="venue" class="lucille-product-field w-full" placeholder="Rockness Festival">
                     </div>
                 </div>
@@ -132,30 +132,30 @@
             <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6 space-y-5">
                 <div>
                     <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Enlaces del Evento</h2>
-                    <p class="mt-1 text-xs text-[#7b7b7b]">Configuración de botones interactivos para el público.</p>
+                    <p class="mt-1 text-xs text-[#9a9a9a]">Configuración de botones interactivos para el público.</p>
                 </div>
 
                 <div class="grid gap-5 md:grid-cols-2">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['ticket_label_label'] }}</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['ticket_label_label'] }}</label>
                         <input name="ticket_label" x-model="ticket_label" class="lucille-product-field w-full" placeholder="Tickets">
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['ticket_url_label'] }}</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['ticket_url_label'] }}</label>
                         <input name="ticket_url" x-model="ticket_url" class="lucille-product-field w-full @error('ticket_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://...">
                         @error('ticket_url')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Venue URL</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Venue URL</label>
                         <input name="venue_url" x-model="venue_url" class="lucille-product-field w-full @error('venue_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://...">
                         @error('venue_url')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Facebook URL</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Facebook URL</label>
                         <input name="facebook_url" x-model="facebook_url" class="lucille-product-field w-full @error('facebook_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://www.facebook.com/...">
                         @error('facebook_url')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
@@ -170,12 +170,12 @@
             <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6 space-y-5">
                 <div>
                     <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Póster Promocional</h2>
-                    <p class="mt-1 text-xs text-[#7b7b7b]">Sube una imagen local o proporciona una ruta/URL existente <span class="text-[var(--lucille-accent)]">*</span></p>
+                    <p class="mt-1 text-xs text-[#9a9a9a]">Sube una imagen local o proporciona una ruta/URL existente <span class="text-[var(--lucille-accent)]">*</span></p>
                 </div>
 
                 <div class="grid gap-5">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Ruta o URL de Imagen</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Ruta o URL de Imagen</label>
                         <input name="poster" x-model="poster" class="lucille-product-field w-full @error('poster') border-red-500/80 bg-red-950/10 @enderror" placeholder="assets/lucille/ozzfest_poster.jpg">
                         @error('poster')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
@@ -183,8 +183,8 @@
                     </div>
 
                     <div class="border border-[#2b2b2b] bg-black/30 p-4">
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b] font-medium">Subir archivo de imagen local</label>
-                        <input type="file" name="poster_file" @change="handlePosterUpload" class="block w-full text-xs text-[#7b7b7b] file:mr-4 file:py-2 file:px-4 file:border file:border-[#2b2b2b] file:bg-black/40 file:text-[#dcdcdc] file:text-[11px] file:uppercase file:tracking-wider hover:file:bg-black/60 file:cursor-pointer @error('poster_file') border border-red-500 bg-red-950/20 @enderror">
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a] font-medium">Subir archivo de imagen local</label>
+                        <input type="file" name="poster_file" @change="handlePosterUpload" class="block w-full text-xs text-[#9a9a9a] file:mr-4 file:py-2 file:px-4 file:border file:border-[#2b2b2b] file:bg-black/40 file:text-[#dcdcdc] file:text-[11px] file:uppercase file:tracking-wider hover:file:bg-black/60 file:cursor-pointer @error('poster_file') border border-red-500 bg-red-950/20 @enderror">
                         @error('poster_file')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
                         @enderror
@@ -196,12 +196,12 @@
             <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6 space-y-5">
                 <div>
                     <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Video & Ubicación</h2>
-                    <p class="mt-1 text-xs text-[#7b7b7b]">Inserta códigos embebidos para enriquecer la página del show.</p>
+                    <p class="mt-1 text-xs text-[#9a9a9a]">Inserta códigos embebidos para enriquecer la página del show.</p>
                 </div>
 
                 <div class="grid gap-5">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Video Embed URL</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Video Embed URL</label>
                         <input name="embed_url" x-model="embed_url" @input="embed_url = cleanIframeSrc(embed_url)" class="lucille-product-field w-full @error('embed_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://www.youtube.com/embed/...">
                         @error('embed_url')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
@@ -209,7 +209,7 @@
                     </div>
 
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Google Maps Embed URL</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Google Maps Embed URL</label>
                         <input name="map_url" x-model="map_url" @input="map_url = cleanIframeSrc(map_url)" class="lucille-product-field w-full @error('map_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://www.google.com/maps/embed?...">
                         @error('map_url')
                             <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
@@ -224,7 +224,7 @@
     <div class="space-y-6">
         <div class="sticky top-[100px] border border-[#2b2b2b] bg-[rgba(16,16,18,.62)] p-5 backdrop-blur-sm space-y-5">
             <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-3">
-                <span class="font-display text-[10px] uppercase tracking-[.25em] text-[#7b7b7b]">Vista Previa en Vivo</span>
+                <span class="font-display text-[10px] uppercase tracking-[.25em] text-[#9a9a9a]">Vista Previa en Vivo</span>
                 <span class="inline-flex items-center gap-1.5">
                     <span class="h-1.5 w-1.5 rounded-full bg-[var(--lucille-accent)] animate-pulse"></span>
                     <span class="text-[9px] uppercase tracking-wider text-[#bcbcbc]">Actualizando</span>
@@ -245,12 +245,12 @@
 
                 <!-- Event Title -->
                 <div class="relative inline-block mt-3">
-                    <h1 class="font-display text-2xl uppercase tracking-[.12em] break-words leading-tight" :class="is_cancelled ? 'text-[#7b7b7b] line-through' : 'text-[#dcdcdc]'" x-text="title || 'Título del Evento'"></h1>
+                    <h1 class="font-display text-2xl uppercase tracking-[.12em] break-words leading-tight" :class="is_cancelled ? 'text-[#9a9a9a] line-through' : 'text-[#dcdcdc]'" x-text="title || 'Título del Evento'"></h1>
                     <template x-if="is_cancelled">
                         <span class="absolute -top-3 -right-6 rotate-[15deg] border-2 border-[#c32720] bg-black/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#c32720] shadow-[0_5px_15px_rgba(195,39,32,0.4)]">Cancelado</span>
                     </template>
                 </div>
-                <p class="mt-1.5 text-[9px] uppercase tracking-[.36em] text-[#7b7b7b]">Upcoming shows 2026</p>
+                <p class="mt-1.5 text-[9px] uppercase tracking-[.36em] text-[#9a9a9a]">Upcoming shows 2026</p>
 
                 <!-- Date & Time badges -->
                 <div class="mt-4 flex flex-wrap justify-center gap-2 text-[10px] uppercase tracking-wider text-[#dcdcdc]">
@@ -264,7 +264,7 @@
                 <!-- Info & Content -->
                 <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 space-y-4">
                     <!-- Venue details -->
-                    <div class="grid gap-2 text-[11px] text-[#7b7b7b] border-l border-[#2b2b2b]/60 pl-3.5 space-y-1">
+                    <div class="grid gap-2 text-[11px] text-[#9a9a9a] border-l border-[#2b2b2b]/60 pl-3.5 space-y-1">
                         <div>
                             <span class="text-[9px] uppercase tracking-[.08em] text-[#dcdcdc] font-display block">Fecha:</span>
                             <span class="text-[#bcbcbc]" x-text="formattedDate"></span>
@@ -292,7 +292,7 @@
                     </div>
 
                     <!-- Content Paragraphs -->
-                    <div class="border-t border-[#2b2b2b]/60 pt-3 space-y-2 text-[11px] text-[#7b7b7b] max-h-[140px] overflow-y-auto pr-1">
+                    <div class="border-t border-[#2b2b2b]/60 pt-3 space-y-2 text-[11px] text-[#9a9a9a] max-h-[140px] overflow-y-auto pr-1">
                         <template x-for="(para, idx) in contentParagraphs" :key="idx">
                             <p x-text="para" class="leading-relaxed"></p>
                         </template>

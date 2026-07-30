@@ -32,7 +32,7 @@
                         class="inline-flex min-w-[8rem] items-center justify-between gap-3 border px-4 py-3 text-sm uppercase tracking-[.18em] transition-colors"
                         :class="activeDay === '{{ $dayKey }}'
                             ? 'border-[var(--color-lucille-accent)] bg-[rgba(255,255,255,.04)] text-[#f2f2f2]'
-                            : 'border-[#2b2b2b] text-[#7b7b7b] hover:border-[#505050] hover:text-[#dcdcdc]'"
+                            : 'border-[#2b2b2b] text-[#9a9a9a] hover:border-[#505050] hover:text-[#dcdcdc]'"
                         aria-label="Ver programas de {{ $dayLabel }}"
                     >
                         <span>{{ $dayLabel }}</span>
@@ -53,7 +53,7 @@
                     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $dayLabel }}</h2>
-                            <p class="mt-1 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $dayPrograms->count() }} programa{{ $dayPrograms->count() === 1 ? '' : 's' }}</p>
+                            <p class="mt-1 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $dayPrograms->count() }} programa{{ $dayPrograms->count() === 1 ? '' : 's' }}</p>
                         </div>
                         <div class="border border-[#2b2b2b] px-3 py-2 text-[11px] uppercase tracking-[.2em] text-[#9d9d9d]">
                             Ordenado por hora de transmisión
@@ -61,13 +61,13 @@
                     </div>
 
                     @if ($dayPrograms->isEmpty())
-                        <div class="border border-[#242424] bg-[#111] px-6 py-10 text-center text-[#7b7b7b]">
+                        <div class="border border-[#242424] bg-[#111] px-6 py-10 text-center text-[#9a9a9a]">
                             No hay programas asignados para este día.
                         </div>
                     @else
                         <div class="overflow-x-auto border border-[#242424]">
                             <table class="min-w-full divide-y divide-[#242424] text-left text-sm">
-                                <thead class="bg-[#131313] text-[#7b7b7b]">
+                                <thead class="bg-[#131313] text-[#9a9a9a]">
                                     <tr>
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Imagen</th>
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Programa</th>
@@ -89,26 +89,26 @@
                                                         class="h-20 w-20 border border-[#2b2b2b] object-cover"
                                                     >
                                                 @else
-                                                    <div class="flex h-20 w-20 items-center justify-center border border-[#2b2b2b] bg-[#111] text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">
+                                                    <div class="flex h-20 w-20 items-center justify-center border border-[#2b2b2b] bg-[#111] text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">
                                                         Sin imagen
                                                     </div>
                                                 @endif
                                             </td>
                                             <td class="px-4 py-4">
                                                 <div class="font-display text-base uppercase tracking-[.08em] text-[#dcdcdc]">{{ $masterProgram->name }}</div>
-                                                <div class="mt-1 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $masterProgram->conductor }}</div>
+                                                <div class="mt-1 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $masterProgram->conductor }}</div>
                                             </td>
                                             <td class="px-4 py-4 text-[#9d9d9d]">
                                                 <div class="font-mono text-sm text-[#dcdcdc]">{{ $masterProgram->program_code ?: 'Sin código' }}</div>
-                                                <div class="mt-1 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $masterProgram->code_prefix ?: 'Base auto' }}</div>
+                                                <div class="mt-1 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $masterProgram->code_prefix ?: 'Base auto' }}</div>
                                             </td>
                                             <td class="px-4 py-4 text-[#9d9d9d]">
                                                 <div>{{ $masterProgram->dia_transmision }}</div>
                                                 <div>{{ $masterProgram->hora_transmision ?: 'Sin hora' }}</div>
-                                                <div class="mt-1 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $masterProgram->timezone }}</div>
+                                                <div class="mt-1 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $masterProgram->timezone }}</div>
                                             </td>
                                             <td class="px-4 py-4">
-                                                <span class="inline-flex items-center border border-[#2b2b2b] px-3 py-1 text-[11px] uppercase tracking-[.18em] {{ $masterProgram->activo ? 'text-[#dcdcdc]' : 'text-[#7b7b7b]' }}">
+                                                <span class="inline-flex items-center border border-[#2b2b2b] px-3 py-1 text-[11px] uppercase tracking-[.18em] {{ $masterProgram->activo ? 'text-[#dcdcdc]' : 'text-[#9a9a9a]' }}">
                                                     {{ $masterProgram->activo ? 'Activo' : 'Inactivo' }}
                                                 </span>
                                             </td>
@@ -282,19 +282,19 @@
             <div @click.away="openInvitation = false" class="w-full max-w-lg border border-[#2b2b2b] bg-[rgba(16,16,18,1)] p-6 shadow-2xl">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="font-display text-xl uppercase tracking-[.1em] text-[#dcdcdc]">Generar Invitación Temporal</h3>
-                    <button @click="openInvitation = false" class="text-[#7b7b7b] hover:text-white">
+                    <button @click="openInvitation = false" class="text-[#9a9a9a] hover:text-white">
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
-                <p class="mb-4 text-sm text-[#7b7b7b]">Crea un enlace único para que el productor actualice la información de: <strong class="text-white" x-text="programName"></strong>.</p>
+                <p class="mb-4 text-sm text-[#9a9a9a]">Crea un enlace único para que el productor actualice la información de: <strong class="text-white" x-text="programName"></strong>.</p>
                 
                 <div class="mb-4">
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Vigencia (Días)</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Vigencia (Días)</label>
                     <input type="number" x-model.number="expiresIn" min="1" max="30" class="lucille-product-field w-full">
                 </div>
                 
                 <div class="mb-6">
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Campos a solicitar</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Campos a solicitar</label>
                     <div class="grid grid-cols-2 gap-3 text-sm text-[#dcdcdc]">
                         <label class="flex items-center gap-2"><input type="checkbox" x-model="fields.nombre" class="rounded border-[#2b2b2b] bg-[#1a1a1e] text-[#a855f7]"> Nombre</label>
                         <label class="flex items-center gap-2"><input type="checkbox" x-model="fields.conductor" class="rounded border-[#2b2b2b] bg-[#1a1a1e] text-[#a855f7]"> Conductor</label>
@@ -317,7 +317,7 @@
 
                 <template x-if="url">
                     <div class="mt-6 border-t border-[#2b2b2b] pt-6">
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Enlace Generado</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Enlace Generado</label>
                         <div class="flex items-center gap-2">
                             <input type="text" readonly :value="url" class="lucille-form-field flex-1 cursor-text bg-[#0e0e10]" id="invitation-url">
                             <button type="button" @click="copyUrl" class="lucille-button-solid bg-[#a855f7] hover:bg-[#9333ea] border-none text-white whitespace-nowrap">
@@ -335,7 +335,7 @@
                         </template>
                     </div>
                 </template>
-                <p class="mt-4 text-xs text-[#7b7b7b]">Este enlace expirará en <span x-text="expiresIn"></span> días y solo puede usarse una vez.</p>
+                <p class="mt-4 text-xs text-[#9a9a9a]">Este enlace expirará en <span x-text="expiresIn"></span> días y solo puede usarse una vez.</p>
             </div>
         </div>
 
@@ -345,7 +345,7 @@
                  :class="alertType === 'error' ? 'border-[#c32720]' : 'border-[var(--color-lucille-accent)]'">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="font-display text-lg uppercase tracking-[.1em]" :class="alertType === 'error' ? 'text-[#c32720]' : 'text-[var(--color-lucille-accent)]'" x-text="alertType === 'error' ? 'Error' : 'Notificación'"></h3>
-                    <button @click="alertOpen = false" class="text-[#7b7b7b] hover:text-white">
+                    <button @click="alertOpen = false" class="text-[#9a9a9a] hover:text-white">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>

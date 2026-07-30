@@ -110,7 +110,7 @@
                 </div>
                 <button
                     type="button"
-                    class="p-2 text-[#7b7b7b] hover:text-white rounded hover:bg-[rgba(255,255,255,0.05)] transition-colors focus:outline-none"
+                    class="p-2 text-[#9a9a9a] hover:text-white rounded hover:bg-[rgba(255,255,255,0.05)] transition-colors focus:outline-none"
                     @click="showHelp = false"
                 >
                     <span class="sr-only">Cerrar manual</span>
@@ -124,7 +124,7 @@
             <div class="px-6 py-4 border-b border-[#2b2b2b] bg-[rgba(0,0,0,0.22)] shrink-0 flex flex-col gap-3">
                 <!-- Select for Mobile -->
                 <div class="block md:hidden">
-                    <label class="block text-[10px] uppercase text-[#7b7b7b] mb-1">Sección:</label>
+                    <label class="block text-[10px] uppercase text-[#9a9a9a] mb-1">Sección:</label>
                     <select
                         x-model="activeManual"
                         class="w-full bg-[#121214] border border-[#2b2b2b] text-xs text-white rounded p-2 focus:outline-none focus:border-[var(--lucille-accent)]"
@@ -402,7 +402,7 @@
 
                 <!-- Safe Footer / Empty State -->
                 <div x-show="search && !matches('metadatos titulo slug autor fecha publicacion programar bloques editor interactivo parrafo heading quote cita image gallery raw html inline links enlaces taxonomias categorias etiquetas tags portada destacada featured image imagen archivo subida redes facebook instagram twitter youtube fuente credito enlace externo seo optimizacion meta title description motores busqueda google guardar publicar borrador programar fecha futuro comentarios moderar aprobar desaprobar eventos proximos cartelera master programs parrilla podcast uploads mp3 archive.org radioboss pipeline canciones catalogo discos discografia videos youtube gallery talento staff convocatoria codices invitaciones outreach email campañas config log de auditoria')" class="text-center py-8" style="display: none;">
-                    <p class="text-xs text-[#7b7b7b]">No se encontraron secciones para tu búsqueda.</p>
+                    <p class="text-xs text-[#9a9a9a]">No se encontraron secciones para tu búsqueda.</p>
                     <button type="button" @click="search = ''" class="mt-2 text-xs text-[var(--lucille-accent)] hover:underline">Mostrar todo</button>
                 </div>
             </div>

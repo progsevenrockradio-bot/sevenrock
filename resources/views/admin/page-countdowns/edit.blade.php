@@ -2,7 +2,7 @@
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="font-display text-2xl uppercase tracking-[.08em] text-[#dcdcdc]">Editar Página en Espera</h1>
-            <p class="text-sm text-[#7b7b7b] mt-1">Configuración actual para: {{ $pageCountdown->route_path }}</p>
+            <p class="text-sm text-[#9a9a9a] mt-1">Configuración actual para: {{ $pageCountdown->route_path }}</p>
         </div>
         <a href="{{ route('admin.page-countdowns.index') }}" class="lucille-button">Volver al listado</a>
     </div>

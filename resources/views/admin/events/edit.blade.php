@@ -9,7 +9,7 @@
         <div class="sticky top-0 z-50 -mx-6 mb-6 border-b border-[#2b2b2b] bg-[rgba(16,16,18,.96)] px-6 py-4 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
             <div>
                 <h1 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ !empty($admin['edit_event']) ? $admin['edit_event'] : 'Editar Evento' }}</h1>
-                <p class="mt-1 text-xs text-[#7b7b7b]">{{ !empty($admin['update_event_copy']) ? $admin['update_event_copy'] : 'Actualiza la información del evento.' }}</p>
+                <p class="mt-1 text-xs text-[#9a9a9a]">{{ !empty($admin['update_event_copy']) ? $admin['update_event_copy'] : 'Actualiza la información del evento.' }}</p>
             </div>
             <div class="flex items-center gap-3">
                 <a href="{{ route('admin.events.index') }}" class="lucille-button">

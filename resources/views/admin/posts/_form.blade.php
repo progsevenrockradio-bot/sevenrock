@@ -20,13 +20,13 @@
     <div class="lg:col-span-2 space-y-6">
         <!-- Título -->
         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
-            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['title_label'] }}</label>
+            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['title_label'] }}</label>
             <input name="title" value="{{ old('title', $post->title) }}" class="lucille-product-field w-full text-lg font-bold" placeholder="Escribe el título aquí...">
         </div>
 
         <!-- Enlace permanente / Slug -->
         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
-            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['slug_label'] }}</label>
+            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['slug_label'] }}</label>
             <input name="slug" value="{{ old('slug', $post->slug) }}" class="lucille-product-field w-full text-xs font-mono" placeholder="enlace-permanente-automatico">
         </div>
 
@@ -40,8 +40,8 @@
                 })"
                 x-init="init()"
             >
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['content_paragraphs_label'] }}</label>
-                <p class="mb-4 text-sm text-[#7b7b7b]">
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['content_paragraphs_label'] }}</label>
+                <p class="mb-4 text-sm text-[#9a9a9a]">
                     Editor por bloques para contenido importado de WordPress. Puedes reordenar, añadir o borrar bloques sin ver comentarios internos.
                 </p>
 
@@ -70,7 +70,7 @@
                                         <option value="gallery">Gallery</option>
                                         <option value="raw">Raw HTML</option>
                                     </select>
-                                    <span class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Block <span x-text="index + 1"></span></span>
+                                    <span class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Block <span x-text="index + 1"></span></span>
                                 </div>
 
                                 <div class="flex flex-wrap gap-2">
@@ -85,7 +85,7 @@
                                     <template x-if="block.type === 'image'">
                                         <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
                                             <div class="flex items-center justify-between gap-3">
-                                                <h4 class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Image Block</h4>
+                                                <h4 class="font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Image Block</h4>
                                                 <label class="lucille-button">
                                                     Upload image
                                                     <input class="hidden" type="file" accept="image/*" @change="uploadImageForBlock(block, $event)">
@@ -93,11 +93,11 @@
                                             </div>
                                             <div class="mt-4 grid gap-4 md:grid-cols-2">
                                                 <div>
-                                                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Image URL</label>
+                                                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Image URL</label>
                                                     <input class="lucille-product-field w-full" type="text" x-model="block.src" @input="sync()" placeholder="https://...">
                                                 </div>
                                                 <div>
-                                                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Alt text</label>
+                                                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Alt text</label>
                                                     <input class="lucille-product-field w-full" type="text" x-model="block.alt" @input="sync()" placeholder="Describe the image">
                                                 </div>
                                             </div>
@@ -107,14 +107,14 @@
                                     <template x-if="block.type === 'gallery'">
                                         <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
                                             <div class="flex flex-wrap items-center justify-between gap-3">
-                                                <h4 class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Gallery Block</h4>
+                                                <h4 class="font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Gallery Block</h4>
                                                 <label class="lucille-button">
                                                     Upload images
                                                     <input class="hidden" type="file" accept="image/*" multiple @change="uploadGalleryImages(block, $event)">
                                                 </label>
                                             </div>
                                             <div class="mt-4">
-                                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Gallery title</label>
+                                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Gallery title</label>
                                                 <input class="lucille-product-field w-full" type="text" x-model="block.caption" @input="sync()" placeholder="Optional caption">
                                             </div>
                                             <div class="mt-4 space-y-3">
@@ -122,7 +122,7 @@
                                                     <div class="grid gap-3 border border-[#2b2b2b] bg-[rgba(0,0,0,.12)] p-3 md:grid-cols-[110px_1fr_auto]">
                                                         <div class="h-[96px] overflow-hidden border border-[#2b2b2b] bg-black">
                                                             <img :src="item.src" alt="" class="h-full w-full object-cover" x-show="item.src" loading="lazy">
-                                                            <div class="flex h-full items-center justify-center text-xs uppercase tracking-[.18em] text-[#7b7b7b]" x-show="! item.src">No image</div>
+                                                            <div class="flex h-full items-center justify-center text-xs uppercase tracking-[.18em] text-[#9a9a9a]" x-show="! item.src">No image</div>
                                                         </div>
                                                         <div class="space-y-2">
                                                             <input class="lucille-product-field w-full" type="text" x-model="item.src" @input="sync()" placeholder="Image URL">
@@ -140,19 +140,19 @@
 
                                     <template x-if="block.type === 'heading'">
                                         <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
-                                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Heading text</label>
+                                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Heading text</label>
                                             <input class="lucille-product-field w-full" type="text" x-model="block.value" @input="sync()" placeholder="Heading">
                                         </div>
                                     </template>
 
                                     <template x-if="block.type === 'paragraph'">
                                         <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
-                                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Paragraph text</label>
+                                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Paragraph text</label>
                                             <textarea class="lucille-product-field w-full" rows="8" x-model="block.value" @input="sync()" placeholder="Write text here"></textarea>
                                             
                                             <div class="mt-4 border-t border-[#2b2b2b] pt-4">
                                                 <div class="flex items-center justify-between">
-                                                    <span class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">🔗 Inline Links</span>
+                                                    <span class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">🔗 Inline Links</span>
                                                     <button type="button" class="lucille-button text-xs" @click="addLink(block)">+ Add Link</button>
                                                 </div>
                                                 <template x-for="(link, linkIndex) in block.links" :key="linkIndex">
@@ -169,10 +169,10 @@
 
                                     <template x-if="block.type === 'quote'">
                                         <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
-                                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Quote text</label>
+                                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Quote text</label>
                                             <textarea class="lucille-product-field w-full" rows="6" x-model="block.value" @input="sync()" placeholder="Write the quote"></textarea>
                                             <div class="mt-4">
-                                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Citation</label>
+                                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Citation</label>
                                                 <input class="lucille-product-field w-full" type="text" x-model="block.cite" @input="sync()" placeholder="Author / source">
                                             </div>
                                         </div>
@@ -180,7 +180,7 @@
 
                                     <template x-if="block.type === 'raw'">
                                         <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
-                                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Raw HTML</label>
+                                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Raw HTML</label>
                                             <textarea
                                                 class="lucille-product-field w-full font-mono text-[12px]"
                                                 rows="10"
@@ -194,8 +194,8 @@
 
                                 <div class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-4">
                                     <div class="flex items-center justify-between gap-3">
-                                        <span class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Preview</span>
-                                        <span class="text-[10px] uppercase tracking-[.18em] text-[#7b7b7b]">Live</span>
+                                        <span class="font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Preview</span>
+                                        <span class="text-[10px] uppercase tracking-[.18em] text-[#9a9a9a]">Live</span>
                                     </div>
                                     <div class="mt-4 min-h-[120px] border border-[#2b2b2b] bg-[#111] p-4 text-[#dcdcdc]" x-html="previewHtml(block)"></div>
                                 </div>
@@ -208,13 +208,13 @@
 
         <!-- Extracto / Excerpt -->
         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
-            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['excerpt_label'] }}</label>
+            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['excerpt_label'] }}</label>
             <textarea name="excerpt" rows="4" class="lucille-product-field w-full" placeholder="Escribe un resumen o extracto corto aquí...">{{ old('excerpt', $post->excerpt) }}</textarea>
         </div>
 
         <!-- Cita Destacada / Quote -->
         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
-            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['quote_label'] }}</label>
+            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['quote_label'] }}</label>
             <textarea name="quote" rows="3" class="lucille-product-field w-full" placeholder="Escribe una frase célebre o cita aquí...">{{ old('quote', $post->quote) }}</textarea>
         </div>
     </div>
@@ -227,17 +227,17 @@
             
             <div class="space-y-4">
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['author_label'] }}</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['author_label'] }}</label>
                     <input name="author" value="{{ old('author', $post->author) }}" class="lucille-product-field w-full">
                 </div>
 
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['published_at_label'] }}</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['published_at_label'] }}</label>
                     <input type="datetime-local" name="published_at" value="{{ old('published_at', optional($post->published_at)->format('Y-m-d\TH:i')) }}" class="lucille-product-field w-full">
                 </div>
 
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Zona horaria</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Zona horaria</label>
                     @php
                         // List of standard common timezones for selection
                         $timezones = [
@@ -287,16 +287,16 @@
         <!-- Caja 2: Notificación al Autor -->
         <div class="sidebar-card">
             <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-2 mb-4">📧 Notificación al Autor</h3>
-            <p class="mb-4 text-xs text-[#7b7b7b]">Configura un correo automático para notificar al autor cuando este post sea publicado (inmediatamente o programado).</p>
+            <p class="mb-4 text-xs text-[#9a9a9a]">Configura un correo automático para notificar al autor cuando este post sea publicado (inmediatamente o programado).</p>
             
             <div class="space-y-4">
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Correo Destinatario</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Correo Destinatario</label>
                     <input type="email" name="author_email" value="{{ old('author_email', $post->author_email) }}" class="lucille-product-field w-full" placeholder="ejemplo@autor.com">
                 </div>
 
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Correo Remitente</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Correo Remitente</label>
                     <input type="email" name="notification_sender" value="{{ old('notification_sender', $post->notification_sender) }}" class="lucille-product-field w-full" placeholder="noreply@sevenrockradio.com">
                     <p class="mt-1 text-[10px] text-[#555]">Dejar en blanco para usar el correo por defecto de la radio.</p>
                 </div>
@@ -315,13 +315,13 @@
 
             <div class="space-y-4">
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['featured_image_path_label'] }}</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['featured_image_path_label'] }}</label>
                     <input name="featured_image" value="{{ old('featured_image', $post->featured_image) }}" class="lucille-product-field w-full" placeholder="Ruta o URL externa...">
                 </div>
 
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['featured_image_file_label'] }}</label>
-                    <input type="file" name="featured_image_file" class="block w-full text-xs text-[#7b7b7b]">
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['featured_image_file_label'] }}</label>
+                    <input type="file" name="featured_image_file" class="block w-full text-xs text-[#9a9a9a]">
                 </div>
             </div>
         </div>
@@ -332,7 +332,7 @@
             
             <div class="space-y-4">
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['categories_label'] }}</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['categories_label'] }}</label>
                     <input
                         name="categories_text"
                         value="{{ old('categories_text', $categoriesText ?? '') }}"
@@ -348,7 +348,7 @@
                 </div>
 
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['tags_label'] }}</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['tags_label'] }}</label>
                     <input
                         name="tags_text"
                         value="{{ old('tags_text', $tagsText ?? '') }}"
@@ -368,23 +368,23 @@
         <!-- Caja 5: Redes Sociales -->
         <div class="sidebar-card">
             <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-2 mb-4">🌐 Redes del Artista / Fuente</h3>
-            <p class="mb-4 text-[11px] text-[#7b7b7b]">Enlaces informativos sobre el artista o banda mencionada en el post.</p>
+            <p class="mb-4 text-[11px] text-[#9a9a9a]">Enlaces informativos sobre el artista o banda mencionada en el post.</p>
             
             <div class="space-y-4">
                 <div>
-                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Facebook URL</label>
+                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Facebook URL</label>
                     <input name="facebook_url" value="{{ old('facebook_url', $post->facebook_url) }}" class="lucille-product-field w-full text-xs">
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Instagram URL</label>
+                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Instagram URL</label>
                     <input name="instagram_url" value="{{ old('instagram_url', $post->instagram_url) }}" class="lucille-product-field w-full text-xs">
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Twitter URL</label>
+                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Twitter URL</label>
                     <input name="twitter_url" value="{{ old('twitter_url', $post->twitter_url) }}" class="lucille-product-field w-full text-xs">
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">YouTube URL</label>
+                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">YouTube URL</label>
                     <input name="youtube_url" value="{{ old('youtube_url', $post->youtube_url) }}" class="lucille-product-field w-full text-xs">
                 </div>
             </div>
@@ -396,19 +396,19 @@
             
             <div class="space-y-4">
                 <div>
-                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">External link URL</label>
+                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">External link URL</label>
                     <input name="external_link_url" value="{{ old('external_link_url', $post->external_link_url) }}" class="lucille-product-field w-full text-xs">
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">External link label</label>
+                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">External link label</label>
                     <input name="external_link_label" value="{{ old('external_link_label', $post->external_link_label) }}" class="lucille-product-field w-full text-xs">
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Source name</label>
+                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Source name</label>
                     <input name="source_name" value="{{ old('source_name', $post->source_name) }}" class="lucille-product-field w-full text-xs">
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Source URL</label>
+                    <label class="mb-1 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Source URL</label>
                     <input name="source_url" value="{{ old('source_url', $post->source_url) }}" class="lucille-product-field w-full text-xs">
                 </div>
             </div>
@@ -420,12 +420,12 @@
             
             <div class="space-y-4">
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Meta title</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Meta title</label>
                     <input name="meta_title" value="{{ old('meta_title', $post->meta_title) }}" class="lucille-product-field w-full" placeholder="Título para buscadores...">
                 </div>
 
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Meta description</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Meta description</label>
                     <textarea name="meta_description" rows="4" class="lucille-product-field w-full" placeholder="Breve resumen para los resultados de búsqueda...">{{ old('meta_description', $post->meta_description) }}</textarea>
                 </div>
             </div>

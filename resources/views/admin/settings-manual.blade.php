@@ -93,7 +93,7 @@
         <aside class="manual-sidebar sticky top-6 space-y-6 self-start">
             <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
                 <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Índice</h2>
-                <p class="mt-2 text-sm leading-7 text-[#7b7b7b]">Navegación fija para saltar entre secciones del manual.</p>
+                <p class="mt-2 text-sm leading-7 text-[#9a9a9a]">Navegación fija para saltar entre secciones del manual.</p>
                 <nav class="mt-5 space-y-2 text-sm">
                     <a href="#tab1" class="block border px-4 py-3 transition" :class="activeSection === 'tab1' ? 'border-[var(--color-lucille-accent)] bg-[rgba(255,255,255,.06)] text-white' : 'border-[#2b2b2b] bg-[rgba(0,0,0,.18)] text-[#e4e4e4] hover:border-[#4a4a4a] hover:text-white'">Apariencia y Multimedia</a>
                     <a href="#tab2" class="block border px-4 py-3 transition" :class="activeSection === 'tab2' ? 'border-[var(--color-lucille-accent)] bg-[rgba(255,255,255,.06)] text-white' : 'border-[#2b2b2b] bg-[rgba(0,0,0,.18)] text-[#e4e4e4] hover:border-[#4a4a4a] hover:text-white'">Contenido y Textos</a>
@@ -110,7 +110,7 @@
                     <a href="{{ route('admin.settings.edit') }}" class="lucille-button">Volver a ajustes</a>
                     <a href="{{ route('admin.dashboard') }}" class="lucille-button">{{ $admin['back_to_dashboard'] }}</a>
                 </div>
-                <p class="mt-4 text-xs leading-6 text-[#7b7b7b]">
+                <p class="mt-4 text-xs leading-6 text-[#9a9a9a]">
                     Usa la impresión del navegador para generar un PDF desde esta misma vista.
                 </p>
             </section>
@@ -132,7 +132,7 @@
             <div>
                 <p class="text-[10px] uppercase tracking-[.28em] text-[#8b8b8b]">Pestaña 1</p>
                 <h2 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Apariencia y Multimedia</h2>
-                <p class="mt-3 max-w-3xl text-sm leading-7 text-[#7b7b7b]">
+                <p class="mt-3 max-w-3xl text-sm leading-7 text-[#9a9a9a]">
                     Aquí se controla la identidad visual del sitio: nombre, marca, logo, fondos, hero, tipografía, colores y media principal.
                 </p>
             </div>
@@ -243,7 +243,7 @@
             <div>
                 <p class="text-[10px] uppercase tracking-[.28em] text-[#8b8b8b]">Pestaña 2</p>
                 <h2 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Contenido y Textos</h2>
-                <p class="mt-3 max-w-3xl text-sm leading-7 text-[#7b7b7b]">
+                <p class="mt-3 max-w-3xl text-sm leading-7 text-[#9a9a9a]">
                     Esta pestaña agrupa los bloques JSON. Si el formato falla, el guardado se bloquea y el sitio puede perder parte del contenido dinámico.
                 </p>
             </div>
@@ -325,7 +325,7 @@
             <div>
                 <p class="text-[10px] uppercase tracking-[.28em] text-[#8b8b8b]">Pestaña 3</p>
                 <h2 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Comunicaciones y Redes</h2>
-                <p class="mt-3 max-w-3xl text-sm leading-7 text-[#7b7b7b]">
+                <p class="mt-3 max-w-3xl text-sm leading-7 text-[#9a9a9a]">
                     Esta pestaña reúne textos de contacto, direcciones, teléfonos, correos del sistema, redes sociales y el estado real de notificaciones activas.
                 </p>
             </div>
@@ -389,23 +389,23 @@
                     <h4 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Estado activo de notificaciones</h4>
                     <div class="mt-4 grid gap-4 md:grid-cols-2">
                         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
-                            <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Correo principal activo</dt>
+                            <dt class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Correo principal activo</dt>
                             <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['primary'] ?? 'No definido' }}</dd>
                         </div>
                         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
-                            <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Correo copia activo</dt>
+                            <dt class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Correo copia activo</dt>
                             <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['copy'] ?? 'No definido' }}</dd>
                         </div>
                         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
-                            <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Remitente activo</dt>
+                            <dt class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Remitente activo</dt>
                             <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['from'] ?? 'No definido' }}</dd>
                         </div>
                         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
-                            <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Reply-to activo</dt>
+                            <dt class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Reply-to activo</dt>
                             <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['reply_to'] ?? 'No definido' }}</dd>
                         </div>
                         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4 md:col-span-2">
-                            <dt class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Mailer activo</dt>
+                            <dt class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Mailer activo</dt>
                             <dd class="mt-2 break-all text-sm text-[#e0e0e0]">{{ $activeNotificationState['mailer'] ?? 'No definido' }}</dd>
                         </div>
                     </div>

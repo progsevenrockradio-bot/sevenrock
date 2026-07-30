@@ -116,7 +116,7 @@
             <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div class="max-w-3xl">
                     <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $admin['theme_settings'] }}</h1>
-                    <p class="mt-3 text-sm leading-7 text-[#7b7b7b]">{{ $admin['theme_settings_copy'] }}</p>
+                    <p class="mt-3 text-sm leading-7 text-[#9a9a9a]">{{ $admin['theme_settings_copy'] }}</p>
                 </div>
 
                 <div class="flex flex-wrap gap-3">

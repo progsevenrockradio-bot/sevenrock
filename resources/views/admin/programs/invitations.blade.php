@@ -3,7 +3,7 @@
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Invitaciones</h1>
-                <p class="mt-3 max-w-3xl text-sm text-[#7b7b7b]">Panel rápido para enviar invitaciones a productores por programa.</p>
+                <p class="mt-3 max-w-3xl text-sm text-[#9a9a9a]">Panel rápido para enviar invitaciones a productores por programa.</p>
             </div>
             <a href="{{ route('admin.programs.index') }}" class="lucille-button-solid">Volver</a>
         </div>
@@ -14,7 +14,7 @@
             <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $program->program_code ?: 'Sin código' }}</div>
+                        <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $program->program_code ?: 'Sin código' }}</div>
                         <h2 class="mt-2 font-display text-2xl uppercase tracking-[.08em] text-[#dcdcdc]">{{ $program->name }}</h2>
                         <p class="mt-2 text-sm text-[#9f9f9f]">{{ $program->conductor }}</p>
                     </div>

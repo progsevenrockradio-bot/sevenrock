@@ -2,7 +2,7 @@
     <div class="mx-auto mt-10 max-w-xl">
         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8 md:p-10">
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Nueva Contraseña</h1>
-            <p class="mt-3 text-sm text-[#7b7b7b]">
+            <p class="mt-3 text-sm text-[#9a9a9a]">
                 Ingresa tu nueva contraseña para restablecer el acceso al panel.
             </p>
 
@@ -75,7 +75,7 @@
 
                 <div class="flex items-center justify-between gap-4">
                     <button type="submit" class="lucille-button-solid">Restablecer contraseña</button>
-                    <a href="{{ route('admin.login') }}" class="text-xs text-[#7b7b7b] transition hover:text-lucille-accent">
+                    <a href="{{ route('admin.login') }}" class="text-xs text-[#9a9a9a] transition hover:text-lucille-accent">
                         ← Volver al login
                     </a>
                 </div>

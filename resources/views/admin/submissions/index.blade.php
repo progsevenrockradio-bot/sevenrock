@@ -16,21 +16,21 @@
         <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Gestión de Maquetas</h1>
-                <p class="mt-2 text-[#7b7b7b]">Buzón de recepción de maquetas enviadas e historial de correos.</p>
+                <p class="mt-2 text-[#9a9a9a]">Buzón de recepción de maquetas enviadas e historial de correos.</p>
             </div>
 
             <!-- Tabs Navigation -->
             <div class="flex gap-2 border-b border-[#2b2b2b] pb-[-1px]">
                 <button 
                     @click="activeTab = 'maquetas'" 
-                    :class="{'text-white border-b-2 border-lucille-accent': activeTab === 'maquetas', 'text-[#7b7b7b] border-b-2 border-transparent hover:text-[#dcdcdc]': activeTab !== 'maquetas'}"
+                    :class="{'text-white border-b-2 border-lucille-accent': activeTab === 'maquetas', 'text-[#9a9a9a] border-b-2 border-transparent hover:text-[#dcdcdc]': activeTab !== 'maquetas'}"
                     class="px-4 py-2 font-semibold uppercase tracking-wider text-sm transition-colors"
                 >
                     Recibidas
                 </button>
                 <button 
                     @click="activeTab = 'correos'" 
-                    :class="{'text-white border-b-2 border-lucille-accent': activeTab === 'correos', 'text-[#7b7b7b] border-b-2 border-transparent hover:text-[#dcdcdc]': activeTab !== 'correos'}"
+                    :class="{'text-white border-b-2 border-lucille-accent': activeTab === 'correos', 'text-[#9a9a9a] border-b-2 border-transparent hover:text-[#dcdcdc]': activeTab !== 'correos'}"
                     class="px-4 py-2 font-semibold uppercase tracking-wider text-sm transition-colors"
                 >
                     Historial de Correos
@@ -72,7 +72,7 @@
                             <th class="px-5 py-4 text-right">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-[#2b2b2b] text-[#7b7b7b]">
+                    <tbody class="divide-y divide-[#2b2b2b] text-[#9a9a9a]">
                         @forelse ($submissions as $submission)
                             <tr class="hover:bg-[rgba(255,255,255,.02)] transition-colors">
                                 <td class="px-5 py-5 align-top text-center">
@@ -108,7 +108,7 @@
                                     <div class="mb-2">
                                         <a href="mailto:{{ $submission->contact_email }}" class="text-[#b8e6c3] hover:underline break-all block">{{ $submission->contact_email }}</a>
                                         @if($submission->phone_number)
-                                            <span class="text-[#7b7b7b] block">{{ $submission->phone_number }}</span>
+                                            <span class="text-[#9a9a9a] block">{{ $submission->phone_number }}</span>
                                         @endif
                                     </div>
                                     
@@ -176,7 +176,7 @@
                                                             @endphp
                                                             <input type="checkbox" @change="toggleFeed({{ $submission->id }}, $event.target)" {{ $hasActiveFeed ? 'checked' : '' }} class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012]">
                                                         @endif
-                                                        <span class="text-[10px] text-[#7b7b7b] uppercase tracking-wider font-semibold">Feed</span>
+                                                        <span class="text-[10px] text-[#9a9a9a] uppercase tracking-wider font-semibold">Feed</span>
                                                     </label>
 
                                                     @if(!$submission->published_to_hub)
@@ -250,7 +250,7 @@
                             <th class="px-5 py-4 text-right">Acción</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-[#2b2b2b] text-[#7b7b7b]">
+                    <tbody class="divide-y divide-[#2b2b2b] text-[#9a9a9a]">
                         @forelse ($emailLogs as $log)
                             <tr class="hover:bg-[rgba(255,255,255,.02)] transition-colors">
                                 <td class="px-5 py-4 whitespace-nowrap">

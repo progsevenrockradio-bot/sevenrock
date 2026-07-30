@@ -9,7 +9,7 @@
     <div class="mb-6 flex items-center justify-between">
         <div>
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $admin['albums_heading'] }}</h1>
-            <p class="mt-2 text-[#7b7b7b]">{{ $admin['albums_copy'] ?? 'Editable discography items used across the public theme.' }}</p>
+            <p class="mt-2 text-[#9a9a9a]">{{ $admin['albums_copy'] ?? 'Editable discography items used across the public theme.' }}</p>
         </div>
         <a href="{{ route('admin.albums.create') }}" class="lucille-button-solid">{{ $admin['new_album'] }}</a>
     </div>
@@ -25,7 +25,7 @@
                     <th class="px-5 py-4">{{ $admin['table_actions'] }}</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-[#2b2b2b] text-[#7b7b7b]">
+            <tbody class="divide-y divide-[#2b2b2b] text-[#9a9a9a]">
                 @forelse ($albums as $album)
                     <tr class="hover:bg-[rgba(255,255,255,.02)]">
                         <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">{{ $album->title }}</td>
@@ -52,7 +52,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-5 py-10 text-center text-[#7b7b7b]">{{ $admin['no_albums'] }}</td>
+                        <td colspan="5" class="px-5 py-10 text-center text-[#9a9a9a]">{{ $admin['no_albums'] }}</td>
                     </tr>
                 @endforelse
             </tbody>

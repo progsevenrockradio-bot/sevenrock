@@ -8,20 +8,20 @@
 
         <div class="grid gap-4 md:grid-cols-4">
             <div class="border border-white/10 bg-[#10161b] p-5">
-                <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Total talentos</div>
+                <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Total talentos</div>
                 <div class="mt-2 font-display text-3xl text-white">{{ $stats['total'] ?? 0 }}</div>
                 <div class="mt-1 text-xs text-[#8b8b8b]">Activos: {{ $stats['active'] ?? 0 }} · Inactivos: {{ $stats['inactive'] ?? 0 }}</div>
             </div>
             <div class="border border-white/10 bg-[#10161b] p-5">
-                <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Ingresos mensuales</div>
+                <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Ingresos mensuales</div>
                 <div class="mt-2 font-display text-3xl text-white">€{{ number_format((float) ($stats['monthly_revenue'] ?? 0), 2) }}</div>
             </div>
             <div class="border border-white/10 bg-[#10161b] p-5">
-                <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Plan más popular</div>
+                <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Plan más popular</div>
                 <div class="mt-2 font-display text-3xl text-white">{{ $stats['most_popular_plan'] ?? 'N/D' }}</div>
             </div>
             <div class="border border-white/10 bg-[#10161b] p-5">
-                <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Almacenamiento B2</div>
+                <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Almacenamiento B2</div>
                 <div class="mt-2 font-display text-3xl text-white">{{ number_format((float) ($stats['storage_mb'] ?? 0), 2) }} MB</div>
             </div>
         </div>
@@ -46,7 +46,7 @@
 
         <div class="overflow-x-auto border border-white/10 bg-[#10161b]">
             <table class="min-w-full divide-y divide-white/10 text-left text-sm">
-                <thead class="bg-black/20 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                <thead class="bg-black/20 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                     <tr>
                         <th class="px-4 py-3">Logo</th>
                         <th class="px-4 py-3">Nombre</th>

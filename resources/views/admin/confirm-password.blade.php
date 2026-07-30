@@ -2,7 +2,7 @@
     <div class="mx-auto mt-10 max-w-xl">
         <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8 md:p-10 rounded">
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Confirmar Contraseña</h1>
-            <p class="mt-3 text-sm text-[#7b7b7b]">Por seguridad, confirma tu contraseña de administrador antes de continuar a esta sección.</p>
+            <p class="mt-3 text-sm text-[#9a9a9a]">Por seguridad, confirma tu contraseña de administrador antes de continuar a esta sección.</p>
 
             @if ($errors->any())
                 <div class="mt-6 border border-[#5a1d1a] bg-[rgba(195,39,32,.08)] px-4 py-3 text-sm text-[#f3b6b1] rounded">

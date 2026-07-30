@@ -148,7 +148,7 @@ class NewReleaseController extends Controller
             'released_at' => ['nullable', 'date'],
             'cover_image' => ['nullable', 'string', 'max:2048', 'required_without:cover_image_file'],
             'cover_image_file' => ['nullable', 'image', 'max:6144'],
-            'audio_path' => ['nullable', 'string', 'max:2048', 'required_without:audio_file'],
+            'audio_path' => ['nullable', 'string', 'max:2048'],
             'audio_file' => ['nullable', 'file', 'mimes:mp3,wav,ogg,mpga,mpeg', 'max:20480'],
             'youtube_url' => ['nullable', 'url', 'max:2048'],
             'spotify_url' => ['nullable', 'url', 'max:2048'],

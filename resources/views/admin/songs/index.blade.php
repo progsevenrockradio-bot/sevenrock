@@ -8,7 +8,7 @@
     <div class="mb-6 flex items-center justify-between">
         <div>
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Songs</h1>
-            <p class="mt-2 text-[#7b7b7b]">Metadata, lyrics and fallback info for the player.</p>
+            <p class="mt-2 text-[#9a9a9a]">Metadata, lyrics and fallback info for the player.</p>
         </div>
         <a href="{{ route('admin.songs.create') }}" class="lucille-button-solid">New Song</a>
     </div>
@@ -24,7 +24,7 @@
                     <th class="px-5 py-4">Actions</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-[#2b2b2b] text-[#7b7b7b]">
+            <tbody class="divide-y divide-[#2b2b2b] text-[#9a9a9a]">
                 @forelse ($songs as $song)
                     <tr class="hover:bg-[rgba(255,255,255,.02)]">
                         <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">{{ $song->title }}</td>
@@ -51,7 +51,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-5 py-10 text-center text-[#7b7b7b]">No songs yet.</td>
+                        <td colspan="5" class="px-5 py-10 text-center text-[#9a9a9a]">No songs yet.</td>
                     </tr>
                 @endforelse
             </tbody>

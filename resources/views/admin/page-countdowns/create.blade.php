@@ -2,7 +2,7 @@
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h1 class="font-display text-2xl uppercase tracking-[.08em] text-[#dcdcdc]">Agregar Página en Espera</h1>
-            <p class="text-sm text-[#7b7b7b] mt-1">Bloquea temporalmente una ruta pública.</p>
+            <p class="text-sm text-[#9a9a9a] mt-1">Bloquea temporalmente una ruta pública.</p>
         </div>
         <a href="{{ route('admin.page-countdowns.index') }}" class="lucille-button">Volver al listado</a>
     </div>
@@ -31,7 +31,7 @@
             <div>
                 <label class="mb-2 block text-[10px] font-semibold uppercase tracking-[.18em] text-[#8a8a8a]">Fecha y Hora de Activación</label>
                 <input type="datetime-local" name="active_at" value="{{ old('active_at') }}" class="lucille-form-field w-full">
-                <p class="text-xs text-[#7b7b7b] mt-1">Si la dejas vacía, se bloqueará indefinidamente.</p>
+                <p class="text-xs text-[#9a9a9a] mt-1">Si la dejas vacía, se bloqueará indefinidamente.</p>
                 @error('active_at') <p class="mt-1 text-xs text-red-400">{{ $message }}</p> @enderror
             </div>
 

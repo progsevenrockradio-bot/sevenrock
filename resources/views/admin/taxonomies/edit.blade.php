@@ -4,7 +4,7 @@
     <div class="mb-6 flex items-center justify-between gap-4">
         <div>
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Edit taxonomy</h1>
-            <p class="mt-2 text-[#7b7b7b]">Update the name or switch between category and tag.</p>
+            <p class="mt-2 text-[#9a9a9a]">Update the name or switch between category and tag.</p>
         </div>
         <a href="{{ route('admin.dashboard') }}#taxonomias" class="lucille-button">Back to dashboard</a>
     </div>
@@ -21,7 +21,7 @@
             @method('PUT')
 
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Type</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Type</label>
                 <select name="type" class="lucille-product-field w-full">
                     <option value="category" @selected(old('type', $taxonomy->type) === 'category')>Category</option>
                     <option value="tag" @selected(old('type', $taxonomy->type) === 'tag')>Tag</option>
@@ -29,7 +29,7 @@
             </div>
 
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Name</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Name</label>
                 <input
                     name="name"
                     value="{{ old('name', $taxonomy->name) }}"

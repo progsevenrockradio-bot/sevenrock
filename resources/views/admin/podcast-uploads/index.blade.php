@@ -75,7 +75,7 @@
                     <p class="text-[10px] uppercase tracking-[.28em] text-[#8b8b8b]">Estado del formulario</p>
                     <p class="mt-2 text-sm text-[#e6e6e6]" x-text="statusMessage || 'Listo para crear el episodio.'"></p>
                 </div>
-                <div class="text-right text-[10px] uppercase tracking-[.18em] text-[#7b7b7b]" x-text="phaseLabel"></div>
+                <div class="text-right text-[10px] uppercase tracking-[.18em] text-[#9a9a9a]" x-text="phaseLabel"></div>
             </div>
 
             <template x-if="errorMessages.length > 0">
@@ -159,14 +159,14 @@
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Últimos episodios</h2>
-                <p class="mt-2 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                <p class="mt-2 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                     Se actualiza automáticamente y muestra todo lo creado, incluidos borradores.
                 </p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <a href="{{ route('admin.podcast-uploads.published') }}" class="lucille-button">Ver publicados</a>
                 <a href="{{ route('admin.podcast-uploads.published.print') }}" target="_blank" class="lucille-button-solid">Imprimir publicados</a>
-                <div class="flex items-center gap-3 text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">
+                <div class="flex items-center gap-3 text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">
                     <svg x-show="isRefreshing" x-cloak class="h-3.5 w-3.5 animate-spin text-[var(--color-lucille-accent)]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
                         <path class="opacity-90" fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2Z"></path>
@@ -178,14 +178,14 @@
 
         <div class="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <form action="{{ route('admin.podcast-uploads.index') }}" method="GET" class="flex items-center gap-3">
-                <label for="filter_date" class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Filtrar por fecha:</label>
+                <label for="filter_date" class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Filtrar por fecha:</label>
                 <input type="date" name="date" id="filter_date" value="{{ request('date') }}" class="h-9 border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] px-3 text-sm text-[#e4e4e4] focus:border-[#4a4a4a] focus:outline-none">
                 <button type="submit" class="lucille-button">Filtrar</button>
                 @if(request('date'))
-                    <a href="{{ route('admin.podcast-uploads.index') }}" class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b] hover:text-white">Limpiar</a>
+                    <a href="{{ route('admin.podcast-uploads.index') }}" class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a] hover:text-white">Limpiar</a>
                 @endif
             </form>
-            <div class="flex items-center gap-3 text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">
+            <div class="flex items-center gap-3 text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">
                 <span x-text="lastUpdatedLabel"></span>
                 <span x-show="isRefreshing" x-cloak>Refrescando lista...</span>
             </div>

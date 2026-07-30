@@ -14,7 +14,7 @@
     <div class="mb-6 flex items-center justify-between">
         <div>
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Contratos de Artistas</h1>
-            <p class="mt-2 text-[#7b7b7b]">Crea, envía y descarga contratos firmados electrónicamente mediante el sistema Clickwrap.</p>
+            <p class="mt-2 text-[#9a9a9a]">Crea, envía y descarga contratos firmados electrónicamente mediante el sistema Clickwrap.</p>
         </div>
         <a href="{{ route('admin.contracts.create') }}" class="lucille-button-solid">Nuevo Contrato</a>
     </div>
@@ -22,12 +22,12 @@
     <div class="mb-6 border border-[#2b2b2b] bg-[rgba(16,16,18,.6)] p-4 rounded-[8px]">
         <form action="{{ route('admin.contracts.index') }}" method="GET" class="flex flex-wrap gap-4 items-end">
             <div class="flex-1 min-w-[200px]">
-                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#7b7b7b] font-semibold">Buscar</label>
+                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#9a9a9a] font-semibold">Buscar</label>
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Nombre, email, título, país, ciudad..." class="lucille-product-field w-full text-xs py-1.5 px-3">
             </div>
             
             <div class="w-[150px]">
-                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#7b7b7b] font-semibold">Estado</label>
+                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#9a9a9a] font-semibold">Estado</label>
                 <select name="status" class="lucille-product-field w-full text-xs py-1.5 px-2">
                     <option value="">Todos</option>
                     <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pendiente</option>
@@ -36,7 +36,7 @@
             </div>
 
             <div class="w-[180px]">
-                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#7b7b7b] font-semibold">Filtrar por País</label>
+                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#9a9a9a] font-semibold">Filtrar por País</label>
                 <select name="country" class="lucille-product-field w-full text-xs py-1.5 px-2">
                     <option value="">Todos los países</option>
                     @foreach($countries as $country)
@@ -67,25 +67,25 @@
                     <th class="px-5 py-4">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-[#2b2b2b] text-[#7b7b7b]">
+            <tbody class="divide-y divide-[#2b2b2b] text-[#9a9a9a]">
                 @forelse ($contracts as $contract)
                     <tr class="hover:bg-[rgba(255,255,255,.02)]">
                         <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">
                             {{ $contract->title }}
-                            <div class="text-[10px] text-[#7b7b7b] lowercase font-mono mt-0.5">Token: {{ $contract->token }}</div>
+                            <div class="text-[10px] text-[#9a9a9a] lowercase font-mono mt-0.5">Token: {{ $contract->token }}</div>
                         </td>
                         <td class="px-5 py-4">
                             <strong class="text-[#dcdcdc]">{{ $contract->signer_name }}</strong>
                             @if($contract->band_name)
                                 <div class="text-xs text-[var(--lucille-accent)] font-semibold uppercase tracking-wider">{{ $contract->band_name }}</div>
                             @endif
-                            <div class="text-xs text-[#7b7b7b]">{{ $contract->signer_email }}</div>
+                            <div class="text-xs text-[#9a9a9a]">{{ $contract->signer_email }}</div>
                         </td>
                         <td class="px-5 py-4 font-display text-xs uppercase tracking-wider text-[#dcdcdc]">
                             @if($contract->city && $contract->country)
                                 {{ $contract->city }}, {{ $contract->country }}
                             @else
-                                <span class="text-[#7b7b7b]">-</span>
+                                <span class="text-[#9a9a9a]">-</span>
                             @endif
                         </td>
                         <td class="px-5 py-4">
@@ -126,7 +126,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-5 py-10 text-center text-[#7b7b7b]">No se han registrado contratos todavía.</td>
+                        <td colspan="7" class="px-5 py-10 text-center text-[#9a9a9a]">No se han registrado contratos todavía.</td>
                     </tr>
                 @endforelse
             </tbody>

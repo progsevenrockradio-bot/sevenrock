@@ -20,9 +20,9 @@
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Últimos 6 publicados</h2>
-                <p class="mt-2 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Solo episodios con entrega verificada.</p>
+                <p class="mt-2 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Solo episodios con entrega verificada.</p>
             </div>
-            <div class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">
+            <div class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">
                 Total visible: {{ $recentPublishedUploads->count() }}
             </div>
         </div>

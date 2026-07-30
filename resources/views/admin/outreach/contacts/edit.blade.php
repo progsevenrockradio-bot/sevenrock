@@ -8,7 +8,7 @@
             @csrf
             @method('PUT')
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Programa</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Programa</label>
                 <select name="program_code" class="lucille-product-field w-full">
                     <option value="">Sin programa</option>
                     @foreach ($programs as $program)
@@ -17,7 +17,7 @@
                 </select>
             </div>
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Origen</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Origen</label>
                 <select name="referral_source" class="lucille-product-field w-full">
                     @foreach (['producer' => 'Producer', 'self' => 'Self', 'other' => 'Other'] as $value => $label)
                         <option value="{{ $value }}" @selected(old('referral_source', $contact->referral_source ?: 'producer') === $value)>{{ $label }}</option>
@@ -25,31 +25,31 @@
                 </select>
             </div>
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Radio artist ID</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Radio artist ID</label>
                 <input name="radio_artist_id" value="{{ old('radio_artist_id', $contact->radio_artist_id) }}" class="lucille-product-field w-full">
             </div>
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Email</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Email</label>
                 <input name="email" value="{{ old('email', $contact->email) }}" class="lucille-product-field w-full">
             </div>
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Teléfono</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Teléfono</label>
                 <input name="phone" value="{{ old('phone', $contact->phone) }}" class="lucille-product-field w-full">
             </div>
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Persona de contacto</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Persona de contacto</label>
                 <input name="contact_person" value="{{ old('contact_person', $contact->contact_person) }}" class="lucille-product-field w-full">
             </div>
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Facebook</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Facebook</label>
                 <input name="facebook" value="{{ old('facebook', $contact->facebook) }}" class="lucille-product-field w-full">
             </div>
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Instagram</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Instagram</label>
                 <input name="instagram" value="{{ old('instagram', $contact->instagram) }}" class="lucille-product-field w-full">
             </div>
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Status</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Status</label>
                 <select name="status" class="lucille-product-field w-full">
                     @foreach (['pending','contacted','responded','registered','not_interested','invalid'] as $status)
                         <option value="{{ $status }}" @selected(old('status', $contact->status) === $status)>{{ $status }}</option>
@@ -57,23 +57,23 @@
                 </select>
             </div>
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Fecha límite</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Fecha límite</label>
                 <input type="datetime-local" name="submission_deadline" value="{{ old('submission_deadline', optional($contact->submission_deadline)->format('Y-m-d\TH:i')) }}" class="lucille-product-field w-full">
             </div>
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Material recibido</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Material recibido</label>
                 <input type="datetime-local" name="materials_received_at" value="{{ old('materials_received_at', optional($contact->materials_received_at)->format('Y-m-d\TH:i')) }}" class="lucille-product-field w-full">
             </div>
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Backblaze path</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Backblaze path</label>
                 <input name="backblaze_path" value="{{ old('backblaze_path', $contact->backblaze_path) }}" class="lucille-product-field w-full">
             </div>
             <div class="lg:col-span-2">
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Notas</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Notas</label>
                 <textarea name="notes" rows="5" class="lucille-product-field w-full">{{ old('notes', $contact->notes) }}</textarea>
             </div>
             <div class="lg:col-span-2">
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Notas del material</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Notas del material</label>
                 <textarea name="materials_note" rows="4" class="lucille-product-field w-full">{{ old('materials_note', $contact->materials_note) }}</textarea>
             </div>
             <div class="lg:col-span-2 grid gap-6 md:grid-cols-2">

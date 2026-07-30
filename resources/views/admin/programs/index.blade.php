@@ -3,7 +3,7 @@
     <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Programas</h1>
-            <p class="mt-2 max-w-3xl text-sm text-[#7b7b7b]">Gestiona códigos únicos y envíos de invitación a productores.</p>
+            <p class="mt-2 max-w-3xl text-sm text-[#9a9a9a]">Gestiona códigos únicos y envíos de invitación a productores.</p>
         </div>
         <div class="flex flex-wrap gap-3">
             <a href="{{ route('admin.master-programs.index') }}" class="lucille-button">CRUD programas</a>
@@ -18,7 +18,7 @@
         <div class="flex flex-wrap items-center gap-4">
             <div class="flex items-center gap-3 border-r border-[#2b2b2b] pr-4">
                 <input type="checkbox" x-model="selectAll" @change="toggleAll()" class="lucille-checkbox h-5 w-5">
-                <span class="text-xs uppercase tracking-[.1em] text-[#7b7b7b] select-none">
+                <span class="text-xs uppercase tracking-[.1em] text-[#9a9a9a] select-none">
                     <span x-text="selectedPrograms.length"></span> seleccionado(s)
                 </span>
             </div>
@@ -33,7 +33,7 @@
         <form method="GET" class="flex flex-1 lg:max-w-md items-center gap-2">
             <div class="relative flex-1">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <svg class="w-4 h-4 text-[#7b7b7b]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                    <svg class="w-4 h-4 text-[#9a9a9a]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
                     </svg>
                 </div>
@@ -49,7 +49,7 @@
     <section class="mt-8 border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
         <div class="overflow-x-auto">
             <table class="w-full min-w-[1040px] text-left text-sm">
-                <thead class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                <thead class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                     <tr>
                         <th class="py-3 pr-4 pl-4 w-12">
                             <input type="checkbox" x-model="selectAll" @change="toggleAll()" class="lucille-checkbox">
@@ -90,7 +90,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="py-8 text-center text-[#7b7b7b]">No hay programas.</td></tr>
+                        <tr><td colspan="6" class="py-8 text-center text-[#9a9a9a]">No hay programas.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -104,7 +104,7 @@
         <div @click.away="!isSending && (showEmailModal = false)" class="relative w-full max-w-lg border border-[#2b2b2b] bg-[rgba(16,16,18,0.95)] shadow-[0_28px_72px_rgba(0,0,0,.58)]">
             <div class="border-b border-[#2b2b2b] p-6">
                 <h3 class="font-display text-xl uppercase tracking-[.1em] text-[#dcdcdc]">Enviar Horarios</h3>
-                <button type="button" @click="showEmailModal = false" :disabled="isSending" class="absolute right-6 top-6 text-[#7b7b7b] hover:text-white">
+                <button type="button" @click="showEmailModal = false" :disabled="isSending" class="absolute right-6 top-6 text-[#9a9a9a] hover:text-white">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
@@ -112,7 +112,7 @@
             <div class="p-6">
                 <form @submit.prevent="sendEmail" class="space-y-5">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Destinatario(s) *</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Destinatario(s) *</label>
                         <input type="text" x-model="emailForm.email" required placeholder="ej: productor@mail.com, locutor@mail.com" class="lucille-product-field w-full" :disabled="isSending">
                         <template x-if="errors.email">
                             <p class="mt-1 text-xs text-[#c32720]" x-text="errors.email[0]"></p>
@@ -120,7 +120,7 @@
                     </div>
                     
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Asunto *</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Asunto *</label>
                         <input type="text" x-model="emailForm.subject" required class="lucille-product-field w-full" :disabled="isSending">
                         <template x-if="errors.subject">
                             <p class="mt-1 text-xs text-[#c32720]" x-text="errors.subject[0]"></p>
@@ -128,7 +128,7 @@
                     </div>
                     
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Mensaje (Opcional)</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Mensaje (Opcional)</label>
                         <textarea x-model="emailForm.message" rows="4" class="lucille-product-field w-full" :disabled="isSending"></textarea>
                         <template x-if="errors.message">
                             <p class="mt-1 text-xs text-[#c32720]" x-text="errors.message[0]"></p>

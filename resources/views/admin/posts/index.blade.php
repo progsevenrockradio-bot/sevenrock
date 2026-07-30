@@ -9,7 +9,7 @@
     <div class="mb-6 flex items-center justify-between">
         <div>
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $admin['posts_heading'] }}</h1>
-            <p class="mt-2 text-[#7b7b7b]">{{ $admin['posts_copy'] ?? 'Blog articles used by the public blog sections.' }}</p>
+            <p class="mt-2 text-[#9a9a9a]">{{ $admin['posts_copy'] ?? 'Blog articles used by the public blog sections.' }}</p>
         </div>
         <a href="{{ route('admin.posts.create') }}" class="lucille-button-solid">{{ $admin['new_post'] }}</a>
     </div>
@@ -25,7 +25,7 @@
                     <th class="px-5 py-4">{{ $admin['table_actions'] }}</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-[#2b2b2b] text-[#7b7b7b]">
+            <tbody class="divide-y divide-[#2b2b2b] text-[#9a9a9a]">
                 @forelse ($posts as $post)
                     <tr class="hover:bg-[rgba(255,255,255,.02)]">
                         <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">{{ $post->title }}</td>
@@ -42,7 +42,7 @@
                             @elseif ($post->is_published)
                                 <span class="text-[#b8e6c3]">{{ $admin['status_published'] }}</span>
                             @else
-                                <span class="text-[#7b7b7b]">{{ $admin['status_draft'] }}</span>
+                                <span class="text-[#9a9a9a]">{{ $admin['status_draft'] }}</span>
                             @endif
                         </td>
                         <td class="px-5 py-4">
@@ -65,7 +65,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-5 py-10 text-center text-[#7b7b7b]">{{ $admin['no_posts'] }}</td>
+                        <td colspan="5" class="px-5 py-10 text-center text-[#9a9a9a]">{{ $admin['no_posts'] }}</td>
                     </tr>
                 @endforelse
             </tbody>

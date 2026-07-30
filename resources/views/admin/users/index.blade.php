@@ -5,7 +5,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Administradores</h1>
-                <p class="mt-1 text-sm text-[#7b7b7b]">Gestiona los usuarios con acceso al panel de administración.</p>
+                <p class="mt-1 text-sm text-[#9a9a9a]">Gestiona los usuarios con acceso al panel de administración.</p>
             </div>
             <a href="{{ route('admin.users.create') }}" class="lucille-button-solid">
                 + Nuevo Administrador
@@ -30,11 +30,11 @@
             <table class="w-full text-sm">
                 <thead class="border-b border-[#2b2b2b]">
                     <tr>
-                        <th class="px-6 py-4 text-left font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre</th>
-                        <th class="px-6 py-4 text-left font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Email</th>
-                        <th class="px-6 py-4 text-left font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Roles</th>
-                        <th class="px-6 py-4 text-left font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Creado</th>
-                        <th class="px-6 py-4 text-right font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Acciones</th>
+                        <th class="px-6 py-4 text-left font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Nombre</th>
+                        <th class="px-6 py-4 text-left font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Email</th>
+                        <th class="px-6 py-4 text-left font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Roles</th>
+                        <th class="px-6 py-4 text-left font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Creado</th>
+                        <th class="px-6 py-4 text-right font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[#1e1e1e]">
@@ -49,16 +49,16 @@
                                     <span class="text-xs text-[#4b4b4b]">Sin roles</span>
                                 @endforelse
                             </td>
-                            <td class="px-6 py-4 text-xs text-[#7b7b7b]">{{ $user->created_at?->format('d/m/Y') }}</td>
+                            <td class="px-6 py-4 text-xs text-[#9a9a9a]">{{ $user->created_at?->format('d/m/Y') }}</td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end gap-3">
-                                    <a href="{{ route('admin.users.edit', $user) }}" class="text-xs text-[#7b7b7b] transition hover:text-lucille-accent">Editar</a>
+                                    <a href="{{ route('admin.users.edit', $user) }}" class="text-xs text-[#9a9a9a] transition hover:text-lucille-accent">Editar</a>
                                     @if ($users->count() > 1)
                                         <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
                                               onsubmit="return confirm('¿Eliminar al administrador {{ addslashes($user->name) }}? Esta acción no se puede deshacer.')">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="text-xs text-[#7b7b7b] transition hover:text-red-400">Eliminar</button>
+                                            <button type="submit" class="text-xs text-[#9a9a9a] transition hover:text-red-400">Eliminar</button>
                                         </form>
                                     @else
                                         <span class="text-xs text-[#3b3b3b]" title="No se puede eliminar el único administrador">Eliminar</span>

@@ -55,7 +55,7 @@
 
         <div class="grid gap-6 lg:grid-cols-2">
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Nombre</label>
                 <input name="name" value="{{ old('name', $template->name) }}" class="lucille-product-field w-full">
             </div>
             <div class="flex items-end gap-3">
@@ -68,18 +68,18 @@
         </div>
 
         <div>
-            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Asunto</label>
+            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Asunto</label>
             <input id="outreach-subject" name="subject" value="{{ old('subject', $template->subject) }}" class="lucille-product-field w-full">
         </div>
 
         <div>
-            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Cuerpo HTML</label>
+            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Cuerpo HTML</label>
             <textarea id="outreach-body" name="body" rows="12" class="lucille-product-field w-full">{{ old('body', $template->body) }}</textarea>
         </div>
 
         <div class="grid gap-6 lg:grid-cols-[1fr_.85fr]">
             <div class="border border-[#2b2b2b] bg-[#151515] p-4">
-                <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Variables disponibles</div>
+                <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Variables disponibles</div>
                 <div class="mt-4 space-y-4">
                     @foreach ($placeholderGroups as $groupName => $groupItems)
                         <div>
@@ -96,7 +96,7 @@
 
             <div class="border border-[#2b2b2b] bg-[#151515] p-4 space-y-4">
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Programa para preview</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Programa para preview</label>
                     <select class="lucille-product-field w-full" x-model="previewProgramId">
                         <option value="">Sin programa</option>
                         @foreach ($programs as $program)
@@ -105,7 +105,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Banda para preview</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Banda para preview</label>
                     <select class="lucille-product-field w-full" x-model="previewContactId">
                         <option value="">Contacto demo</option>
                         @foreach ($sampleContacts as $contact)
@@ -113,7 +113,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Preview rápido</div>
+                <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Preview rápido</div>
                 <p class="text-sm leading-6 text-[#9f9f9f]">
                     El render de prueba usa el programa y la banda seleccionados para validar placeholders antes de enviar.
                 </p>
@@ -134,11 +134,11 @@
             </div>
             <div class="mt-5 space-y-4 text-sm text-[#d0d0d0]">
                 <div>
-                    <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Asunto</div>
+                    <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Asunto</div>
                     <div class="mt-1 text-[#f0f0f0]" x-text="previewSubject"></div>
                 </div>
                 <div>
-                    <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Cuerpo</div>
+                    <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Cuerpo</div>
                     <div class="mt-1 whitespace-pre-wrap rounded border border-[#2b2b2b] bg-[#151515] p-4 leading-7" x-html="previewBody"></div>
                 </div>
             </div>

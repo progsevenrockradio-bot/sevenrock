@@ -7,7 +7,7 @@
         @endif
 
         <div class="border border-white/10 bg-[#10161b] p-6">
-            <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Moderación</div>
+            <div class="font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Moderación</div>
             <h1 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-white">Contenido subido por talentos</h1>
         </div>
 
@@ -24,7 +24,7 @@
 
         <div class="overflow-x-auto border border-white/10 bg-[#10161b]">
             <table class="min-w-full divide-y divide-white/10 text-left text-sm">
-                <thead class="bg-black/20 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                <thead class="bg-black/20 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                     <tr>
                         <th class="px-4 py-3">Talento</th>
                         <th class="px-4 py-3">Tipo</th>

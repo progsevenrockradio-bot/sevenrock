@@ -5,27 +5,27 @@
 
 <div class="grid gap-5 md:grid-cols-2">
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['form_title_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['form_title_label'] }}</label>
         <input name="title" id="title-input" value="{{ old('title', $video->title) }}" class="lucille-product-field w-full">
     </div>
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['form_slug_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['form_slug_label'] }}</label>
         <input name="slug" id="slug-input" value="{{ old('slug', $video->slug) }}" class="lucille-product-field w-full">
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['image_path_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['image_path_label'] }}</label>
         <input name="image" value="{{ old('image', $video->image) }}" class="lucille-product-field w-full">
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['image_file_label'] }}</label>
-        <input type="file" name="image_file" class="block w-full text-sm text-[#7b7b7b]">
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['image_file_label'] }}</label>
+        <input type="file" name="image_file" class="block w-full text-sm text-[#9a9a9a]">
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['youtube_url_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['youtube_url_label'] }}</label>
         <input name="youtube_url" value="{{ old('youtube_url', $video->youtube_url) }}" class="lucille-product-field w-full">
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $admin['summary_label'] }}</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['summary_label'] }}</label>
         <textarea name="summary" rows="5" class="lucille-product-field w-full">{{ old('summary', $video->summary) }}</textarea>
     </div>
     <div class="md:col-span-2 mt-2 flex items-center gap-3">

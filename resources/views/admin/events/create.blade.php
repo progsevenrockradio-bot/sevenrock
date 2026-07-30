@@ -8,7 +8,7 @@
         <div class="sticky top-0 z-50 -mx-6 mb-6 border-b border-[#2b2b2b] bg-[rgba(16,16,18,.96)] px-6 py-4 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
             <div>
                 <h1 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ !empty($admin['new_event']) ? $admin['new_event'] : 'Nuevo Evento' }}</h1>
-                <p class="mt-1 text-xs text-[#7b7b7b]">{{ !empty($admin['create_event_copy']) ? $admin['create_event_copy'] : 'Crea un nuevo evento para la programación.' }}</p>
+                <p class="mt-1 text-xs text-[#9a9a9a]">{{ !empty($admin['create_event_copy']) ? $admin['create_event_copy'] : 'Crea un nuevo evento para la programación.' }}</p>
             </div>
             <div class="flex items-center gap-3">
                 <a href="{{ route('admin.events.index') }}" class="lucille-button">

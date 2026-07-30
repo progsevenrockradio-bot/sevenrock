@@ -3,7 +3,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
                 <h1 class="font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Redactar Correo</h1>
-                <p class="mt-1 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Envía un correo directamente a cualquier destinatario usando o personalizando plantillas</p>
+                <p class="mt-1 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Envía un correo directamente a cualquier destinatario usando o personalizando plantillas</p>
             </div>
         </div>
     </div>
@@ -39,7 +39,7 @@
 
             <div class="grid gap-6 lg:grid-cols-2">
                 <div>
-                    <label for="email-recipients" class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                    <label for="email-recipients" class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                         Para (Correos separados por coma) <span class="text-[var(--lucille-accent)]">*</span>
                     </label>
                     <input 
@@ -54,7 +54,7 @@
                 </div>
 
                 <div>
-                    <label for="template-selector" class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                    <label for="template-selector" class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                         Cargar desde plantilla predefinida
                     </label>
                     <select 
@@ -72,7 +72,7 @@
             </div>
 
             <div>
-                <label for="email-subject" class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                <label for="email-subject" class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                     Asunto <span class="text-[var(--lucille-accent)]">*</span>
                 </label>
                 <input 
@@ -87,7 +87,7 @@
             </div>
 
             <div>
-                <label for="email-body" class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                <label for="email-body" class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                     Mensaje / Contenido <span class="text-[var(--lucille-accent)]">*</span>
                 </label>
                 <textarea 
@@ -98,7 +98,7 @@
                     class="lucille-product-field w-full font-mono text-sm leading-relaxed"
                     required
                 >{{ old('body') }}</textarea>
-                <p class="mt-2 text-xs text-[#7b7b7b]">
+                <p class="mt-2 text-xs text-[#9a9a9a]">
                     Nota: Puedes editar libremente el texto o reemplazar etiquetas genéricas (como {contact_person} o {band_name}) antes de realizar el envío.
                 </p>
             </div>

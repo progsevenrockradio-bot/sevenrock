@@ -7,7 +7,7 @@
         @endif
 
         <div class="border border-white/10 bg-[#10161b] p-6">
-            <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Talento</div>
+            <div class="font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Talento</div>
             <h1 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-white">Editar {{ $talent->band_name }}</h1>
         </div>
 
@@ -17,16 +17,16 @@
 
             <div class="space-y-5 border border-white/10 bg-[#10161b] p-6">
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Nombre</label>
                     <input name="band_name" value="{{ old('band_name', $talent->band_name) }}" class="lucille-product-field w-full">
                 </div>
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Bio</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Bio</label>
                     <textarea name="bio" rows="8" class="lucille-product-field w-full">{{ old('bio', $talent->bio) }}</textarea>
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Plan</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Plan</label>
                         <select name="plan" class="lucille-product-field w-full">
                             @foreach (['free', 'basic', 'pro', 'premium'] as $plan)
                                 <option value="{{ $plan }}" @selected(old('plan', $talent->plan) === $plan)>{{ ucfirst($plan) }}</option>
@@ -34,7 +34,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Estado</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Estado</label>
                         <select name="subscription_status" class="lucille-product-field w-full">
                             @foreach (['active' => 'Active', 'inactive' => 'Inactive', 'cancelled' => 'Cancelled'] as $key => $label)
                                 <option value="{{ $key }}" @selected(old('subscription_status', $talent->subscription_status) === $key)>{{ $label }}</option>
@@ -61,7 +61,7 @@
                                 <strong class="text-white">{{ ucfirst($subscription->plan) }}</strong>
                                 <span>{{ ucfirst($subscription->status) }}</span>
                             </div>
-                            <div class="mt-2 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                            <div class="mt-2 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                                 €{{ number_format((float) $subscription->amount, 2) }} · {{ $subscription->currency }} · {{ ucfirst((string) $subscription->payment_provider) }}
                             </div>
                             <div class="mt-1 text-xs text-[#8b8b8b]">

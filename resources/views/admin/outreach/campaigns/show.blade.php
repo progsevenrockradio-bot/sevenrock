@@ -3,7 +3,7 @@
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $campaign->name }}</h1>
-                <p class="mt-3 max-w-3xl text-sm text-[#7b7b7b]">
+                <p class="mt-3 max-w-3xl text-sm text-[#9a9a9a]">
                     {{ $campaign->description ?: 'Sin descripción.' }}
                     @if ($campaign->program_code)
                         · Programa: {{ $campaign->program_code }}
@@ -24,7 +24,7 @@
                 ['label' => 'Estado', 'value' => $campaign->completed_at ? 'Completada' : 'En proceso'],
             ] as $card)
                 <div class="border border-[#2b2b2b] bg-[#151515] p-5">
-                    <div class="text-xs uppercase tracking-[.2em] text-[#7b7b7b]">{{ $card['label'] }}</div>
+                    <div class="text-xs uppercase tracking-[.2em] text-[#9a9a9a]">{{ $card['label'] }}</div>
                     <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ $card['value'] }}</div>
                 </div>
             @endforeach
@@ -35,7 +35,7 @@
         <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Envíos individuales</h2>
         <div class="mt-5 overflow-x-auto">
             <table class="w-full min-w-[980px] text-left text-sm">
-                <thead class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                <thead class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                     <tr>
                         <th class="py-3 pr-4">Banda/Programa</th>
                         <th class="py-3 pr-4">Email</th>
@@ -49,7 +49,7 @@
                         <tr class="border-t border-[#242424] align-top">
                             <td class="py-4 pr-4 text-[#dcdcdc]">
                                 {{ $log->bandContact?->displayName() ?? $log->recipient_email }}
-                                <div class="mt-1 text-xs text-[#7b7b7b]">{{ $log->bandContact?->programLabel() ?? $campaign->program?->name ?? 'Productor' }}</div>
+                                <div class="mt-1 text-xs text-[#9a9a9a]">{{ $log->bandContact?->programLabel() ?? $campaign->program?->name ?? 'Productor' }}</div>
                             </td>
                             <td class="py-4 pr-4 text-[#9f9f9f]">{{ $log->recipient_email }}</td>
                             <td class="py-4 pr-4 text-[#9f9f9f]">{{ $log->subject }}</td>
@@ -57,7 +57,7 @@
                             <td class="py-4 pr-4 text-[#9f9f9f]">{{ $log->error_message ?: '—' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="py-8 text-center text-[#7b7b7b]">Aún no hay envíos registrados.</td></tr>
+                        <tr><td colspan="5" class="py-8 text-center text-[#9a9a9a]">Aún no hay envíos registrados.</td></tr>
                     @endforelse
                 </tbody>
             </table>

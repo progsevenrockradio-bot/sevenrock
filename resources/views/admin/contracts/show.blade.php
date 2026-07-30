@@ -14,7 +14,7 @@
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $contract->title }}</h1>
-            <p class="mt-2 text-[#7b7b7b]">Consulta web detallada del contrato digital.</p>
+            <p class="mt-2 text-[#9a9a9a]">Consulta web detallada del contrato digital.</p>
         </div>
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('admin.contracts.index') }}" class="lucille-button">Volver al Listado</a>
@@ -34,7 +34,7 @@
         <div class="md:col-span-1 space-y-6">
             <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6 rounded-[8px]">
                 <h3 class="font-display text-sm uppercase tracking-wider text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-4 font-semibold">Datos del Firmante</h3>
-                <div class="space-y-3.5 text-xs text-[#7b7b7b]">
+                <div class="space-y-3.5 text-xs text-[#9a9a9a]">
                     <div>
                         <span class="block text-[10px] uppercase text-gray-500 font-mono mb-0.5">Banda / Artista</span>
                         <strong class="text-[var(--lucille-accent)] text-sm font-sans font-semibold uppercase tracking-wider">{{ $contract->band_name ?? '-' }}</strong>
@@ -60,7 +60,7 @@
 
             <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6 rounded-[8px]">
                 <h3 class="font-display text-sm uppercase tracking-wider text-[#dcdcdc] border-b border-[#2b2b2b] pb-3 mb-4 font-semibold">Registro de Auditoría (Clickwrap)</h3>
-                <div class="space-y-3.5 text-xs text-[#7b7b7b]">
+                <div class="space-y-3.5 text-xs text-[#9a9a9a]">
                     <div>
                         <span class="block text-[10px] uppercase text-gray-500 font-mono mb-0.5">Estado del Documento</span>
                         @if ($contract->status === 'signed')

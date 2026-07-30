@@ -26,7 +26,7 @@
                     <!-- Users -->
                     <div class="border border-[#2b2b2b] bg-[#151515] p-5 rounded hover:border-[var(--lucille-accent)] transition-all duration-300 group flex items-start justify-between">
                         <div>
-                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#7b7b7b]">{{ $admin['users_label'] }}</div>
+                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#9a9a9a]">{{ $admin['users_label'] }}</div>
                             <div class="mt-2 font-display text-3xl text-white group-hover:text-[var(--lucille-accent)] transition-colors">{{ $stats['users'] }}</div>
                         </div>
                         <span class="p-2 bg-[rgba(255,255,255,0.02)] border border-[#2b2b2b] rounded text-blue-400">
@@ -37,7 +37,7 @@
                     <!-- Admins -->
                     <div class="border border-[#2b2b2b] bg-[#151515] p-5 rounded hover:border-[var(--lucille-accent)] transition-all duration-300 group flex items-start justify-between">
                         <div>
-                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#7b7b7b]">{{ $admin['admins_label'] }}</div>
+                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#9a9a9a]">{{ $admin['admins_label'] }}</div>
                             <div class="mt-2 font-display text-3xl text-white group-hover:text-[var(--lucille-accent)] transition-colors">{{ $stats['admin_users'] }}</div>
                         </div>
                         <span class="p-2 bg-[rgba(255,255,255,0.02)] border border-[#2b2b2b] rounded text-red-400">
@@ -48,7 +48,7 @@
                     <!-- Radio Artists -->
                     <div class="border border-[#2b2b2b] bg-[#151515] p-5 rounded hover:border-[var(--lucille-accent)] transition-all duration-300 group flex items-start justify-between">
                         <div>
-                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#7b7b7b]">Artistas / Bandas</div>
+                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#9a9a9a]">Artistas / Bandas</div>
                             <div class="mt-2 font-display text-3xl text-white group-hover:text-[var(--lucille-accent)] transition-colors">{{ $stats['radio_artists'] }}</div>
                         </div>
                         <span class="p-2 bg-[rgba(255,255,255,0.02)] border border-[#2b2b2b] rounded text-indigo-400">
@@ -59,7 +59,7 @@
                     <!-- Songs -->
                     <div class="border border-[#2b2b2b] bg-[#151515] p-5 rounded hover:border-[var(--lucille-accent)] transition-all duration-300 group flex items-start justify-between">
                         <div>
-                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#7b7b7b]">Canciones</div>
+                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#9a9a9a]">Canciones</div>
                             <div class="mt-2 font-display text-3xl text-white group-hover:text-[var(--lucille-accent)] transition-colors">{{ $stats['songs'] }}</div>
                         </div>
                         <span class="p-2 bg-[rgba(255,255,255,0.02)] border border-[#2b2b2b] rounded text-green-400">
@@ -70,7 +70,7 @@
                     <!-- Master Programs -->
                     <div class="border border-[#2b2b2b] bg-[#151515] p-5 rounded hover:border-[var(--lucille-accent)] transition-all duration-300 group flex items-start justify-between">
                         <div>
-                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#7b7b7b]">Programas Master</div>
+                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#9a9a9a]">Programas Master</div>
                             <div class="mt-2 font-display text-3xl text-white group-hover:text-[var(--lucille-accent)] transition-colors">{{ $stats['master_programs'] }}</div>
                         </div>
                         <span class="p-2 bg-[rgba(255,255,255,0.02)] border border-[#2b2b2b] rounded text-purple-400">
@@ -81,7 +81,7 @@
                     <!-- Posts -->
                     <div class="border border-[#2b2b2b] bg-[#151515] p-5 rounded hover:border-[var(--lucille-accent)] transition-all duration-300 group flex items-start justify-between">
                         <div>
-                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#7b7b7b]">{{ $admin['posts_label'] }}</div>
+                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#9a9a9a]">{{ $admin['posts_label'] }}</div>
                             <div class="mt-2 font-display text-3xl text-white group-hover:text-[var(--lucille-accent)] transition-colors">{{ $stats['posts'] }}</div>
                         </div>
                         <span class="p-2 bg-[rgba(255,255,255,0.02)] border border-[#2b2b2b] rounded text-yellow-400">
@@ -92,7 +92,7 @@
                     <!-- Outreach Contacts -->
                     <div class="border border-[#2b2b2b] bg-[#151515] p-5 rounded hover:border-[var(--lucille-accent)] transition-all duration-300 group flex items-start justify-between">
                         <div>
-                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#7b7b7b]">Contactos Outreach</div>
+                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#9a9a9a]">Contactos Outreach</div>
                             <div class="mt-2 font-display text-3xl text-white group-hover:text-[var(--lucille-accent)] transition-colors">{{ $stats['outreach_contacts'] }}</div>
                         </div>
                         <span class="p-2 bg-[rgba(255,255,255,0.02)] border border-[#2b2b2b] rounded text-pink-400">
@@ -103,7 +103,7 @@
                     <!-- Outreach Sent -->
                     <div class="border border-[#2b2b2b] bg-[#151515] p-5 rounded hover:border-[var(--lucille-accent)] transition-all duration-300 group flex items-start justify-between">
                         <div>
-                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#7b7b7b]">Correos Enviados</div>
+                            <div class="font-display text-[10px] uppercase tracking-[.2em] text-[#9a9a9a]">Correos Enviados</div>
                             <div class="mt-2 font-display text-3xl text-white group-hover:text-[var(--lucille-accent)] transition-colors">{{ $stats['outreach_sent'] }}</div>
                         </div>
                         <span class="p-2 bg-[rgba(255,255,255,0.02)] border border-[#2b2b2b] rounded text-teal-400">
@@ -149,7 +149,7 @@
                 
                 <div class="space-y-4">
                     <div>
-                        <span class="text-[9px] uppercase tracking-wider text-[#7b7b7b] font-semibold block mb-2">Publicación</span>
+                        <span class="text-[9px] uppercase tracking-wider text-[#9a9a9a] font-semibold block mb-2">Publicación</span>
                         <div class="flex flex-wrap gap-2">
                             <a href="{{ route('admin.posts.index') }}" class="lucille-button py-1.5 px-3 text-[10px] uppercase tracking-wider text-white">Posts</a>
                             <a href="#taxonomias" class="lucille-button py-1.5 px-3 text-[10px] uppercase tracking-wider text-white">Taxonomías</a>
@@ -157,7 +157,7 @@
                     </div>
 
                     <div>
-                        <span class="text-[9px] uppercase tracking-wider text-[#7b7b7b] font-semibold block mb-2">Música & Podcasts</span>
+                        <span class="text-[9px] uppercase tracking-wider text-[#9a9a9a] font-semibold block mb-2">Música & Podcasts</span>
                         <div class="flex flex-wrap gap-2">
                             <a href="{{ route('admin.podcast-uploads.index') }}" class="lucille-button py-1.5 px-3 text-[10px] uppercase tracking-wider text-white">Podcast uploads</a>
                             <a href="{{ route('admin.songs.index') }}" class="lucille-button py-1.5 px-3 text-[10px] uppercase tracking-wider text-white">Canciones</a>
@@ -167,7 +167,7 @@
                     </div>
 
                     <div>
-                        <span class="text-[9px] uppercase tracking-wider text-[#7b7b7b] font-semibold block mb-2">Configuración</span>
+                        <span class="text-[9px] uppercase tracking-wider text-[#9a9a9a] font-semibold block mb-2">Configuración</span>
                         <div class="flex flex-wrap gap-2">
                             @role('Super Admin')
                             <a href="{{ route('admin.settings.edit') }}" class="lucille-button-solid py-1.5 px-3 text-[10px] uppercase tracking-wider">Ajustes</a>
@@ -191,11 +191,11 @@
         <div class="flex flex-wrap items-end justify-between gap-4 border-b border-[#2b2b2b] pb-3 mb-6">
             <div>
                 <h2 class="font-display text-2xl uppercase tracking-[.12em] text-white">Podcast Pipeline</h2>
-                <p class="mt-1 max-w-3xl text-xs text-[#7b7b7b]">
+                <p class="mt-1 max-w-3xl text-xs text-[#9a9a9a]">
                     Estado operacional del pipeline de audios. Sincronización independiente de RadioBOSS, Archive.org y entrega final de podcasts.
                 </p>
             </div>
-            <div class="text-[10px] uppercase tracking-wider text-[#7b7b7b] bg-[rgba(255,255,255,0.02)] px-3 py-1.5 border border-[#2b2b2b] rounded">
+            <div class="text-[10px] uppercase tracking-wider text-[#9a9a9a] bg-[rgba(255,255,255,0.02)] px-3 py-1.5 border border-[#2b2b2b] rounded">
                 Eventos recientes registrados: <span class="text-white font-bold">{{ is_countable($recentPipelineEvents) ? count($recentPipelineEvents) : 0 }}</span>
             </div>
         </div>
@@ -210,7 +210,7 @@
                 'delivery_verified' => ['label' => 'Entrega Verificada', 'tone' => 'text-green-400'],
             ] as $key => $props)
                 <div class="border border-[#2b2b2b] bg-[#151515] p-5 rounded">
-                    <div class="font-display text-[9px] uppercase tracking-[.2em] text-[#7b7b7b]">{{ $props['label'] }}</div>
+                    <div class="font-display text-[9px] uppercase tracking-[.2em] text-[#9a9a9a]">{{ $props['label'] }}</div>
                     <div class="mt-2 font-display text-3xl font-bold {{ $props['tone'] }}">{{ $pipelineCounts[$key] ?? 0 }}</div>
                 </div>
             @endforeach
@@ -235,7 +235,7 @@
                             </div>
                         </div>
                     @empty
-                        <p class="text-xs text-[#7b7b7b] py-4 text-center">No hay eventos del pipeline registrados aún.</p>
+                        <p class="text-xs text-[#9a9a9a] py-4 text-center">No hay eventos del pipeline registrados aún.</p>
                     @endforelse
                 </div>
             </div>
@@ -254,7 +254,7 @@
                             </div>
                         </div>
                     @empty
-                        <p class="text-xs text-[#7b7b7b] py-4 text-center">No hay programas cargados recientemente.</p>
+                        <p class="text-xs text-[#9a9a9a] py-4 text-center">No hay programas cargados recientemente.</p>
                     @endforelse
                 </div>
             </div>
@@ -266,11 +266,11 @@
         <div class="flex flex-wrap items-end justify-between gap-4 border-b border-[#2b2b2b] pb-3 mb-6">
             <div>
                 <h2 class="font-display text-2xl uppercase tracking-[.12em] text-white">Taxonomías Rápidas</h2>
-                <p class="mt-1 max-w-3xl text-xs text-[#7b7b7b]">
+                <p class="mt-1 max-w-3xl text-xs text-[#9a9a9a]">
                     Registra categorías y etiquetas de manera global para que los editores puedan autocompletarlas al crear posts.
                 </p>
             </div>
-            <div class="text-[10px] uppercase tracking-wider text-[#7b7b7b]">
+            <div class="text-[10px] uppercase tracking-wider text-[#9a9a9a]">
                 Categorías: <span class="text-white font-bold">{{ $stats['categories'] }}</span> ·
                 Etiquetas: <span class="text-white font-bold">{{ $stats['tags'] }}</span>
             </div>
@@ -284,7 +284,7 @@
                 <div class="border border-[#2b2b2b] bg-[#151515] p-5 rounded">
                     <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-2 mb-4">
                         <h3 class="font-display text-xs uppercase tracking-[.12em] text-white">{{ $group['label'] }}</h3>
-                        <span class="text-[10px] uppercase tracking-wider text-[#7b7b7b]">{{ $group['items']->count() }} registrados</span>
+                        <span class="text-[10px] uppercase tracking-wider text-[#9a9a9a]">{{ $group['items']->count() }} registrados</span>
                     </div>
 
                     <!-- Add inline form -->
@@ -321,7 +321,7 @@
                                 </form>
                             </span>
                         @empty
-                            <p class="text-xs text-[#7b7b7b] py-2">No hay elementos registrados aún.</p>
+                            <p class="text-xs text-[#9a9a9a] py-2">No hay elementos registrados aún.</p>
                         @endforelse
                     </div>
                 </div>
@@ -334,7 +334,7 @@
         <div class="flex flex-wrap items-end justify-between gap-4 border-b border-[#2b2b2b] pb-3 mb-6">
             <div>
                 <h2 class="font-display text-2xl uppercase tracking-[.12em] text-white">Outreach (Convocatorias)</h2>
-                <p class="mt-1 max-w-3xl text-xs text-[#7b7b7b]">
+                <p class="mt-1 max-w-3xl text-xs text-[#9a9a9a]">
                     Monitoreo de campañas masivas por e-mail a manager de bandas, agencias y actividad de registro reciente.
                 </p>
             </div>
@@ -356,7 +356,7 @@
                             </div>
                         </div>
                     @empty
-                        <p class="text-xs text-[#7b7b7b] py-4 text-center">No hay campañas registradas todavía.</p>
+                        <p class="text-xs text-[#9a9a9a] py-4 text-center">No hay campañas registradas todavía.</p>
                     @endforelse
                 </div>
             </div>
@@ -376,7 +376,7 @@
                             </div>
                         </div>
                     @empty
-                        <p class="text-xs text-[#7b7b7b] py-4 text-center">No hay contactos cargados aún.</p>
+                        <p class="text-xs text-[#9a9a9a] py-4 text-center">No hay contactos cargados aún.</p>
                     @endforelse
                 </div>
             </div>

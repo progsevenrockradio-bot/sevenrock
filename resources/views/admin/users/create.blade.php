@@ -3,7 +3,7 @@
 
         {{-- Header --}}
         <div class="flex items-center gap-4">
-            <a href="{{ route('admin.users.index') }}" class="text-[#7b7b7b] transition hover:text-lucille-accent">← Volver</a>
+            <a href="{{ route('admin.users.index') }}" class="text-[#9a9a9a] transition hover:text-lucille-accent">← Volver</a>
             <h1 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Nuevo Administrador</h1>
         </div>
 
@@ -92,7 +92,7 @@
 
                 <div class="flex items-center gap-4 pt-2">
                     <button type="submit" class="lucille-button-solid">Crear Administrador</button>
-                    <a href="{{ route('admin.users.index') }}" class="text-sm text-[#7b7b7b] transition hover:text-[#dcdcdc]">Cancelar</a>
+                    <a href="{{ route('admin.users.index') }}" class="text-sm text-[#9a9a9a] transition hover:text-[#dcdcdc]">Cancelar</a>
                 </div>
             </form>
         </div>

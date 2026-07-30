@@ -2,7 +2,7 @@
     <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
         <div class="flex flex-wrap items-start justify-between gap-4 border-b border-[#2b2b2b] pb-6 mb-6">
             <div>
-                <a href="{{ route('admin.email-templates.index') }}" class="text-sm text-[#7b7b7b] hover:text-[#dcdcdc] transition-colors mb-2 inline-block">&larr; Volver a las plantillas</a>
+                <a href="{{ route('admin.email-templates.index') }}" class="text-sm text-[#9a9a9a] hover:text-[#dcdcdc] transition-colors mb-2 inline-block">&larr; Volver a las plantillas</a>
                 <h1 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Editar Plantilla: <span class="text-lucille-accent font-mono lowercase tracking-normal">{{ $relativePath }}</span></h1>
             </div>
             <div>
@@ -19,7 +19,7 @@
             @method('PUT')
             
             <div class="flex flex-col">
-                <label for="content" class="mb-2 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Código Blade (HTML/CSS/PHP)</label>
+                <label for="content" class="mb-2 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Código Blade (HTML/CSS/PHP)</label>
                 <textarea 
                     id="content" 
                     name="content" 

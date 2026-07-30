@@ -56,7 +56,7 @@
                     <textarea id="custom_message" name="custom_message" rows="4" 
                         class="w-full bg-[rgba(0,0,0,0.2)] border border-[#3b3b3b] rounded p-2.5 text-sm text-white focus:outline-none focus:border-[var(--lucille-accent)]"
                         placeholder="Hola equipo, les comparto nuestro media kit y recursos gráficos...">{{ old('custom_message') }}</textarea>
-                    <p class="mt-2 text-[10px] text-[#7b7b7b]">Este mensaje aparecerá arriba de los datos y el PDF en el correo.</p>
+                    <p class="mt-2 text-[10px] text-[#9a9a9a]">Este mensaje aparecerá arriba de los datos y el PDF en el correo.</p>
                     @error('custom_message')
                         <p class="mt-2 text-xs text-[var(--lucille-accent)]">{{ $message }}</p>
                     @enderror
@@ -88,7 +88,7 @@
                             </div>
                         </div>
                         @else
-                            <p class="text-xs text-[#7b7b7b]">No hay redes sociales configuradas en el panel.</p>
+                            <p class="text-xs text-[#9a9a9a]">No hay redes sociales configuradas en el panel.</p>
                         @endif
                     </div>
                 </div>

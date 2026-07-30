@@ -3,7 +3,7 @@
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Plantillas de Correo</h1>
-                <p class="mt-2 text-sm text-[#7b7b7b]">Edita el contenido y diseño de los correos automáticos del sistema.</p>
+                <p class="mt-2 text-sm text-[#9a9a9a]">Edita el contenido y diseño de los correos automáticos del sistema.</p>
             </div>
         </div>
 
@@ -27,7 +27,7 @@
             <form action="{{ route('admin.email-templates.test') }}" method="POST" class="flex flex-wrap items-end gap-4">
                 @csrf
                 <div class="flex-1 min-w-[300px]">
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Correo destino de prueba</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Correo destino de prueba</label>
                     <input type="email" name="test_email" required class="lucille-product-field w-full" placeholder="tu@correo.com">
                 </div>
                 <button type="submit" class="lucille-button-solid">Enviar Correo de Prueba</button>
@@ -37,7 +37,7 @@
 
         <div class="mt-8 overflow-x-auto border border-[#242424]">
             <table class="min-w-full divide-y divide-[#242424] text-left text-sm">
-                <thead class="bg-[#131313] text-[#7b7b7b]">
+                <thead class="bg-[#131313] text-[#9a9a9a]">
                     <tr>
                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Nombre de la Plantilla</th>
                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Ruta</th>
@@ -52,13 +52,13 @@
                             <td class="px-4 py-4 font-display uppercase tracking-[.08em] text-[#dcdcdc]">
                                 {{ str_replace('/', ' / ', $template['name']) }}
                             </td>
-                            <td class="px-4 py-4 text-[#7b7b7b] font-mono text-xs">
+                            <td class="px-4 py-4 text-[#9a9a9a] font-mono text-xs">
                                 {{ $template['path'] }}
                             </td>
-                            <td class="px-4 py-4 text-[#7b7b7b] text-xs">
+                            <td class="px-4 py-4 text-[#9a9a9a] text-xs">
                                 {{ round($template['size'] / 1024, 2) }} KB
                             </td>
-                            <td class="px-4 py-4 text-[#7b7b7b] text-xs">
+                            <td class="px-4 py-4 text-[#9a9a9a] text-xs">
                                 {{ $template['last_modified']->diffForHumans() }}
                             </td>
                             <td class="px-4 py-4 text-right">

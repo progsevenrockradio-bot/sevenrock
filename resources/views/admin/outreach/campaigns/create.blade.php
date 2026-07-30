@@ -20,11 +20,11 @@
             @csrf
             <div class="grid gap-6 lg:grid-cols-2">
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Nombre</label>
                     <input name="name" value="{{ old('name') }}" class="lucille-product-field w-full">
                 </div>
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Plantilla</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Plantilla</label>
                     <select name="template_id" class="lucille-product-field w-full" x-model="selectedTemplate">
                         <option value="">Selecciona una plantilla</option>
                         @foreach ($templates as $template)
@@ -35,13 +35,13 @@
             </div>
 
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Descripción</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Descripción</label>
                 <textarea name="description" rows="4" class="lucille-product-field w-full">{{ old('description') }}</textarea>
             </div>
 
             <div class="grid gap-6 lg:grid-cols-3">
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Modo de envío</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Modo de envío</label>
                     <select name="recipient_mode" class="lucille-product-field w-full" x-model="recipientMode">
                         <option value="contacts" @selected(old('recipient_mode', 'contacts') === 'contacts')>Contactos seleccionados</option>
                         <option value="program" @selected(old('recipient_mode') === 'program')>Contactos de un programa</option>
@@ -49,7 +49,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Programa</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Programa</label>
                     <select name="program_code" class="lucille-product-field w-full">
                         <option value="">Todos los programas</option>
                         @foreach ($programs as $program)
@@ -58,7 +58,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Estado</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Estado</label>
                     <select name="status_filter" class="lucille-product-field w-full">
                         <option value="">Todos</option>
                         @foreach (['pending','contacted','responded','registered','not_interested','invalid'] as $status)
@@ -70,18 +70,18 @@
 
             <div class="border border-[#2b2b2b] bg-[#151515] p-4">
                 <div class="flex items-center justify-between gap-4">
-                    <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Plantilla seleccionada</div>
-                    <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]"><span x-text="selectedCount"></span> contactos seleccionados</div>
+                    <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Plantilla seleccionada</div>
+                    <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]"><span x-text="selectedCount"></span> contactos seleccionados</div>
                 </div>
                 <div class="mt-3 text-sm text-[#d0d0d0]">
                     <template x-if="selectedTemplate && templateMap[selectedTemplate]">
                         <div>
                             <div class="text-[#f0f0f0]" x-text="templateMap[selectedTemplate].name"></div>
                             <div class="mt-2 text-[#9f9f9f]" x-text="templateMap[selectedTemplate].subject"></div>
-                            <div class="mt-2 max-h-32 overflow-auto whitespace-pre-wrap text-[#7b7b7b]" x-text="templateMap[selectedTemplate].body"></div>
+                            <div class="mt-2 max-h-32 overflow-auto whitespace-pre-wrap text-[#9a9a9a]" x-text="templateMap[selectedTemplate].body"></div>
                         </div>
                     </template>
-                    <p x-show="!selectedTemplate" class="text-[#7b7b7b]">Elige una plantilla para continuar.</p>
+                    <p x-show="!selectedTemplate" class="text-[#9a9a9a]">Elige una plantilla para continuar.</p>
                 </div>
             </div>
 
@@ -96,7 +96,7 @@
 
                 <div class="mt-4 max-h-[420px] overflow-auto border border-[#2b2b2b]">
                     <table class="w-full min-w-[960px] text-left text-sm">
-                        <thead class="sticky top-0 bg-[#151515] text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                        <thead class="sticky top-0 bg-[#151515] text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                             <tr>
                                 <th class="py-3 pl-4 pr-4">Sel</th>
                                 <th class="py-3 pr-4">Banda</th>
@@ -117,7 +117,7 @@
                                     <td class="py-3 pr-4 text-[#9f9f9f]">{{ $contact->status }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="py-8 text-center text-[#7b7b7b]">No hay contactos con email disponibles.</td></tr>
+                                <tr><td colspan="5" class="py-8 text-center text-[#9a9a9a]">No hay contactos con email disponibles.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

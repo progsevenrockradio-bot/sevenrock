@@ -13,11 +13,11 @@
 
 <div class="grid gap-5 md:grid-cols-2">
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Name</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Name</label>
         <input name="name" value="{{ old('name', $bandProfile->name) }}" class="lucille-product-field w-full">
     </div>
     <div x-data="imageHelper('{{ old('image_path', $bandProfile->image_path) }}')">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Image Path</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Image Path</label>
         <input 
             name="image_path" 
             x-model="url"
@@ -34,11 +34,11 @@
         </div>
     </div>
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Founded Date</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Founded Date</label>
         <input type="date" name="founded_date" value="{{ old('founded_date', $bandProfile->founded_date?->format('Y-m-d')) }}" class="lucille-product-field w-full">
     </div>
     <div x-data="imageHelper('{{ old('logo_path', $bandProfile->logo_path) }}')">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Logo URL</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Logo URL</label>
         <input 
             name="logo_path" 
             x-model="url"
@@ -58,7 +58,7 @@
         <input type="hidden" name="country" :value="getFinalCountry()">
         <div class="grid gap-5 md:grid-cols-2">
             <div>
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Country</label>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Country</label>
                 <div class="relative" @click.away="openCountry = false">
                     <input 
                         type="text" 
@@ -68,7 +68,7 @@
                         @focus="openCountry = true"
                         @input="openCountry = true"
                     >
-                    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#7b7b7b]">
+                    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9a9a9a]">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
@@ -108,7 +108,7 @@
                 <!-- Si el país seleccionado tiene lista predefinida de estados -->
                 <template x-if="selectedCountry && selectedCountry !== 'Otro / Personalizado' && hasPredefinedStates()">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">State / Province</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">State / Province</label>
                         <div class="relative" @click.away="openState = false">
                             <input 
                                 type="text" 
@@ -118,7 +118,7 @@
                                 @focus="openState = true"
                                 @input="openState = true"
                             >
-                            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#7b7b7b]">
+                            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9a9a9a]">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                 </svg>
@@ -148,7 +148,7 @@
                 <!-- Si el país seleccionado NO tiene lista predefinida de estados -->
                 <template x-if="selectedCountry && selectedCountry !== 'Otro / Personalizado' && !hasPredefinedStates()">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">State / Province</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">State / Province</label>
                         <input 
                             type="text" 
                             class="lucille-product-field w-full" 
@@ -162,7 +162,7 @@
 
         <div x-show="selectedCountry === 'Otro / Personalizado'" x-transition class="mt-3 grid gap-3 grid-cols-2 p-3 bg-[#1a1a1e] rounded-md border border-white/5">
             <div>
-                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#7b7b7b]">País Personalizado</label>
+                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#9a9a9a]">País Personalizado</label>
                 <input 
                     type="text" 
                     class="lucille-product-field w-full text-sm" 
@@ -171,7 +171,7 @@
                 >
             </div>
             <div>
-                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#7b7b7b]">Estado / Provincia</label>
+                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#9a9a9a]">Estado / Provincia</label>
                 <input 
                     type="text" 
                     class="lucille-product-field w-full text-sm" 
@@ -202,7 +202,7 @@
     </div>
     <div x-data="genreSelector('{{ old('genre', $bandProfile->genre) }}')" class="relative">
         <input type="hidden" name="genre" :value="getFinalGenre()">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Genre</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Genre</label>
         
         <div class="relative" @click.away="open = false">
             <div class="flex items-center">
@@ -214,7 +214,7 @@
                     @focus="open = true"
                     @input="open = true"
                 >
-                <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#7b7b7b]">
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9a9a9a]">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
@@ -230,7 +230,7 @@
             >
                 <template x-for="(options, group) in groupedGenres" :key="group">
                     <div>
-                        <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-[.1em] text-[#7b7b7b] bg-white/5 rounded-sm my-1" x-text="group"></div>
+                        <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-[.1em] text-[#9a9a9a] bg-white/5 rounded-sm my-1" x-text="group"></div>
                         <template x-for="opt in options" :key="opt">
                             <button 
                                 type="button" 
@@ -260,7 +260,7 @@
         <!-- Custom inputs -->
         <div x-show="selectedGenre === 'Otro / Personalizado'" x-transition class="mt-3 grid gap-3 grid-cols-2 p-3 bg-[#1a1a1e] rounded-md border border-white/5">
             <div>
-                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#7b7b7b]">Género Personalizado</label>
+                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#9a9a9a]">Género Personalizado</label>
                 <input 
                     type="text" 
                     class="lucille-product-field w-full text-sm" 
@@ -269,7 +269,7 @@
                 >
             </div>
             <div>
-                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#7b7b7b]">Subgénero Personalizado</label>
+                <label class="mb-1 block text-[10px] uppercase tracking-wider text-[#9a9a9a]">Subgénero Personalizado</label>
                 <input 
                     type="text" 
                     class="lucille-product-field w-full text-sm" 
@@ -280,11 +280,11 @@
         </div>
     </div>
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Members Count</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Members Count</label>
         <input type="number" name="members_count" value="{{ old('members_count', $bandProfile->members_count) }}" class="lucille-product-field w-full" min="0">
     </div>
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Status</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Status</label>
         <select name="status" class="lucille-product-field w-full">
             <option value="">Select...</option>
             <option value="active" {{ old('status', $bandProfile->status) === 'active' ? 'selected' : '' }}>Active</option>
@@ -297,7 +297,7 @@
         $agencies = \App\Models\Agency::query()->orderBy('name')->get();
     @endphp
     <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Agency (Colaborador)</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Agency (Colaborador)</label>
         <select name="agency_id" class="lucille-product-field w-full">
             <option value="">None / Ninguna</option>
             @foreach($agencies as $agency)
@@ -308,31 +308,31 @@
         </select>
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Biography</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Biography</label>
         <textarea name="biography" rows="6" class="lucille-product-field w-full">{{ old('biography', $bandProfile->biography) }}</textarea>
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Editorial Summary</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Editorial Summary</label>
         <textarea name="editorial_summary" rows="6" class="lucille-product-field w-full">{{ old('editorial_summary', $bandProfile->editorial_summary) }}</textarea>
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Featured Facts</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Featured Facts</label>
         <textarea name="featured_facts_text" rows="5" class="lucille-product-field w-full" placeholder="One fact per line">{{ old('featured_facts_text', $featuredFactsText ?? '') }}</textarea>
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Official Links</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Official Links</label>
         <textarea name="official_links_text" rows="5" class="lucille-product-field w-full" placeholder="Label|https://example.com">{{ old('official_links_text', $officialLinksText ?? '') }}</textarea>
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Related Artists</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Related Artists</label>
         <textarea name="related_artists_text" rows="4" class="lucille-product-field w-full" placeholder="One artist per line">{{ old('related_artists_text', $relatedArtistsText ?? '') }}</textarea>
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Source</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Source</label>
         <input name="source" value="{{ old('source', $bandProfile->source ?: 'Seven Rock Radio') }}" class="lucille-product-field w-full">
     </div>
     <div class="md:col-span-2">
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Labels</label>
+        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Labels</label>
         <textarea name="labels" rows="3" class="lucille-product-field w-full" placeholder="One label per line">{{ old('labels', $labelsText ?? $bandProfile->labels) }}</textarea>
     </div>
 </div>

@@ -8,7 +8,7 @@
     <div class="mb-6 flex items-center justify-between">
         <div>
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Nuevos Lanzamientos</h1>
-            <p class="mt-2 text-[#7b7b7b]">Gestiona los nuevos lanzamientos musicales destacados en la página principal y sus reseñas.</p>
+            <p class="mt-2 text-[#9a9a9a]">Gestiona los nuevos lanzamientos musicales destacados en la página principal y sus reseñas.</p>
         </div>
         <a href="{{ route('admin.new-releases.create') }}" class="lucille-button-solid">Nuevo Lanzamiento</a>
     </div>
@@ -26,7 +26,7 @@
                     <th class="px-5 py-4">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-[#2b2b2b] text-[#7b7b7b]">
+            <tbody class="divide-y divide-[#2b2b2b] text-[#9a9a9a]">
                 @forelse ($newReleases as $release)
                     <tr class="hover:bg-[rgba(255,255,255,.02)]">
                         <td class="px-5 py-4">
@@ -69,7 +69,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-5 py-10 text-center text-[#7b7b7b]">No hay lanzamientos creados aún.</td>
+                        <td colspan="7" class="px-5 py-10 text-center text-[#9a9a9a]">No hay lanzamientos creados aún.</td>
                     </tr>
                 @endforelse
             </tbody>

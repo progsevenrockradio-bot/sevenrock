@@ -3,7 +3,7 @@
         <div>
             <p class="text-[10px] uppercase tracking-[.28em] text-[#8b8b8b]">Bloque 3</p>
             <h2 class="mt-2 font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Distribución y Estados</h2>
-            <p class="mt-3 text-sm leading-7 text-[#7b7b7b]">
+            <p class="mt-3 text-sm leading-7 text-[#9a9a9a]">
                 Opciones técnicas del pipeline: qué se conserva, qué se sincroniza y qué se envía al resto de sistemas.
             </p>
         </div>
@@ -21,15 +21,15 @@
             </p>
             <div class="mt-4 grid gap-3">
                 <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-3">
-                    <div class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Procesando</div>
+                    <div class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Procesando</div>
                     <div class="mt-1 text-sm text-[#e0e0e0]">La carga está en curso o el pipeline trabaja en segundo plano.</div>
                 </div>
                 <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-3">
-                    <div class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Publicado</div>
+                    <div class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Publicado</div>
                     <div class="mt-1 text-sm text-[#e0e0e0]">Se considera listo cuando RadioBOSS, Archive.org y notificación terminan correctamente.</div>
                 </div>
                 <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-3">
-                    <div class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Borrador</div>
+                    <div class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Borrador</div>
                     <div class="mt-1 text-sm text-[#e0e0e0]">Es el estado implícito antes de completar una subida exitosa.</div>
                 </div>
             </div>
@@ -41,14 +41,14 @@
                 <input type="checkbox" name="download_processed_mp3" value="1" @checked(old('download_processed_mp3')) class="mt-1 h-4 w-4">
                 <span>
                     <span class="block font-medium text-white">Conservar una copia local del MP3 procesado</span>
-                    <span class="mt-1 block text-xs leading-5 text-[#7b7b7b]">La descarga quedará disponible cuando termine el procesamiento.</span>
+                    <span class="mt-1 block text-xs leading-5 text-[#9a9a9a]">La descarga quedará disponible cuando termine el procesamiento.</span>
                 </span>
             </label>
 
 
 
             <div class="mt-4 border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
-                <h4 class="text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">Notas técnicas</h4>
+                <h4 class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Notas técnicas</h4>
                 <p class="mt-2 text-sm leading-6 text-[#c7c7c7]">
                     Si más adelante necesitas tags, categorías o un selector manual de estado, conviene crear columnas y validación explícita en `RadioProgram`
                     antes de mostrarlos aquí.

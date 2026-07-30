@@ -11,7 +11,7 @@
             ['label' => 'Galería de Fotos', 'url' => route('multimedia') . '#galeria'],
             ['label' => 'Videos', 'url' => route('multimedia') . '#videos'],
             ['label' => 'Catálogo de Música', 'url' => route('multimedia') . '#musica'],
-            ['label' => 'Podcasts', 'url' => route('multimedia') . '#podcasts'],
+            ['label' => 'Podcasts', 'url' => route('programs')],
         ]],
         ['label' => 'Eventos', 'route' => 'events', 'children' => [
             ['label' => 'Proximos eventos', 'route' => 'events.upcoming'],

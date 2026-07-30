@@ -13,7 +13,7 @@
 
     <div class="mb-6">
         <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Nuevo Contrato Digital</h1>
-        <p class="mt-2 text-[#7b7b7b]">Crea un contrato para firma electrónica. Al guardar, se enviará el enlace de firma automáticamente por correo.</p>
+        <p class="mt-2 text-[#9a9a9a]">Crea un contrato para firma electrónica. Al guardar, se enviará el enlace de firma automáticamente por correo.</p>
     </div>
 
     <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6 md:p-8 rounded-[8px]">
@@ -22,7 +22,7 @@
 
             <div class="grid gap-5 md:grid-cols-2">
                 <div class="md:col-span-2">
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b] font-semibold">Seleccionar Plantilla de Contrato</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a] font-semibold">Seleccionar Plantilla de Contrato</label>
                     <select @change="changeTemplate($event.target.value)" class="lucille-product-field w-full">
                         @foreach($templates as $key => $tpl)
                             <option value="{{ $key }}">{{ $tpl['name'] }}</option>
@@ -31,23 +31,23 @@
                     </select>
                 </div>
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre del Firmante / Representante Legal</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Nombre del Firmante / Representante Legal</label>
                     <input name="signer_name" value="{{ old('signer_name') }}" class="lucille-product-field w-full" placeholder="Ej. Juan Pérez" required>
                 </div>
                 <div>
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Correo Electrónico del Firmante</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Correo Electrónico del Firmante</label>
                     <input type="email" name="signer_email" value="{{ old('signer_email') }}" class="lucille-product-field w-full" placeholder="Ej. juan@correo.com" required>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre de la Banda / Artista</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Nombre de la Banda / Artista</label>
                     <input name="band_name" value="{{ old('band_name') }}" class="lucille-product-field w-full" placeholder="Ej. Foo Fighters / Artista Solista" required>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Título del Contrato</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Título del Contrato</label>
                     <input name="title" x-model="title" class="lucille-product-field w-full" required>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Cuerpo del Contrato (Cláusulas)</label>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Cuerpo del Contrato (Cláusulas)</label>
                     <p class="mb-2 text-xs text-gray-500 italic">* Puedes editar este texto para personalizarlo según el acuerdo.</p>
                     <textarea name="content" x-model="content" rows="15" class="lucille-product-field w-full font-mono text-sm leading-relaxed" required></textarea>
                 </div>
