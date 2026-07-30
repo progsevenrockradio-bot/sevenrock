@@ -319,7 +319,7 @@
     <header id="pwa-header">
         {{-- Logo --}}
         <a href="/app" class="flex items-center pwa-nav-link" data-href="/app">
-            <img src="{{ $logoUrl }}" alt="Seven Rock Radio" class="h-[40px] w-auto object-contain" loading="lazy">
+            <img src="{{ $logoUrl }}" alt="Seven Rock Radio" class="h-10 w-auto object-contain" style="height: 40px; width: auto;" loading="lazy">
             <span class="pwa-brand-container">
                 <span class="pwa-brand-word pwa-word-seven">Seven</span>
                 <span class="pwa-brand-word pwa-word-rock">Rock</span>
