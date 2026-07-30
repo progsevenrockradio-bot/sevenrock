@@ -16,7 +16,7 @@ class AppDownloadController extends Controller
         ]);
 
         // URL del archivo a descargar (se puede configurar en el .env)
-        $downloadUrl = env('APP_DOWNLOAD_URL', asset('sevenrockradio.apk'));
+        $downloadUrl = env('APP_DOWNLOAD_URL', 'https://sevenrockradio.com/app');
         
         return redirect()->away($downloadUrl);
     }
