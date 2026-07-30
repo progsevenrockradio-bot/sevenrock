@@ -12,8 +12,8 @@
     ═══════════════════════════════════════════════ --}}
     <section class="relative overflow-hidden">
         {{-- Fondo con gradiente rock --}}
-        <div class="relative h-52 flex items-end"
-             style="background: linear-gradient(135deg, #1a0000 0%, #2d0505 40%, #121212 100%);">
+        <div class="relative h-52 flex flex-col items-center justify-center"
+             style="background: linear-gradient(135deg, #1a0000 0%, #350505 50%, #121212 100%);">
 
             {{-- Textura de ruido sutil --}}
             <div class="absolute inset-0 opacity-5"
@@ -21,24 +21,38 @@
 
             {{-- Artwork difuminado de fondo --}}
             <div class="absolute inset-0 opacity-20"
-                 style="background: radial-gradient(ellipse at 80% 50%, #DC2626 0%, transparent 70%);"></div>
+                 style="background: radial-gradient(circle at center, #DC2626 0%, transparent 60%);"></div>
+
+            {{-- Visualizador de olas (Background decorativo) --}}
+            <div class="absolute inset-0 flex items-end justify-center gap-1.5 pb-2 opacity-30 pointer-events-none" style="-webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%); mask-image: linear-gradient(to bottom, black 50%, transparent 100%);">
+                @for($i = 0; $i < 16; $i++)
+                <div class="wave-bar rounded bg-red-500"
+                     style="
+                        width: 4px;
+                        height: {{ rand(20, 80) }}px;
+                        animation-delay: {{ number_format($i * 0.1, 2) }}s;
+                        animation-duration: {{ number_format(0.8 + ($i % 3) * 0.2, 2) }}s;
+                     ">
+                </div>
+                @endfor
+            </div>
 
             {{-- Contenido del hero --}}
-            <div class="relative z-10 w-full px-5 pb-5 pt-8">
-
+            <div class="relative z-10 flex flex-col items-center">
                 {{-- Botón Play Live --}}
                 <button @click="playLive()"
-                        class="btn-accent flex items-center gap-2 px-6 py-3 text-sm font-bold uppercase tracking-wider">
+                        class="btn-accent flex items-center gap-2 px-8 py-3.5 text-sm font-bold uppercase tracking-wider shadow-[0_8px_24px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 transition-all">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
                     </svg>
                     Escuchar Ahora
                 </button>
+                <span class="text-[10px] text-red-400 font-bold uppercase tracking-widest mt-4">🔴 En Vivo 24/7</span>
             </div>
         </div>
 
         {{-- Difuminado inferior para transición suave --}}
-        <div class="h-8" style="background: linear-gradient(to bottom, transparent, #121212);"></div>
+        <div class="h-8" style="background: linear-gradient(to bottom, transparent, #121212); margin-top: -32px; position: relative; z-index: 10;"></div>
     </section>
 
     {{-- ═══════════════════════════════════════════════
@@ -84,13 +98,13 @@
                     <h3 class="font-display text-sm font-semibold text-white leading-snug line-clamp-2 mb-1">
                         {{ $post->title }}
                     </h3>
-                    <p class="text-[11px] text-gray-500">
+                    <p class="text-[11px] text-gray-400">
                         {{ $post->published_at?->diffForHumans() ?? '—' }}
                     </p>
                 </div>
             </div>
             @empty
-                <p class="text-sm text-gray-500 py-4 px-2">No hay noticias disponibles.</p>
+                <p class="text-sm text-gray-400 py-4 px-2">No hay noticias disponibles.</p>
             @endforelse
         </div>
     </section>
@@ -133,7 +147,7 @@
                     <p class="font-display text-sm font-semibold text-white truncate leading-tight">
                         {{ $ep['title'] ?? 'Episodio' }}
                     </p>
-                    <p class="text-xs text-gray-500 truncate mt-0.5">
+                    <p class="text-xs text-gray-400 truncate mt-0.5">
                         {{ $ep['program'] ?? '' }}
                         @if(!empty($ep['date'])) · {{ $ep['date'] }} @endif
                     </p>
@@ -150,7 +164,7 @@
         </div>
         @else
         <div class="pwa-card p-6 text-center">
-            <p class="text-sm text-gray-500">Cargando episodios...</p>
+            <p class="text-sm text-gray-400">Cargando episodios...</p>
         </div>
         @endif
     </section>
@@ -200,7 +214,7 @@
                     </div>
                 </div>
                 <p class="font-display text-xs font-semibold text-white truncate">{{ $release->title }}</p>
-                <p class="text-[11px] text-gray-500 truncate">{{ $release->artist_name }}</p>
+                <p class="text-[11px] text-gray-400 truncate">{{ $release->artist_name }}</p>
             </div>
             @endforeach
         </div>

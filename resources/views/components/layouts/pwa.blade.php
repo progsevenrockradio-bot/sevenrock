@@ -46,7 +46,7 @@
             --pwa-accent:  #DC2626;
             --pwa-accent2: #ef4444;
             --pwa-text:    #e8e8e8;
-            --pwa-muted:   #7b7b7b;
+            --pwa-muted:   #9ca3af;
             --pwa-nav-h:   56px;     /* altura bottom nav */
             --pwa-player-h: 68px;    /* altura mini player */
             --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -134,6 +134,7 @@
             padding-bottom: var(--safe-bottom);
             background: #0e0e0e;
             border-top: 1px solid var(--pwa-border);
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.3);
             display: flex;
             align-items: stretch;
         }
@@ -171,14 +172,15 @@
         .scroll-snap-x::-webkit-scrollbar { display: none; }
         .scroll-snap-x > * { scroll-snap-align: start; flex-shrink: 0; }
 
-        /* ── Cards ── */
         .pwa-card {
             background: var(--pwa-card);
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
-            transition: transform 0.15s, box-shadow 0.15s;
+            border: 1px solid var(--pwa-border);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease;
         }
-        .pwa-card:active { transform: scale(0.97); }
+        .pwa-card:active { transform: scale(0.97); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
 
         /* ── Botón de acento ── */
         .btn-accent {
@@ -199,7 +201,7 @@
         .player-progress {
             position: absolute;
             top: 0; left: 0; right: 0;
-            height: 2px;
+            height: 3px;
             background: var(--pwa-border);
         }
         .player-progress-fill {
@@ -218,7 +220,7 @@
             flex-direction: column;
             align-items: center;
             overflow-y: auto;
-            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
         /* ── Animación de onda (live visualizer) ── */
@@ -237,10 +239,10 @@
         /* ── Sección headings ── */
         .section-heading {
             font-family: 'Oswald', sans-serif;
-            font-size: 1.1rem;
+            font-size: 1.125rem; /* text-lg */
             font-weight: 600;
             color: var(--pwa-text);
-            letter-spacing: 0.04em;
+            letter-spacing: 0.03em;
             text-transform: uppercase;
         }
 
@@ -343,14 +345,14 @@
             <button id="pwa-push-btn"
                     @click="togglePushSubscription()"
                     title="Activar notificaciones En Vivo"
-                    class="w-8 h-8 rounded-full border border-[#3a3a3a] flex items-center justify-center overflow-hidden hover:border-red-600/40 transition-colors"
+                    class="w-10 h-10 rounded-full border border-[#3a3a3a] flex items-center justify-center overflow-hidden hover:border-red-600/40 transition-colors"
                     :class="pushSubscribed ? 'bg-red-600/10 border-red-600/40' : 'bg-[#2a2a2a]'">
                 {{-- Campana activa --}}
                 <svg x-show="pushSubscribed" class="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
                 </svg>
                 {{-- Campana inactiva --}}
-                <svg x-show="!pushSubscribed" class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <svg x-show="!pushSubscribed" class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                 </svg>
             </button>
@@ -442,7 +444,7 @@
                 </button>
 
                 {{-- Chevron expand --}}
-                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>
                 </svg>
             </div>
@@ -527,7 +529,7 @@
                    min="0" max="100" step="0.1"
                    @input="seekTo($event.target.value)"
                    @click.stop>
-            <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <div class="flex justify-between text-xs text-gray-400 mt-1">
                 <span x-text="formatTime(currentTime)">0:00</span>
                 <span x-text="formatTime(duration)">0:00</span>
             </div>

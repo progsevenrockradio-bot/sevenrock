@@ -12,7 +12,7 @@
     ═══════════════════════════════════════════════ --}}
     <div class="px-4 pt-4 pb-4">
         <h1 class="font-display text-2xl font-bold text-white tracking-wide">Mi Música</h1>
-        <p class="text-sm text-gray-500 mt-1">Artistas y lanzamientos de Seven Rock Radio</p>
+        <p class="text-sm text-gray-400 mt-1">Artistas y lanzamientos de Seven Rock Radio</p>
     </div>
 
     {{-- ═══════════════════════════════════════════════
@@ -21,7 +21,7 @@
     <section class="mb-6" x-data x-show="$store.favorites && $store.favorites.items.length > 0">
         <div class="flex items-center justify-between px-4 mb-3">
             <h2 class="section-heading">❤ Mis Favoritos</h2>
-            <button class="text-xs text-gray-600 hover:text-red-400 transition-colors"
+            <button class="text-xs text-gray-500 hover:text-red-400 transition-colors"
                     @click="if(confirm('¿Borrar todos los favoritos?')) $store.favorites.clear()">
                 Borrar todo
             </button>
@@ -42,7 +42,7 @@
                     {{-- Info --}}
                     <div class="flex-1 min-w-0">
                         <p class="font-display text-sm font-semibold text-white truncate leading-tight" x-text="ep.title"></p>
-                        <p class="text-xs text-gray-500 truncate mt-0.5" x-text="ep.program || ep.artist || ''"></p>
+                        <p class="text-xs text-gray-400 truncate mt-0.5" x-text="ep.program || ep.artist || ''"></p>
                     </div>
 
                     {{-- Botones --}}
@@ -91,7 +91,7 @@
                              loading="lazy">
                     @else
                         <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-900/20 to-[#1e1e1e]">
-                            <svg class="w-7 h-7 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-7 h-7 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                             </svg>
                         </div>
@@ -101,7 +101,7 @@
                 {{-- Info --}}
                 <div class="min-w-0">
                     <p class="font-display text-sm font-semibold text-white truncate">{{ $artist->name }}</p>
-                    <p class="text-[10px] text-gray-500 mt-0.5">Artista</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">Artista</p>
                 </div>
             </a>
             @endforeach
@@ -159,9 +159,9 @@
                     <p class="font-display text-sm font-semibold text-white truncate leading-tight">
                         {{ $release->title }}
                     </p>
-                    <p class="text-xs text-gray-500 truncate mt-0.5">{{ $release->artist_name }}</p>
+                    <p class="text-xs text-gray-400 truncate mt-0.5">{{ $release->artist_name }}</p>
                     @if($release->released_at)
-                        <p class="text-[10px] text-gray-600 mt-0.5">
+                        <p class="text-[10px] text-gray-500 mt-0.5">
                             {{ $release->released_at->format('Y') }}
                         </p>
                     @endif
@@ -187,7 +187,7 @@
                     </div>
                     @else
                     <div class="w-9 h-9 rounded-full border border-[#2a2a2a] flex items-center justify-center opacity-30 cursor-not-allowed">
-                        <svg class="w-4 h-4 text-gray-500 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4 text-gray-400 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z"/>
                         </svg>
                     </div>
@@ -206,11 +206,11 @@
         <h2 class="section-heading mb-3">Mis Playlists</h2>
 
         <div class="pwa-card p-8 text-center border border-dashed border-[#2a2a2a]" style="background: transparent;">
-            <svg class="w-12 h-12 text-gray-700 mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <svg class="w-12 h-12 text-gray-600 mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
             </svg>
-            <p class="text-sm text-gray-600 mb-1">Próximamente</p>
-            <p class="text-xs text-gray-700">Las playlists personales estarán disponibles pronto.</p>
+            <p class="text-sm text-gray-500 mb-1">Próximamente</p>
+            <p class="text-xs text-gray-600">Las playlists personales estarán disponibles pronto.</p>
         </div>
     </section>
 

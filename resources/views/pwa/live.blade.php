@@ -106,7 +106,7 @@
         </div>
 
         {{-- Info de la emisora --}}
-        <p class="text-xs text-gray-600 text-center">
+        <p class="text-xs text-gray-500 text-center">
             Señal digital · Seven Rock Radio © {{ date('Y') }}
         </p>
     </div>
@@ -177,15 +177,15 @@
                         <div class="flex items-center gap-3 px-4 py-3 bg-[#1a1a1a]"
                              :class="index < tracks.length - 1 ? 'border-b border-[#1e1e1e]' : ''">
                             <div class="w-9 h-9 rounded overflow-hidden bg-[#252525] shrink-0 flex items-center justify-center">
-                                <svg class="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                                 </svg>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm text-white font-semibold truncate" x-text="track.title"></p>
-                                <p class="text-xs text-gray-500 truncate" x-text="track.artist"></p>
+                                <p class="text-xs text-gray-400 truncate" x-text="track.artist"></p>
                             </div>
-                            <span class="text-[10px] text-gray-600 shrink-0" x-text="track.played_at"></span>
+                            <span class="text-[10px] text-gray-500 shrink-0" x-text="track.played_at"></span>
                         </div>
                     </template>
                 </div>
@@ -193,7 +193,7 @@
 
             {{-- Sin datos --}}
             <template x-if="!loading && tracks.length === 0">
-                <div class="px-4 py-6 text-center text-sm text-gray-600 bg-[#1a1a1a]">
+                <div class="px-4 py-6 text-center text-sm text-gray-500 bg-[#1a1a1a]">
                     El historial de reproducción no está disponible en este momento.
                 </div>
             </template>

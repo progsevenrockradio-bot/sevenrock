@@ -26,7 +26,7 @@
 
         {{-- Barra de búsqueda --}}
         <div class="relative">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
             <input type="search"
@@ -134,12 +134,12 @@
                             {{-- Info --}}
                             <div class="flex-1 min-w-0">
                                 <p class="font-display text-sm font-semibold text-white leading-tight" x-text="program.title"></p>
-                                <p class="text-xs text-gray-500 truncate mt-0.5" x-text="program.host || program.schedule || ''"></p>
-                                <p class="text-[10px] text-gray-600 mt-0.5" x-text="program.day ? `${program.day} · ${program.hour}` : ''"></p>
+                                <p class="text-xs text-gray-400 truncate mt-0.5" x-text="program.host || program.schedule || ''"></p>
+                                <p class="text-[10px] text-gray-500 mt-0.5" x-text="program.day ? `${program.day} · ${program.hour}` : ''"></p>
                             </div>
 
                             {{-- Flecha expand --}}
-                            <svg class="w-4 h-4 text-gray-500 transition-transform shrink-0"
+                            <svg class="w-4 h-4 text-gray-400 transition-transform shrink-0"
                                  :class="activeProgram === program.id ? 'rotate-180' : ''"
                                  fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
@@ -183,10 +183,10 @@
 
             {{-- Sin resultados --}}
             <div x-show="filteredPrograms.length === 0" class="pwa-card p-8 text-center">
-                <svg class="w-10 h-10 text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-10 h-10 text-gray-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                <p class="text-sm text-gray-500">No se encontraron programas.</p>
+                <p class="text-sm text-gray-400">No se encontraron programas.</p>
             </div>
         </div>
     </div>
@@ -225,7 +225,7 @@
                     <p class="font-display text-sm font-semibold text-white truncate leading-tight">
                         {{ $ep['title'] ?? 'Episodio' }}
                     </p>
-                    <p class="text-xs text-gray-500 truncate mt-0.5">
+                    <p class="text-xs text-gray-400 truncate mt-0.5">
                         {{ $ep['program'] ?? '' }}
                         @if(!empty($ep['date'])) · {{ $ep['date'] }} @endif
                     </p>
@@ -236,7 +236,7 @@
                     {{-- Botón corazón favorito --}}
                     <button @click.stop="$store.favorites.toggle({{ Js::from($epData) }})"
                             class="w-7 h-7 flex items-center justify-center transition-colors"
-                            :class="$store.favorites.has('{{ $epData['id'] }}') ? 'text-red-500' : 'text-gray-600 hover:text-red-400'">
+                            :class="$store.favorites.has('{{ $epData['id'] }}') ? 'text-red-500' : 'text-gray-500 hover:text-red-400'">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                         </svg>
