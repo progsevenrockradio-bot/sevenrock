@@ -216,10 +216,10 @@
             </a>
 
             <div class="flex items-center gap-5 text-white">
-                <button type="button" class="relative flex h-11 w-11 -ml-2 items-center justify-center lg:hidden" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
-                    <span class="absolute h-[1.5px] w-6 bg-white transition-all duration-300" :class="open ? 'rotate-45' : '-translate-y-2'"></span>
-                    <span class="absolute h-[1.5px] w-6 bg-white transition-all duration-300" :class="open ? 'opacity-0' : ''"></span>
-                    <span class="absolute h-[1.5px] w-6 bg-white transition-all duration-300" :class="open ? '-rotate-45' : 'translate-y-2'"></span>
+                <button type="button" class="relative h-11 w-11 lg:hidden mr-2" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
+                    <span class="absolute left-1/2 top-4 h-[1.5px] w-5 -translate-x-1/2 bg-white transition-all duration-300" :class="open ? 'top-1/2 rotate-45' : ''"></span>
+                    <span class="absolute left-1/2 top-1/2 h-[1.5px] w-5 -translate-x-1/2 bg-white transition-all duration-300" :class="open ? 'opacity-0' : ''"></span>
+                    <span class="absolute left-1/2 top-7 h-[1.5px] w-5 -translate-x-1/2 bg-white transition-all duration-300" :class="open ? 'top-1/2 -rotate-45' : ''"></span>
                 </button>
             </div>
         </div>
@@ -335,9 +335,20 @@
         </div>
     </div>
 
-    <div x-cloak x-show="open" x-transition.opacity class="fixed inset-0 z-40 bg-[rgba(16,16,18,.98)] backdrop-blur-md pt-[120px] px-5 pb-6 lg:hidden overflow-y-auto">
-        <nav>
-            <ul class="mx-auto max-w-[1180px] divide-y divide-white/5 pb-28">
+    <div x-cloak x-show="open" x-transition.opacity class="fixed inset-0 z-40 bg-[rgba(16,16,18,.98)] backdrop-blur-md pt-[100px] px-5 pb-6 lg:hidden overflow-y-auto">
+        <nav class="flex flex-col">
+            <div class="mb-6 px-1">
+                <a href="{{ route('app.download') }}" class="flex w-full items-center justify-center gap-2 rounded-full bg-lucille-accent px-5 py-3 text-sm font-display font-bold uppercase tracking-wider text-white shadow-lg shadow-lucille-accent/30 transition-all active:scale-95" aria-label="Descargar la aplicación de la radio">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Descargar App</span>
+                </a>
+            </div>
+
+            <ul class="mx-auto w-full max-w-[1180px] divide-y divide-white/5 pb-24">
                 @foreach ($items as $item)
                     @php
                         $isActive = isset($item['route']) && request()->routeIs($item['route']);
@@ -372,17 +383,6 @@
                         @endif
                     </li>
                 @endforeach
-                
-                <li class="py-5 px-1 mt-2 border-t-0">
-                    <a href="{{ route('app.download') }}" class="flex w-full items-center justify-center gap-2 rounded-full bg-lucille-accent px-5 py-3 text-sm font-display font-bold uppercase tracking-wider text-white shadow-lg shadow-lucille-accent/30 transition-all active:scale-95" aria-label="Descargar la aplicación de la radio">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        <span>Descargar App</span>
-                    </a>
-                </li>
             </ul>
         </nav>
     </div>
