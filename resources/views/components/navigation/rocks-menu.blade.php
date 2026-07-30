@@ -323,7 +323,7 @@
                 </a>
             @endauth
 
-            <a href="{{ route('app.download') }}" class="ml-2 flex items-center gap-1.5 rounded-full border border-lucille-accent/60 px-[clamp(8px,0.8vw,12px)] py-[clamp(4px,0.4vw,6px)] text-[clamp(8px,0.75vw,11px)] font-display font-medium uppercase tracking-[.1em] text-lucille-accent transition-all duration-300 ease-in-out whitespace-nowrap hover:bg-lucille-accent hover:text-white" aria-label="Descargar la aplicación de la radio" title="Descargar App">
+            <a href="{{ route('app.download') }}" target="_blank" rel="noopener noreferrer" class="ml-2 flex items-center gap-1.5 rounded-full border border-lucille-accent/60 px-[clamp(8px,0.8vw,12px)] py-[clamp(4px,0.4vw,6px)] text-[clamp(8px,0.75vw,11px)] font-display font-medium uppercase tracking-[.1em] text-lucille-accent transition-all duration-300 ease-in-out whitespace-nowrap hover:bg-lucille-accent hover:text-white" aria-label="Descargar la aplicación de la radio" title="Descargar App">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7 10 12 15 17 10"></polyline>
@@ -381,7 +381,7 @@
             </ul>
             
             <div class="mt-8 mb-24 flex flex-col gap-3 px-8">
-                <a href="{{ route('app.download') }}" class="group flex w-full items-center justify-center gap-2 rounded-full bg-lucille-accent px-4 py-2.5 text-[10px] font-display font-medium uppercase tracking-[.1em] text-white shadow-lg shadow-lucille-accent/20 transition-all duration-300 hover:bg-[#d42c24] hover:shadow-lucille-accent/40 active:scale-95">
+                <a href="{{ route('app.download') }}" target="_blank" rel="noopener noreferrer" class="group flex w-full items-center justify-center gap-2 rounded-full bg-lucille-accent px-4 py-2.5 text-[10px] font-display font-medium uppercase tracking-[.1em] text-white shadow-lg shadow-lucille-accent/20 transition-all duration-300 hover:bg-[#d42c24] hover:shadow-lucille-accent/40 active:scale-95">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:-translate-y-0.5">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
