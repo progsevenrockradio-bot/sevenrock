@@ -24,14 +24,7 @@
                  style="background: radial-gradient(ellipse at 80% 50%, #DC2626 0%, transparent 70%);"></div>
 
             {{-- Contenido del hero --}}
-            <div class="relative z-10 w-full px-5 pb-5">
-                {{-- Badge En Vivo --}}
-                <div class="flex items-center gap-2 mb-4">
-                    <span class="flex items-center gap-1.5 bg-red-600/20 border border-red-600/50 text-red-400 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-                        <span class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
-                        En el Aire
-                    </span>
-                </div>
+            <div class="relative z-10 w-full px-5 pb-5 pt-8">
 
                 {{-- Botón Play Live --}}
                 <button @click="playLive()"
