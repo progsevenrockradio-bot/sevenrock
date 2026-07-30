@@ -568,5 +568,7 @@ Route::get('/storage/{path}', function (string $path) {
     return response()->file($filePath);
 })->where('path', '.*')->name('local-storage-fallback');
 
+Route::get('/descargar-app', [\App\Http\Controllers\AppDownloadController::class, 'download'])->name('app.download');
+
 
 
