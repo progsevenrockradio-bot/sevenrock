@@ -26,17 +26,12 @@
             {{-- Contenido del hero --}}
             <div class="relative z-10 w-full px-5 pb-5">
                 {{-- Badge En Vivo --}}
-                <div class="flex items-center gap-2 mb-2">
+                <div class="flex items-center gap-2 mb-4">
                     <span class="flex items-center gap-1.5 bg-red-600/20 border border-red-600/50 text-red-400 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
                         <span class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
                         En el Aire
                     </span>
                 </div>
-
-                <h1 class="font-display text-3xl font-bold text-white leading-none mb-1">
-                    SEVEN ROCK RADIO
-                </h1>
-                <p class="text-sm text-gray-400 mb-4">Tu radio de rock online · 24/7</p>
 
                 {{-- Botón Play Live --}}
                 <button @click="playLive()"
