@@ -216,10 +216,10 @@
             </a>
 
             <div class="flex items-center gap-5 text-white">
-                <button type="button" class="relative h-11 w-11 lg:hidden mr-2" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
-                    <span class="absolute left-1/2 top-4 h-[1.5px] w-5 -translate-x-1/2 bg-white transition-all duration-300" :class="open ? 'top-1/2 rotate-45' : ''"></span>
-                    <span class="absolute left-1/2 top-1/2 h-[1.5px] w-5 -translate-x-1/2 bg-white transition-all duration-300" :class="open ? 'opacity-0' : ''"></span>
-                    <span class="absolute left-1/2 top-7 h-[1.5px] w-5 -translate-x-1/2 bg-white transition-all duration-300" :class="open ? 'top-1/2 -rotate-45' : ''"></span>
+                <button type="button" class="relative h-11 w-11 lg:hidden mr-2 group" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
+                    <span class="absolute left-1/2 top-4 h-[1.5px] w-5 -translate-x-1/2 rounded-full bg-white transition-all duration-300 ease-out" :class="open ? 'top-1/2 rotate-45' : 'group-hover:-translate-y-0.5'"></span>
+                    <span class="absolute left-1/2 top-1/2 h-[1.5px] w-5 -translate-x-1/2 rounded-full bg-white transition-all duration-300 ease-out" :class="open ? 'opacity-0' : ''"></span>
+                    <span class="absolute left-1/2 top-7 h-[1.5px] w-5 -translate-x-1/2 rounded-full bg-white transition-all duration-300 ease-out" :class="open ? 'top-1/2 -rotate-45' : 'group-hover:translate-y-0.5'"></span>
                 </button>
             </div>
         </div>
@@ -239,7 +239,7 @@
                     <li class="group relative flex h-full items-center">
                         <a
                             href="{{ $item['url'] ?? route($item['route']) }}"
-                            class="flex h-full items-center px-2 xl:px-[18px] font-display text-[10px] xl:text-xs font-light uppercase tracking-wider xl:tracking-[.08em] text-white transition-colors duration-300 hover:text-lucille-accent"
+                            class="flex h-full items-center px-2 xl:px-[18px] font-display text-[10px] xl:text-xs font-medium uppercase tracking-wider xl:tracking-[.08em] text-white/90 transition-colors duration-300 hover:text-lucille-accent"
                         >
                             {{ $item['label'] }}
                         </a>
@@ -262,8 +262,8 @@
 
         <div class="hidden items-center gap-2 xl:gap-6 border-l border-white/10 pl-2 xl:pl-6 lg:flex">
             <!-- Programas Icon -->
-            <a href="{{ route('programs') }}" class="text-white transition-colors duration-300 hover:text-lucille-accent" aria-label="Programas" title="Programas">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <a href="{{ route('programs') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent" aria-label="Programas" title="Programas">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:scale-110">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
                     <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                     <line x1="12" y1="19" x2="12" y2="23"></line>
@@ -272,8 +272,8 @@
             </a>
 
             <!-- Tienda Icon -->
-            <a href="{{ route('shop') }}" class="text-white transition-colors duration-300 hover:text-lucille-accent" aria-label="Tienda" title="Tienda">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <a href="{{ route('shop') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent" aria-label="Tienda" title="Tienda">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:scale-110">
                     <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
                     <line x1="3" y1="6" x2="21" y2="6"></line>
                     <path d="M16 10a4 4 0 0 1-8 0"></path>
@@ -281,25 +281,25 @@
             </a>
 
             {{-- P1-2: Ícono de Carrito con Badge "Próximamente" --}}
-            <span class="relative group cursor-pointer" title="Carrito — Próximamente" aria-label="Carrito (próximamente disponible)">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="text-white/50 group-hover:text-lucille-accent transition-colors duration-300">
+            <span class="relative group cursor-pointer flex items-center" title="Carrito — Próximamente" aria-label="Carrito (próximamente disponible)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white/50 transition-all duration-300 group-hover:text-lucille-accent group-hover:scale-110">
                     <circle cx="9" cy="21" r="1"></circle>
                     <circle cx="20" cy="21" r="1"></circle>
                     <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                 </svg>
                 {{-- Badge animado --}}
-                <span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-lucille-accent/70 text-white group-hover:bg-lucille-accent transition-colors duration-200">
+                <span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-lucille-accent/70 text-white transition-all duration-300 group-hover:bg-lucille-accent group-hover:scale-110">
                     <span class="font-display text-[7px] leading-none">0</span>
                 </span>
                 {{-- Tooltip --}}
-                <span class="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-[#111] border border-[#2b2b2b] px-2 py-0.5 text-[9px] uppercase tracking-[.1em] text-[#aaa] opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <span class="pointer-events-none absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#161618] border border-white/10 px-2.5 py-1 text-[9px] uppercase tracking-[.1em] text-[#ccc] opacity-0 shadow-lg transition-all duration-300 group-hover:opacity-100 group-hover:-translate-y-1">
                     Próximamente
                 </span>
             </span>
 
             <!-- Buscar Icon -->
-            <button type="button" class="text-white transition-colors duration-300 hover:text-lucille-accent" @click="searchOpen = true" aria-label="Buscar" title="Buscar">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <button type="button" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent" @click="searchOpen = true" aria-label="Buscar" title="Buscar">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:scale-110">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
@@ -307,15 +307,15 @@
 
             <!-- Iniciar Sesión / Mi Cuenta Icon -->
             @auth('talent')
-                <a href="{{ route('talents.dashboard') }}" class="text-white transition-colors duration-300 hover:text-lucille-accent" aria-label="Mi Cuenta" title="Mi Cuenta (Talentos)">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <a href="{{ route('talents.dashboard') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent" aria-label="Mi Cuenta" title="Mi Cuenta (Talentos)">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:scale-110">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                         <circle cx="12" cy="7" r="4"></circle>
                     </svg>
                 </a>
             @else
-                <a href="{{ route('talents.login') }}" class="text-white transition-colors duration-300 hover:text-lucille-accent" aria-label="Iniciar Sesión" title="Iniciar Sesión (Talentos)">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <a href="{{ route('talents.login') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent" aria-label="Iniciar Sesión" title="Iniciar Sesión (Talentos)">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:scale-110">
                         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
                         <polyline points="10 17 15 12 10 7"></polyline>
                         <line x1="15" y1="12" x2="3" y2="12"></line>
@@ -352,8 +352,12 @@
                                 @if($isActive) aria-current="page" @endif
                             >{{ $item['label'] }}</a>
                             @if (! empty($item['children']))
-                                {{-- P2-4: Área táctil mínima 44×44px en el botón + de submenú --}}
-                                <button type="button" class="flex items-center justify-center w-11 h-11 text-white hover:text-lucille-accent transition-colors duration-200" @click.prevent="childOpen = ! childOpen" aria-label="Toggle submenu">+</button>
+                                {{-- P2-4: Área táctil mínima 44×44px en el botón de submenú --}}
+                                <button type="button" class="flex items-center justify-center w-11 h-11 text-white/60 hover:text-lucille-accent transition-colors duration-300" @click.prevent="childOpen = ! childOpen" aria-label="Toggle submenu">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300" :class="childOpen ? 'rotate-180 text-lucille-accent' : ''">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </button>
                             @endif
                         </div>
                         @if (! empty($item['children']))
@@ -377,11 +381,11 @@
             </ul>
             
             <div class="mt-8 mb-24 grid grid-cols-2 gap-3 px-1">
-                <a href="{{ route('talents.login') }}" class="flex w-full items-center justify-center rounded-full bg-white/10 px-2 py-3 text-[11px] font-display font-bold uppercase tracking-wider text-white transition-all active:scale-95">
+                <a href="{{ route('talents.login') }}" class="flex w-full items-center justify-center rounded-full bg-white/5 border border-white/10 px-2 py-3 text-[11px] font-display font-medium uppercase tracking-wider text-white transition-all duration-300 hover:bg-white/10 active:scale-95">
                     Iniciar Sesión
                 </a>
-                <a href="{{ route('app.download') }}" class="flex w-full items-center justify-center gap-1.5 rounded-full bg-lucille-accent px-2 py-3 text-[11px] font-display font-bold uppercase tracking-wider text-white shadow-lg shadow-lucille-accent/30 transition-all active:scale-95">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <a href="{{ route('app.download') }}" class="group flex w-full items-center justify-center gap-1.5 rounded-full bg-lucille-accent px-2 py-3 text-[11px] font-display font-medium uppercase tracking-wider text-white shadow-lg shadow-lucille-accent/20 transition-all duration-300 hover:bg-[#d42c24] hover:shadow-lucille-accent/40 active:scale-95">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:-translate-y-0.5">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
