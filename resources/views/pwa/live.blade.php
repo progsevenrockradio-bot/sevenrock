@@ -10,7 +10,31 @@
     {{-- ═══════════════════════════════════════════════
          HERO — SEÑAL EN VIVO
     ═══════════════════════════════════════════════ --}}
-    <div class="flex-1 flex flex-col items-center justify-center px-6 pt-8 pb-4">
+    <div class="flex-1 flex flex-col items-center justify-center px-6 pt-8 pb-4"
+         x-data="{
+             liveInfo: { title: 'Seven Rock Radio', artist: 'En el aire · 24/7', cover: '{{ $artworkUrl }}' },
+             async fetchLive() {
+                 try {
+                     const res = await fetch('/app/api/now-playing');
+                     if (!res.ok) return;
+                     const data = await res.json();
+                     this.liveInfo.title = data.title || 'Seven Rock Radio';
+                     this.liveInfo.artist = data.artist || 'En el aire · 24/7';
+                     this.liveInfo.cover = data.cover ? data.cover + '?t=' + Date.now() : '{{ $artworkUrl }}?' + Date.now();
+                     
+                     if (typeof isLive !== 'undefined' && isLive) {
+                         currentTrack.title = this.liveInfo.title;
+                         currentTrack.artist = this.liveInfo.artist;
+                         currentTrack.cover = this.liveInfo.cover;
+                     }
+                 } catch {}
+             }
+         }"
+         x-init="
+             fetchLive();
+             const ivLive = setInterval(() => fetchLive(), 15000);
+             return () => clearInterval(ivLive);
+         ">
 
         {{-- Artwork / Logo de la estación --}}
         <div class="relative mb-8" x-data>
@@ -23,7 +47,7 @@
             {{-- Artwork principal --}}
             <div class="relative w-52 h-52 rounded-full overflow-hidden border-4 border-red-600/40 shadow-2xl shadow-red-900/40">
                 <img id="live-artwork"
-                     src="{{ $artworkUrl }}"
+                     :src="liveInfo.cover"
                      alt="Seven Rock Radio — En Vivo"
                      class="w-full h-full object-cover"
                      onerror="this.src='{{ asset('assets/lucille/album3.jpg') }}'">
@@ -41,12 +65,12 @@
         <div class="text-center mb-6 w-full max-w-xs">
             <h1 class="font-display text-2xl font-bold text-white leading-tight mb-1"
                 id="live-title"
-                x-text="(isLive && currentTrack.title) ? currentTrack.title : 'Seven Rock Radio'">
+                x-text="liveInfo.title">
                 Seven Rock Radio
             </h1>
             <p class="text-base text-gray-400"
                id="live-artist"
-               x-text="(isLive && currentTrack.artist) ? currentTrack.artist : 'En el aire · 24/7'">
+               x-text="liveInfo.artist">
                En el aire · 24/7
             </p>
         </div>
@@ -124,7 +148,11 @@
                     this.loading = false;
                 }
              }"
-             x-init="fetchTracks(); setInterval(() => fetchTracks(), 30000)">
+             x-init="
+                fetchTracks(); 
+                const ivTracks = setInterval(() => fetchTracks(), 30000);
+                return () => clearInterval(ivTracks);
+             ">
 
             {{-- Skeleton mientras carga --}}
             <template x-if="loading">

@@ -128,14 +128,14 @@
                      'src'     => $ep['src'] ?? '',
                      'title'   => $ep['title'] ?? 'Episodio',
                      'program' => $ep['program'] ?? 'Podcast',
-                     'cover'   => $ep['cover'] ?? asset('assets/lucille/podcats.webp'),
+                     'cover'   => $ep['image'] ?? asset('assets/lucille/podcats.webp'),
                  ]) }})">
 
                 {{-- Carátula del episodio --}}
                 <div class="w-14 h-14 rounded-lg overflow-hidden bg-[#0a0a0b] shrink-0 border border-[#2a2a2a]">
-                    <img src="{{ $ep['cover'] ?? asset('assets/lucille/podcats.webp') }}"
+                    <img src="{{ $ep['image'] ?? asset('assets/lucille/podcats.webp') }}"
                          alt="{{ $ep['title'] ?? 'Podcast' }}"
-                         class="w-full h-full object-contain"
+                         class="w-full h-full object-cover"
                          loading="lazy"
                          onerror="this.src='{{ asset('assets/lucille/podcats.webp') }}'">
                 </div>

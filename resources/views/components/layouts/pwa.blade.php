@@ -16,9 +16,19 @@
     <meta name="apple-mobile-web-app-title" content="7RockRadio">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    
+    @php
+        $themeSettings = \App\Models\ThemeSetting::first();
+        $logoUrl = $themeSettings->logo_url ?? asset('assets/lucille/logo.png');
+        $logoUrl = \App\Support\PublicMediaUrl::normalize($logoUrl) ?? $logoUrl;
+        $brandFontUrl = $themeSettings->google_fonts_url ?? 'https://fonts.googleapis.com/css2?family=Rock+Salt&display=swap';
+    @endphp
+    
+    <link rel="icon" type="image/png" href="{{ $logoUrl }}">
+    <link rel="apple-touch-icon" href="{{ $logoUrl }}">
 
     {{-- Fuentes Oswald + Open Sans (sistema Lucille) --}}
+    <link href="{{ $brandFontUrl }}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=oswald:400,500,600,700|open-sans:400,500,600&display=swap" rel="stylesheet">
 
@@ -268,6 +278,29 @@
         @media all and (display-mode: fullscreen) {
             .hide-in-pwa { display: none !important; }
         }
+
+        /* ── Estilos Brand PWA ── */
+        .pwa-brand-container {
+            position: relative;
+            display: inline-block;
+            font-family: var(--lucille-brand-font, "Rock Salt"), "Segoe Script", cursive;
+            color: var(--pwa-accent);
+            font-size: 11px;
+            width: 58px;
+            height: 38px;
+            transform: skewX(12deg) translateY(2px);
+            text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.2);
+            margin-left: 6px;
+        }
+        .pwa-brand-word {
+            position: absolute;
+            display: inline-block;
+            white-space: nowrap;
+            line-height: 1;
+        }
+        .pwa-word-seven { left: 0; top: 0; transform: rotate(-4deg); }
+        .pwa-word-rock { left: 0; top: 12px; transform: rotate(-4deg); }
+        .pwa-word-radio { left: 0; top: 24px; transform: rotate(-4deg); }
     </style>
 </head>
 
@@ -285,9 +318,12 @@
     ═══════════════════════════════════════════════ --}}
     <header id="pwa-header">
         {{-- Logo --}}
-        <a href="/app" class="flex items-center gap-2 pwa-nav-link" data-href="/app">
-            <span class="font-display font-bold text-base tracking-wider text-white">
-                SEVEN ROCK RADIO
+        <a href="/app" class="flex items-center pwa-nav-link" data-href="/app">
+            <img src="{{ $logoUrl }}" alt="Seven Rock Radio" class="h-[40px] w-auto object-contain" loading="lazy">
+            <span class="pwa-brand-container">
+                <span class="pwa-brand-word pwa-word-seven">Seven</span>
+                <span class="pwa-brand-word pwa-word-rock">Rock</span>
+                <span class="pwa-brand-word pwa-word-radio">Radio</span>
             </span>
         </a>
 
