@@ -183,12 +183,12 @@
     :class="sticky ? 'rocks-header-sticky' : 'rocks-header-top'"
     class="inset-x-0 top-0 z-50 transition-all duration-300"
 >
-    <div class="absolute inset-0 bg-cover bg-center md:hidden" style="background-image: linear-gradient(rgba(16, 16, 18, 0.75), rgba(16, 16, 18, 0.75)), var(--lucille-bg-image);" aria-hidden="true"></div>
+    <div class="absolute inset-0 z-0 bg-cover bg-center md:hidden" style="background-image: linear-gradient(rgba(16, 16, 18, 0.75), rgba(16, 16, 18, 0.75)), var(--lucille-bg-image);" aria-hidden="true"></div>
     <div 
-        class="relative z-[50] mx-auto flex h-full max-w-[1180px] flex-col justify-center px-5 lg:px-8 md:flex-row md:items-center md:justify-between md:py-0"
+        class="mx-auto flex h-full max-w-[1180px] flex-col justify-center px-4 lg:px-6 md:flex-row md:items-center md:justify-between md:py-0 md:gap-4"
     >
         <div class="flex w-full items-center justify-between md:contents">
-            <a href="{{ route('home') }}" class="flex h-full items-center gap-3 py-2 md:py-0" aria-label="{{ $brandMark }} home">
+            <a href="{{ route('home') }}" class="relative z-10 flex h-full items-center gap-3 py-2 md:py-0" aria-label="{{ $brandMark }} home">
                 @if ($brandDisplayMode === 'both' && $logoUrl)
                     <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both" loading="lazy">
                     <span class="brand-mark-container" :class="sticky ? 'sticky-active' : 'normal'">
@@ -215,7 +215,7 @@
                 @endif
             </a>
 
-            <div class="flex items-center gap-5 text-white">
+            <div class="relative z-[60] flex items-center gap-5 text-white">
                 <button type="button" class="relative h-11 w-11 lg:hidden mr-2 group" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
                     <span class="absolute left-1/2 top-4 h-[1.5px] w-5 -translate-x-1/2 rounded-full bg-white transition-all duration-300 ease-out" :class="open ? 'top-1/2 rotate-45' : 'group-hover:-translate-y-0.5'"></span>
                     <span class="absolute left-1/2 top-1/2 h-[1.5px] w-5 -translate-x-1/2 rounded-full bg-white transition-all duration-300 ease-out" :class="open ? 'opacity-0' : ''"></span>
@@ -224,7 +224,7 @@
             </div>
         </div>
 
-        <div class="md:hidden w-full px-1 pb-3 pt-1 text-center">
+        <div class="relative z-10 md:hidden w-full px-1 pb-3 pt-1 text-center">
             <span class="inline-block max-w-full font-display text-[8.5px] uppercase tracking-[.22em] leading-tight text-white/50">
                 Todas las épocas del Rock, <span class="text-lucille-accent/70">están aquí</span>
             </span>
@@ -239,7 +239,7 @@
                     <li class="group relative flex h-full items-center">
                         <a
                             href="{{ $item['url'] ?? route($item['route']) }}"
-                            class="flex h-full items-center px-2 xl:px-[18px] font-display text-[10px] xl:text-xs font-medium uppercase tracking-wider xl:tracking-[.08em] text-white/90 transition-colors duration-300 hover:text-lucille-accent"
+                            class="flex h-full items-center px-1.5 xl:px-4 font-display text-[9px] xl:text-[11px] font-medium uppercase tracking-[.1em] text-white/90 transition-colors duration-300 hover:text-lucille-accent"
                         >
                             {{ $item['label'] }}
                         </a>
@@ -323,7 +323,7 @@
                 </a>
             @endauth
 
-            <a href="{{ route('app.download') }}" class="ml-2 flex items-center gap-1.5 rounded-full bg-lucille-accent px-3 py-1.5 text-[10px] font-display font-medium uppercase tracking-[.08em] text-white shadow-md shadow-lucille-accent/20 transition-all hover:scale-105 hover:bg-opacity-90 hover:shadow-lucille-accent/40" aria-label="Descargar la aplicación de la radio" title="Descargar App">
+            <a href="{{ route('app.download') }}" class="ml-2 flex items-center gap-1.5 rounded-full border border-lucille-accent/60 px-3 py-1.5 text-[9px] font-display font-medium uppercase tracking-[.1em] text-lucille-accent transition-all duration-300 hover:bg-lucille-accent hover:text-white" aria-label="Descargar la aplicación de la radio" title="Descargar App">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7 10 12 15 17 10"></polyline>
@@ -380,17 +380,17 @@
                 @endforeach
             </ul>
             
-            <div class="mt-8 mb-24 grid grid-cols-2 gap-3 px-1">
-                <a href="{{ route('talents.login') }}" class="flex w-full items-center justify-center rounded-full bg-white/5 border border-white/10 px-2 py-3 text-[11px] font-display font-medium uppercase tracking-wider text-white transition-all duration-300 hover:bg-white/10 active:scale-95">
-                    Iniciar Sesión
-                </a>
-                <a href="{{ route('app.download') }}" class="group flex w-full items-center justify-center gap-1.5 rounded-full bg-lucille-accent px-2 py-3 text-[11px] font-display font-medium uppercase tracking-wider text-white shadow-lg shadow-lucille-accent/20 transition-all duration-300 hover:bg-[#d42c24] hover:shadow-lucille-accent/40 active:scale-95">
+            <div class="mt-8 mb-24 flex flex-col gap-3 px-8">
+                <a href="{{ route('app.download') }}" class="group flex w-full items-center justify-center gap-2 rounded-full bg-lucille-accent px-4 py-2.5 text-[10px] font-display font-medium uppercase tracking-[.1em] text-white shadow-lg shadow-lucille-accent/20 transition-all duration-300 hover:bg-[#d42c24] hover:shadow-lucille-accent/40 active:scale-95">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:-translate-y-0.5">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
-                    <span>Descargar</span>
+                    <span>Descargar App</span>
+                </a>
+                <a href="{{ route('talents.login') }}" class="flex w-full items-center justify-center rounded-full border border-white/20 bg-transparent px-4 py-2.5 text-[10px] font-display font-medium uppercase tracking-[.1em] text-white transition-all duration-300 hover:bg-white/5 active:scale-95">
+                    Iniciar Sesión
                 </a>
             </div>
         </nav>
