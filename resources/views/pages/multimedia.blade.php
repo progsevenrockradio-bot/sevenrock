@@ -388,7 +388,23 @@
             <span class="w-1 h-6 bg-lucille-accent rounded-full"></span>Galería de Fotos
         </h2>
         @if (empty($galleryImages))
-            <div class="py-16 text-center text-sm text-[#7b7b7b]">No hay imágenes publicadas todavía.</div>
+            {{-- P1-5: Estado vacío de Galería con mensaje de marca y CTA --}}
+            <div class="py-24 text-center">
+                <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#111] border border-[#242424]">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#c32720" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                </div>
+                <p class="font-display text-sm uppercase tracking-[.18em] text-[#dcdcdc] mb-2">La galería pronto cobrará vida</p>
+                <p class="text-sm text-[#555] max-w-xs mx-auto leading-relaxed">
+                    Aún no hay fotografías publicadas. Los talentos de la comunidad podrán compartir su trabajo aquí muy pronto.
+                </p>
+                <a href="{{ route('talents.login') }}" class="mt-6 inline-flex items-center gap-2 border border-lucille-accent/30 px-5 py-2.5 font-display text-[11px] uppercase tracking-[.15em] text-lucille-accent hover:bg-lucille-accent/10 transition-colors duration-200">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    ¡Sóy un Talento &mdash; Acceder!
+                </a>
+            </div>
         @else
             <div class="columns-1 gap-[5px] md:columns-2 lg:columns-3">
                 @foreach ($galleryImages as $idx => $image)

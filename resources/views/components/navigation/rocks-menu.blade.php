@@ -280,6 +280,23 @@
                 </svg>
             </a>
 
+            {{-- P1-2: Ícono de Carrito con Badge "Próximamente" --}}
+            <span class="relative group cursor-pointer" title="Carrito — Próximamente" aria-label="Carrito (próximamente disponible)">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="text-white/50 group-hover:text-lucille-accent transition-colors duration-300">
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+                {{-- Badge animado --}}
+                <span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-lucille-accent/70 text-white group-hover:bg-lucille-accent transition-colors duration-200">
+                    <span class="font-display text-[7px] leading-none">0</span>
+                </span>
+                {{-- Tooltip --}}
+                <span class="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-[#111] border border-[#2b2b2b] px-2 py-0.5 text-[9px] uppercase tracking-[.1em] text-[#aaa] opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    Próximamente
+                </span>
+            </span>
+
             <!-- Buscar Icon -->
             <button type="button" class="text-white transition-colors duration-300 hover:text-lucille-accent" @click="searchOpen = true" aria-label="Buscar" title="Buscar">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -312,17 +329,34 @@
         <nav>
             <ul class="mx-auto max-w-[1180px] divide-y divide-white/5">
                 @foreach ($items as $item)
+                    @php
+                        $isActive = isset($item['route']) && request()->routeIs($item['route']);
+                    @endphp
                     <li x-data="{ childOpen: false }" class="py-1">
                         <div class="flex items-center justify-between">
-                            <a href="{{ $item['url'] ?? route($item['route']) }}" class="block py-3 font-display text-sm uppercase tracking-[.08em] text-white">{{ $item['label'] }}</a>
+                            <a
+                                href="{{ $item['url'] ?? route($item['route']) }}"
+                                class="block py-3 font-display text-sm uppercase tracking-[.08em] transition-colors duration-200 {{ $isActive ? 'text-lucille-accent' : 'text-white' }}"
+                                @if($isActive) aria-current="page" @endif
+                            >{{ $item['label'] }}</a>
                             @if (! empty($item['children']))
-                                <button type="button" class="px-4 py-3 text-white" @click.prevent="childOpen = ! childOpen" aria-label="Toggle submenu">+</button>
+                                {{-- P2-4: Área táctil mínima 44×44px en el botón + de submenú --}}
+                                <button type="button" class="flex items-center justify-center w-11 h-11 text-white hover:text-lucille-accent transition-colors duration-200" @click.prevent="childOpen = ! childOpen" aria-label="Toggle submenu">+</button>
                             @endif
                         </div>
                         @if (! empty($item['children']))
                             <ul x-show="childOpen" x-transition class="pb-2 pl-5">
                                 @foreach ($item['children'] as $child)
-                                    <li><a href="{{ $child['url'] ?? route($child['route']) }}" class="block py-2 text-[13px] text-[#b7b7b7]">{{ $child['label'] }}</a></li>
+                                    @php
+                                        $isChildActive = isset($child['route']) && request()->routeIs($child['route']);
+                                    @endphp
+                                    <li>
+                                        <a
+                                            href="{{ $child['url'] ?? route($child['route']) }}"
+                                            class="block py-2 text-[13px] transition-colors duration-200 {{ $isChildActive ? 'text-lucille-accent' : 'text-[#b7b7b7]' }}"
+                                            @if($isChildActive) aria-current="page" @endif
+                                        >{{ $child['label'] }}</a>
+                                    </li>
                                 @endforeach
                             </ul>
                         @endif

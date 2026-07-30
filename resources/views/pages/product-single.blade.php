@@ -1,11 +1,113 @@
 <x-layouts.site :title="$product['title'] . ' - Seven Rock Radio'">
+    {{-- ══ Toast Carrito ══ --}}
+    @once
+    <style>
+    #cart-toast {
+        position: fixed;
+        top: 28px;
+        right: 28px;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #0f0f11;
+        border: 1px solid rgba(195,39,32,.45);
+        border-radius: 8px;
+        padding: 14px 20px;
+        box-shadow: 0 12px 40px rgba(0,0,0,.6);
+        max-width: 340px;
+        transition: opacity .3s, transform .3s;
+        transform: translateY(-6px);
+        opacity: 0;
+        pointer-events: none;
+    }
+    #cart-toast.show {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+    #cart-toast .ct-icon {
+        flex-shrink: 0;
+        width: 36px; height: 36px;
+        background: rgba(195,39,32,.15);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+    }
+    #cart-toast .ct-title {
+        font-family: var(--lucille-display-font, 'Oswald', sans-serif);
+        font-size: 13px;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: #dcdcdc;
+        margin-bottom: 2px;
+    }
+    #cart-toast .ct-msg {
+        font-size: 11px;
+        color: #7b7b7b;
+        line-height: 1.4;
+    }
+    #cart-toast .ct-close {
+        margin-left: auto;
+        background: none;
+        border: none;
+        color: #555;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        padding: 2px 4px;
+        transition: color .2s;
+    }
+    #cart-toast .ct-close:hover { color: #c32720; }
+    </style>
+    <div id="cart-toast" role="status" aria-live="polite">
+        <div class="ct-icon">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#c32720" stroke-width="2.2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+            </svg>
+        </div>
+        <div>
+            <div class="ct-title">🛒 Próximamente</div>
+            <div class="ct-msg">La tienda estará disponible muy pronto. ¡Gracias por tu interés!</div>
+        </div>
+        <button class="ct-close" onclick="hideCartToast()" aria-label="Cerrar">&times;</button>
+    </div>
+    <script>
+    function showCartToast() {
+        const t = document.getElementById('cart-toast');
+        t.classList.add('show');
+        clearTimeout(window._cartToastTimer);
+        window._cartToastTimer = setTimeout(hideCartToast, 4500);
+    }
+    function hideCartToast() {
+        document.getElementById('cart-toast')?.classList.remove('show');
+    }
+    </script>
+    @endonce
     @php $ui = $themeAppearance['ui_texts']; @endphp
+    {{-- Breadcrumbs P2-2 --}}
+    <nav aria-label="Breadcrumb" class="lucille-content-box pt-6 pb-0">
+        <ol class="flex items-center gap-2 text-[11px] uppercase tracking-[.1em] text-[#555]">
+            <li><a href="{{ route('home') }}" class="hover:text-lucille-accent transition-colors">Inicio</a></li>
+            <li class="select-none">/</li>
+            <li><a href="{{ route('shop') }}" class="hover:text-lucille-accent transition-colors">Tienda</a></li>
+            <li class="select-none">/</li>
+            <li class="text-[#888] truncate max-w-[180px]">{{ $product['title'] }}</li>
+        </ol>
+    </nav>
     <section>
         <div class="lucille-content-box">
             <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start">
                 <div class="lucille-product-gallery">
                     <div class="border border-[#2b2b2b] bg-[#1b1b1b] p-4">
-                        <img src="{{ $product['image'] }}" alt="{{ $product['title'] }}" class="block w-full" loading="lazy">
+                        @if(!empty($product['image']))
+                            <img src="{{ $product['image'] }}" alt="{{ $product['title'] }}" class="block w-full" loading="lazy">
+                        @else
+                            <div class="flex flex-col items-center justify-center py-20 gap-4 opacity-30">
+                                <img src="{{ asset('assets/lucille/logo.png') }}" alt="Seven Rock Radio" class="w-24 opacity-50">
+                                <span class="font-display text-xs uppercase tracking-[.15em] text-[#7b7b7b]">Sin imagen disponible</span>
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -19,8 +121,13 @@
                         @endif
                         {{ $product['price'] }}
                     </p>
+                    {{-- P1-4: Nota de moneda GBP --}}
+                    <p class="mt-2 text-[11px] text-[#555] uppercase tracking-[.1em]">
+                        <svg class="inline-block mr-1 -mt-0.5" viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="7"/><path d="M8 4v4l3 1.5"/></svg>
+                        Precio en GBP · Impuestos según tu país · Envío desde UK
+                    </p>
                     <p class="mt-5 max-w-2xl text-[15px] leading-8 text-[#7b7b7b]">
-                        {{ $product['description'] }} There is contrast stitching and raw edge detail around the collar, sleeves and bottom hem line.
+                        {{ $product['description'] }}
                     </p>
 
                     <div class="mt-8 flex flex-wrap items-center gap-4">
@@ -31,7 +138,15 @@
                         @else
                             <label class="font-display text-sm uppercase tracking-[.3em] text-[#7b7b7b]" for="quantity">{{ $ui['quantity'] }}</label>
                             <input id="quantity" type="number" min="1" value="1" class="lucille-product-qty">
-                            <button type="button" class="lucille-button-solid">{{ $ui['add_to_cart'] }}</button>
+                            {{-- P0-1+P1-1: Botón con toast "Próximamente" en lugar de checkout roto --}}
+                            <button
+                                type="button"
+                                class="lucille-button-solid relative"
+                                onclick="showCartToast()"
+                                aria-label="Añadir al carrito (próximamente disponible)"
+                            >
+                                <span>{{ $ui['add_to_cart'] }}</span>
+                            </button>
                         @endif
                     </div>
 
@@ -47,8 +162,7 @@
                         </div>
 
                         <div x-show="tab === 'description'" x-cloak class="py-6 text-[15px] leading-8 text-[#7b7b7b]">
-                            <p>{{ $product['description'] }} Each t-shirt is unique with vintage finish and mini ribbed neckline. The word T-shirt became part of American English by the 1920s, and appeared in the Merriam-Webster Dictionary.</p>
-                            <p class="mt-5">Following World War II, it became common to see veterans wearing their uniform trousers with their T-shirts as casual clothing.</p>
+                            <p>{{ $product['description'] }}</p>
                         </div>
 
                         <div x-show="tab === 'reviews'" x-cloak class="py-6 text-[15px] leading-8 text-[#7b7b7b]">
