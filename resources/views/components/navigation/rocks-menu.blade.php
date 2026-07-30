@@ -185,7 +185,7 @@
 >
     <div class="absolute inset-0 bg-cover bg-center md:hidden" style="background-image: linear-gradient(rgba(16, 16, 18, 0.75), rgba(16, 16, 18, 0.75)), var(--lucille-bg-image);" aria-hidden="true"></div>
     <div 
-        class="relative z-10 mx-auto flex h-full max-w-[1180px] flex-col justify-center px-5 lg:px-8 md:flex-row md:items-center md:justify-between md:py-0"
+        class="relative z-[50] mx-auto flex h-full max-w-[1180px] flex-col justify-center px-5 lg:px-8 md:flex-row md:items-center md:justify-between md:py-0"
     >
         <div class="flex w-full items-center justify-between md:contents">
             <a href="{{ route('home') }}" class="flex h-full items-center gap-3 py-2 md:py-0" aria-label="{{ $brandMark }} home">
@@ -239,7 +239,7 @@
                     <li class="group relative flex h-full items-center">
                         <a
                             href="{{ $item['url'] ?? route($item['route']) }}"
-                            class="flex h-full items-center px-3 xl:px-[18px] font-display text-[11px] xl:text-xs font-light uppercase tracking-wider xl:tracking-[.08em] text-white transition-colors duration-300 hover:text-lucille-accent"
+                            class="flex h-full items-center px-2 xl:px-[18px] font-display text-[10px] xl:text-xs font-light uppercase tracking-wider xl:tracking-[.08em] text-white transition-colors duration-300 hover:text-lucille-accent"
                         >
                             {{ $item['label'] }}
                         </a>
@@ -260,7 +260,7 @@
             </ul>
         </nav>
 
-        <div class="hidden items-center gap-4 xl:gap-6 border-l border-white/10 pl-4 xl:pl-6 lg:flex">
+        <div class="hidden items-center gap-2 xl:gap-6 border-l border-white/10 pl-2 xl:pl-6 lg:flex">
             <!-- Programas Icon -->
             <a href="{{ route('programs') }}" class="text-white transition-colors duration-300 hover:text-lucille-accent" aria-label="Programas" title="Programas">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -334,21 +334,13 @@
         </div>
     </div>
 
-    <div x-cloak x-show="open" x-transition.opacity class="fixed inset-0 z-40 bg-[rgba(16,16,18,.98)] backdrop-blur-md pt-[100px] px-5 pb-6 lg:hidden overflow-y-auto">
-        <nav class="flex flex-col">
-            <div class="mb-6 px-1">
-                <a href="{{ route('app.download') }}" class="flex w-full items-center justify-center gap-2 rounded-full bg-lucille-accent px-5 py-3 text-sm font-display font-bold uppercase tracking-wider text-white shadow-lg shadow-lucille-accent/30 transition-all active:scale-95" aria-label="Descargar la aplicación de la radio">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    <span>Descargar App</span>
-                </a>
-            </div>
-
-            <ul class="mx-auto w-full max-w-[1180px] divide-y divide-white/5 pb-24">
+    <div x-cloak x-show="open" x-transition.opacity class="fixed inset-0 z-40 bg-[rgba(16,16,18,.98)] backdrop-blur-md pt-[100px] px-5 pb-6 lg:hidden overflow-y-auto flex flex-col">
+        <nav class="flex-1 flex flex-col min-h-[calc(100vh-140px)]">
+            <ul class="mx-auto w-full max-w-[1180px] divide-y divide-white/5 flex-1">
                 @foreach ($items as $item)
+                    @if($item['label'] === 'Iniciar Sesión')
+                        @continue
+                    @endif
                     @php
                         $isActive = isset($item['route']) && request()->routeIs($item['route']);
                     @endphp
@@ -383,6 +375,20 @@
                     </li>
                 @endforeach
             </ul>
+            
+            <div class="mt-8 mb-24 grid grid-cols-2 gap-3 px-1">
+                <a href="{{ route('talents.login') }}" class="flex w-full items-center justify-center rounded-full bg-white/10 px-2 py-3 text-[11px] font-display font-bold uppercase tracking-wider text-white transition-all active:scale-95">
+                    Iniciar Sesión
+                </a>
+                <a href="{{ route('app.download') }}" class="flex w-full items-center justify-center gap-1.5 rounded-full bg-lucille-accent px-2 py-3 text-[11px] font-display font-bold uppercase tracking-wider text-white shadow-lg shadow-lucille-accent/30 transition-all active:scale-95">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Descargar</span>
+                </a>
+            </div>
         </nav>
     </div>
 
