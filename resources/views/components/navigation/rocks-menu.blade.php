@@ -215,11 +215,11 @@
                 @endif
             </a>
 
-            <div class="flex items-center text-white xl:hidden">
-                <button type="button" class="relative flex h-11 w-11 items-center justify-center -ml-2" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
-                    <span class="absolute h-[1.5px] w-6 bg-white transition-all duration-300" :class="open ? 'rotate-45' : '-translate-y-2'"></span>
-                    <span class="absolute h-[1.5px] w-6 bg-white transition-all duration-300" :class="open ? 'opacity-0' : ''"></span>
-                    <span class="absolute h-[1.5px] w-6 bg-white transition-all duration-300" :class="open ? '-rotate-45' : 'translate-y-2'"></span>
+            <div class="flex items-center gap-5 text-white">
+                <button type="button" class="relative h-10 w-10 lg:hidden" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
+                    <span class="absolute left-1/2 top-[12px] h-px w-9 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'top-1/2 rotate-45' : ''"></span>
+                    <span class="absolute left-1/2 top-1/2 h-px w-7 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'opacity-0' : ''"></span>
+                    <span class="absolute left-1/2 top-[28px] h-px w-9 -translate-x-1/2 bg-white transition duration-200" :class="open ? 'top-1/2 -rotate-45' : ''"></span>
                 </button>
             </div>
         </div>
@@ -230,7 +230,7 @@
             </span>
         </div>
 
-        <nav class="hidden h-full items-center xl:flex">
+        <nav class="hidden h-full items-center lg:flex">
             <ul class="flex h-full items-center">
                 @foreach ($items as $item)
                     @if (in_array($item['label'], ['Tienda', 'Programas', 'Programa', 'Iniciar Sesión']))
@@ -260,7 +260,7 @@
             </ul>
         </nav>
 
-        <div class="hidden items-center gap-5 border-l border-white/10 pl-6 xl:flex">
+        <div class="hidden items-center gap-6 border-l border-white/10 pl-6 lg:flex">
             <!-- Programas Icon -->
             <a href="{{ route('programs') }}" class="text-white transition-colors duration-300 hover:text-lucille-accent" aria-label="Programas" title="Programas">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -324,19 +324,18 @@
             @endauth
 
             <a href="{{ route('app.download') }}" class="ml-2 flex items-center gap-2 rounded-full bg-lucille-accent px-4 py-2 text-xs font-display font-bold uppercase tracking-wider text-white shadow-lg shadow-lucille-accent/30 transition-all hover:scale-105 hover:bg-opacity-90 hover:shadow-lucille-accent/50" aria-label="Descargar la aplicación de la radio" title="Descargar App">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                    <line x1="12" y1="18" x2="12.01" y2="18"></line>
                 </svg>
                 <span>Descargar App</span>
             </a>
         </div>
     </div>
 
-    <div x-cloak x-show="open" x-transition.opacity class="border-t border-white/5 bg-[rgba(16,16,18,.95)] backdrop-blur-md px-5 py-4 xl:hidden overflow-y-auto" style="max-height: calc(100vh - 75px);">
+    <div x-cloak x-show="open" x-transition.opacity class="border-t border-white/5 bg-[rgba(16,16,18,.95)] backdrop-blur-md px-5 py-4 lg:hidden">
         <nav>
-            <ul class="mx-auto max-w-[1180px] divide-y divide-white/5 pb-24">
+            <ul class="mx-auto max-w-[1180px] divide-y divide-white/5">
                 @foreach ($items as $item)
                     @php
                         $isActive = isset($item['route']) && request()->routeIs($item['route']);
@@ -374,10 +373,9 @@
                 
                 <li class="py-5 px-1 mt-2 border-t-0">
                     <a href="{{ route('app.download') }}" class="flex w-full items-center justify-center gap-2 rounded-full bg-lucille-accent px-5 py-3 text-sm font-display font-bold uppercase tracking-wider text-white shadow-lg shadow-lucille-accent/30 transition-all active:scale-95" aria-label="Descargar la aplicación de la radio">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                            <line x1="12" y1="18" x2="12.01" y2="18"></line>
                         </svg>
                         <span>Descargar App</span>
                     </a>
