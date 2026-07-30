@@ -288,7 +288,7 @@
         <a href="/app" class="flex items-center gap-2 pwa-nav-link" data-href="/app">
             <img src="{{ asset('assets/lucille/logo.png') }}" alt="Seven Rock Radio" class="h-7 w-auto">
             <span class="font-display font-bold text-base tracking-wider text-white">
-                SEVEN ROCK
+                SEVEN ROCK RADIO
             </span>
         </a>
 

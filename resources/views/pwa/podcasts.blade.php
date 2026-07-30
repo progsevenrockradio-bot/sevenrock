@@ -60,10 +60,10 @@
 
             <div class="relative z-10 flex gap-4 p-4">
                 {{-- Portada --}}
-                <div class="w-20 h-20 rounded-xl overflow-hidden bg-[#1e1e1e] shrink-0 shadow-lg">
+                <div class="w-20 h-20 rounded-xl overflow-hidden bg-[#0a0a0b] shrink-0 shadow-lg border border-[#2a2a2a]">
                     <img src="{{ $featured['cover'] ?? asset('assets/lucille/podcats.webp') }}"
                          alt="{{ $featured['title'] ?? 'Podcast' }}"
-                         class="w-full h-full object-cover"
+                         class="w-full h-full object-contain"
                          loading="lazy"
                          onerror="this.src='{{ asset('assets/lucille/podcats.webp') }}'">
                 </div>
@@ -123,10 +123,10 @@
 
                         <div class="flex items-center gap-3 p-3">
                             {{-- Portada --}}
-                            <div class="w-14 h-14 rounded-xl overflow-hidden bg-[#1e1e1e] shrink-0">
+                            <div class="w-14 h-14 rounded-xl overflow-hidden bg-[#0a0a0b] shrink-0 border border-[#2a2a2a]">
                                 <img :src="program.cover || '{{ asset('assets/lucille/podcats.webp') }}'"
                                      :alt="program.title"
-                                     class="w-full h-full object-cover"
+                                     class="w-full h-full object-contain"
                                      loading="lazy"
                                      x-on:error="$el.src='{{ asset('assets/lucille/podcats.webp') }}'">
                             </div>
@@ -213,10 +213,10 @@
             <div class="pwa-card flex items-center gap-3 p-3 cursor-pointer"
                  @click="playEpisode({{ Js::from($epData) }})">
 
-                <div class="w-12 h-12 rounded-lg overflow-hidden bg-[#1e1e1e] shrink-0">
+                <div class="w-12 h-12 rounded-lg overflow-hidden bg-[#0a0a0b] shrink-0 border border-[#2a2a2a]">
                     <img src="{{ $ep['cover'] ?? asset('assets/lucille/podcats.webp') }}"
                          alt="{{ $ep['title'] ?? '' }}"
-                         class="w-full h-full object-cover"
+                         class="w-full h-full object-contain"
                          loading="lazy"
                          onerror="this.src='{{ asset('assets/lucille/podcats.webp') }}'">
                 </div>

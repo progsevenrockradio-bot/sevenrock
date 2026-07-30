@@ -169,29 +169,24 @@ class PwaAppController extends Controller
                 'duration' => null,
             ];
 
-            // Endpoint 1: API v2 (más completa)
+            // Endpoint 1: RadioBoss API nowplayinginfo
             try {
                 $r = Http::timeout(4)->withoutVerifying()
-                    ->get("{$apiUrl}/w/api.php", ['u' => $stationId, 'mode' => 'nowplaying2']);
+                    ->get("{$apiUrl}/w/nowplayinginfo", ['u' => $stationId]);
                 if ($r->successful()) {
                     $j = $r->json();
-                    $title  = trim((string)($j['current']['title']   ?? $j['title']   ?? ''));
-                    $artist = trim((string)($j['current']['artist']  ?? $j['artist']  ?? ''));
-                    $show   = trim((string)($j['current']['program'] ?? $j['show']    ?? ''));
-                    if ($title) {
-                        return array_merge($defaults, array_filter(compact('title', 'artist', 'show')));
+                    $title  = trim((string)($j['currenttrack_title'] ?? ''));
+                    $artist = trim((string)($j['currenttrack_artist'] ?? ''));
+                    
+                    if (!$title && !empty($j['nowplaying'])) {
+                        $parts = explode(' - ', $j['nowplaying'], 2);
+                        if (count($parts) === 2) {
+                            $title = trim($parts[0]);
+                            $artist = trim($parts[1]);
+                        } else {
+                            $title = trim($j['nowplaying']);
+                        }
                     }
-                }
-            } catch (\Throwable) {}
-
-            // Endpoint 2: API v1 (fallback)
-            try {
-                $r = Http::timeout(4)->withoutVerifying()
-                    ->get("{$apiUrl}/w/api.php", ['u' => $stationId, 'mode' => 'nowplaying']);
-                if ($r->successful()) {
-                    $j = $r->json();
-                    $title  = trim((string)($j['current']['title']  ?? $j['title']  ?? ''));
-                    $artist = trim((string)($j['current']['artist'] ?? $j['artist'] ?? ''));
                     if ($title) {
                         return array_merge($defaults, array_filter(compact('title', 'artist')));
                     }
