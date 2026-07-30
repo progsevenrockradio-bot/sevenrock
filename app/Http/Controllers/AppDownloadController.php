@@ -15,8 +15,8 @@ class AppDownloadController extends Controller
             'referer' => $request->headers->get('referer'),
         ]);
 
-        // URL del archivo a descargar (cámbiala si es necesario)
-        $downloadUrl = 'https://play.google.com/store/apps/details?id=com.sevenrockradio.app';
+        // URL del archivo a descargar (se puede configurar en el .env)
+        $downloadUrl = env('APP_DOWNLOAD_URL', asset('sevenrockradio.apk'));
         
         return redirect()->away($downloadUrl);
     }
