@@ -77,7 +77,9 @@
                              loading="lazy">
                     @else
                         <div class="w-full h-full flex items-center justify-center bg-[#0a0a0b]">
-                            <img src="{{ asset('assets/lucille/logo.png') }}" alt="Seven Rock Radio" class="w-16 h-auto opacity-30 object-contain">
+                            <svg class="w-10 h-10 text-red-600/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                            </svg>
                         </div>
                     @endif
 
@@ -130,10 +132,10 @@
                  ]) }})">
 
                 {{-- Carátula del episodio --}}
-                <div class="w-14 h-14 rounded-lg overflow-hidden bg-[#1e1e1e] shrink-0">
+                <div class="w-14 h-14 rounded-lg overflow-hidden bg-[#0a0a0b] shrink-0 border border-[#2a2a2a]">
                     <img src="{{ $ep['cover'] ?? asset('assets/lucille/podcats.webp') }}"
                          alt="{{ $ep['title'] ?? 'Podcast' }}"
-                         class="w-full h-full object-cover"
+                         class="w-full h-full object-contain"
                          loading="lazy"
                          onerror="this.src='{{ asset('assets/lucille/podcats.webp') }}'">
                 </div>

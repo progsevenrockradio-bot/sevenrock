@@ -212,23 +212,41 @@ class PwaAppController extends Controller
         $tracks = Cache::remember('pwa.recent_tracks', 25, function () use ($apiUrl, $stationId): array {
             try {
                 $r = Http::timeout(5)->withoutVerifying()
-                    ->get("{$apiUrl}/w/api.php", [
-                        'u'     => $stationId,
-                        'mode'  => 'recent',
-                        'limit' => 8,
+                    ->get("{$apiUrl}/w/recenttrackslist", [
+                        'u' => $stationId,
                     ]);
 
                 if ($r->successful()) {
-                    $json    = $r->json();
-                    $history = $json['history'] ?? $json['recent'] ?? $json['tracks'] ?? [];
-
-                    return array_map(fn ($t) => [
-                        'title'     => trim((string)($t['title']   ?? $t['song']   ?? 'Canción')),
-                        'artist'    => trim((string)($t['artist']  ?? '')),
-                        'played_at' => trim((string)($t['time']    ?? $t['date']   ?? '')),
-                        'duration'  => trim((string)($t['duration'] ?? '')),
-                        'cover'     => "{$apiUrl}/w/artwork/{$stationId}.jpg",
-                    ], array_slice($history, 0, 8));
+                    $history = $r->json();
+                    
+                    if (is_array($history) && !isset($history['error'])) {
+                        // RadioBoss recent tracks list usually includes current playing as index 0. Shift it.
+                        array_shift($history);
+                        
+                        return array_map(function ($t) use ($apiUrl, $stationId) {
+                            $title = trim((string)($t['tracktitle'] ?? $t['title'] ?? 'Canción'));
+                            $artist = trim((string)($t['trackartist'] ?? ''));
+                            
+                            // If title doesn't exist but full title does, split it
+                            if (!$title && !empty($t['title'])) {
+                                $parts = explode(' - ', $t['title'], 2);
+                                if (count($parts) === 2) {
+                                    $title = trim($parts[0]);
+                                    $artist = trim($parts[1]);
+                                } else {
+                                    $title = trim($t['title']);
+                                }
+                            }
+                            
+                            return [
+                                'title'     => $title,
+                                'artist'    => $artist,
+                                'played_at' => trim((string)($t['started'] ?? '')),
+                                'duration'  => '', // API doesn't return duration directly here
+                                'cover'     => !empty($t['artworkid']) ? "{$apiUrl}/w/artwork_recent_{$t['artworkid']}/{$stationId}.jpg" : "{$apiUrl}/w/artwork/{$stationId}.jpg",
+                            ];
+                        }, array_slice($history, 0, 8));
+                    }
                 }
             } catch (\Throwable) {}
 
