@@ -6,6 +6,9 @@ use App\Http\Controllers\Api\PlayerFavoriteController;
 use App\Http\Controllers\Api\ProgramInfoController;
 use App\Http\Controllers\Api\PlayerStatusController;
 use App\Http\Controllers\Api\RadioWebhookController;
+use App\Http\Controllers\Api\TelegramBotController;
+
+Route::post('/telegram/webhook', [TelegramBotController::class, 'handle'])->name('api.telegram.webhook');
 
 Route::get('/player/status', [PlayerStatusController::class, 'show'])->middleware('throttle:60,1')->name('api.player.status');
 Route::post('/player/share-track', [\App\Http\Controllers\PlayerController::class, 'registerShare'])->name('api.player.share-track');
