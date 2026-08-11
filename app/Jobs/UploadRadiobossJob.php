@@ -185,7 +185,7 @@ class UploadRadiobossJob implements ShouldQueue
     /**
      * Borra solo archivos del folder remoto, sin eliminar la carpeta.
      */
-    private function clearRemoteFilesOnly($disk, string $folder): void
+    private function clearRemoteFilesOnly(\Illuminate\Contracts\Filesystem\Filesystem $disk, string $folder): void
     {
         try {
             foreach ((array) $disk->files($folder) as $remoteFile) {

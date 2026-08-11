@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\RadioArtist;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Throwable;
@@ -135,13 +136,8 @@ class BandInfoAggregator
             'thumbnail' => $thumbnail,
             'social_links' => $socialLinks,
             'formed_year' => $formedYear,
-            'logo_path' => $logoPath,
-                'country' => $country,
-                'genre' => $genre,
-                'members_count' => $membersCount,
-                'status' => $status,
-                'labels' => $labels,
-                'logo_path' => $this->firstFilledString([
+            'formed_year' => $formedYear,
+            'logo_path' => $this->firstFilledString([
                 $local['logo_path'] ?? '',
                 $audioDb['logo_path'] ?? '',
             ]),
@@ -539,13 +535,8 @@ class BandInfoAggregator
             'thumbnail' => $thumbnail,
             'social_links' => $this->normalizeLinks($socialLinks),
             'formed_year' => $formedYear,
-            'logo_path' => $logoPath,
-                'country' => $country,
-                'genre' => $genre,
-                'members_count' => $membersCount,
-                'status' => $status,
-                'labels' => $labels,
-                'logo_path' => $this->firstFilledString([
+            'formed_year' => $formedYear,
+            'logo_path' => $this->firstFilledString([
                 $local['logo_path'] ?? '',
                 $audioDb['logo_path'] ?? '',
             ]),

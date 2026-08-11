@@ -532,7 +532,6 @@ class ThemeSetting extends Model
             'social_x' => null,
             'body_font' => 'Open Sans',
             'heading_font' => 'Oswald',
-            'brand_mark_font' => 'Rock Salt',
             'accent_color' => '#c32720',
             'nav_color' => '#081a24',
             'surface_color' => '#101012',

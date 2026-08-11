@@ -1669,7 +1669,6 @@
 
     .lucille-lightbox-caption {
         float: right;
-        display: inline-block;
         color: #ccc;
         font-size: 13px;
         font-style: italic;

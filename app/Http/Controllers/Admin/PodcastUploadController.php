@@ -239,14 +239,17 @@ final class PodcastUploadController extends Controller
         $durationSeconds = 0;
         if (! $isR2 && $request->hasFile('archivo_mp3')) {
             try {
-                $getID3 = new \getID3();
-                $fileInfo = $getID3->analyze($request->file('archivo_mp3')->getRealPath());
+                $className = '\\getID3';
+                if (class_exists($className)) {
+                    /** @var mixed $getID3 */
+                    $getID3 = new $className();
+                    $fileInfo = $getID3->analyze($request->file('archivo_mp3')->getRealPath());
                 if (isset($fileInfo['playtime_seconds'])) {
                     $baseSeconds = (int) ceil((float) $fileInfo['playtime_seconds']);
                     // Se suman 5 minutos (300 segundos) adicionales según solicitud del usuario.
                     $durationSeconds = $baseSeconds + 300;
                 }
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Ignore duration read failures
             }
         }
@@ -348,7 +351,7 @@ final class PodcastUploadController extends Controller
         return back()->with('status', $message);
     }
 
-    public function retry(\Illuminate\Http\Request $request, RadioProgram $radioProgram): RedirectResponse
+    public function retry(Request $request, RadioProgram $radioProgram): RedirectResponse
     {
         if (blank($radioProgram->archivo_mp3)) {
             return back()->with('status', 'Ese episodio no tiene un MP3 local asociado.');
@@ -404,7 +407,7 @@ final class PodcastUploadController extends Controller
                 return back()->with('status', 'No existe un MP3 local listo para descargar.');
             }
 
-            return Storage::disk('public')->download($path, $downloadName);
+            return response()->download(Storage::disk('public')->path($path), $downloadName);
         }
 
         $localPath = app(FileUploadService::class)->localPath($path, $disk);

@@ -30,7 +30,7 @@ class PwaPushController extends Controller
      */
     public function vapidPublicKey(): JsonResponse
     {
-        $key = config('app.vapid_public_key') ?: env('VAPID_PUBLIC_KEY', '');
+        $key = config()->get('app.vapid_public_key') ?: env('VAPID_PUBLIC_KEY', '');
 
         if (empty($key)) {
             return response()->json(['error' => 'VAPID no configurado. Ejecuta: php artisan pwa:vapid-keys'], 503);
