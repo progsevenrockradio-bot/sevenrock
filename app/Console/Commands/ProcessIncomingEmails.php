@@ -595,7 +595,7 @@ class ProcessIncomingEmails extends Command
                         $baseSlug = Str::slug($title);
                         $slug = $baseSlug;
                         $suffix = 1;
-                        while (\DB::table('posts')->where('slug', $slug)->exists()) {
+                        while (DB::table('posts')->where('slug', $slug)->exists()) {
                             $slug = $baseSlug . '-' . $suffix;
                             $suffix++;
                         }

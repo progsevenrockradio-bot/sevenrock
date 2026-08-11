@@ -97,7 +97,7 @@ class PwaAppController extends Controller
                 ->where('activo', true)
                 ->orderBy('nombre')
                 ->get()
-                ->map(fn (\App\Models\MasterProgram $p) => [
+                ->map(fn (MasterProgram $p) => [
                     'id'                 => $p->id,
                     'title'              => $p->nombre,
                     'host'               => $p->host ?? $p->conductor ?? '',

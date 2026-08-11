@@ -249,6 +249,7 @@ final class PodcastUploadController extends Controller
                     // Se suman 5 minutos (300 segundos) adicionales según solicitud del usuario.
                     $durationSeconds = $baseSeconds + 300;
                 }
+                }
             } catch (Throwable) {
                 // Ignore duration read failures
             }

@@ -136,7 +136,6 @@ class BandInfoAggregator
             'thumbnail' => $thumbnail,
             'social_links' => $socialLinks,
             'formed_year' => $formedYear,
-            'formed_year' => $formedYear,
             'logo_path' => $this->firstFilledString([
                 $local['logo_path'] ?? '',
                 $audioDb['logo_path'] ?? '',
@@ -534,7 +533,6 @@ class BandInfoAggregator
             'summary' => $summary,
             'thumbnail' => $thumbnail,
             'social_links' => $this->normalizeLinks($socialLinks),
-            'formed_year' => $formedYear,
             'formed_year' => $formedYear,
             'logo_path' => $this->firstFilledString([
                 $local['logo_path'] ?? '',
