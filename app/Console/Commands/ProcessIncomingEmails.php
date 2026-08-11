@@ -126,6 +126,10 @@ class ProcessIncomingEmails extends Command
             foreach ($messages as $message) {
                 $messageId = (string) $message->getMessageId();
                 $subject = (string) $message->getSubject();
+                
+                // Sanitizar caracteres UTF-8 malformados que causan errores en base de datos y json_encode
+                $subject = mb_convert_encoding($subject, 'UTF-8', 'UTF-8');
+                $subject = iconv('UTF-8', 'UTF-8//IGNORE', $subject) ?: $subject;
 
                 // Evitar procesar correos duplicados
                 if (DB::table('processed_emails')->where('message_id', $messageId)->exists()) {
@@ -216,6 +220,9 @@ class ProcessIncomingEmails extends Command
 
                 // Obtener el cuerpo del correo
                 $body = $message->getHTMLBody() ?: $message->getTextBody() ?: '';
+                $body = mb_convert_encoding($body, 'UTF-8', 'UTF-8');
+                $body = iconv('UTF-8', 'UTF-8//IGNORE', $body) ?: $body;
+
                 if (trim($body) === '') {
                     $this->warn("El cuerpo del correo está vacío. Saltando correo.");
                     continue;
