@@ -735,7 +735,7 @@ class ProcessIncomingEmails extends Command
     /**
      * Envía una notificación por correo al administrador asegurando que no se sature (rate limit de 24h).
      */
-    protected function sendAdminAlert(string $errorKey, string $subject, string $message, $settings): void
+    protected function sendAdminAlert(string $errorKey, string $subject, string $message, ThemeSetting $settings): void
     {
         $cacheKey = "admin_alert_sent_{$errorKey}";
         if (!Cache::has($cacheKey)) {
