@@ -541,12 +541,16 @@ class RadioPlayerService
             return false;
         }
 
-        $end = $this->parseTimeToCarbon($moment, $endTime);
+        $cleanEndTime = trim($endTime);
+        $end = $this->parseTimeToCarbon($moment, $cleanEndTime);
         if ($end === null) {
-            $end = $durationMinutes > 0 ? $start->copy()->addMinutes($durationMinutes) : $start->copy();
+            if ($durationMinutes <= 0) {
+                return false;
+            }
+            $end = $start->copy()->addMinutes($durationMinutes);
         }
 
-        if ($end->lessThan($start)) {
+        if ($cleanEndTime !== '' && $end->lessThan($start)) {
             $end = $end->copy()->addDay();
         }
 
@@ -575,18 +579,19 @@ class RadioPlayerService
         $endTime = trim((string) ($episode->hora_fin ?: ''));
         if ($endTime !== '') {
             $end = $this->parseTimeToCarbon($baseDate, $endTime);
+            if ($end instanceof Carbon && $end->lessThan($start)) {
+                $end = $end->copy()->addDay();
+            }
         } elseif ((int) ($episode->duration_seconds ?? 0) > 0) {
             $end = $start->copy()->addSeconds((int) $episode->duration_seconds);
+        } elseif ((int) ($master->duracion_minutos ?? 0) > 0) {
+            $end = $start->copy()->addMinutes((int) $master->duracion_minutos);
         } else {
-            $end = $start->copy()->addMinutes(max(1, (int) $master->duracion_minutos));
+            return null;
         }
 
         if (! $end instanceof Carbon) {
             return null;
-        }
-
-        if ($end->lessThanOrEqualTo($start)) {
-            $end = $end->copy()->addDay();
         }
 
         $cutoff = $this->programScheduleService->nextProgramStartFor($master, $reference);
