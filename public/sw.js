@@ -9,7 +9,7 @@
  *  - Push Notifications:                   Listener para alertas "En Vivo"
  */
 
-const CACHE_VERSION  = 'v2';
+const CACHE_VERSION  = 'v3';
 const CACHE_NAME     = `srr-pwa-${CACHE_VERSION}`;
 const STATIC_CACHE   = `srr-static-${CACHE_VERSION}`;
 const OFFLINE_URL    = '/app/offline';
@@ -103,7 +103,7 @@ self.addEventListener('fetch', (event) => {
     }
 
     // 6. Páginas PWA (/app/*) — Network-First con fallback offline
-    if (url.pathname.startsWith('/app') || url.pathname === '/') {
+    if (url.pathname.startsWith('/app')) {
         event.respondWith(networkFirst(request));
         return;
     }
