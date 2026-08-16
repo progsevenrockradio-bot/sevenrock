@@ -27,6 +27,22 @@ class ProgramInfoController extends Controller
         }
 
         if (! $program && ! $masterProgram) {
+            try {
+                $playerService = app(\App\Services\RadioPlayerService::class);
+                $status = $playerService->resolve();
+                $resolvedId = (int) ($status['program_id'] ?? $status['track']['program_id'] ?? 0);
+                if ($resolvedId > 0) {
+                    $program = Program::query()->find($resolvedId);
+                    if (! $program && class_exists(\App\Models\MasterProgram::class)) {
+                        $masterProgram = \App\Models\MasterProgram::query()->find($resolvedId);
+                    }
+                }
+            } catch (\Throwable) {
+                // ignore
+            }
+        }
+
+        if (! $program && ! $masterProgram) {
             $program = Program::query()->active()->orderBy('sort_order')->first()
                 ?? Program::query()->orderBy('sort_order')->first();
         }
@@ -59,31 +75,34 @@ class ProgramInfoController extends Controller
             $masterProgram = \App\Models\MasterProgram::query()->find($masterProgramId);
         }
 
-        $description = trim((string) ($program->informacion_fija_programa ?: $program->description ?: ($masterProgram ? $masterProgram->description : '')));
-        $host = trim((string) ($program->conductor ?: $program->host ?: ($masterProgram ? $masterProgram->host : '')));
-        $genre = trim((string) ($program->genero_musical ?: ($masterProgram ? $masterProgram->genero : '')));
-        $facebook = trim((string) ($program->facebook_url ?: ($masterProgram ? $masterProgram->red_social1_url : '')));
-        $instagram = trim((string) ($program->instagram_url ?: ($masterProgram ? $masterProgram->red_social2_url : '')));
+        $description = trim((string) ($program?->informacion_fija_programa ?: $program?->description ?: ($masterProgram ? $masterProgram->description : '')));
+        $host = trim((string) ($program?->conductor ?: $program?->host ?: ($masterProgram ? ($masterProgram->host ?: $masterProgram->conductor) : '')));
+        $genre = trim((string) ($program?->genero_musical ?: ($masterProgram ? $masterProgram->genero : '')));
+        $facebook = trim((string) ($program?->facebook_url ?: ($masterProgram ? $masterProgram->red_social1_url : '')));
+        $instagram = trim((string) ($program?->instagram_url ?: ($masterProgram ? $masterProgram->red_social2_url : '')));
         
-        $cover = trim((string) ($program->caratula_programa ?: $program->cover_url ?: $program->cover_image ?: ''));
+        $cover = trim((string) ($program?->caratula_programa ?: $program?->cover_url ?: $program?->cover_image ?: ''));
         if ($cover === '' && $masterProgram) {
             $cover = trim((string) ($masterProgram->cover_url ?: $masterProgram->caratula_url ?: $masterProgram->live_image_url ?: ''));
         }
 
         $schedule = trim(implode(' · ', array_filter([
-            trim((string) ($program->dia_transmision ?? '')),
-            trim((string) ($program->hora_inicio ?? '')),
+            trim((string) ($program?->dia_transmision ?? '')),
+            trim((string) ($program?->hora_inicio ?? '')),
         ])));
         if ($schedule === '' && $masterProgram) {
             $schedule = trim((string) $masterProgram->schedule);
         }
 
+        $resolvedName = $program?->titulo_programa ?: $program?->name ?: $masterProgram?->name ?: $masterProgram?->nombre ?: '';
+        $resolvedSlug = $program?->slug ?: $masterProgram?->slug ?: \Illuminate\Support\Str::slug($resolvedName);
+
         return response()->json([
             'success' => true,
             'data' => [
-                'id' => $program->getKey(),
-                'name' => $program->titulo_programa ?: $program->name ?: '',
-                'slug' => $program->slug ?: \Illuminate\Support\Str::slug($program->titulo_programa ?: $program->name ?: ''),
+                'id' => $program?->getKey() ?? $masterProgram?->getKey(),
+                'name' => $resolvedName,
+                'slug' => $resolvedSlug,
                 'description' => $description,
                 'host' => $host,
                 'schedule' => $schedule,

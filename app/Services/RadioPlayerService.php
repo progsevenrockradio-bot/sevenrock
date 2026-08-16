@@ -122,9 +122,11 @@ class RadioPlayerService
             )
         );
         $lyrics = $song?->lyrics ?? '';  // From band-info API only
-        $scheduleContext = $this->resolveActiveProgramContext();
         $programs = $this->loadPrograms();
-        $currentProgram = $scheduleContext['program'] ?? $this->resolveCurrentProgram($lookupState, $song, $programs);
+        $matchedTrackProgram = $this->resolveCurrentProgram($lookupState, $song, $programs);
+        $scheduleContext = $this->resolveActiveProgramContext();
+
+        $currentProgram = $matchedTrackProgram ?? $scheduleContext['program'] ?? null;
         $nextProgram = $this->resolveNextProgram(
             $currentProgram,
             $programs,
@@ -160,7 +162,10 @@ class RadioPlayerService
             $elapsed = 0;
         }
 
-        $isProgramBlock = (bool) (!empty($scheduleContext['es_bloque_programa']) || ($currentProgram !== null));
+        $isProgramBlock = (bool) ($matchedTrackProgram !== null || !empty($scheduleContext['es_bloque_programa']));
+        $resolvedProgramId = $matchedTrackProgram?->id ?? $scheduleContext['program_id'] ?? $currentProgram?->id ?? Arr::get($state, 'program_id');
+        $resolvedProgramName = $matchedTrackProgram?->name ?? $scheduleContext['program_name'] ?? $currentProgram?->name ?? Arr::get($state, 'program_name');
+        $resolvedProgramDescription = $matchedTrackProgram?->description ?? $scheduleContext['program_description'] ?? $currentProgram?->description;
 
         $track = [
             'id' => $song?->id,
@@ -182,9 +187,9 @@ class RadioPlayerService
                 ? $song->social_links
                 : (Arr::get($state, 'social_links', []) ?: []),
             'audio_url' => null, // LIVE streams use the global streamUrl, never override with podcast URL
-            'program_id' => $scheduleContext['program_id'] ?? ($currentProgram?->id ?? Arr::get($state, 'program_id')),
-            'program_name' => $scheduleContext['program_name'] ?? $currentProgram?->name,
-            'program_description' => $scheduleContext['program_description'] ?? $currentProgram?->description,
+            'program_id' => $resolvedProgramId,
+            'program_name' => $resolvedProgramName,
+            'program_description' => $resolvedProgramDescription,
             'program_host' => $currentProgram?->host,
             'program_schedule' => $currentProgram?->schedule,
             'es_bloque_programa' => $isProgramBlock,
@@ -203,9 +208,9 @@ class RadioPlayerService
             'playlist_pls' => config('player.streams.pls'),
             'listeners' => (int) Arr::get($state, 'listeners', 0),
             'es_bloque_programa' => $isProgramBlock,
-            'program_id' => $scheduleContext['program_id'] ?? ($currentProgram?->id ?? null),
-            'program_name' => $scheduleContext['program_name'] ?? ($currentProgram?->name ?? null),
-            'program_description' => $scheduleContext['program_description'] ?? ($currentProgram?->description ?? null),
+            'program_id' => $resolvedProgramId,
+            'program_name' => $resolvedProgramName,
+            'program_description' => $resolvedProgramDescription,
             'track' => $track,
             'program' => $this->programPayload($currentProgram),
             'next_program' => $this->programPayload($nextProgram),
