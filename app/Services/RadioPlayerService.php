@@ -179,7 +179,7 @@ class RadioPlayerService
             'social_links' => ! empty($song?->social_links)
                 ? $song->social_links
                 : (Arr::get($state, 'social_links', []) ?: []),
-            'audio_url' => $song?->audio_url ?: Arr::get($state, 'audio_url'),
+            'audio_url' => null, // LIVE streams use the global streamUrl, never override with podcast URL
             'program_id' => $scheduleContext['program_id'] ?? ($currentProgram?->id ?? Arr::get($state, 'program_id')),
             'program_name' => $scheduleContext['program_name'] ?? $currentProgram?->name,
             'program_description' => $scheduleContext['program_description'] ?? $currentProgram?->description,
@@ -311,6 +311,44 @@ class RadioPlayerService
             $program = $programs->first(fn ($p) => mb_strtolower($p->name) === mb_strtolower($artist) || mb_strtolower($p->titulo_programa ?? '') === mb_strtolower($artist));
             if ($program) {
                 return $program;
+            }
+        }
+
+        // Fallback to MasterProgram matching if no episode matches
+        if ($this->hasTable('master_programs')) {
+            $master = null;
+            if ($title !== '') {
+                $master = MasterProgram::query()->where('activo', true)->where(function ($q) use ($title) {
+                    $q->whereRaw('LOWER(name) = ?', [mb_strtolower($title)])
+                      ->orWhereRaw('LOWER(nombre) = ?', [mb_strtolower($title)]);
+                })->first();
+            }
+            if (!$master && $artist !== '') {
+                $master = MasterProgram::query()->where('activo', true)->where(function ($q) use ($artist) {
+                    $q->whereRaw('LOWER(name) = ?', [mb_strtolower($artist)])
+                      ->orWhereRaw('LOWER(nombre) = ?', [mb_strtolower($artist)]);
+                })->first();
+            }
+
+            if ($master) {
+                $latestEpisode = \App\Models\RadioProgram::query()
+                    ->where('master_program_id', $master->id)
+                    ->orderByDesc('fecha_emision')
+                    ->orderByDesc('id')
+                    ->first();
+
+                if ($latestEpisode) {
+                    return Program::query()->find($latestEpisode->getKey());
+                }
+
+                // If no episode exists, return a dummy Program based on the master
+                return new Program([
+                    'name' => $master->name ?: $master->nombre,
+                    'description' => $master->description,
+                    'host' => $master->host,
+                    'cover_image' => $master->live_image_url ?: $master->caratula_url,
+                    'schedule' => $master->schedule,
+                ]);
             }
         }
 
