@@ -15,6 +15,7 @@ class ProgramInfoController extends Controller
     public function show(Request $request): JsonResponse
     {
         $programId = (int) $request->query('program_id', 0);
+        $programName = trim((string) $request->query('program_name', ''));
 
         $program = null;
         $masterProgram = null;
@@ -26,15 +27,41 @@ class ProgramInfoController extends Controller
             }
         }
 
+        if (! $program && ! $masterProgram && $programName !== '') {
+            if (class_exists(\App\Models\MasterProgram::class)) {
+                $masterProgram = \App\Models\MasterProgram::query()
+                    ->where('name', 'like', "%{$programName}%")
+                    ->orWhere('nombre', 'like', "%{$programName}%")
+                    ->first();
+            }
+            if (! $masterProgram) {
+                $program = Program::query()
+                    ->where('name', 'like', "%{$programName}%")
+                    ->orWhere('titulo_programa', 'like', "%{$programName}%")
+                    ->first();
+            }
+        }
+
         if (! $program && ! $masterProgram) {
             try {
                 $playerService = app(\App\Services\RadioPlayerService::class);
                 $status = $playerService->resolve();
                 $resolvedId = (int) ($status['program_id'] ?? $status['track']['program_id'] ?? 0);
+                $resolvedName = trim((string) ($status['program_name'] ?? $status['track']['program_name'] ?? ''));
+
                 if ($resolvedId > 0) {
                     $program = Program::query()->find($resolvedId);
                     if (! $program && class_exists(\App\Models\MasterProgram::class)) {
                         $masterProgram = \App\Models\MasterProgram::query()->find($resolvedId);
+                    }
+                }
+
+                if (! $program && ! $masterProgram && $resolvedName !== '') {
+                    if (class_exists(\App\Models\MasterProgram::class)) {
+                        $masterProgram = \App\Models\MasterProgram::query()
+                            ->where('name', 'like', "%{$resolvedName}%")
+                            ->orWhere('nombre', 'like', "%{$resolvedName}%")
+                            ->first();
                     }
                 }
             } catch (\Throwable) {
@@ -54,22 +81,23 @@ class ProgramInfoController extends Controller
             ], 404);
         }
 
-        $masterProgramId = (int) ($program?->master_program_id ?? $masterProgram?->id ?? $program?->id ?? 0);
+        $masterProgramId = (int) ($program?->master_program_id ?? $masterProgram?->id ?? 0);
         $title = trim((string) ($program?->titulo_programa ?: $program?->name ?: $masterProgram?->name ?: $masterProgram?->nombre ?: ''));
 
-        $episodeQuery = RadioProgram::query();
+        $episode = null;
         if ($masterProgramId > 0) {
-            $episodeQuery->where('master_program_id', $masterProgramId);
+            $episode = RadioProgram::query()
+                ->where('master_program_id', $masterProgramId)
+                ->orderByDesc('fecha_emision')
+                ->orderByDesc('id')
+                ->first();
+        } elseif ($title !== '') {
+            $episode = RadioProgram::query()
+                ->where('titulo_programa', $title)
+                ->orderByDesc('fecha_emision')
+                ->orderByDesc('id')
+                ->first();
         }
-
-        if ($title !== '') {
-            $episodeQuery->orWhere('titulo_programa', $title);
-        }
-
-        $episode = $episodeQuery
-            ->orderByDesc('fecha_emision')
-            ->orderByDesc('id')
-            ->first();
 
         if (! $masterProgram && $masterProgramId > 0) {
             $masterProgram = \App\Models\MasterProgram::query()->find($masterProgramId);

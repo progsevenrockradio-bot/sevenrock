@@ -43,6 +43,15 @@
                     playerVisible: false,
                     fallbackModalVisible: false,
 
+                    init() {
+                        window.addEventListener('sr-live-playing', () => {
+                            if (this.playing) {
+                                this.playing = false;
+                                this.$refs.audio?.pause();
+                            }
+                        });
+                    },
+
                     play(episode, autoplay = true) {
                         this.activeEpisode = episode;
                         this.playerVisible = true;
@@ -63,7 +72,15 @@
                             a.pause(); a.src = src; a.load();
                             this.elapsed = 0; this.duration = 0; this.progress = 0;
                         }
-                        if (autoplay) this.$nextTick(() => a.play().catch(() => this.playing = false));
+                        if (autoplay) {
+                            document.querySelectorAll('audio').forEach((el) => {
+                                if (el !== a) {
+                                    try { el.pause(); } catch (_) {}
+                                }
+                            });
+                            window.dispatchEvent(new CustomEvent('sr-podcast-playing'));
+                            this.$nextTick(() => a.play().catch(() => this.playing = false));
+                        }
                     },
                     togglePlayback() {
                         if (this.playing) this.$refs.audio?.pause();
@@ -319,8 +336,8 @@
                     </div>
                 </div>
 
-                <audio x-ref="audio" preload="metadata" playsinline
-                    x-on:error="playerVisible = false; fallbackModalVisible = true;"
+                <audio x-ref="audio" preload="none" playsinline
+                    x-on:error="if (playing) { playerVisible = false; fallbackModalVisible = true; }"
                     @loadedmetadata="onLoadedMetadata()"
                     @timeupdate="onTimeUpdate()"
                     @play="onPlay()" @pause="onPause()" @ended="onEnded()">

@@ -87,7 +87,7 @@
 
     <audio
         x-ref="audio"
-        preload="metadata"
+        preload="none"
         playsinline
         @loadedmetadata="onLoadedMetadata()"
         @timeupdate="onTimeUpdate()"

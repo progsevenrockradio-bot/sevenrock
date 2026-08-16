@@ -151,6 +151,11 @@
             window.addEventListener('pageshow', () => {
                 this.closeInfoModal();
             }, { once: true });
+            window.addEventListener('sr-live-playing', () => {
+                if (this.playing) {
+                    this.pause();
+                }
+            });
             
             this.progressInterval = setInterval(() => {
                 if (this.playing && this.fixedDuration > 0) {
@@ -260,6 +265,13 @@
                     audio.load();
                 }
 
+                document.querySelectorAll('audio').forEach((el) => {
+                    if (el !== audio) {
+                        try { el.pause(); } catch (_) {}
+                    }
+                });
+                window.dispatchEvent(new CustomEvent('sr-podcast-playing'));
+
                 await audio.play();
 
                 if (this.activeEpisode) {
@@ -289,6 +301,9 @@
             }
         },
         async tryNextAudioSource() {
+            if (!this.playing) {
+                return;
+            }
             const audio = this.$refs.audio;
             const episode = this.normalizeEpisode(this.activeEpisode);
             const currentSource = audio?.getAttribute('src') || '';

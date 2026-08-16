@@ -234,6 +234,16 @@ export function registerRadioPlayer(Alpine) {
                 this.handleMultimediaTrack(e.detail);
             });
 
+            // Pause live stream when a podcast/local track is played on any page
+            window.addEventListener('sr-podcast-playing', () => {
+                if (this.playing) {
+                    this.playing = false;
+                    this.loading = false;
+                    const audio = this.$refs.audio;
+                    if (audio) audio.pause();
+                }
+            });
+
             this.watchNowPlayingWidget();
             this.queueStatusRefresh(0);
 
@@ -551,6 +561,12 @@ export function registerRadioPlayer(Alpine) {
             try {
                 this.loading = true;
                 this.playing = true;
+                document.querySelectorAll('audio').forEach((el) => {
+                    if (el !== audio) {
+                        try { el.pause(); } catch (_) {}
+                    }
+                });
+                window.dispatchEvent(new CustomEvent('sr-live-playing'));
                 await audio.play();
                 this.loading = false;
                 this.queueStatusRefresh(0);
@@ -816,9 +832,12 @@ export function registerRadioPlayer(Alpine) {
 
             try {
                 const id = Number(programId || this.track.program_id || this.program?.id || 0);
-                const url = id > 0
-                    ? `${this.programInfoUrl}?program_id=${encodeURIComponent(id)}`
-                    : this.programInfoUrl;
+                const name = this.track.program_name ? encodeURIComponent(this.track.program_name) : '';
+                let url = this.programInfoUrl;
+                const params = [];
+                if (id > 0) params.push(`program_id=${id}`);
+                if (name) params.push(`program_name=${name}`);
+                if (params.length) url += (url.includes('?') ? '&' : '?') + params.join('&');
 
                 const response = await fetch(url, {
                     headers: {

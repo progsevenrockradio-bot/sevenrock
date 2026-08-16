@@ -47,6 +47,15 @@
                     progress: 0,
                     playerVisible: false,
 
+                    init() {
+                        window.addEventListener('sr-live-playing', () => {
+                            if (this.playing) {
+                                this.playing = false;
+                                this.$refs.audio?.pause();
+                            }
+                        });
+                    },
+
                     play(episode) {
                         // Toggle play/pause if same episode
                         if (this.activeEpisode && this.activeEpisode.src === episode.src) {
@@ -74,7 +83,15 @@
                             audio.load();
                             this.elapsed = 0; this.duration = 0; this.progress = 0;
                         }
-                        if (autoplay) this.$nextTick(() => audio.play().catch(() => this.playing = false));
+                        if (autoplay) {
+                            document.querySelectorAll('audio').forEach((el) => {
+                                if (el !== audio) {
+                                    try { el.pause(); } catch (_) {}
+                                }
+                            });
+                            window.dispatchEvent(new CustomEvent('sr-podcast-playing'));
+                            this.$nextTick(() => audio.play().catch(() => this.playing = false));
+                        }
                     },
                     togglePlayback() {
                         if (this.playing) this.$refs.audio?.pause();
@@ -455,7 +472,7 @@
                     </div>
                 </div>
 
-                <audio x-ref="audio" preload="metadata" playsinline
+                <audio x-ref="audio" preload="none" playsinline
                     @loadedmetadata="onLoadedMetadata()"
                     @timeupdate="onTimeUpdate()"
                     @play="onPlay()" @pause="onPause()" @ended="onEnded()">
