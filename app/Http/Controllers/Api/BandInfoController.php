@@ -35,7 +35,7 @@ class BandInfoController extends Controller
         $artist = trim((string) ($validated['artist'] ?? ''));
         $title = trim((string) ($validated['title'] ?? ''));
         [$artist, $title] = $this->normalizeTrackContext($artist, $title);
-        if ($artist === '' && $title === '') {
+        if (($artist === '' && $title === '') || $this->isProgramOrHost($artist, $title)) {
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -44,18 +44,18 @@ class BandInfoController extends Controller
                     'logo_path' => '',
                     'country' => '',
                     'genre' => '',
-                'members_count' => null,
-                'status' => '',
-                'labels' => '',
-                'social_links' => [],
-                'formed_year' => null,
-                'formed_label' => '',
-                'facts' => [],
-                'biography' => '',
-                'biography_source' => 'none',
-                'lyrics' => '',
-            ],
-        ]);
+                    'members_count' => null,
+                    'status' => '',
+                    'labels' => '',
+                    'social_links' => [],
+                    'formed_year' => null,
+                    'formed_label' => '',
+                    'facts' => [],
+                    'biography' => '',
+                    'biography_source' => 'none',
+                    'lyrics' => '',
+                ],
+            ]);
         }
 
         $lyrics = '';
@@ -325,6 +325,39 @@ class BandInfoController extends Controller
         return [$artist, $title];
     }
 
+    private function isProgramOrHost(string $artist, string $title): bool
+    {
+        $normalizedArtist = $this->normalizeContextValue($artist);
+        $normalizedTitle = $this->normalizeContextValue($title);
+
+        if ($this->isPlaceholderArtist($artist)) {
+            return true;
+        }
+
+        foreach (['conducido por', 'conduce', 'locucion', 'locutor', 'programa', 'podcast', 'radio show'] as $marker) {
+            if (str_contains($normalizedArtist, $marker) || str_contains($normalizedTitle, $marker)) {
+                return true;
+            }
+        }
+
+        try {
+            if (class_exists(\App\Models\MasterProgram::class) && \Illuminate\Support\Facades\Schema::hasTable('master_programs')) {
+                $exists = \App\Models\MasterProgram::query()->where('activo', true)->where(function ($q) use ($normalizedArtist, $normalizedTitle) {
+                    $q->whereRaw('LOWER(nombre) LIKE ?', ['%' . $normalizedTitle . '%'])
+                      ->orWhereRaw('LOWER(conductor) LIKE ?', ['%' . $normalizedArtist . '%']);
+                })->exists();
+
+                if ($exists) {
+                    return true;
+                }
+            }
+        } catch (\Throwable) {
+            // ignore
+        }
+
+        return false;
+    }
+
     private function isPlaceholderArtist(string $artist): bool
     {
         $normalized = $this->normalizeContextValue($artist);
@@ -332,7 +365,7 @@ class BandInfoController extends Controller
             return true;
         }
 
-        foreach (['transmision en vivo', 'senal al aire', 'seven rock radio', 'rock', 'live'] as $marker) {
+        foreach (['transmision en vivo', 'senal al aire', 'seven rock radio', 'rock', 'live', 'conducido por', 'conduce'] as $marker) {
             if ($normalized === $marker || str_contains($normalized, $marker)) {
                 return true;
             }

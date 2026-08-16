@@ -16,20 +16,30 @@ class ProgramInfoController extends Controller
     {
         $programId = (int) $request->query('program_id', 0);
 
-        $program = $programId > 0
-            ? Program::query()->find($programId)
-            : (Program::query()->active()->orderBy('sort_order')->first()
-                ?? Program::query()->orderBy('sort_order')->first());
+        $program = null;
+        $masterProgram = null;
 
-        if (! $program) {
+        if ($programId > 0) {
+            $program = Program::query()->find($programId);
+            if (! $program && class_exists(\App\Models\MasterProgram::class)) {
+                $masterProgram = \App\Models\MasterProgram::query()->find($programId);
+            }
+        }
+
+        if (! $program && ! $masterProgram) {
+            $program = Program::query()->active()->orderBy('sort_order')->first()
+                ?? Program::query()->orderBy('sort_order')->first();
+        }
+
+        if (! $program && ! $masterProgram) {
             return response()->json([
                 'success' => false,
                 'message' => 'Programa no encontrado',
             ], 404);
         }
 
-        $masterProgramId = (int) ($program->master_program_id ?? $program->id ?? 0);
-        $title = trim((string) ($program->titulo_programa ?: $program->name ?: ''));
+        $masterProgramId = (int) ($program?->master_program_id ?? $masterProgram?->id ?? $program?->id ?? 0);
+        $title = trim((string) ($program?->titulo_programa ?: $program?->name ?: $masterProgram?->name ?: $masterProgram?->nombre ?: ''));
 
         $episodeQuery = RadioProgram::query();
         if ($masterProgramId > 0) {
@@ -45,9 +55,9 @@ class ProgramInfoController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        $masterProgram = $masterProgramId > 0
-            ? \App\Models\MasterProgram::query()->find($masterProgramId)
-            : null;
+        if (! $masterProgram && $masterProgramId > 0) {
+            $masterProgram = \App\Models\MasterProgram::query()->find($masterProgramId);
+        }
 
         $description = trim((string) ($program->informacion_fija_programa ?: $program->description ?: ($masterProgram ? $masterProgram->description : '')));
         $host = trim((string) ($program->conductor ?: $program->host ?: ($masterProgram ? $masterProgram->host : '')));

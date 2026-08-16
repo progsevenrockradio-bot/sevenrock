@@ -124,7 +124,7 @@ class RadioPlayerService
         $lyrics = $song?->lyrics ?? '';  // From band-info API only
         $scheduleContext = $this->resolveActiveProgramContext();
         $programs = $this->loadPrograms();
-        $currentProgram = $scheduleContext['program'] ?? $this->resolveCurrentProgram($state, $song, $programs);
+        $currentProgram = $scheduleContext['program'] ?? $this->resolveCurrentProgram($lookupState, $song, $programs);
         $nextProgram = $this->resolveNextProgram(
             $currentProgram,
             $programs,
@@ -160,6 +160,8 @@ class RadioPlayerService
             $elapsed = 0;
         }
 
+        $isProgramBlock = (bool) (!empty($scheduleContext['es_bloque_programa']) || ($currentProgram !== null));
+
         $track = [
             'id' => $song?->id,
             'title' => $trackTitle !== '' ? $trackTitle : (string) ($defaults['title'] ?? ''),
@@ -185,7 +187,7 @@ class RadioPlayerService
             'program_description' => $scheduleContext['program_description'] ?? $currentProgram?->description,
             'program_host' => $currentProgram?->host,
             'program_schedule' => $currentProgram?->schedule,
-            'es_bloque_programa' => (bool) ($scheduleContext['es_bloque_programa'] ?? ($currentProgram !== null)),
+            'es_bloque_programa' => $isProgramBlock,
             'is_live' => (bool) Arr::get($state, 'is_live', $song?->is_live ?? true),
             'signature' => $trackSignature,
             'started_at' => Arr::get($state, 'started_at'),
@@ -200,7 +202,7 @@ class RadioPlayerService
             'playlist_m3u' => config('player.streams.m3u'),
             'playlist_pls' => config('player.streams.pls'),
             'listeners' => (int) Arr::get($state, 'listeners', 0),
-            'es_bloque_programa' => (bool) ($scheduleContext['es_bloque_programa'] ?? ($currentProgram !== null)),
+            'es_bloque_programa' => $isProgramBlock,
             'program_id' => $scheduleContext['program_id'] ?? ($currentProgram?->id ?? null),
             'program_name' => $scheduleContext['program_name'] ?? ($currentProgram?->name ?? null),
             'program_description' => $scheduleContext['program_description'] ?? ($currentProgram?->description ?? null),
@@ -316,23 +318,27 @@ class RadioPlayerService
 
         // Fallback to MasterProgram matching if no episode matches
         if ($this->hasTable('master_programs')) {
-            $master = null;
-            if ($title !== '') {
-                $master = MasterProgram::query()->where('activo', true)->where(function ($q) use ($title) {
-                    $q->whereRaw('LOWER(name) = ?', [mb_strtolower($title)])
-                      ->orWhereRaw('LOWER(nombre) = ?', [mb_strtolower($title)]);
-                })->first();
-            }
-            if (!$master && $artist !== '') {
-                $master = MasterProgram::query()->where('activo', true)->where(function ($q) use ($artist) {
-                    $q->whereRaw('LOWER(name) = ?', [mb_strtolower($artist)])
-                      ->orWhereRaw('LOWER(nombre) = ?', [mb_strtolower($artist)]);
-                })->first();
+            $masters = MasterProgram::query()->where('activo', true)->get();
+            $matchedMaster = null;
+
+            foreach ($masters as $m) {
+                $mName = mb_strtolower(trim((string) ($m->name ?: $m->nombre ?: '')));
+                $mHost = mb_strtolower(trim((string) ($m->host ?: $m->conductor ?: '')));
+                $cleanArtist = mb_strtolower(trim(preg_replace('/^\s*(conducido\s+por\s*:?\s*|conduce\s*:?\s*|host\s*:?\s*)/iu', '', $artist)));
+                $cleanTitle = mb_strtolower($title);
+
+                $matchName = ($mName !== '' && (str_contains($cleanTitle, $mName) || str_contains($cleanArtist, $mName) || str_contains($mName, $cleanTitle)));
+                $matchHost = ($mHost !== '' && (str_contains($cleanArtist, $mHost) || str_contains($cleanTitle, $mHost)));
+
+                if ($matchName || $matchHost) {
+                    $matchedMaster = $m;
+                    break;
+                }
             }
 
-            if ($master) {
+            if ($matchedMaster) {
                 $latestEpisode = \App\Models\RadioProgram::query()
-                    ->where('master_program_id', $master->id)
+                    ->where('master_program_id', $matchedMaster->id)
                     ->orderByDesc('fecha_emision')
                     ->orderByDesc('id')
                     ->first();
@@ -341,14 +347,18 @@ class RadioPlayerService
                     return Program::query()->find($latestEpisode->getKey());
                 }
 
-                // If no episode exists, return a dummy Program based on the master
-                return new Program([
-                    'name' => $master->name ?: $master->nombre,
-                    'description' => $master->description,
-                    'host' => $master->host,
-                    'cover_image' => $master->live_image_url ?: $master->caratula_url,
-                    'schedule' => $master->schedule,
+                $dummy = new Program();
+                $dummy->id = $matchedMaster->id;
+                $dummy->exists = true;
+                $dummy->fill([
+                    'name' => $matchedMaster->name ?: $matchedMaster->nombre,
+                    'description' => $matchedMaster->description,
+                    'host' => $matchedMaster->host,
+                    'cover_image' => $matchedMaster->live_image_url ?: $matchedMaster->caratula_url,
+                    'schedule' => $matchedMaster->schedule,
                 ]);
+                $dummy->setAttribute('id', $matchedMaster->id);
+                return $dummy;
             }
         }
 
