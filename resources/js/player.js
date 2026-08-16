@@ -751,7 +751,7 @@ export function registerRadioPlayer(Alpine) {
                 return;
             }
 
-            const esBloqueDePrograma = Boolean(this.track.es_bloque_programa) || (this.track.program_id !== null && Number(this.track.program_id) > 0);
+            const esBloqueDePrograma = Boolean(this.track.es_bloque_programa);
 
             if (esBloqueDePrograma) {
                 if (this.programWindowOpen) {
@@ -866,6 +866,9 @@ export function registerRadioPlayer(Alpine) {
                     };
 
                     this.programInfo = nextProgramInfo;
+                } else if (payload && !payload.success) {
+                    this.closeProgramWindow();
+                    this.openBandWindow();
                 }
             } catch (error) {
                 // ignore program info lookup failures

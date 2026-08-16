@@ -70,14 +70,9 @@ class ProgramInfoController extends Controller
         }
 
         if (! $program && ! $masterProgram) {
-            $program = Program::query()->active()->orderBy('sort_order')->first()
-                ?? Program::query()->orderBy('sort_order')->first();
-        }
-
-        if (! $program && ! $masterProgram) {
             return response()->json([
                 'success' => false,
-                'message' => 'Programa no encontrado',
+                'message' => 'No hay ningún programa especial en vivo en este momento.',
             ], 404);
         }
 

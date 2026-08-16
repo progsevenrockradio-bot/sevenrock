@@ -163,11 +163,11 @@ class RadioPlayerService
         }
 
         $isProgramBlock = (bool) ($matchedTrackProgram !== null || !empty($scheduleContext['es_bloque_programa']));
-        $resolvedProgramId = $matchedTrackProgram?->id ?? $scheduleContext['program_id'] ?? $currentProgram?->id ?? Arr::get($state, 'program_id');
-        $resolvedProgramName = $matchedTrackProgram?->name ?? $matchedTrackProgram?->titulo_programa ?? $scheduleContext['program_name'] ?? $currentProgram?->name ?? Arr::get($state, 'program_name');
-        $resolvedProgramDescription = $matchedTrackProgram?->description ?? $matchedTrackProgram?->informacion_fija_programa ?? $scheduleContext['program_description'] ?? $currentProgram?->description;
-        $resolvedProgramHost = $matchedTrackProgram?->host ?? $matchedTrackProgram?->conductor ?? $currentProgram?->host;
-        $resolvedProgramSchedule = $matchedTrackProgram?->schedule ?? $currentProgram?->schedule;
+        $resolvedProgramId = $isProgramBlock ? ($matchedTrackProgram?->id ?? $scheduleContext['program_id'] ?? null) : null;
+        $resolvedProgramName = $isProgramBlock ? ($matchedTrackProgram?->name ?? $matchedTrackProgram?->titulo_programa ?? $scheduleContext['program_name'] ?? null) : null;
+        $resolvedProgramDescription = $isProgramBlock ? ($matchedTrackProgram?->description ?? $matchedTrackProgram?->informacion_fija_programa ?? $scheduleContext['program_description'] ?? null) : null;
+        $resolvedProgramHost = $isProgramBlock ? ($matchedTrackProgram?->host ?? $matchedTrackProgram?->conductor ?? $currentProgram?->host ?? null) : null;
+        $resolvedProgramSchedule = $isProgramBlock ? ($matchedTrackProgram?->schedule ?? $currentProgram?->schedule ?? null) : null;
 
         $track = [
             'id' => $song?->id,
