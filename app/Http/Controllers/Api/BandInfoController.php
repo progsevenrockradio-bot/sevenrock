@@ -32,7 +32,7 @@ class BandInfoController extends Controller
             'title' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $artist = trim((string) $validated['artist']);
+        $artist = trim((string) ($validated['artist'] ?? ''));
         $title = trim((string) ($validated['title'] ?? ''));
         [$artist, $title] = $this->normalizeTrackContext($artist, $title);
         if ($artist === '' && $title === '') {
