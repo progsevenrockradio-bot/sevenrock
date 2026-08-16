@@ -297,6 +297,23 @@ class RadioPlayerService
             }
         }
 
+        $title = trim((string) Arr::get($state, 'title', ''));
+        $artist = trim((string) Arr::get($state, 'artist', ''));
+
+        if ($title !== '') {
+            $program = $programs->first(fn ($p) => mb_strtolower($p->name) === mb_strtolower($title) || mb_strtolower($p->titulo_programa ?? '') === mb_strtolower($title));
+            if ($program) {
+                return $program;
+            }
+        }
+
+        if ($artist !== '') {
+            $program = $programs->first(fn ($p) => mb_strtolower($p->name) === mb_strtolower($artist) || mb_strtolower($p->titulo_programa ?? '') === mb_strtolower($artist));
+            if ($program) {
+                return $program;
+            }
+        }
+
         return null;
     }
 
