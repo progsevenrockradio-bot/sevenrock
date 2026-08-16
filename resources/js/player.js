@@ -515,7 +515,9 @@ export function registerRadioPlayer(Alpine) {
                 return;
             }
 
-            const source = this.streamCandidates[this.currentStreamIndex] || this.playbackSource || this.streamUrl;
+            const source = (this.track.is_live || !this.track.audio_url)
+                ? (this.streamCandidates[this.currentStreamIndex] || this.streamUrl)
+                : (this.playbackSource || this.streamUrl);
             const currentSource = audio.currentSrc || audio.getAttribute('src') || '';
 
             if (currentSource !== source || audio.error) {
@@ -598,8 +600,13 @@ export function registerRadioPlayer(Alpine) {
         },
 
         startLiveFromFAB() {
+            this.track.is_live = true;
+            this.track.audio_url = '';
+            this.streamCandidates = [this.streamUrl, this.altStreamUrl].filter(Boolean);
+            this.currentStreamIndex = 0;
             this.dockVisible = true;
             this.dockMinimized = false;
+            this.ensureAudioSource();
             if (!this.playing) {
                 this.attemptPlayWithFallback();
             }
@@ -1322,7 +1329,7 @@ export function registerRadioPlayer(Alpine) {
                 comment: track.comment || '',
                 band_members: Array.isArray(track.band_members) ? track.band_members : [],
                 social_links: nextLinks.length ? nextLinks : [],
-                audio_url: track.audio_url || this.track.audio_url || '',
+                audio_url: (track.is_live ?? true) ? '' : (track.audio_url || ''),
                 is_live: track.is_live ?? true,
                 program_name: track.program_name || data.program_name || this.track.program_name || '',
                 program_description: track.program_description || data.program_description || data.program?.description || this.track.program_description || '',
