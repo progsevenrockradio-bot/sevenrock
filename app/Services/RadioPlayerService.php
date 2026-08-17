@@ -311,14 +311,14 @@ class RadioPlayerService
 
         if ($title !== '') {
             $program = $programs->first(fn ($p) => mb_strtolower($p->name) === mb_strtolower($title) || mb_strtolower($p->titulo_programa ?? '') === mb_strtolower($title));
-            if ($program) {
+            if ($program && $this->isProgramCurrentlyOnAir($program)) {
                 return $program;
             }
         }
 
         if ($artist !== '') {
             $program = $programs->first(fn ($p) => mb_strtolower($p->name) === mb_strtolower($artist) || mb_strtolower($p->titulo_programa ?? '') === mb_strtolower($artist));
-            if ($program) {
+            if ($program && $this->isProgramCurrentlyOnAir($program)) {
                 return $program;
             }
         }
@@ -327,6 +327,8 @@ class RadioPlayerService
         if ($this->hasTable('master_programs')) {
             $masters = MasterProgram::query()->where('activo', true)->get();
             $matchedMaster = null;
+
+            $now = Carbon::now(config('app.timezone'));
 
             foreach ($masters as $m) {
                 $mName = mb_strtolower(trim((string) ($m->name ?: $m->nombre ?: '')));
@@ -337,7 +339,7 @@ class RadioPlayerService
                 $matchName = ($mName !== '' && (str_contains($cleanTitle, $mName) || str_contains($cleanArtist, $mName) || str_contains($mName, $cleanTitle)));
                 $matchHost = ($mHost !== '' && (str_contains($cleanArtist, $mHost) || str_contains($cleanTitle, $mHost)));
 
-                if ($matchName || $matchHost) {
+                if (($matchName || $matchHost) && $this->isMasterOnAir($m, $now)) {
                     $matchedMaster = $m;
                     break;
                 }
@@ -370,6 +372,29 @@ class RadioPlayerService
         }
 
         return null;
+    }
+
+    /**
+     * Returns true only if the episode's associated master_program is currently on-air.
+     * Used to prevent stale/inactive episodes from triggering the program block mode.
+     */
+    private function isProgramCurrentlyOnAir(Program $program): bool
+    {
+        if (! $this->hasTable('master_programs')) {
+            return false;
+        }
+
+        $masterProgramId = $program->master_program_id ?? null;
+        if (! $masterProgramId) {
+            return false;
+        }
+
+        $master = MasterProgram::query()->find((int) $masterProgramId);
+        if (! $master || ! $master->activo) {
+            return false;
+        }
+
+        return $this->isMasterOnAir($master, Carbon::now(config('app.timezone')));
     }
 
     /**
