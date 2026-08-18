@@ -1,3 +1,16 @@
+<style>
+    .repro-marquee {
+        display: inline-block;
+        animation: repro-marquee-scroll 12s linear infinite alternate;
+    }
+    .repro-marquee:hover {
+        animation-play-state: paused;
+    }
+    @keyframes repro-marquee-scroll {
+        0%, 15% { transform: translateX(0); }
+        85%, 100% { transform: translateX(calc(100cqw - 100%)); }
+    }
+</style>
 <div class="mt-6 border border-[#2b2b2b] bg-[#101010] p-4 shadow-[0_18px_48px_rgba(0,0,0,.35)]">
     <div class="mejs-container wp-audio-shortcode mejs-audio flex w-full flex-col gap-4" tabindex="0" role="application" aria-label="Audio Player">
         <div class="mejs-inner">
@@ -13,11 +26,27 @@
                     >
                 </div>
 
-                <div class="min-w-0 flex-1">
+                <div class="min-w-0 flex-1 overflow-hidden" 
+                     x-data="{ isOverflowing: false }"
+                     x-init="$watch('activeEpisode', () => { 
+                                $nextTick(() => { 
+                                    if($refs.titleText && $refs.titleWrapper) isOverflowing = $refs.titleText.scrollWidth > $refs.titleWrapper.clientWidth; 
+                                }); 
+                             });
+                             window.addEventListener('resize', () => {
+                                 if($refs.titleText && $refs.titleWrapper) isOverflowing = $refs.titleText.scrollWidth > $refs.titleWrapper.clientWidth;
+                             });
+                             setTimeout(() => { if($refs.titleText && $refs.titleWrapper) isOverflowing = $refs.titleText.scrollWidth > $refs.titleWrapper.clientWidth; }, 150);"
+                >
                     <div class="text-[10px] uppercase tracking-[.28em] text-[#7b7b7b]">
                         ReproSeven
                     </div>
-                    <p class="mt-1 truncate font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent" x-text="activeEpisode.episode_title || 'Último episodio'"></p>
+                    <div x-ref="titleWrapper" class="mt-1 w-full" style="container-type: inline-size;" :style="isOverflowing ? 'mask-image: linear-gradient(to right, black 90%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);' : ''">
+                        <p x-ref="titleText" 
+                           class="font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent whitespace-nowrap"
+                           :class="isOverflowing ? 'repro-marquee' : 'truncate'"
+                           x-text="activeEpisode.episode_title || 'Último episodio'"></p>
+                    </div>
                 </div>
             </div>
         </div>
