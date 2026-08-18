@@ -1,14 +1,13 @@
 <style>
-    .repro-marquee {
-        display: inline-block;
-        animation: repro-marquee-scroll 12s linear infinite alternate;
+    .repro-marquee-snake {
+        animation: repro-marquee-snake-anim 15s linear infinite;
     }
-    .repro-marquee:hover {
+    .repro-marquee-snake:hover {
         animation-play-state: paused;
     }
-    @keyframes repro-marquee-scroll {
+    @keyframes repro-marquee-snake-anim {
         0%, 15% { transform: translateX(0); }
-        85%, 100% { transform: translateX(calc(100cqw - 100%)); }
+        100% { transform: translateX(-50%); }
     }
 </style>
 <div class="mt-6 border border-[#2b2b2b] bg-[#101010] p-4 shadow-[0_18px_48px_rgba(0,0,0,.35)]">
@@ -34,18 +33,34 @@
                                 }); 
                              });
                              window.addEventListener('resize', () => {
-                                 if($refs.titleText && $refs.titleWrapper) isOverflowing = $refs.titleText.scrollWidth > $refs.titleWrapper.clientWidth;
+                                 if($refs.titleText && $refs.titleWrapper) {
+                                     // Small hysteresis to prevent rapid toggling
+                                     const currentScroll = $refs.titleText.scrollWidth;
+                                     const wrapperWidth = $refs.titleWrapper.clientWidth;
+                                     if (isOverflowing && currentScroll < wrapperWidth + 20) isOverflowing = false;
+                                     else if (!isOverflowing && currentScroll > wrapperWidth) isOverflowing = true;
+                                 }
                              });
                              setTimeout(() => { if($refs.titleText && $refs.titleWrapper) isOverflowing = $refs.titleText.scrollWidth > $refs.titleWrapper.clientWidth; }, 150);"
                 >
                     <div class="text-[10px] uppercase tracking-[.28em] text-[#7b7b7b]">
                         ReproSeven
                     </div>
-                    <div x-ref="titleWrapper" class="mt-1 w-full" style="container-type: inline-size;" :style="isOverflowing ? 'mask-image: linear-gradient(to right, black 90%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);' : ''">
-                        <p x-ref="titleText" 
-                           class="font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent whitespace-nowrap"
-                           :class="isOverflowing ? 'repro-marquee' : 'truncate'"
-                           x-text="activeEpisode.episode_title || 'Último episodio'"></p>
+                    
+                    <div x-ref="titleWrapper" class="mt-1 w-full overflow-hidden" :style="isOverflowing ? 'mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 20px), transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 20px), transparent);' : ''">
+                        <div :class="isOverflowing ? 'repro-marquee-snake flex w-max' : 'block truncate'">
+                            <!-- Primary text -->
+                            <p x-ref="titleText" 
+                               class="font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent"
+                               :class="isOverflowing ? 'whitespace-nowrap pr-12' : 'truncate'"
+                               x-text="activeEpisode.episode_title || 'Último episodio'"></p>
+                               
+                            <!-- Duplicate text for seamless snake loop, only visible when overflowing -->
+                            <p x-show="isOverflowing" 
+                               class="font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent whitespace-nowrap pr-12"
+                               x-text="activeEpisode.episode_title || 'Último episodio'" 
+                               aria-hidden="true"></p>
+                        </div>
                     </div>
                 </div>
             </div>
