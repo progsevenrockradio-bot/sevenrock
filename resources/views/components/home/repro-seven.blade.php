@@ -17,7 +17,7 @@
                     <div class="text-[10px] uppercase tracking-[.28em] text-[#7b7b7b]">
                         ReproSeven
                     </div>
-                    <p class="mt-1 truncate font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent" x-text="(activeEpisode.episode_title || 'Último episodio').split(' ').slice(0, 2).join(' ')"></p>
+                    <p class="mt-1 truncate font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent" x-text="activeEpisode.episode_title || 'Último episodio'"></p>
                 </div>
             </div>
         </div>
