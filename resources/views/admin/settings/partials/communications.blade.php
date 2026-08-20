@@ -110,7 +110,13 @@
                         @error('notification_email')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Contraseña de correo (Entrada/Salida de noticias)</label>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Correo de Recepción de Noticias (IMAP)</label>
+                        <input name="imap_username" value="{{ old('imap_username', $settings->imap_username) }}" class="lucille-product-field w-full" placeholder="sevenrockradio@gmail.com">
+                        <p class="mt-1 text-[10px] text-[#9a9a9a]">Correo exclusivo donde el Bot busca las noticias a publicar. (Ej: sevenrockradio@gmail.com)</p>
+                        @error('imap_username')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Contraseña de correo (IMAP)</label>
                         <input type="password" name="imap_password" class="lucille-product-field w-full font-mono" placeholder="{{ $settings->imap_password ? '******** (Guardada, dejar en blanco para mantener)' : '********' }}">
                         <p class="mt-1 text-[10px] text-[#9a9a9a]">Contraseña de Aplicación de Google. Déjala en blanco si no deseas cambiar la actual.</p>
                         @error('imap_password')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror

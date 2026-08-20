@@ -68,7 +68,7 @@ class ProcessIncomingEmails extends Command
         $imapHost = config('services.imap.host', 'imap.gmail.com');
         $imapPort = (int) config('services.imap.port', 993);
         $imapEncryption = config('services.imap.encryption', 'ssl');
-        $imapUsername = config('services.imap.username') ?: $settings->notification_email;
+        $imapUsername = trim((string) $settings->imap_username) ?: config('services.imap.username') ?: $settings->notification_email;
         $imapPassword = trim((string) $settings->imap_password) ?: config('services.imap.password');
 
         if (empty($imapPassword)) {

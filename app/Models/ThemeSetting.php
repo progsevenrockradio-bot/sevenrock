@@ -85,6 +85,7 @@ class ThemeSetting extends Model
         'email_min_importance',
         'email_whitelist_senders',
         'imap_password',
+        'imap_username',
         'email_daily_posts_limit',
         'email_daily_releases_limit',
     ];
@@ -128,6 +129,7 @@ class ThemeSetting extends Model
             'notification_reply_to_email' => 'prog.sevenrockradio@gmail.com',
             'notification_mailer' => null,
             'imap_password' => null,
+            'imap_username' => null,
             'contact_phone_primary' => '',
             'contact_phone_secondary' => '',
             'featured_stories' => [
