@@ -111,7 +111,7 @@
 @endphp
 
 <div
-    class="mx-auto max-w-[1200px] px-6 mt-[60px] grid gap-6 lg:grid-cols-[1.5fr_1fr] xl:grid-cols-[1.7fr_1fr]"
+    class="mx-auto max-w-[1200px] px-6 mt-[60px] grid gap-6 lg:grid-cols-[3fr_2fr] xl:grid-cols-[6fr_4fr]"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
@@ -546,7 +546,7 @@
                             <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-base-content/80 md:text-[15px]">
                                 {!! formatear_titulo($episode['program']) !!}
                             </div>
-                            <div class="mt-1 truncate text-[12px] text-base-content/50">
+                            <div class="mt-1 line-clamp-2 text-[12px] text-base-content/50">
                                 {{ $episode['episode_title'] }}
                             </div>
                         </div>
