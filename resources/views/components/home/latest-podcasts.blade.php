@@ -111,7 +111,7 @@
 @endphp
 
 <div
-    class="mx-auto max-w-[1200px] px-6 mt-[60px] grid gap-6 lg:grid-cols-[3fr_2fr] xl:grid-cols-[6fr_4fr]"
+    class="mx-auto max-w-[1200px] px-6 mt-[60px] grid gap-6 lg:grid-cols-12"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
@@ -465,7 +465,7 @@
         },
     }"
 >
-    <article class="home-panel overflow-hidden">
+    <article class="home-panel overflow-hidden lg:col-span-7 xl:col-span-8">
         <div class="p-4 md:p-6 lg:p-7">
             <div class="overflow-hidden border border-base-300 bg-base-200">
                 <img
@@ -520,8 +520,8 @@
         </div>
     </article>
 
-    <aside class="home-panel p-0">
-        <div class="border-b border-base-300 px-6 py-5">
+    <aside class="home-panel p-0 lg:col-span-5 xl:col-span-4 flex flex-col">
+        <div class="border-b border-base-300 px-6 py-5 shrink-0">
             <div class="font-display text-sm uppercase tracking-[.22em] text-base-content/80">Últimos episodios</div>
             <div class="mt-2 text-sm text-base-content/60">Servidor de Podcast</div>
         </div>
