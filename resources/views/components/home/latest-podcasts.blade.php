@@ -111,7 +111,7 @@
 @endphp
 
 <div
-    class="mt-[60px] grid gap-6 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px]"
+    class="mx-auto max-w-[1200px] px-6 mt-[60px] grid gap-6 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_340px]"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
