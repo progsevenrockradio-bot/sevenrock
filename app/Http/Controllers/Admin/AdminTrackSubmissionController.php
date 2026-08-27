@@ -149,7 +149,7 @@ class AdminTrackSubmissionController extends Controller
     /**
      * Publish the approved submission to the NewReleases Hub catalog.
      */
-    public function publishToHub(\Illuminate\Http\Request $request, TrackSubmission $submission): RedirectResponse
+    public function publishToHub(Request $request, TrackSubmission $submission): RedirectResponse
     {
         if ($submission->status !== 'approved') {
             return redirect()->back()->with('error', 'Solo las maquetas aprobadas pueden publicarse en el Hub.');
@@ -227,7 +227,7 @@ class AdminTrackSubmissionController extends Controller
         }
     }
 
-    public function toggleFeed(\Illuminate\Http\Request $request, TrackSubmission $submission)
+    public function toggleFeed(Request $request, TrackSubmission $submission)
     {
         if (!$submission->published_to_hub) {
             return response()->json(['success' => false, 'message' => 'La maqueta no está publicada en el Hub.']);
@@ -244,7 +244,7 @@ class AdminTrackSubmissionController extends Controller
         return response()->json(['success' => false, 'message' => 'No se encontró el lanzamiento asociado.']);
     }
 
-    public function bulkPublish(\Illuminate\Http\Request $request): RedirectResponse
+    public function bulkPublish(Request $request): RedirectResponse
     {
         $action = $request->input('action');
         $submissionIds = $request->input('submissions', []);

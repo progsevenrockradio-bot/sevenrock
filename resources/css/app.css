@@ -15,6 +15,9 @@
     --color-lucille-body: var(--lucille-body, #7b7b7b);
     --color-lucille-heading: var(--lucille-heading, #dcdcdc);
     --color-lucille-line: var(--lucille-line, #757575);
+    
+    /* Override theme primary color for Pinion UI semantic classes */
+    --color-primary: var(--color-lucille-accent);
 }
 
 @layer base {

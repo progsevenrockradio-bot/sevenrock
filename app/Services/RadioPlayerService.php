@@ -346,7 +346,7 @@ class RadioPlayerService
             }
 
             if ($matchedMaster) {
-                $latestEpisode = \App\Models\RadioProgram::query()
+                $latestEpisode = RadioProgram::query()
                     ->where('master_program_id', $matchedMaster->id)
                     ->orderByDesc('fecha_emision')
                     ->orderByDesc('id')
@@ -421,6 +421,7 @@ class RadioPlayerService
             ->orderByDesc('id')
             ->get();
 
+        /** @var \App\Models\RadioProgram $episode */
         foreach ($episodes as $episode) {
             $master = $episode->masterProgram;
             if (! $master || ! $master->activo) {
@@ -431,11 +432,11 @@ class RadioPlayerService
                 continue;
             }
 
-            $program = Program::query()->find($episode->getKey());
+            $program = Program::query()->find($episode->id);
 
             return [
                 'es_bloque_programa' => true,
-                'program_id' => (int) $episode->getKey(),
+                'program_id' => (int) $episode->id,
                 'program_name' => $this->firstFilledString([
                     $episode->titulo_programa,
                     $episode->live_title,
@@ -460,12 +461,12 @@ class RadioPlayerService
                 continue;
             }
 
-            $episode = $episodes->firstWhere('master_program_id', (int) $master->getKey());
-            $program = $episode ? Program::query()->find($episode->getKey()) : null;
+            $episode = $episodes->firstWhere('master_program_id', (int) $master->id);
+            $program = $episode ? Program::query()->find($episode->id) : null;
 
             return [
                 'es_bloque_programa' => true,
-                'program_id' => $episode ? (int) $episode->getKey() : (int) $master->getKey(),
+                'program_id' => $episode ? (int) $episode->id : (int) $master->id,
                 'program_name' => $this->firstFilledString([
                     $episode?->titulo_programa,
                     $episode?->live_title,
