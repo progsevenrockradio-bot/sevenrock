@@ -59,6 +59,9 @@
     >
         @csrf
 
+        <!-- Default submit button for Enter key -->
+        <button type="submit" name="pipeline_action" value="process" class="hidden" aria-hidden="true" tabindex="-1"></button>
+
         @if ($totalErrorCount > 0)
             <div class="border border-[#7a2b2b] bg-[rgba(195,39,32,.12)] px-4 py-3 text-sm text-[#ffd3d3]">
                 Hay {{ $totalErrorCount }} campo{{ $totalErrorCount === 1 ? '' : 's' }} con errores. Se abrió automáticamente la pestaña correspondiente.
