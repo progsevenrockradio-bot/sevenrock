@@ -24,6 +24,14 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+Artisan::command('fix:posts', function () {
+    $count = \App\Models\Post::where('title', 'like', '%font-family%')->update([
+        'title' => 'Efemérides del Rock',
+        'excerpt' => 'Efeméride recuperada.'
+    ]);
+    $this->info("Se arreglaron $count posts corruptos.");
+})->purpose('Arregla los posts corruptos con CSS en el titulo');
+
 Artisan::command('sevenrock:audit-archive-identifiers {--limit=200}', function () {
     $report = app(ArchiveIdentifierAudit::class)->buildReport((int) $this->option('limit'));
 
