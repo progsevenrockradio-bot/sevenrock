@@ -111,7 +111,7 @@
 @endphp
 
 <div
-    class="mx-auto max-w-[1200px] px-6 mt-[60px] grid gap-6 lg:grid-cols-12"
+    class="mt-[60px] grid gap-6 lg:grid-cols-[1.3fr_.7fr]"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
@@ -465,7 +465,7 @@
         },
     }"
 >
-    <article class="home-panel overflow-hidden lg:col-span-7 xl:col-span-8">
+    <article class="home-panel overflow-hidden">
         <div class="p-4 md:p-6 lg:p-7">
             <div class="overflow-hidden border border-base-300 bg-base-200">
                 <img
@@ -474,7 +474,7 @@
                     width="1280"
                     height="720"
                     fetchpriority="high"
-                    class="block h-[180px] w-full bg-base-200 object-contain p-3 object-center sm:h-[220px] md:h-[260px]"
+                    class="block h-[220px] w-full bg-base-200 object-contain p-3 object-center sm:h-[250px] md:h-[300px]"
                 >
             </div>
 
@@ -484,26 +484,17 @@
             </div>
 
             <div class="mt-4 max-w-[620px]">
-                <div class="mt-3">
-                    <div class="flex flex-col gap-3">
-                        <div class="min-w-0">
-                            <!-- Nombre del programa -->
-                            <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px] break-words hyphens-auto" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
-                            
-                            <!-- Título del episodio -->
-                            <div class="mt-3" x-show="activeEpisode.episode_title && (activeEpisode.episode_title.toLowerCase() !== (activeEpisode.program || activeEpisode.title || '').toLowerCase())">
-                                <span class="home-badge inline-block" x-text="activeEpisode.episode_title"></span>
-                            </div>
+                <span class="home-badge" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></span>
 
-                            <!-- Fecha -->
+                <div class="mt-3">
+                    <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px] break-words hyphens-auto" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
                             <p class="mt-3 text-[12px] uppercase tracking-[.24em] text-base-content/80" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
-                            
-                            <!-- Conducido por -->
                             <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
                         </div>
 
-                        <!-- Botón Info -->
-                        <div class="mt-2">
+                        <div class="flex flex-wrap gap-2 md:shrink-0 md:pt-1">
                             <x-button
                                 size="sm"
                                 variant="outline"
@@ -520,8 +511,8 @@
         </div>
     </article>
 
-    <aside class="home-panel p-0 lg:col-span-5 xl:col-span-4 flex flex-col">
-        <div class="border-b border-base-300 px-6 py-5 shrink-0">
+    <aside class="home-panel p-0">
+        <div class="border-b border-base-300 px-6 py-5">
             <div class="font-display text-sm uppercase tracking-[.22em] text-base-content/80">Últimos episodios</div>
             <div class="mt-2 text-sm text-base-content/60">Servidor de Podcast</div>
         </div>
@@ -546,7 +537,7 @@
                             <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-base-content/80 md:text-[15px]">
                                 {!! formatear_titulo($episode['program']) !!}
                             </div>
-                            <div class="mt-1 line-clamp-2 text-[12px] text-base-content/50">
+                            <div class="mt-1 truncate text-[12px] text-base-content/50">
                                 {{ $episode['episode_title'] }}
                             </div>
                         </div>
