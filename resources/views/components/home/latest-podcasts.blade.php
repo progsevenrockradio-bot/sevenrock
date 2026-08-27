@@ -565,7 +565,8 @@
 
         <x-slot:actions>
             <x-button
-                :href="activeEpisode.archive_url || activeEpisode.url || '#'"
+                as="a"
+                x-bind:href="activeEpisode.archive_url || activeEpisode.url || '#'"
                 target="_blank"
                 rel="noopener"
                 color="primary"
