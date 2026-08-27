@@ -111,7 +111,7 @@
 @endphp
 
 <div
-    class="mt-[60px] grid gap-6 lg:grid-cols-[1.3fr_.7fr]"
+    class="mt-[60px] grid gap-6 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px]"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
@@ -484,17 +484,26 @@
             </div>
 
             <div class="mt-4 max-w-[620px]">
-                <span class="home-badge" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></span>
-
                 <div class="mt-3">
-                    <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
-                        <div class="min-w-0 flex-1">
+                    <div class="flex flex-col gap-3">
+                        <div class="min-w-0">
+                            <!-- Nombre del programa -->
                             <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px] break-words hyphens-auto" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
-                            <p class="mt-3 text-[12px] uppercase tracking-[.24em] text-base-content/80" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
-                            <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
+                            
+                            <!-- Título del episodio -->
+                            <div class="mt-4">
+                                <span class="home-badge inline-block" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></span>
+                            </div>
+
+                            <!-- Fecha -->
+                            <p class="mt-4 text-[12px] uppercase tracking-[.24em] text-base-content/80" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
+                            
+                            <!-- Conducido por -->
+                            <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-primary">CONDUCIDO POR: <span x-text="activeEpisode.host || ''"></span></p>
                         </div>
 
-                        <div class="flex flex-wrap gap-2 md:shrink-0 md:pt-1">
+                        <!-- Botón Info -->
+                        <div class="mt-2">
                             <x-button
                                 size="sm"
                                 variant="outline"
