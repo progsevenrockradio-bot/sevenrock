@@ -111,7 +111,7 @@
 @endphp
 
 <div
-    class="mx-auto max-w-[1200px] px-6 mt-[60px] grid gap-6 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_340px]"
+    class="mx-auto max-w-[1200px] px-6 mt-[60px] grid gap-6 lg:grid-cols-[1.5fr_1fr] xl:grid-cols-[1.7fr_1fr]"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
@@ -474,7 +474,7 @@
                     width="1280"
                     height="720"
                     fetchpriority="high"
-                    class="block h-[220px] w-full bg-base-200 object-contain p-3 object-center sm:h-[250px] md:h-[300px]"
+                    class="block h-[180px] w-full bg-base-200 object-contain p-3 object-center sm:h-[220px] md:h-[260px]"
                 >
             </div>
 
@@ -491,15 +491,15 @@
                             <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px] break-words hyphens-auto" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
                             
                             <!-- Título del episodio -->
-                            <div class="mt-4">
-                                <span class="home-badge inline-block" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></span>
+                            <div class="mt-3" x-show="activeEpisode.episode_title && (activeEpisode.episode_title.toLowerCase() !== (activeEpisode.program || activeEpisode.title || '').toLowerCase())">
+                                <span class="home-badge inline-block" x-text="activeEpisode.episode_title"></span>
                             </div>
 
                             <!-- Fecha -->
-                            <p class="mt-4 text-[12px] uppercase tracking-[.24em] text-base-content/80" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
+                            <p class="mt-3 text-[12px] uppercase tracking-[.24em] text-base-content/80" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
                             
                             <!-- Conducido por -->
-                            <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-primary">CONDUCIDO POR: <span x-text="activeEpisode.host || ''"></span></p>
+                            <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
                         </div>
 
                         <!-- Botón Info -->
