@@ -52,18 +52,40 @@
     "src": "_instrument-sans-600-normal-DMks36a2.woff"
   },
   "resources/css/app.css": {
-    "file": "assets/app-DK-ywm9d.css",
+    "file": "assets/app-D7G_J3as.css",
     "name": "app",
     "names": [
       "app.css"
     ],
     "src": "resources/css/app.css",
-    "isEntry": true
+    "isEntry": true,
+    "assets": [
+      "assets/PixelMplus10-Regular-CCSYmBkH.ttf",
+      "assets/PixelMplus10-Bold-C_7OC1o5.ttf",
+      "assets/PixelMplus12-Regular-q7bW_Ici.ttf",
+      "assets/PixelMplus12-Bold-BWRjZrhi.ttf"
+    ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-CWih-DWs.js",
+    "file": "assets/app-BXAnqWzT.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true
+  },
+  "vendor/sparrowhawk-labs/pinion-ui/src/resources/fonts/pixelmplus/PixelMplus10-Bold.ttf": {
+    "file": "assets/PixelMplus10-Bold-C_7OC1o5.ttf",
+    "src": "vendor/sparrowhawk-labs/pinion-ui/src/resources/fonts/pixelmplus/PixelMplus10-Bold.ttf"
+  },
+  "vendor/sparrowhawk-labs/pinion-ui/src/resources/fonts/pixelmplus/PixelMplus10-Regular.ttf": {
+    "file": "assets/PixelMplus10-Regular-CCSYmBkH.ttf",
+    "src": "vendor/sparrowhawk-labs/pinion-ui/src/resources/fonts/pixelmplus/PixelMplus10-Regular.ttf"
+  },
+  "vendor/sparrowhawk-labs/pinion-ui/src/resources/fonts/pixelmplus/PixelMplus12-Bold.ttf": {
+    "file": "assets/PixelMplus12-Bold-BWRjZrhi.ttf",
+    "src": "vendor/sparrowhawk-labs/pinion-ui/src/resources/fonts/pixelmplus/PixelMplus12-Bold.ttf"
+  },
+  "vendor/sparrowhawk-labs/pinion-ui/src/resources/fonts/pixelmplus/PixelMplus12-Regular.ttf": {
+    "file": "assets/PixelMplus12-Regular-q7bW_Ici.ttf",
+    "src": "vendor/sparrowhawk-labs/pinion-ui/src/resources/fonts/pixelmplus/PixelMplus12-Regular.ttf"
   }
 }

@@ -17,6 +17,7 @@
         "mews/purifier": "^3.4",
         "minishlink/web-push": "^9.0",
         "opcodesio/log-viewer": "^3.24",
+        "sparrowhawk-labs/pinion-ui": "^0.10.11",
         "spatie/laravel-permission": "^8.0",
         "stripe/stripe-php": "^20.1",
         "webklex/laravel-imap": "^6.2",

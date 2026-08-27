@@ -1,6 +1,10 @@
 import Alpine from 'alpinejs';
+import collapse from '@alpinejs/collapse';
+import focus from '@alpinejs/focus';
 import { registerRadioPlayer } from './player.js';
 
+Alpine.plugin(focus);
+Alpine.plugin(collapse);
 window.Alpine = Alpine;
 window.__srUserGesture = false;
 

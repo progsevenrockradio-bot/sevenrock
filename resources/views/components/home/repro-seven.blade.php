@@ -10,11 +10,11 @@
         100% { transform: translateX(-50%); }
     }
 </style>
-<div class="mt-6 border border-[#2b2b2b] bg-[#101010] p-4 shadow-[0_18px_48px_rgba(0,0,0,.35)]">
+<div class="mt-6 border border-base-300 bg-base-200 p-4 shadow-[0_18px_48px_rgba(0,0,0,.35)]">
     <div class="mejs-container wp-audio-shortcode mejs-audio flex w-full flex-col gap-4" tabindex="0" role="application" aria-label="Audio Player">
         <div class="mejs-inner">
             <div class="flex items-start gap-3">
-                <div class="h-14 w-14 shrink-0 overflow-hidden border border-[#2b2b2b] bg-[#0f0f0f] shadow-[0_10px_30px_rgba(0,0,0,.35)]">
+                <div class="h-14 w-14 shrink-0 overflow-hidden border border-base-300 bg-base-300 shadow-[0_10px_30px_rgba(0,0,0,.35)]">
                     <img
                         :src="activeEpisode.image"
                         :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
@@ -43,7 +43,7 @@
                              });
                              setTimeout(() => { if($refs.titleText && $refs.titleWrapper) isOverflowing = $refs.titleText.scrollWidth > $refs.titleWrapper.clientWidth; }, 150);"
                 >
-                    <div class="text-[10px] uppercase tracking-[.28em] text-[#7b7b7b]">
+                    <div class="text-[10px] uppercase tracking-[.28em] text-base-content/60">
                         ReproSeven
                     </div>
                     
@@ -51,13 +51,13 @@
                         <div :class="isOverflowing ? 'repro-marquee-snake flex w-max' : 'block truncate'">
                             <!-- Primary text -->
                             <p x-ref="titleText" 
-                               class="font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent"
+                               class="font-display text-[12px] uppercase tracking-[.16em] text-primary"
                                :class="isOverflowing ? 'whitespace-nowrap pr-12' : 'truncate'"
                                x-text="activeEpisode.episode_title || 'Último episodio'"></p>
                                
                             <!-- Duplicate text for seamless snake loop, only visible when overflowing -->
                             <p x-show="isOverflowing" 
-                               class="font-display text-[12px] uppercase tracking-[.16em] text-lucille-accent whitespace-nowrap pr-12"
+                               class="font-display text-[12px] uppercase tracking-[.16em] text-primary whitespace-nowrap pr-12"
                                x-text="activeEpisode.episode_title || 'Último episodio'" 
                                aria-hidden="true"></p>
                         </div>
@@ -66,11 +66,11 @@
             </div>
         </div>
 
-        <div class="mejs-controls flex items-center gap-4 border-t border-[#2b2b2b] pt-4 w-full">
+        <div class="mejs-controls flex items-center gap-4 border-t border-base-300 pt-4 w-full">
             <!-- Play button -->
             <button
                 type="button"
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-lg transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-content shadow-lg transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-40"
                 @click="togglePlayback()"
                 :disabled="!activeEpisode.src && !activeEpisode.archive_url"
                 aria-label="Play/Pause"
@@ -84,23 +84,23 @@
             </button>
 
             <!-- Timer -->
-            <div class="flex shrink-0 items-center gap-1 text-[11px] font-display uppercase tracking-[.18em] text-[#dcdcdc]">
+            <div class="flex shrink-0 items-center gap-1 text-[11px] font-display uppercase tracking-[.18em] text-base-content/80">
                 <span x-text="formatTime(currentTime)"></span>
-                <span class="mx-0.5 text-[#595959]">/</span>
+                <span class="mx-0.5 text-base-content/40">/</span>
                 <span x-text="formatTime(fixedDuration)"></span>
             </div>
 
             <!-- Custom Progress Bar -->
-            <div class="group relative flex-1 h-1.5 cursor-pointer rounded-full bg-[#2b2b2b]" @click="seekAudio($event)">
-                <div class="absolute left-0 top-0 h-full rounded-full bg-lucille-accent transition-all duration-100" :style="'width: ' + progressWidth"></div>
-                <div class="absolute top-1/2 -ml-1.5 -mt-1.5 h-3 w-3 rounded-full bg-white opacity-0 shadow transition-opacity group-hover:opacity-100" :style="'left: ' + progressWidth"></div>
+            <div class="group relative flex-1 h-1.5 cursor-pointer rounded-full bg-base-300" @click="seekAudio($event)">
+                <div class="absolute left-0 top-0 h-full rounded-full bg-primary transition-all duration-100" :style="'width: ' + progressWidth"></div>
+                <div class="absolute top-1/2 -ml-1.5 -mt-1.5 h-3 w-3 rounded-full bg-base-content opacity-0 shadow transition-opacity group-hover:opacity-100" :style="'left: ' + progressWidth"></div>
             </div>
 
             <!-- Volume -->
             <div class="hidden sm:flex items-center gap-2 shrink-0">
                 <button
                     type="button"
-                    class="text-[#7b7b7b] transition-colors hover:text-white"
+                    class="text-base-content/60 transition-colors hover:text-base-content"
                     @click="muted = !muted; const audio = $refs.audio; if (audio) { audio.muted = muted; }"
                     :aria-pressed="muted ? 'true' : 'false'"
                     aria-label="Mute"

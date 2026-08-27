@@ -111,7 +111,7 @@
 @endphp
 
 <div
-    class="mt-[60px] grid gap-6 lg:grid-cols-[1.15fr_.85fr]"
+    class="mt-[60px] grid gap-6 lg:grid-cols-[1.3fr_.7fr]"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
@@ -467,14 +467,14 @@
 >
     <article class="home-panel overflow-hidden">
         <div class="p-4 md:p-6 lg:p-7">
-            <div class="overflow-hidden border border-[#2b2b2b] bg-[#111]">
+            <div class="overflow-hidden border border-base-300 bg-base-200">
                 <img
                     :src="activeEpisode.image"
                     :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
                     width="1280"
                     height="720"
                     fetchpriority="high"
-                    class="block h-[220px] w-full bg-[#111] object-contain p-3 object-center sm:h-[250px] md:h-[300px]"
+                    class="block h-[220px] w-full bg-base-200 object-contain p-3 object-center sm:h-[250px] md:h-[300px]"
                 >
             </div>
 
@@ -489,19 +489,19 @@
                 <div class="mt-3">
                     <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                         <div class="min-w-0 flex-1">
-                            <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
-                            <p class="mt-3 text-[12px] uppercase tracking-[.24em] text-[#dcdcdc]" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
-                            <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeEpisode.host || ''"></p>
+                            <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px] break-words hyphens-auto" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
+                            <p class="mt-3 text-[12px] uppercase tracking-[.24em] text-base-content/80" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
+                            <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
                         </div>
 
                         <div class="flex flex-wrap gap-2 md:shrink-0 md:pt-1">
-                            <button
-                                type="button"
-                                class="inline-flex h-7 items-center justify-center border border-[#dcdcdc] bg-transparent px-2.5 py-0 text-[9px] font-display uppercase tracking-[.14em] text-[#dcdcdc] transition-colors hover:bg-white/5"
-                    @click="openInfoModal($event)"
+                            <x-button
+                                size="sm"
+                                variant="outline"
+                                @click="openInfoModal($event); $dispatch('open-modal-info-modal')"
                             >
                                 Info
-                            </button>
+                            </x-button>
                         </div>
                     </div>
 
@@ -512,32 +512,32 @@
     </article>
 
     <aside class="home-panel p-0">
-        <div class="border-b border-[#2b2b2b] px-6 py-5">
-            <div class="font-display text-sm uppercase tracking-[.22em] text-[#dcdcdc]">Últimos episodios</div>
-            <div class="mt-2 text-sm text-[#7b7b7b]">Servidor de Podcast</div>
+        <div class="border-b border-base-300 px-6 py-5">
+            <div class="font-display text-sm uppercase tracking-[.22em] text-base-content/80">Últimos episodios</div>
+            <div class="mt-2 text-sm text-base-content/60">Servidor de Podcast</div>
         </div>
 
         @if ($sidebarEpisodes !== [])
-            <div class="grid gap-0 divide-y divide-[#2b2b2b]">
+            <div class="grid gap-0 divide-y divide-base-300">
                 @foreach ($sidebarEpisodes as $episode)
                     <button
                         type="button"
-                        class="flex items-center gap-3 px-4 py-3 text-left transition-colors duration-300 hover:bg-[rgba(255,255,255,.03)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent/80"
-                        :class="isActiveEpisode(@js($episode)) ? 'bg-[rgba(195,39,32,.08)] ring-1 ring-lucille-accent/50' : ''"
+                        class="flex items-center gap-3 px-4 py-3 text-left transition-colors duration-300 hover:bg-base-content/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80"
+                        :class="isActiveEpisode(@js($episode)) ? 'bg-primary/10 ring-1 ring-primary/50' : ''"
                         @click="selectEpisode(@js($episode))"
                     >
-                        <div class="h-16 w-16 shrink-0 overflow-hidden border border-[#2b2b2b] bg-[#111] md:h-18 md:w-18">
+                        <div class="h-16 w-16 shrink-0 overflow-hidden border border-base-300 bg-base-200 md:h-18 md:w-18">
                             <img src="{{ $episode['image'] }}" alt="{{ $episode['program'] }}" width="320" height="240" class="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.02]" loading="lazy" decoding="async">
                         </div>
 
                         <div class="min-w-0 flex-1">
-                            <div class="text-[10px] uppercase tracking-[.22em] text-[#7b7b7b]">
+                            <div class="text-[10px] uppercase tracking-[.22em] text-base-content/60">
                                 {{ $episode['date'] ?: 'Servidor de Podcast' }}
                             </div>
-                            <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-[#dcdcdc] md:text-[15px]">
+                            <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-base-content/80 md:text-[15px]">
                                 {!! formatear_titulo($episode['program']) !!}
                             </div>
-                            <div class="mt-1 truncate text-[12px] text-[#9a9a9a]">
+                            <div class="mt-1 truncate text-[12px] text-base-content/50">
                                 {{ $episode['episode_title'] }}
                             </div>
                         </div>
@@ -545,61 +545,39 @@
                 @endforeach
             </div>
         @else
-            <div class="px-6 py-10 text-sm text-[#7b7b7b]">
+            <div class="px-6 py-10 text-sm text-base-content/60">
                 No hay episodios listos todavía.
             </div>
         @endif
     </aside>
 
-    <template x-teleport="body">
-    <div
-        x-show="infoModalOpen"
-        x-transition.opacity.duration.300ms
-        x-cloak
-        class="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 px-4 py-8 backdrop-blur-sm"
-        @keydown.escape.window="closeInfoModal()"
-        @click.self="closeInfoModal()"
-    >
-        <div class="mx-auto w-full max-w-[560px] border border-[#2b2b2b] bg-[#111] p-5 shadow-[0_24px_80px_rgba(0,0,0,.65)]">
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <div class="home-badge" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></div>
-                    <h4 class="mt-3 font-display text-[22px] uppercase leading-none tracking-[.12em]" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title || 'Podcast')"></h4>
-                    <p class="mt-2 text-xs uppercase tracking-[.24em] text-[#bfbfbf]" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
-                    <p class="mt-1 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeEpisode.host || ''"></p>
-                </div>
-
-                <button
-                    type="button"
-                    class="h-10 w-10 border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:bg-white/5"
-                    @click="closeInfoModal()"
-                    aria-label="Cerrar"
-                >
-                    ×
-                </button>
-            </div>
-
-            <div class="mt-4 space-y-3 border-t border-[#2b2b2b] pt-4">
-                <p class="text-sm leading-7 text-[#d8d8d8]" x-text="activeEpisode.summary || 'Episodio listo para escuchar desde la portada.'"></p>
-                <div class="flex flex-wrap gap-3">
-                    <a
-                        class="lucille-button-solid"
-                        :href="activeEpisode.archive_url || activeEpisode.url || '#'"
-                        target="_blank"
-                        rel="noopener"
-                    >
-                        Escuchar en Servidor de Podcast
-                    </a>
-                    <button
-                        type="button"
-                        class="lucille-button-solid"
-                        @click="closeInfoModal()"
-                    >
-                        Cerrar
-                    </button>
-                </div>
-            </div>
+    <x-modal id="info-modal" size="md">
+        <div>
+            <x-badge x-text="activeEpisode.episode_title || 'Nuevo episodio'"></x-badge>
+            <h4 class="mt-md font-display text-[22px] uppercase leading-none tracking-[.12em] text-base-content" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title || 'Podcast')"></h4>
+            <p class="mt-sm text-xs uppercase tracking-[.24em] text-base-content/70" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
+            <p class="mt-xs font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
         </div>
-    </div>
-    </template>
+        
+        <div class="mt-lg space-y-md pt-md">
+            <p class="text-sm leading-7 text-base-content/80" x-text="activeEpisode.summary || 'Episodio listo para escuchar desde la portada.'"></p>
+        </div>
+
+        <x-slot:actions>
+            <x-button
+                :href="activeEpisode.archive_url || activeEpisode.url || '#'"
+                target="_blank"
+                rel="noopener"
+                color="primary"
+            >
+                Escuchar en Servidor de Podcast
+            </x-button>
+            <x-button
+                @click="open = false; closeInfoModal()"
+                appearance="ghost"
+            >
+                Cerrar
+            </x-button>
+        </x-slot:actions>
+    </x-modal>
 </div>

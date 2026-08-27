@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3fbb63411b600761270bc98bffa738cd",
+    "content-hash": "a498af7368e62de307f58311abc64359",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -4399,6 +4399,134 @@
                 "source": "https://github.com/MyIntervals/PHP-CSS-Parser/tree/v9.4.0"
             },
             "time": "2026-06-18T15:10:53+00:00"
+        },
+        {
+            "name": "sparrowhawk-labs/pinion-icons",
+            "version": "v1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/sparrowhawk-labs/pinion-icons.git",
+                "reference": "2f8c4ab365c608df7c7aae9ed1954e8f2ce76ffa"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/sparrowhawk-labs/pinion-icons/zipball/2f8c4ab365c608df7c7aae9ed1954e8f2ce76ffa",
+                "reference": "2f8c4ab365c608df7c7aae9ed1954e8f2ce76ffa",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": "^11.0|^12.0|^13.0",
+                "php": "^8.2"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "SparrowhawkLabs\\PinionIcons\\PinionIconsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "SparrowhawkLabs\\PinionIcons\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Akihiko Takai",
+                    "email": "akihiko.takai@yakaze.com",
+                    "homepage": "https://sparrowhawk-labs.dev",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Unified icon system for Laravel. 7,404 Solar icons across 6 style variants, plus Fluent Emoji and Pixelarticons virtual variants — switch styles or libraries at the call site.",
+            "homepage": "https://sparrowhawk-labs.dev",
+            "keywords": [
+                "blade",
+                "fluent-emoji",
+                "icons",
+                "laravel",
+                "pinion",
+                "pixelarticons",
+                "solar",
+                "sparrowhawk-labs",
+                "svg"
+            ],
+            "support": {
+                "issues": "https://github.com/sparrowhawk-labs/pinion-icons/issues",
+                "source": "https://github.com/sparrowhawk-labs/pinion-icons"
+            },
+            "time": "2026-07-22T03:30:30+00:00"
+        },
+        {
+            "name": "sparrowhawk-labs/pinion-ui",
+            "version": "v0.10.11",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/sparrowhawk-labs/pinion-ui.git",
+                "reference": "44b99a38dfa486bcf3f1b4e59804b3099bcef1d7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/sparrowhawk-labs/pinion-ui/zipball/44b99a38dfa486bcf3f1b4e59804b3099bcef1d7",
+                "reference": "44b99a38dfa486bcf3f1b4e59804b3099bcef1d7",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": "^11.0|^12.0|^13.0",
+                "php": "^8.2",
+                "sparrowhawk-labs/pinion-icons": "^1.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "SparrowhawkLabs\\PinionUi\\PinionUiServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/helpers.php"
+                ],
+                "psr-4": {
+                    "SparrowhawkLabs\\PinionUi\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Akihiko Takai",
+                    "email": "akihiko.takai@yakaze.com",
+                    "homepage": "https://sparrowhawk-labs.dev",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Blade UI component system for Laravel — daisyUI semantic colors, Alpine.js interactivity, and Tune design tokens. Pairs with sparrowhawk-labs/pinion-icons.",
+            "homepage": "https://sparrowhawk-labs.dev",
+            "keywords": [
+                "DaisyUI",
+                "alpinejs",
+                "blade",
+                "components",
+                "laravel",
+                "pinion",
+                "sparrowhawk-labs",
+                "tailwindcss",
+                "ui"
+            ],
+            "support": {
+                "issues": "https://github.com/sparrowhawk-labs/pinion-ui/issues",
+                "source": "https://github.com/sparrowhawk-labs/pinion-ui"
+            },
+            "time": "2026-08-26T09:37:31+00:00"
         },
         {
             "name": "spatie/laravel-package-tools",
