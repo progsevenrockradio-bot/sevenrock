@@ -35,6 +35,7 @@
             'audio_sources' => $audioSources,
             'archive_url' => $archiveUrl,
             'url' => trim((string) ($archiveUrl !== '' ? $archiveUrl : $src)),
+            'program_url' => route('programs.detail', ['identifier' => \Illuminate\Support\Str::slug($program !== '' ? $program : 'Podcast')]),
         ];
     };
 
@@ -188,6 +189,7 @@
                 audio_sources: Array.isArray(episode?.audio_sources) ? episode.audio_sources.filter(Boolean) : [],
                 archive_url: episode?.archive_url || '',
                 url: episode?.url || episode?.archive_url || episode?.src || '',
+                program_url: episode?.program_url || '',
             };
         },
         selectEpisode(episode) {
@@ -577,12 +579,10 @@
         <x-slot:actions>
             <x-button
                 as="a"
-                x-bind:href="activeEpisode.archive_url || activeEpisode.url || '#'"
-                target="_blank"
-                rel="noopener"
+                x-bind:href="activeEpisode.program_url || '#'"
                 color="primary"
             >
-                Escuchar en Servidor de Podcast
+                Ir a la Página del Podcast
             </x-button>
             <x-button
                 @click="open = false; closeInfoModal()"
