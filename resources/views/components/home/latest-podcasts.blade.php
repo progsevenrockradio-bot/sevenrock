@@ -467,14 +467,25 @@
 >
     <article class="home-panel overflow-hidden">
         <div class="p-4 md:p-6 lg:p-7">
-            <div class="overflow-hidden border border-base-300 bg-base-200">
+            <div class="relative overflow-hidden border border-base-300 bg-base-200 h-[220px] sm:h-[250px] md:h-[300px]">
+                <!-- Fondo desenfocado -->
+                <div class="absolute inset-0 z-0 overflow-hidden">
+                    <img 
+                        :src="activeEpisode.image" 
+                        class="h-full w-full object-cover blur-xl opacity-40 scale-125"
+                        alt="" 
+                        aria-hidden="true"
+                    >
+                    <div class="absolute inset-0 bg-base-200/30"></div>
+                </div>
+                <!-- Imagen principal -->
                 <img
                     :src="activeEpisode.image"
                     :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
                     width="1280"
                     height="720"
                     fetchpriority="high"
-                    class="block h-[220px] w-full bg-base-200 object-contain object-center sm:h-[250px] md:h-[300px]"
+                    class="relative z-10 block h-full w-full object-contain object-center drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"
                 >
             </div>
 
@@ -485,7 +496,7 @@
 
             <div class="mt-4 max-w-[720px]">
                 <div class="min-w-0 flex-1">
-                    <h3 class="font-display text-[20px] uppercase leading-[.95] tracking-[.12em] md:text-[28px] break-words hyphens-auto" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
+                    <h3 class="font-display text-[20px] uppercase leading-[1.05] tracking-[.12em] md:text-[28px] text-balance" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
                     <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
                 </div>
 
