@@ -92,7 +92,7 @@
             ->all();
     }
 
-    if (count($sidebarEpisodes) < 8 && $episodes !== []) {
+    if (count($sidebarEpisodes) < 6 && $episodes !== []) {
         $currentKeys = collect($sidebarEpisodes)
             ->map($episodeIdentity)
             ->filter()
@@ -107,11 +107,11 @@
         $sidebarEpisodes = array_merge($sidebarEpisodes, $extraEpisodes);
     }
 
-    $sidebarEpisodes = array_slice($sidebarEpisodes, 0, 8);
+    $sidebarEpisodes = array_slice($sidebarEpisodes, 0, 6);
 @endphp
 
 <div
-    class="mt-[60px] grid gap-6 lg:grid-cols-[1.45fr_.55fr]"
+    class="mt-[60px] grid gap-6 lg:grid-cols-[1.3fr_.7fr]"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
@@ -483,26 +483,26 @@
                 <span class="h-px w-12 bg-lucille-accent/90"></span>
             </div>
 
-            <div class="mt-4 max-w-[720px]">
-                <div class="min-w-0 flex-1">
-                    <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px] break-words hyphens-auto" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
-                    <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
-                </div>
+            <div class="mt-4 max-w-[620px]">
+                <span class="home-badge" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></span>
 
-                <div class="mt-4">
-                    <div class="mb-5 flex flex-col gap-1.5">
-                        <p class="text-[11px] uppercase tracking-[.24em] text-base-content/80" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
-                        <p class="text-[15px] font-medium text-base-content/90" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></p>
-                    </div>
+                <div class="mt-3">
+                    <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px] break-words hyphens-auto" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
+                            <p class="mt-3 text-[12px] uppercase tracking-[.24em] text-base-content/80" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
+                            <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
+                        </div>
 
-                    <div class="mb-5">
-                        <x-button
-                            class="w-full flex justify-center"
-                            variant="outline"
-                            @click="openInfoModal($event); $dispatch('open-modal-info-modal')"
-                        >
-                            Info del Episodio
-                        </x-button>
+                        <div class="flex flex-wrap gap-2 md:shrink-0 md:pt-1">
+                            <x-button
+                                size="sm"
+                                variant="outline"
+                                @click="openInfoModal($event); $dispatch('open-modal-info-modal')"
+                            >
+                                Info
+                            </x-button>
+                        </div>
                     </div>
 
                     <x-home.repro-seven />

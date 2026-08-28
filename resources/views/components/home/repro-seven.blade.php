@@ -66,7 +66,7 @@
             </div>
         </div>
 
-        <div class="mejs-controls flex items-center gap-4 border-t border-base-300 pt-4 w-full">
+        <div class="mejs-controls flex flex-wrap sm:flex-nowrap items-center gap-3 md:gap-4 border-t border-base-300 pt-4 w-full">
             <!-- Play button -->
             <button
                 type="button"
