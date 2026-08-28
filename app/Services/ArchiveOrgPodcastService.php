@@ -692,8 +692,7 @@ final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
     }
 
     /**
-     * @param array<string, string> $itemMetadata
-     * @param array<string, string> $fileMetadata
+
      * @return array<string, mixed>
      */
 

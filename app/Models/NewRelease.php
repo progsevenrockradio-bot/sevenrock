@@ -44,7 +44,7 @@ class NewRelease extends Model
                         'youtube_url' => $newRelease->youtube_url ?: null,
                     ]);
                 } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::error("Fallo al crear post automático en Muro para lanzamiento ID {$newRelease->id}: " . $e->getMessage());
+                    Log::error("Fallo al crear post automático en Muro para lanzamiento ID {$newRelease->id}: " . $e->getMessage());
                 }
                 }
             }

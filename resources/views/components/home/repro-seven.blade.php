@@ -66,38 +66,40 @@
             </div>
         </div>
 
-        <div class="mejs-controls flex flex-wrap sm:flex-nowrap items-center gap-3 md:gap-4 border-t border-base-300 pt-4 w-full">
-            <!-- Play button -->
-            <button
-                type="button"
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-content shadow-lg transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-40"
-                @click="togglePlayback()"
-                :disabled="!activeEpisode.src && !activeEpisode.archive_url"
-                aria-label="Play/Pause"
-            >
-                <svg x-show="!playing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5 ml-1">
-                    <path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd" />
-                </svg>
-                <svg x-show="playing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
-                    <path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75h-1.5a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd" />
-                </svg>
-            </button>
+        <div class="mejs-controls flex flex-col gap-3 border-t border-base-300 pt-4 w-full">
+            <div class="flex items-center gap-4 w-full">
+                <!-- Play button -->
+                <button
+                    type="button"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-content shadow-lg transition-colors hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-40"
+                    @click="togglePlayback()"
+                    :disabled="!activeEpisode.src && !activeEpisode.archive_url"
+                    aria-label="Play/Pause"
+                >
+                    <svg x-show="!playing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5 ml-1">
+                        <path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clip-rule="evenodd" />
+                    </svg>
+                    <svg x-show="playing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
+                        <path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75h-1.5a.75.75 0 01-.75-.75V5.25z" clip-rule="evenodd" />
+                    </svg>
+                </button>
 
-            <!-- Timer -->
-            <div class="flex shrink-0 items-center gap-1 text-[11px] font-display uppercase tracking-[.18em] text-base-content/80">
-                <span x-text="formatTime(currentTime)"></span>
-                <span class="mx-0.5 text-base-content/40">/</span>
-                <span x-text="formatTime(fixedDuration)"></span>
-            </div>
+                <!-- Timer -->
+                <div class="flex shrink-0 items-center gap-1 text-[11px] font-display uppercase tracking-[.18em] text-base-content/80">
+                    <span x-text="formatTime(currentTime)"></span>
+                    <span class="mx-0.5 text-base-content/40">/</span>
+                    <span x-text="formatTime(fixedDuration)"></span>
+                </div>
 
-            <!-- Custom Progress Bar -->
-            <div class="group relative flex-1 h-1.5 cursor-pointer rounded-full bg-base-300" @click="seekAudio($event)">
-                <div class="absolute left-0 top-0 h-full rounded-full bg-primary transition-all duration-100" :style="'width: ' + progressWidth"></div>
-                <div class="absolute top-1/2 -ml-1.5 -mt-1.5 h-3 w-3 rounded-full bg-base-content opacity-0 shadow transition-opacity group-hover:opacity-100" :style="'left: ' + progressWidth"></div>
+                <!-- Custom Progress Bar -->
+                <div class="group relative flex-1 h-1.5 cursor-pointer rounded-full bg-base-300" @click="seekAudio($event)">
+                    <div class="absolute left-0 top-0 h-full rounded-full bg-primary transition-all duration-100" :style="'width: ' + progressWidth"></div>
+                    <div class="absolute top-1/2 -ml-1.5 -mt-1.5 h-3 w-3 rounded-full bg-base-content opacity-0 shadow transition-opacity group-hover:opacity-100" :style="'left: ' + progressWidth"></div>
+                </div>
             </div>
 
             <!-- Volume -->
-            <div class="hidden sm:flex items-center gap-2 shrink-0">
+            <div class="flex items-center gap-2">
                 <button
                     type="button"
                     class="text-base-content/60 transition-colors hover:text-base-content"
@@ -113,7 +115,7 @@
                         <path d="M5.889 6H4a1 1 0 00-1 1v6a1 1 0 001 1h1.889l4.265 4.437A.75.75 0 0011.5 17.89V2.11a.75.75 0 00-1.346-.546L5.89 6zM17.06 5.06a.75.75 0 10-1.06-1.06L14 6.06l-2-2a.75.75 0 10-1.06 1.06l2 2-2 2a.75.75 0 101.06 1.06l2-2 2 2a.75.75 0 101.06-1.06l-2-2 2-2z" />
                     </svg>
                 </button>
-                <div class="flex items-center w-20">
+                <div class="flex items-center w-24">
                     <input
                         type="range"
                         min="0"

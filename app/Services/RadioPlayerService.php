@@ -421,7 +421,7 @@ class RadioPlayerService
             ->orderByDesc('id')
             ->get();
 
-        /** @var \App\Models\RadioProgram $episode */
+        /** @var RadioProgram $episode */
         foreach ($episodes as $episode) {
             $master = $episode->masterProgram;
             if (! $master || ! $master->activo) {

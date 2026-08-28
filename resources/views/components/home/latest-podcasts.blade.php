@@ -111,7 +111,7 @@
 @endphp
 
 <div
-    class="mt-[60px] grid gap-6 lg:grid-cols-[1.45fr_.55fr]"
+    class="mt-[60px] grid gap-6 lg:grid-cols-[1.55fr_.45fr]"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
@@ -474,7 +474,7 @@
                     width="1280"
                     height="720"
                     fetchpriority="high"
-                    class="block h-[220px] w-full bg-base-200 object-contain p-3 object-center sm:h-[250px] md:h-[300px]"
+                    class="block h-[220px] w-full bg-base-200 object-contain object-center sm:h-[250px] md:h-[300px]"
                 >
             </div>
 
@@ -485,7 +485,7 @@
 
             <div class="mt-4 max-w-[720px]">
                 <div class="min-w-0 flex-1">
-                    <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px] break-words hyphens-auto" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
+                    <h3 class="font-display text-[20px] uppercase leading-[.95] tracking-[.12em] md:text-[28px] break-words hyphens-auto" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
                     <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
                 </div>
 
