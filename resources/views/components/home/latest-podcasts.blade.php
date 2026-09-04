@@ -112,7 +112,7 @@
 @endphp
 
 <div
-    class="mt-[60px] grid gap-6 lg:grid-cols-[1fr_.65fr]"
+    class="mt-[60px] grid gap-6 md:grid-cols-[1.3fr_.7fr]"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
