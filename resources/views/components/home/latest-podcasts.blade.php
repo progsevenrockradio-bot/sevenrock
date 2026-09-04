@@ -112,7 +112,7 @@
 @endphp
 
 <div
-    class="mt-[60px] grid gap-6 lg:grid-cols-[1.55fr_.45fr]"
+    class="mt-[60px] grid gap-6 lg:grid-cols-[1fr_.65fr]"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
@@ -524,7 +524,7 @@
         </div>
     </article>
 
-    <aside class="home-panel min-w-0 p-0">
+    <aside class="home-panel min-w-0 overflow-hidden p-0">
         <div class="border-b border-base-300 px-6 py-5">
             <div class="font-display text-sm uppercase tracking-[.22em] text-base-content/80">Últimos episodios</div>
             <div class="mt-2 text-sm text-base-content/60">Servidor de Podcast</div>
