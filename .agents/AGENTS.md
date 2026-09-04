@@ -88,3 +88,62 @@ Actualmente, el sistema solo requiere estrictamente **3 Cron Jobs** configurados
    _(Frecuencia: Cada minuto `* * * * *`)_
 
 > **Importante para Podcasts:** Nunca alteres el tercer Cron Job. Si los podcasts se quedan en "PENDIENTE", es posible que un archivo pesado excedió el tiempo límite y haya bloqueado la cola, o el archivo `.env` no tiene definido `DB_QUEUE_RETRY_AFTER=2000`. En esos casos, basta con ejecutar `php artisan queue:restart` y `php artisan podcast:reconcile-pipeline` en el servidor para reactivarlos. No es necesario crear un 4to Cron Job.
+
+---
+
+## ⚡ REGLA CRÍTICA: Compilación de Assets con Vite (OBLIGATORIO)
+
+> **Esta regla NO tiene excepciones. Incumplirla rompe el sitio en producción.**
+
+### ¿Cuándo DEBES ejecutar `npm run build`?
+
+Ejecutar `npm run build` en `c:\laragon\www\SevenRockRadio` es **obligatorio** ANTES de hacer `git add / commit / push` cuando hayas modificado **cualquiera** de estos archivos:
+
+| Tipo de archivo | Ejemplos |
+|---|---|
+| Clases CSS de Tailwind v4 | Cualquier `.blade.php` con clases nuevas o modificadas |
+| **Clases arbitrarias de Tailwind** (con corchetes `[]`) | `lg:grid-cols-[1.15fr_.85fr]`, `h-[220px]`, `text-[14px]`, etc. |
+| Archivos CSS fuente | `resources/css/app.css`, `resources/css/*.css` |
+| Archivos JS fuente | `resources/js/app.js`, `resources/js/*.js` |
+| Componentes Blade **con clases nuevas** | Cualquier clase que no existía antes en el proyecto |
+
+### ⚠️ La trampa más común: cambiar el breakpoint de una clase arbitraria
+
+Tailwind v4 **solo compila las clases que detecta en el código**. Si cambias `lg:grid-cols-[1.15fr_.85fr]` a `md:grid-cols-[1.15fr_.85fr]`, esa nueva variante `md:` NO existirá en el CSS compilado hasta que hagas `npm run build`. El sitio seguirá usando el CSS anterior y la clase no tendrá efecto. **Siempre reconstruye tras cualquier cambio de clase arbitraria.**
+
+### Flujo obligatorio cuando modificas assets:
+
+```bash
+# 1. Reconstruir el CSS/JS localmente
+npm run build
+
+# 2. Verificar que el build terminó sin errores (exit code 0)
+
+# 3. Subir TODO (código + build generado) a GitHub
+git add -A
+git commit -m "Descripción del cambio"
+git push origin main
+
+# 4. Dar al usuario el bloque de producción COMPLETO con cp del build
+```
+
+### Bloque de producción COMPLETO cuando hay cambios en assets (SIEMPRE incluir el cp):
+
+```bash
+cd /home/u531780502/domains/sevenrockradio.com/sevenrockradio
+git pull
+php artisan cache:clear
+php artisan view:clear
+cp -r /home/u531780502/domains/sevenrockradio.com/sevenrockradio/public/build /home/u531780502/domains/sevenrockradio.com/public_html/
+```
+
+### Bloque de producción REDUCIDO cuando solo cambian archivos Blade/PHP (sin CSS/JS):
+
+```bash
+cd /home/u531780502/domains/sevenrockradio.com/sevenrockradio
+git pull
+php artisan view:clear
+```
+
+> **Regla mnemotécnica:** "¿Toqué CSS, JS, o una clase nueva de Tailwind? → `npm run build` primero, siempre."
+
