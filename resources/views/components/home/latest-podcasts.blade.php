@@ -467,7 +467,7 @@
         },
     }"
 >
-    <article class="home-panel overflow-hidden">
+    <article class="home-panel min-w-0 overflow-hidden">
         <div class="p-4 md:p-6 lg:p-7">
             <div class="relative overflow-hidden border border-base-300 bg-base-200 h-[220px] sm:h-[250px] md:h-[300px]">
                 <!-- Fondo desenfocado -->
@@ -524,7 +524,7 @@
         </div>
     </article>
 
-    <aside class="home-panel p-0">
+    <aside class="home-panel min-w-0 p-0">
         <div class="border-b border-base-300 px-6 py-5">
             <div class="font-display text-sm uppercase tracking-[.22em] text-base-content/80">Últimos episodios</div>
             <div class="mt-2 text-sm text-base-content/60">Servidor de Podcast</div>
