@@ -16,11 +16,11 @@ class MediaKitMail extends Mailable
 {
     use SerializesModels;
 
-    public $customSubject;
-    public $customMessage;
-    public $appTheme;
-    public $recipientName;
-    public $options;
+    public string $customSubject;
+    public ?string $customMessage;
+    public array $appTheme;
+    public ?string $recipientName;
+    public array $options;
 
     /**
      * Create a new message instance.
@@ -90,7 +90,7 @@ class MediaKitMail extends Mailable
     /**
      * Get the attachments for the message.
      *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+     * @return array<int, Attachment>
      */
     public function attachments(): array
     {

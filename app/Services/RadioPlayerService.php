@@ -290,7 +290,7 @@ class RadioPlayerService
             ?? $matcher->fuzzyMatch($artist);
     }
 
-    private function resolveCurrentProgram(array $state, ?Song $song, $programs): ?Program
+    private function resolveCurrentProgram(array $state, ?Song $song, \Illuminate\Support\Collection $programs): ?Program
     {
         if ($programId = Arr::get($state, 'program_id')) {
             $program = $programs->firstWhere('id', (int) $programId);
@@ -667,7 +667,7 @@ class RadioPlayerService
         return $timezone !== '' ? $timezone : config('app.timezone');
     }
 
-    private function resolveNextProgram(?Program $currentProgram, $programs, array $remoteUpcomingPrograms = []): ?Program
+    private function resolveNextProgram(?Program $currentProgram, \Illuminate\Support\Collection $programs, array $remoteUpcomingPrograms = []): ?Program
     {
         if (! $currentProgram) {
             return $programs->skip(1)->first() ?? $this->programFromUpcomingEvent($remoteUpcomingPrograms[0] ?? null);

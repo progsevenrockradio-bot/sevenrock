@@ -4,7 +4,7 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use App\Support\ArchiveIdentifierAudit;
 use App\Models\Post;
-use App\Jobs\UploadMp3Job;
+use App\Jobs\ProcessMp3Job;
 use App\Models\MasterProgram;
 use App\Models\RadioProgram;
 use App\Models\Talent;
@@ -25,7 +25,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Artisan::command('fix:posts', function () {
-    $count = \App\Models\Post::where('title', 'like', '%font-family%')->update([
+    $count = Post::where('title', 'like', '%font-family%')->update([
         'title' => 'Efemérides del Rock',
         'excerpt' => 'Efeméride recuperada.'
     ]);
@@ -301,7 +301,7 @@ Artisan::command('sevenrock:test-upload {--file= : Ruta relativa en storage/app/
     config(['services.notifications.mailer' => 'log']);
 
     try {
-        UploadMp3Job::dispatchSync($radioProgram->fresh(['masterProgram']) ?? $radioProgram, $storedPath, $keepLocalCopy);
+        ProcessMp3Job::dispatchSync($radioProgram->fresh(['masterProgram']) ?? $radioProgram, $storedPath, $keepLocalCopy);
     } catch (\Throwable $exception) {
         $radioProgram->refresh();
         $this->error('El upload de prueba falló: ' . $exception->getMessage());

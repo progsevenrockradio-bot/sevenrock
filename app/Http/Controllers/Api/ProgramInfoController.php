@@ -14,7 +14,7 @@ class ProgramInfoController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
-        $programId = (int) $request->query('program_id', 0);
+        $programId = (int) $request->query('program_id', '0');
         $programName = trim((string) $request->query('program_name', ''));
 
         $program = null;

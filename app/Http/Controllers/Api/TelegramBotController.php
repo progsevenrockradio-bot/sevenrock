@@ -33,7 +33,7 @@ class TelegramBotController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
-    private function sendMessage($chatId, $message)
+    private function sendMessage(int|string $chatId, string $message): void
     {
         $token = env('TELEGRAM_BOT_TOKEN');
         if (!$token) {
