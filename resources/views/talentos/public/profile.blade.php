@@ -1,13 +1,15 @@
 @php
-    $shareTitle = $talent->band_name . ' - Seven Rock Radio';
-    $shareDesc = $talent->bio ? Str::limit($talent->bio, 160) : 'Perfil de ' . $talent->band_name . ' en Seven Rock Radio';
+    // Título principal: Solo el nombre de la banda (similar a como Spotify pone el nombre de la canción)
+    $shareTitle = $talent->band_name;
+    
+    // Descripción: Estadísticas y el nombre de la plataforma (similar a "Banda • Canción • Año")
+    $shareDesc = "Visitas: " . number_format($viewsCount) . " • Me gusta: " . number_format($likesCount) . " • Muro del Rock";
 
-    // If it belongs to an agency, prepend agency name to sharing preview
+    // Si pertenece a una agencia (para los perfiles importados)
     if ($talent instanceof \App\Models\RadioArtistTalentFallback && $talent->agency_id) {
         $agency = $talent->agency;
         if ($agency) {
-            $shareTitle = $agency->name . ' presenta: ' . $talent->band_name . ' - Seven Rock Radio';
-            $shareDesc = 'Perfil de ' . $talent->band_name . ' (representado por ' . $agency->name . ') en Seven Rock Radio. ' . ($talent->bio ? Str::limit($talent->bio, 100) : '');
+            $shareTitle = $talent->band_name . ' (' . $agency->name . ')';
         }
     }
 @endphp
@@ -70,7 +72,7 @@
         </div>
 
         <!-- Stats Bar -->
-        <div class="flex justify-center gap-6 md:gap-12 flex-wrap rounded-[16px] border border-white/10 bg-[#10151a]/60 backdrop-blur-md px-6 py-5 shadow-lg max-w-2xl mx-auto -mt-6 relative z-20">
+        <div class="flex justify-center gap-6 md:gap-12 flex-wrap rounded-[16px] border border-white/10 bg-[#10151a]/60 backdrop-blur-md px-6 py-5 shadow-lg max-w-3xl mx-auto -mt-6 relative z-20 items-center">
             <div class="text-center px-4">
                 <span class="block font-display text-3xl font-bold text-white like-count">{{ $likesCount }}</span>
                 <span class="text-[10px] uppercase tracking-[.2em] text-gray-400">Likes</span>
@@ -85,6 +87,32 @@
                 <span class="block font-display text-3xl font-bold text-white">{{ $viewsCount }}</span>
                 <span class="text-[10px] uppercase tracking-[.2em] text-gray-400">Visitas</span>
             </div>
+            <div class="h-10 w-[1px] bg-white/10 self-center hidden sm:block"></div>
+            
+            <!-- Botón Compartir -->
+            <button type="button" 
+                class="text-center px-4 flex flex-col justify-center items-center cursor-pointer hover:scale-105 transition-transform group"
+                x-data="{
+                    shareProfile() {
+                        if (navigator.share) {
+                            navigator.share({
+                                title: '{{ addslashes($shareTitle) }}',
+                                text: '{{ addslashes($shareDesc) }}',
+                                url: window.location.href
+                            }).catch(console.error);
+                        } else {
+                            navigator.clipboard.writeText(window.location.href);
+                            alert('Enlace copiado al portapapeles');
+                        }
+                    }
+                }"
+                @click="shareProfile"
+            >
+                <div class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--lucille-accent)]/20 text-[var(--lucille-accent)] mb-1.5 group-hover:bg-[var(--lucille-accent)] group-hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                </div>
+                <span class="text-[10px] uppercase tracking-[.2em] text-[var(--lucille-accent)] font-bold group-hover:text-white transition-colors">Compartir</span>
+            </button>
         </div>
 
         <!-- Main Layout Grid -->
