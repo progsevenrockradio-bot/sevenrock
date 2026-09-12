@@ -1,20 +1,11 @@
 <x-layouts.site :title="'Seven Rock Radio - Talentos'" description="Descubre nuevos talentos musicales en Seven Rock Radio. Bandas independientes, artistas emergentes y musica original.">
-    @push('styles')
-        <style>
-            /* Ocultar el fondo global anterior que tenía texto de tarjetas antiguas */
-            .lucille-fixed-bg {
-                display: none !important;
-            }
-        </style>
-    @endpush
-
     {{-- Exclusivo Fondo de Pared de Rock con Glassmorphism para Muro del Rock --}}
     <div class="relative min-h-screen bg-[#0a0a0b]">
-        {{-- Imagen de Fondo Fijo / Parallax Vívida --}}
-        <div class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-85" style="background-image: url('{{ asset('assets/lucille/muro-bg.png') }}');"></div>
+        {{-- Imagen de Fondo Fijo / Parallax Vívida Limpia (Sin duplicación de tarjetas o texto) --}}
+        <div class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-40 mix-blend-luminosity blur-[2px]" style="background-image: url('{{ asset('assets/lucille/dark-background.jpg') }}');"></div>
         
-        {{-- Capa de Cristal Esmerilado (Glassmorphism Overlay Translúcido) --}}
-        <div class="fixed inset-0 z-0 bg-gradient-to-b from-[#0a0a0b]/30 via-[#0a0a0b]/45 to-[#0a0a0b]/80 pointer-events-none backdrop-blur-[1px]"></div>
+        {{-- Capa de Cristal Esmerilado (Overlay Translúcido sin backdrop-blur para evitar ghosting) --}}
+        <div class="fixed inset-0 z-0 bg-gradient-to-b from-[#0a0a0b]/60 via-[#0a0a0b]/80 to-[#0a0a0b] pointer-events-none"></div>
 
         <section class="relative z-10 mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
         <!-- Section Header Banner (Impeccable Design) -->
@@ -41,8 +32,26 @@
             </div>
         </div>
 
+        @php
+            $defaultPlansList = [
+                'free'    => ['label' => 'Plan Free'],
+                'basic'   => ['label' => 'Plan Basic'],
+                'pro'     => ['label' => 'Plan Pro'],
+                'premium' => ['label' => 'Plan Premium'],
+            ];
+            $availablePlans = is_array($plans ?? null) && !empty($plans) ? $plans : $defaultPlansList;
+            $selectedKey = (string) ($selectedPlan ?? '');
+            $activePlanLabel = 'Todos los planes';
+            if ($selectedKey !== '' && array_key_exists($selectedKey, $availablePlans)) {
+                $activePlanLabel = (string) ($availablePlans[$selectedKey]['label'] ?? ('Plan ' . ucfirst($selectedKey)));
+            }
+            if ($activePlanLabel !== 'Todos los planes' && !str_starts_with(strtolower($activePlanLabel), 'plan')) {
+                $activePlanLabel = 'Plan ' . $activePlanLabel;
+            }
+        @endphp
+
         <!-- Filter Form -->
-        <form method="GET" action="{{ route('talents.explore') }}" class="grid gap-4 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:grid-cols-[1.5fr_1fr_auto] shadow-lg" x-data="{ dropdownOpen: false, selectedPlan: '{{ $selectedPlan }}', selectedLabel: '{{ $selectedPlan ? ($plans[$selectedPlan]['label'] ?? ucfirst($selectedPlan)) : 'Todos los planes' }}' }">
+        <form method="GET" action="{{ route('talents.explore') }}" class="grid gap-4 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:grid-cols-[1.5fr_1fr_auto] shadow-lg" x-data="{ dropdownOpen: false, selectedPlan: '{{ $selectedPlan }}', selectedLabel: '{{ addslashes($activePlanLabel) }}' }">
             <input type="search" name="search" value="{{ $search }}" placeholder="Buscar talento..." class="lucille-product-field w-full rounded-[8px]">
             
             <div class="relative w-full">
@@ -67,12 +76,18 @@
                             Todos los planes
                         </button>
                     </li>
-                    @foreach ($plans as $key => $plan)
+                    @foreach ($availablePlans as $key => $planItem)
+                        @php
+                            $itemLabel = $planItem['label'] ?? ('Plan ' . ucfirst($key));
+                            if (!str_starts_with(strtolower($itemLabel), 'plan')) {
+                                $itemLabel = 'Plan ' . $itemLabel;
+                            }
+                        @endphp
                         <li>
-                            <button type="button" @click="selectedPlan = '{{ $key }}'; selectedLabel = '{{ $plan['label'] ?? ucfirst($key) }}'; dropdownOpen = false" 
+                            <button type="button" @click="selectedPlan = '{{ $key }}'; selectedLabel = '{{ addslashes($itemLabel) }}'; dropdownOpen = false" 
                                 class="w-full text-left px-4 py-3 text-sm transition-colors duration-150"
                                 :class="selectedPlan === '{{ $key }}' ? 'bg-[var(--lucille-accent)] text-white' : 'text-[#dcdcdc] hover:bg-white/5'">
-                                {{ $plan['label'] ?? ucfirst($key) }}
+                                {{ $itemLabel }}
                             </button>
                         </li>
                     @endforeach

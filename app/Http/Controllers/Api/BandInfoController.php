@@ -120,6 +120,9 @@ class BandInfoController extends Controller
         }
 
         try {
+            $songMatchesArtist = false;
+            $bandProfile = null;
+
             if ($newRelease) {
                 // Multimedia Hub track — never expose formed_year or external metadata
                 $song = null;
@@ -222,41 +225,49 @@ class BandInfoController extends Controller
         $query = Song::query()->with('bandProfile');
 
         if ($title !== '' && $artist !== '') {
+            /** @var Song|null $song */
             $song = (clone $query)
                 ->whereRaw('LOWER(title) = ?', [mb_strtolower($title)])
                 ->whereRaw('LOWER(artist) = ?', [mb_strtolower($artist)])
                 ->first();
 
-            if ($song) {
+            if ($song instanceof Song) {
                 return $song;
             }
         }
 
         if ($title !== '') {
+            /** @var Song|null $song */
             $song = (clone $query)
                 ->whereRaw('LOWER(title) = ?', [mb_strtolower($title)])
                 ->first();
 
-            if ($song) {
+            if ($song instanceof Song) {
                 return $song;
             }
         }
 
         if ($artist !== '') {
+            /** @var Song|null $song */
             $song = (clone $query)
                 ->whereRaw('LOWER(artist) = ?', [mb_strtolower($artist)])
                 ->first();
 
-            if ($song) {
+            if ($song instanceof Song) {
                 return $song;
             }
         }
 
         if ($title !== '') {
-            return (clone $query)
+            /** @var Song|null $song */
+            $song = (clone $query)
                 ->whereRaw('LOWER(title) LIKE ?', ['%' . mb_strtolower($title) . '%'])
                 ->orderByRaw('CHAR_LENGTH(title) ASC')
                 ->first();
+
+            if ($song instanceof Song) {
+                return $song;
+            }
         }
 
         if ($artist !== '') {
@@ -341,7 +352,7 @@ class BandInfoController extends Controller
         }
 
         try {
-            if (class_exists(\App\Models\MasterProgram::class) && \Illuminate\Support\Facades\Schema::hasTable('master_programs')) {
+            if (class_exists(\App\Models\MasterProgram::class) && Schema::hasTable('master_programs')) {
                 $exists = \App\Models\MasterProgram::query()->where('activo', true)->where(function ($q) use ($normalizedArtist, $normalizedTitle) {
                     $q->whereRaw('LOWER(nombre) LIKE ?', ['%' . $normalizedTitle . '%'])
                       ->orWhereRaw('LOWER(conductor) LIKE ?', ['%' . $normalizedArtist . '%']);

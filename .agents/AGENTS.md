@@ -100,7 +100,7 @@ Actualmente, el sistema solo requiere estrictamente **3 Cron Jobs** configurados
 Ejecutar `npm run build` en `c:\laragon\www\SevenRockRadio` es **obligatorio** ANTES de hacer `git add / commit / push` cuando hayas modificado **cualquiera** de estos archivos:
 
 | Tipo de archivo | Ejemplos |
-|---|---|
+| --- | --- |
 | Clases CSS de Tailwind v4 | Cualquier `.blade.php` con clases nuevas o modificadas |
 | **Clases arbitrarias de Tailwind** (con corchetes `[]`) | `lg:grid-cols-[1.15fr_.85fr]`, `h-[220px]`, `text-[14px]`, etc. |
 | Archivos CSS fuente | `resources/css/app.css`, `resources/css/*.css` |
@@ -111,7 +111,7 @@ Ejecutar `npm run build` en `c:\laragon\www\SevenRockRadio` es **obligatorio** A
 
 Tailwind v4 **solo compila las clases que detecta en el código**. Si cambias `lg:grid-cols-[1.15fr_.85fr]` a `md:grid-cols-[1.15fr_.85fr]`, esa nueva variante `md:` NO existirá en el CSS compilado hasta que hagas `npm run build`. El sitio seguirá usando el CSS anterior y la clase no tendrá efecto. **Siempre reconstruye tras cualquier cambio de clase arbitraria.**
 
-### Flujo obligatorio cuando modificas assets:
+### Flujo obligatorio cuando modificas assets
 
 ```bash
 # 1. Reconstruir el CSS/JS localmente
@@ -127,7 +127,7 @@ git push origin main
 # 4. Dar al usuario el bloque de producción COMPLETO con cp del build
 ```
 
-### Bloque de producción COMPLETO cuando hay cambios en assets (SIEMPRE incluir el cp):
+### Bloque de producción COMPLETO cuando hay cambios en assets (SIEMPRE incluir el cp)
 
 ```bash
 cd /home/u531780502/domains/sevenrockradio.com/sevenrockradio
@@ -137,7 +137,7 @@ php artisan view:clear
 cp -r /home/u531780502/domains/sevenrockradio.com/sevenrockradio/public/build /home/u531780502/domains/sevenrockradio.com/public_html/
 ```
 
-### Bloque de producción REDUCIDO cuando solo cambian archivos Blade/PHP (sin CSS/JS):
+### Bloque de producción REDUCIDO cuando solo cambian archivos Blade/PHP (sin CSS/JS)
 
 ```bash
 cd /home/u531780502/domains/sevenrockradio.com/sevenrockradio
@@ -146,4 +146,3 @@ php artisan view:clear
 ```
 
 > **Regla mnemotécnica:** "¿Toqué CSS, JS, o una clase nueva de Tailwind? → `npm run build` primero, siempre."
-

@@ -49,6 +49,7 @@ final class ReconcilePodcastPipelineCommand extends Command
         $requeued = 0;
         $reported = 0;
 
+        /** @var RadioProgram $program */
         foreach ($programs as $program) {
             $program->loadMissing('masterProgram');
             $actions = [];

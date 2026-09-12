@@ -32,7 +32,9 @@ class TrackSubmission extends Model
     public function getFileUrlAttribute(): ?string
     {
         if ($this->file_path) {
-            return \Illuminate\Support\Facades\Storage::disk('r2')->url($this->file_path);
+            /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+            $disk = \Illuminate\Support\Facades\Storage::disk('r2');
+            return $disk->url($this->file_path);
         }
         
         return null;

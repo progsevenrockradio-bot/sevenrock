@@ -157,11 +157,7 @@ class Talent extends Authenticatable
             return null;
         }
 
-        try {
-            return Storage::disk('backblaze')->url($this->logo);
-        } catch (\Throwable) {
-            return null;
-        }
+        return \App\Support\PublicMediaUrl::normalize($this->logo);
     }
 
     /**

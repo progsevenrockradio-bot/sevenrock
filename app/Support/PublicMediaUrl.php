@@ -157,7 +157,7 @@ class PublicMediaUrl
 
             $storageCandidate = ltrim((string) preg_replace('#^(public/|storage/)#', '', $candidate), '/');
             if ($storageCandidate !== '' && Storage::disk('public')->exists($storageCandidate)) {
-                return Storage::disk('public')->url($storageCandidate);
+                return self::diskUrl('public', $storageCandidate);
             }
 
             if ($storageCandidate !== '' && self::isCloudflareR2Configured()) {
@@ -251,7 +251,7 @@ class PublicMediaUrl
                 }
 
                 if (Storage::disk('public')->exists($key)) {
-                    return Storage::disk('public')->url($key);
+                    return self::diskUrl('public', $key);
                 }
             }
 
@@ -261,12 +261,12 @@ class PublicMediaUrl
                 }
 
                 if (Storage::disk('public')->exists($key)) {
-                    return Storage::disk('public')->url($key);
+                    return self::diskUrl('public', $key);
                 }
             }
 
             if (Storage::disk('public')->exists($key)) {
-                return Storage::disk('public')->url($key);
+                return self::diskUrl('public', $key);
             }
 
             if ($disk !== 'public' && self::isCloudflareR2Configured() && Storage::disk('r2')->exists($key)) {
@@ -478,7 +478,7 @@ class PublicMediaUrl
         }
 
         try {
-            return Storage::disk('backblaze')->url($key);
+            return self::diskUrl('backblaze', $key);
         } catch (\Throwable) {
             return '';
         }
@@ -492,10 +492,17 @@ class PublicMediaUrl
         }
 
         try {
-            return Storage::disk('r2')->url($key);
+            return self::diskUrl('r2', $key);
         } catch (\Throwable) {
             return '';
         }
+    }
+
+    private static function diskUrl(string $disk, string $path): string
+    {
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $adapter */
+        $adapter = Storage::disk($disk);
+        return $adapter->url($path);
     }
 
     private static function findLegacyWordPressUploadByBasename(string $basePath, string $relative): ?string
@@ -594,7 +601,7 @@ class PublicMediaUrl
             return false;
         }
 
-        $forced = config('filesystems.disks.backblaze.custom_url_resolves');
+        $forced = config('filesystems.disks.backblaze.custom_url_resolves', null);
         if ($forced !== null) {
             return (bool) $forced;
         }

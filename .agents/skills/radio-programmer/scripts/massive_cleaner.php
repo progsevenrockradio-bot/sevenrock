@@ -21,6 +21,10 @@ $totalFiles = 0;
 $totalDeleted = 0;
 $deletedList = [];
 
+/**
+ * @param \FTP\Connection|resource $ftp
+ * @param array<int, string> $filesList
+ */
 function scan_recursive($ftp, string $dir, array &$filesList): void {
     $contents = ftp_nlist($ftp, $dir);
     if (is_array($contents)) {
