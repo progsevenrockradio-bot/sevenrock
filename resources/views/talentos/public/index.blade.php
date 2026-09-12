@@ -49,18 +49,20 @@
         </form>
 
         <!-- Talents Cards Bento Grid -->
-        <div class="mt-8 grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 grid-flow-dense">
+        <div class="mt-8 grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             @forelse ($talents as $talent)
                 @php
-                    // Una tarjeta es ancha (span 2) si la banda es DESTACADA o si es PRO en una posición que equilibra el collage.
-                    $isFeatured = (bool) $talent->is_featured;
-                    $isProOrPremium = in_array(strtolower((string) $talent->plan), ['pro', 'premium']);
-                    $isWide = $isFeatured || ($isProOrPremium && ($loop->index % 3 === 0));
+                    // Patrón Bento de 7 tarjetas:
+                    // Posición 0: Ancha a la izquierda (span 2)
+                    // Posición 3: Ancha a la derecha (span 2)
+                    // Posiciones 1, 2, 4, 5, 6: Estándar (span 1) -> Fila de 3 pequeñas en pos 4,5,6
+                    $patternIndex = $loop->index % 7;
+                    $isWide = in_array($patternIndex, [0, 3]);
                     $latestTrack = $talent->media ? $talent->media->firstWhere('type', 'mp3') : null;
                 @endphp
 
                 @if ($isWide)
-                    {{-- Tarjeta Ancha Destacada / PRO (2 Columnas en tablet/desktop) --}}
+                    {{-- Tarjeta Ancha (2 Columnas en tablet/desktop) --}}
                     <div class="col-span-1 md:col-span-2 group relative border border-white/10 hover:border-[var(--lucille-accent)]/50 bg-gradient-to-br from-white/[0.03] via-white/[0.01] to-[#0c0c0e] backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 hover:shadow-[0_12px_40px_rgba(195,39,32,0.15)] flex flex-col md:flex-row gap-6 justify-between overflow-hidden min-h-[260px]">
                         {{-- Portada Grande y Badges --}}
                         <div class="flex flex-row md:flex-col items-center md:items-start gap-4 shrink-0">
@@ -101,7 +103,7 @@
                                 </div>
 
                                 <p class="mt-2 text-sm text-gray-300 leading-relaxed line-clamp-3 md:line-clamp-4 font-sans">
-                                    {{ $talent->bio ?: 'Este artista destacado forma parte de nuestra comunidad oficial de talentos.' }}
+                                    {{ $talent->bio ?: 'Este artista forma parte de nuestra comunidad oficial de talentos.' }}
                                 </p>
 
                                 {{-- Track Audio Preview --}}
