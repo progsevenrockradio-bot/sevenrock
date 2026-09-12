@@ -98,10 +98,10 @@
                             navigator.share({
                                 title: '{{ addslashes($shareTitle) }}',
                                 text: '{{ addslashes($shareDesc) }}',
-                                url: window.location.href
+                                url: '{{ route('talents.show', $talent->band_name) }}'
                             }).catch(console.error);
                         } else {
-                            navigator.clipboard.writeText(window.location.href);
+                            navigator.clipboard.writeText('{{ route('talents.show', $talent->band_name) }}');
                             alert('Enlace copiado al portapapeles');
                         }
                     }
