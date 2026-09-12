@@ -11,10 +11,10 @@
         <!-- Section Header Banner (Impeccable Design) -->
         <div class="relative overflow-hidden mb-8 rounded-[20px] border border-white/10 p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.6)] group">
             {{-- Background Image --}}
-            <div class="absolute inset-0 z-0 bg-cover bg-center opacity-80 transition-transform duration-700 group-hover:scale-105" style="background-image: url('{{ asset('assets/lucille/muro-bg.png') }}');"></div>
+            <div class="absolute inset-0 z-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style="background-image: url('{{ asset('assets/lucille/muro-bg.png') }}');"></div>
             
-            {{-- Glass Overlay (Vidrio) --}}
-            <div class="absolute inset-0 z-0 bg-gradient-to-br from-[#161214]/70 via-[#0f0e11]/75 to-[#08080a]/90 backdrop-blur-[6px] pointer-events-none"></div>
+            {{-- Glass Overlay (Vidrio) - Less opacity to make image visible --}}
+            <div class="absolute inset-0 z-0 bg-gradient-to-br from-[#161214]/40 via-[#0f0e11]/50 to-[#08080a]/75 backdrop-blur-[3px] pointer-events-none"></div>
 
             {{-- Ambient radial background glow --}}
             <div class="absolute -top-24 -left-24 w-96 h-96 opacity-40 pointer-events-none bg-[radial-gradient(circle,var(--lucille-accent)_0%,transparent_70%)] blur-2xl z-0 mix-blend-screen"></div>
