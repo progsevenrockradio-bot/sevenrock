@@ -15,10 +15,36 @@
 <x-layouts.site :title="$shareTitle"
     :description="$shareDesc"
     :og-image="$talent->logoUrl() ?? asset('assets/lucille/logo.png')">
+    
+    @php
+        $planKey = strtolower((string) ($talent->plan ?? 'free'));
+        $planColors = [
+            'premium' => '#d4af37',
+            'pro'     => '#3b82f6',
+            'basic'   => '#10b981',
+            'free'    => '#c32720', // Default lucille red
+        ];
+        $accentColor = $planColors[$planKey] ?? '#c32720';
+    @endphp
+    
+    <style>
+        /* Override primary accent color for this specific profile based on plan */
+        :root {
+            --lucille-accent: {{ $accentColor }};
+        }
+    </style>
+
     <section class="mx-auto max-w-7xl px-5 py-16" style="padding-top: 150px;">
         <!-- Profile Header -->
-        <div class="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#10151a]/95 to-[#070a0d]/98 border border-white/10 p-8 md:p-12 text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-md">
-            <div class="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_center,var(--lucille-accent),transparent_70%)]"></div>
+        <div class="relative overflow-hidden rounded-[20px] bg-[#070a0d] border border-white/10 p-8 md:p-12 text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+            <!-- Background Banner -->
+            <div class="absolute inset-0 z-0 opacity-40 mix-blend-luminosity">
+                <img src="{{ \App\Models\ThemeSetting::current()->talents_banner_url ?? asset('assets/lucille/dark-background.jpg') }}" alt="Banner" class="w-full h-full object-cover">
+            </div>
+            <!-- Overlay Gradient for Readability -->
+            <div class="absolute inset-0 z-0 bg-gradient-to-t from-[#10151a] via-[#10151a]/60 to-transparent"></div>
+            
+            <div class="absolute inset-0 z-0 opacity-40 pointer-events-none bg-[radial-gradient(circle_at_center,var(--lucille-accent),transparent_70%)]"></div>
             <div class="relative z-10 flex flex-col items-center">
                 <div class="relative group">
                     <div class="absolute inset-0 rounded-full blur-[15px] opacity-60 bg-[var(--lucille-accent)] group-hover:opacity-85 transition-opacity duration-300"></div>
@@ -26,15 +52,15 @@
                         <img src="{{ $talent->logoUrl() ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" width="160" height="160">
                     </div>
                 </div>
-                <h1 class="font-display text-4xl md:text-6xl uppercase tracking-[.18em] text-white mt-6 drop-shadow-lg">{{ $talent->band_name }}</h1>
-                <div class="mt-4 flex flex-wrap justify-center items-center gap-3">
+                </div>
+                <h1 class="font-display text-4xl md:text-6xl uppercase tracking-[.18em] text-white mt-6 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]" style="text-shadow: 0 4px 20px rgba(0,0,0,0.9);">{{ $talent->band_name }}</h1>
+                <div class="mt-4 flex flex-wrap justify-center items-center gap-3 relative z-10">
                     @php
-                        $planKey = strtolower((string) ($talent->plan ?? 'free'));
                         $planBadgeThemes = [
                             'premium' => 'border-[#d4af37]/40 bg-[#d4af37]/15 text-[#d4af37] shadow-[0_0_15px_rgba(212,175,55,0.25)]',
                             'pro'     => 'border-[#3b82f6]/40 bg-[#3b82f6]/15 text-[#60a5fa] shadow-[0_0_15px_rgba(59,130,246,0.25)]',
                             'basic'   => 'border-[#10b981]/40 bg-[#10b981]/15 text-[#34d399] shadow-[0_0_15px_rgba(16,185,129,0.25)]',
-                            'free'    => 'border-[#a855f7]/40 bg-[#a855f7]/15 text-[#c084fc] shadow-[0_0_15px_rgba(168,85,247,0.25)]',
+                            'free'    => 'border-[#c32720]/40 bg-[#c32720]/15 text-[#ff6b6b] shadow-[0_0_15px_rgba(195,39,32,0.25)]',
                         ];
                         $headerBadgeStyle = $planBadgeThemes[$planKey] ?? $planBadgeThemes['free'];
                     @endphp
@@ -116,7 +142,7 @@
                 ]);
             }
         @endphp
-        <div class="grid gap-8 lg:grid-cols-[1.2fr_.8fr] mt-12">
+        <div class="grid gap-8 lg:grid-cols-[1.2fr_.8fr] mt-12 items-start">
             <!-- Left Column: Biography, Media, Store, etc. -->
             <div class="space-y-8">
                 <!-- Biography Panel -->
