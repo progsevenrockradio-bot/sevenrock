@@ -47,13 +47,18 @@ class PublicProfileController extends Controller
 
     public function show(string $bandName): View
     {
+        $decoded = urldecode($bandName);
+        $normalizedName = str_replace('-', ' ', $decoded);
+        
         $talent = Talent::query()
-            ->where('band_name', urldecode($bandName))
+            ->where('band_name', $decoded)
+            ->orWhere('band_name', $normalizedName)
             ->first();
 
         if (! $talent) {
             $talent = \App\Models\RadioArtistTalentFallback::query()
-                ->where('name', urldecode($bandName))
+                ->where('name', $decoded)
+                ->orWhere('name', $normalizedName)
                 ->firstOrFail();
         }
 
@@ -144,8 +149,12 @@ class PublicProfileController extends Controller
 
     public function like(string $bandName): JsonResponse
     {
+        $decoded = urldecode($bandName);
+        $normalizedName = str_replace('-', ' ', $decoded);
+        
         $talent = Talent::query()
-            ->where('band_name', urldecode($bandName))
+            ->where('band_name', $decoded)
+            ->orWhere('band_name', $normalizedName)
             ->firstOrFail();
 
         $recent = $talent->interactions()
@@ -181,8 +190,12 @@ class PublicProfileController extends Controller
             'content' => ['required', 'string', 'max:500'],
         ]);
 
+        $decoded = urldecode($bandName);
+        $normalizedName = str_replace('-', ' ', $decoded);
+        
         $talent = Talent::query()
-            ->where('band_name', urldecode($bandName))
+            ->where('band_name', $decoded)
+            ->orWhere('band_name', $normalizedName)
             ->firstOrFail();
 
         TalentInteraction::query()->create([

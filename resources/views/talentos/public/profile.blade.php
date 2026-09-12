@@ -24,7 +24,7 @@
 
 <x-layouts.site :title="$shareTitle"
     :description="$shareDesc"
-    :og-image="route('talents.og-image', $talent->band_name)"
+    :og-image="route('talents.og-image', \Illuminate\Support\Str::slug($talent->band_name))"
     :twitter-card="'summary_large_image'">
     
     @php
@@ -106,11 +106,10 @@
                         if (navigator.share) {
                             navigator.share({
                                 title: '{{ addslashes($shareTitle) }}',
-                                text: '{{ addslashes($shareDesc) }}',
-                                url: '{{ route('talents.show', $talent->band_name) }}'
+                                url: '{{ route('talents.show', \Illuminate\Support\Str::slug($talent->band_name)) }}'
                             }).catch(console.error);
                         } else {
-                            navigator.clipboard.writeText('{{ route('talents.show', $talent->band_name) }}');
+                            navigator.clipboard.writeText('{{ route('talents.show', \Illuminate\Support\Str::slug($talent->band_name)) }}');
                             alert('Enlace copiado al portapapeles');
                         }
                     }

@@ -10,8 +10,12 @@ class TalentOgImageController extends Controller
 {
     public function show(string $talentName): Response
     {
-        $talentName = urldecode($talentName);
-        $talent = Talent::where('band_name', $talentName)->firstOrFail();
+        $decoded = urldecode($talentName);
+        $normalizedName = str_replace('-', ' ', $decoded);
+        
+        $talent = Talent::where('band_name', $decoded)
+            ->orWhere('band_name', $normalizedName)
+            ->firstOrFail();
         
         $cacheKey = 'talent_og_image_' . $talent->id . '_' . $talent->updated_at?->timestamp;
         
