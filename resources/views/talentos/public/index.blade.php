@@ -51,7 +51,7 @@
         @endphp
 
         <!-- Filter Form -->
-        <form method="GET" action="{{ route('talents.explore') }}" class="grid gap-4 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:grid-cols-[1.5fr_1fr_auto] shadow-lg" x-data="{ dropdownOpen: false, selectedPlan: '{{ $selectedPlan }}', selectedLabel: '{{ addslashes($activePlanLabel) }}' }">
+        <form method="GET" action="{{ route('talents.explore') }}" class="relative z-20 grid gap-4 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:grid-cols-[1.5fr_1fr_auto] shadow-lg" x-data="{ dropdownOpen: false, selectedPlan: '{{ $selectedPlan }}', selectedLabel: '{{ addslashes($activePlanLabel) }}' }">
             <input type="search" name="search" value="{{ $search }}" placeholder="Buscar talento..." class="lucille-product-field w-full rounded-[8px]">
             
             <div class="relative w-full">
