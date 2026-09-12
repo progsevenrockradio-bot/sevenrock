@@ -51,7 +51,7 @@ class ProcessIncomingEmails extends Command
             return 0;
         }
 
-        $geminiKey = trim((string) $settings->gemini_api_key);
+        $geminiKey = trim((string) $settings->gemini_api_key) ?: config('services.gemini.api_key');
         if ($geminiKey === '') {
             $this->error('La API Key de Gemini no está configurada en los Ajustes del Tema.');
             $this->sendAdminAlert(

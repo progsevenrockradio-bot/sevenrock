@@ -53,7 +53,7 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
         }
 
         $settings = ThemeSetting::current();
-        $geminiKey = trim((string) $settings->gemini_api_key);
+        $geminiKey = trim((string) $settings->gemini_api_key) ?: config('services.gemini.api_key');
         if ($geminiKey === '') {
             Log::error("ScrapeAndEnrichContactsJob: Gemini API Key no configurada.");
             return;
