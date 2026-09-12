@@ -368,11 +368,7 @@
                          x-data="{ 
                              lightboxOpen: false, 
                              activeIndex: 0,
-                             photos: [
-                                 @foreach($photoFiles as $photo)
-                                 { url: '{{ $photo->url }}', title: '{{ addslashes((string)$photo->title) }}' }{{ $loop->last ? '' : ',' }}
-                                 @endforeach
-                             ],
+                             photos: @json($photoFiles->map(fn($p) => ['url' => $p->url, 'title' => (string) $p->title])->values()->all()),
                              next() {
                                  if (this.activeIndex < this.photos.length - 1) this.activeIndex++;
                              },
