@@ -9,10 +9,16 @@
 
         <section class="relative z-10 mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
         <!-- Section Header Banner (Impeccable Design) -->
-        <div class="relative overflow-hidden mb-8 rounded-[20px] bg-gradient-to-br from-[#161214]/90 via-[#0f0e11]/90 to-[#08080a]/95 border border-white/10 p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-md">
+        <div class="relative overflow-hidden mb-8 rounded-[20px] border border-white/10 p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.6)] group">
+            {{-- Background Image --}}
+            <div class="absolute inset-0 z-0 bg-cover bg-center opacity-80 transition-transform duration-700 group-hover:scale-105" style="background-image: url('{{ asset('assets/lucille/muro-bg.png') }}');"></div>
+            
+            {{-- Glass Overlay (Vidrio) --}}
+            <div class="absolute inset-0 z-0 bg-gradient-to-br from-[#161214]/70 via-[#0f0e11]/75 to-[#08080a]/90 backdrop-blur-[6px] pointer-events-none"></div>
+
             {{-- Ambient radial background glow --}}
-            <div class="absolute -top-24 -left-24 w-96 h-96 opacity-25 pointer-events-none bg-[radial-gradient(circle,var(--lucille-accent)_0%,transparent_70%)] blur-2xl"></div>
-            <div class="absolute -bottom-24 -right-24 w-96 h-96 opacity-15 pointer-events-none bg-[radial-gradient(circle,#d4af37_0%,transparent_70%)] blur-2xl"></div>
+            <div class="absolute -top-24 -left-24 w-96 h-96 opacity-40 pointer-events-none bg-[radial-gradient(circle,var(--lucille-accent)_0%,transparent_70%)] blur-2xl z-0 mix-blend-screen"></div>
+            <div class="absolute -bottom-24 -right-24 w-96 h-96 opacity-30 pointer-events-none bg-[radial-gradient(circle,#d4af37_0%,transparent_70%)] blur-2xl z-0 mix-blend-screen"></div>
             
             <div class="relative z-10">
                 <div class="inline-flex items-center gap-2 rounded-full border border-[var(--lucille-accent)]/30 bg-[var(--lucille-accent)]/10 px-3.5 py-1 text-[10px] font-bold uppercase tracking-[.25em] text-[var(--lucille-accent)] shadow-[0_0_15px_rgba(195,39,32,0.25)]">
