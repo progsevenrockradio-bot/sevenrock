@@ -39,7 +39,7 @@
         <div class="relative overflow-hidden rounded-[20px] bg-[#070a0d] border border-white/10 p-8 md:p-12 text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
             <!-- Background Banner -->
             <div class="absolute inset-0 z-0 opacity-40 mix-blend-luminosity">
-                <img src="{{ \App\Models\ThemeSetting::current()->talents_banner_url ?? asset('assets/lucille/dark-background.jpg') }}" alt="Banner" class="w-full h-full object-cover">
+                <img src="{{ asset('assets/lucille/dark-background.jpg') }}" alt="Banner" class="w-full h-full object-cover">
             </div>
             <!-- Overlay Gradient for Readability -->
             <div class="absolute inset-0 z-0 bg-gradient-to-t from-[#10151a] via-[#10151a]/60 to-transparent"></div>
@@ -51,7 +51,6 @@
                     <div class="relative h-[160px] w-[160px] overflow-hidden rounded-full border-4 border-white/15 hover:border-[var(--lucille-accent)] transition-colors duration-300 shadow-2xl">
                         <img src="{{ $talent->logoUrl() ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" width="160" height="160">
                     </div>
-                </div>
                 </div>
                 <h1 class="font-display text-4xl md:text-6xl uppercase tracking-[.18em] text-white mt-6 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]" style="text-shadow: 0 4px 20px rgba(0,0,0,0.9);">{{ $talent->band_name }}</h1>
                 <div class="mt-4 flex flex-wrap justify-center items-center gap-3 relative z-10">
