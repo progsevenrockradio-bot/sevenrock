@@ -24,8 +24,8 @@
 
 <x-layouts.site :title="$shareTitle"
     :description="$shareDesc"
-    :og-image="$bestImage"
-    :twitter-card="'summary'">
+    :og-image="route('talents.og-image', $talent->band_name)"
+    :twitter-card="'summary_large_image'">
     
     @php
         $planKey = strtolower((string) ($talent->plan ?? 'free'));
