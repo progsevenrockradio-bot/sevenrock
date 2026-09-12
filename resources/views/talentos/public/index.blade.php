@@ -48,46 +48,128 @@
             <button type="submit" class="lucille-button-solid rounded-[8px] px-8">Filtrar</button>
         </form>
 
-        <!-- Talents Cards Grid -->
-        <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- Talents Cards Bento Grid -->
+        <div class="mt-8 grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 grid-flow-dense">
             @forelse ($talents as $talent)
-                <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="group border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04] hover:-translate-y-1 shadow-lg flex flex-col justify-between min-h-[260px]">
-                    <div class="flex items-start gap-4">
-                        <div class="h-20 w-20 shrink-0 overflow-hidden rounded-[12px] border border-white/10 bg-black/30 relative">
-                            @if ($talent->logoUrl())
-                                <img src="{{ $talent->logoUrl() }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" width="80" height="80">
-                            @else
-                                <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#1c1c1e] to-[#111112]">
-                                    <svg class="h-8 w-8 text-[#555] group-hover:text-[var(--lucille-accent)] transition-colors duration-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-                                        <circle cx="12" cy="12" r="9" />
-                                        <circle cx="12" cy="12" r="3" />
-                                        <path d="M12 11c.5 0 1 .5 1 1" />
-                                    </svg>
-                                </div>
-                            @endif
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <h2 class="font-display text-xl uppercase tracking-[.12em] text-white truncate group-hover:text-[var(--lucille-accent)] transition-colors">{{ $talent->band_name }}</h2>
-                                @if ($talent->is_featured)
-                                    <span class="border border-[#d4af37]/30 bg-[#d4af37]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.15em] text-[#d4af37] rounded-sm shadow-[0_0_10px_rgba(212,175,55,0.15)]">Destacado</span>
+                @php
+                    $isWide = $talent->is_featured || in_array(strtolower((string) $talent->plan), ['pro', 'premium']);
+                    $latestTrack = $talent->media ? $talent->media->firstWhere('type', 'mp3') : null;
+                @endphp
+
+                @if ($isWide)
+                    {{-- Tarjeta Ancha Destacada / PRO (2 Columnas en tablet/desktop) --}}
+                    <div class="col-span-1 md:col-span-2 group relative border border-white/10 hover:border-[var(--lucille-accent)]/50 bg-gradient-to-br from-white/[0.03] via-white/[0.01] to-[#0c0c0e] backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 hover:shadow-[0_12px_40px_rgba(195,39,32,0.15)] flex flex-col md:flex-row gap-6 justify-between overflow-hidden min-h-[260px]">
+                        {{-- Portada Grande y Badges --}}
+                        <div class="flex flex-row md:flex-col items-center md:items-start gap-4 shrink-0">
+                            <div class="h-28 w-28 md:h-36 md:w-36 shrink-0 overflow-hidden rounded-[14px] border border-white/10 bg-black/40 relative shadow-inner">
+                                @if ($talent->logoUrl())
+                                    <img src="{{ $talent->logoUrl() }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" width="144" height="144">
+                                @else
+                                    <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#1c1c1e] to-[#111112]">
+                                        <svg class="h-12 w-12 text-[#555] group-hover:text-[var(--lucille-accent)] transition-colors duration-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                                            <circle cx="12" cy="12" r="9" />
+                                            <circle cx="12" cy="12" r="3" />
+                                            <path d="M12 11c.5 0 1 .5 1 1" />
+                                        </svg>
+                                    </div>
                                 @endif
                             </div>
-                            <div class="mt-1 text-[10px] uppercase tracking-[.18em] text-gray-500">{{ ucfirst($talent->plan) }}</div>
-                            <p class="mt-3 line-clamp-3 text-sm text-gray-400 leading-relaxed font-sans">{{ $talent->bio ?: 'Este artista aún no ha escrito su biografía.' }}</p>
+                            
+                            <div class="flex flex-wrap gap-1.5 md:w-36 justify-start">
+                                @if ($talent->is_featured)
+                                    <span class="border border-[#d4af37]/40 bg-[#d4af37]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.15em] text-[#d4af37] rounded-sm shadow-[0_0_10px_rgba(212,175,55,0.15)]">★ Destacado</span>
+                                @endif
+                                <span class="border border-[var(--lucille-accent)]/30 bg-[var(--lucille-accent)]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.18em] text-[var(--lucille-accent)] rounded-sm">
+                                    Plan {{ ucfirst($talent->plan) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        {{-- Información Amplia y Audio --}}
+                        <div class="min-w-0 flex-1 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <h2 class="font-display text-2xl uppercase tracking-[.12em] text-white truncate group-hover:text-[var(--lucille-accent)] transition-colors">
+                                        <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="hover:underline">
+                                            {{ $talent->band_name }}
+                                        </a>
+                                    </h2>
+                                    <span class="hidden sm:inline-block text-[10px] uppercase font-mono tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">Banda Verificada</span>
+                                </div>
+
+                                <p class="mt-2 text-sm text-gray-300 leading-relaxed line-clamp-3 md:line-clamp-4 font-sans">
+                                    {{ $talent->bio ?: 'Este artista destacado forma parte de nuestra comunidad oficial de talentos.' }}
+                                </p>
+
+                                {{-- Track Audio Preview --}}
+                                @if ($latestTrack && $latestTrack->url)
+                                    <div class="mt-3 p-3 rounded-[10px] bg-black/50 border border-white/10 flex flex-wrap items-center gap-3">
+                                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                                            <div class="h-7 w-7 rounded-full bg-[var(--lucille-accent)]/20 text-[var(--lucille-accent)] flex items-center justify-center shrink-0 animate-pulse">
+                                                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <div class="text-[9px] uppercase tracking-widest text-gray-500 font-mono">Pista Destacada</div>
+                                                <div class="text-xs font-semibold text-white truncate font-mono">{{ $latestTrack->title ?: $latestTrack->filename }}</div>
+                                            </div>
+                                        </div>
+                                        <audio controls controlsList="nodownload" class="h-8 max-w-[220px] w-full text-xs">
+                                            <source src="{{ $latestTrack->url }}" type="{{ $latestTrack->mime_type ?: 'audio/mpeg' }}">
+                                            Tu navegador no soporta el reproductor de audio.
+                                        </audio>
+                                    </div>
+                                @endif
+                            </div>
+
+                            {{-- Barra Inferior --}}
+                            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] uppercase tracking-[.18em] text-gray-400 font-mono">
+                                <div class="flex gap-4">
+                                    <span>📁 {{ $talent->media_count }} archivos</span>
+                                    <span>🔥 {{ $talent->interacts }} interacciones</span>
+                                </div>
+                                <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="lucille-button-solid text-[10px] py-1.5 px-4 tracking-widest uppercase rounded-[6px] shrink-0">
+                                    Ver Perfil →
+                                </a>
+                            </div>
                         </div>
                     </div>
-                    <div class="mt-5 pt-4 border-t border-white/5 flex items-center justify-between text-[10px] uppercase tracking-[.18em] text-gray-400 font-mono">
-                        <span>{{ $talent->media_count }} archivos</span>
-                        <span>{{ $talent->interacts }} interacciones</span>
-                    </div>
-                </a>
+                @else
+                    {{-- Tarjeta Estándar (1 Columna) --}}
+                    <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="col-span-1 group border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04] hover:-translate-y-1 shadow-lg flex flex-col justify-between min-h-[260px]">
+                        <div class="flex items-start gap-4">
+                            <div class="h-20 w-20 shrink-0 overflow-hidden rounded-[12px] border border-white/10 bg-black/30 relative">
+                                @if ($talent->logoUrl())
+                                    <img src="{{ $talent->logoUrl() }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" width="80" height="80">
+                                @else
+                                    <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#1c1c1e] to-[#111112]">
+                                        <svg class="h-8 w-8 text-[#555] group-hover:text-[var(--lucille-accent)] transition-colors duration-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                                            <circle cx="12" cy="12" r="9" />
+                                            <circle cx="12" cy="12" r="3" />
+                                            <path d="M12 11c.5 0 1 .5 1 1" />
+                                        </svg>
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h2 class="font-display text-xl uppercase tracking-[.12em] text-white truncate group-hover:text-[var(--lucille-accent)] transition-colors">{{ $talent->band_name }}</h2>
+                                </div>
+                                <div class="mt-1 text-[10px] uppercase tracking-[.18em] text-gray-500">Plan {{ ucfirst($talent->plan) }}</div>
+                                <p class="mt-3 line-clamp-3 text-sm text-gray-400 leading-relaxed font-sans">{{ $talent->bio ?: 'Este artista aún no ha escrito su biografía.' }}</p>
+                            </div>
+                        </div>
+                        <div class="mt-5 pt-4 border-t border-white/5 flex items-center justify-between text-[10px] uppercase tracking-[.18em] text-gray-400 font-mono">
+                            <span>{{ $talent->media_count }} archivos</span>
+                            <span>{{ $talent->interacts }} interacciones</span>
+                        </div>
+                    </a>
+                @endif
             @empty
                 <div class="col-span-full border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-8 text-sm text-gray-500 text-center shadow-lg">No hay talentos publicados todavía con estos criterios de búsqueda.</div>
             @endforelse
 
             @if(count($talents) < 6)
-                <div class="border border-dashed border-white/10 bg-white/[0.01] backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.03] shadow-lg flex flex-col justify-between min-h-[260px] text-center items-center group">
+                <div class="col-span-1 border border-dashed border-white/10 bg-white/[0.01] backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.03] shadow-lg flex flex-col justify-between min-h-[260px] text-center items-center group">
                     <div class="flex-1 flex flex-col items-center justify-center">
                         <div class="h-12 w-12 rounded-full border border-white/10 flex items-center justify-center bg-white/[0.02] mb-3 group-hover:border-[var(--lucille-accent)]/30 group-hover:bg-[var(--lucille-accent)]/5 transition-all duration-300">
                             <svg class="h-6 w-6 text-gray-400 group-hover:text-[var(--lucille-accent)] transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
