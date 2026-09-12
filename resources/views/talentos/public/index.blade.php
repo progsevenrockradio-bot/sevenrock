@@ -3,10 +3,10 @@
     {{-- Exclusivo Fondo de Pared de Rock con Glassmorphism para Muro del Rock --}}
     <div class="relative min-h-screen">
         {{-- Imagen de Fondo Fijo / Parallax Vívida --}}
-        <div class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-80" style="background-image: url('{{ asset('assets/lucille/muro-bg.png') }}');"></div>
+        <div class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-90" style="background-image: url('{{ asset('assets/lucille/muro-bg.png') }}');"></div>
         
         {{-- Capa de Cristal Esmerilado (Glassmorphism Overlay Translúcido) --}}
-        <div class="fixed inset-0 z-0 bg-gradient-to-b from-[#0a0a0b]/40 via-[#0a0a0b]/55 to-[#0a0a0b]/80 pointer-events-none backdrop-blur-[1px]"></div>
+        <div class="fixed inset-0 z-0 bg-gradient-to-b from-[#0a0a0b]/20 via-[#0a0a0b]/40 to-[#0a0a0b]/75 pointer-events-none backdrop-blur-[1px]"></div>
 
         <section class="relative z-10 mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
         <!-- Section Header Banner (Impeccable Design) -->
