@@ -29,7 +29,17 @@ class DummyBandsSeeder extends Seeder
         $dummyBands = [];
 
         foreach ($bandNames as $index => $name) {
+            $user = \App\Models\User::firstOrCreate(
+                ['email' => 'dummyband' . $index . '@sevenrockradio.com'],
+                [
+                    'name' => $name . ' Admin',
+                    'password' => Hash::make('password123'),
+                    'email_verified_at' => now(),
+                ]
+            );
+
             $dummyBands[] = Talent::create([
+                'user_id' => $user->id,
                 'band_name' => $name,
                 'email' => 'dummyband' . $index . '@sevenrockradio.com',
                 'password' => Hash::make('password123'),
