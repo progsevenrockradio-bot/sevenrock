@@ -47,8 +47,12 @@ class DummyBandsSeeder extends Seeder
                 'bio' => 'Somos ' . $name . ', una banda de rock nacida para hacer vibrar los escenarios. Nuestra música combina riffs potentes con melodías inolvidables.',
                 'logo' => null, 
                 'subscription_status' => 'active',
-                'plan' => 'pro',
-                'is_featured' => ($index % 2 === 0), // Alternamos destacados
+                'plan' => match($index % 3) {
+                    0 => 'pro',
+                    1 => 'basic',
+                    2 => 'free',
+                },
+                'is_featured' => ($index % 3 === 0), // Alternamos destacados para armar el Bento Grid
                 'interacts' => rand(10, 500),
             ]);
         }

@@ -52,7 +52,10 @@
         <div class="mt-8 grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 grid-flow-dense">
             @forelse ($talents as $talent)
                 @php
-                    $isWide = $talent->is_featured || in_array(strtolower((string) $talent->plan), ['pro', 'premium']);
+                    // Una tarjeta es ancha (span 2) si la banda es DESTACADA o si es PRO en una posición que equilibra el collage.
+                    $isFeatured = (bool) $talent->is_featured;
+                    $isProOrPremium = in_array(strtolower((string) $talent->plan), ['pro', 'premium']);
+                    $isWide = $isFeatured || ($isProOrPremium && ($loop->index % 3 === 0));
                     $latestTrack = $talent->media ? $talent->media->firstWhere('type', 'mp3') : null;
                 @endphp
 
@@ -153,6 +156,9 @@
                             <div class="min-w-0 flex-1">
                                 <div class="flex flex-wrap items-center gap-2">
                                     <h2 class="font-display text-xl uppercase tracking-[.12em] text-white truncate group-hover:text-[var(--lucille-accent)] transition-colors">{{ $talent->band_name }}</h2>
+                                    @if ($talent->is_featured)
+                                        <span class="border border-[#d4af37]/30 bg-[#d4af37]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.15em] text-[#d4af37] rounded-sm">★</span>
+                                    @endif
                                 </div>
                                 <div class="mt-1 text-[10px] uppercase tracking-[.18em] text-gray-500">Plan {{ ucfirst($talent->plan) }}</div>
                                 <p class="mt-3 line-clamp-3 text-sm text-gray-400 leading-relaxed font-sans">{{ $talent->bio ?: 'Este artista aún no ha escrito su biografía.' }}</p>
