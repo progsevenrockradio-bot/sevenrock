@@ -13,7 +13,7 @@
                 <p class="mt-2 text-sm text-[#9aa7b1]">Gestiona aquí los productos que se muestran en tu perfil público.</p>
             </div>
 
-            <a href="{{ route('talentos.store.create') }}" class="lucille-button-solid">Nuevo producto</a>
+            <a href="{{ route('talents.store.create') }}" class="lucille-button-solid">Nuevo producto</a>
         </div>
 
         <div class="rounded border border-white/10 bg-[rgba(255,255,255,.03)] px-4 py-3 text-sm text-[#c9c9c9]">
@@ -53,8 +53,8 @@
                             <td class="px-4 py-4">{{ $product->stock ?? 'N/D' }}</td>
                             <td class="px-4 py-4">
                                 <div class="flex flex-wrap gap-2">
-                                    <a href="{{ route('talentos.store.edit', $product->id) }}" class="lucille-button">Editar</a>
-                                    <form method="POST" action="{{ route('talentos.store.destroy', $product->id) }}">
+                                    <a href="{{ route('talents.store.edit', $product->id) }}" class="lucille-button">Editar</a>
+                                    <form method="POST" action="{{ route('talents.store.destroy', $product->id) }}">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="lucille-button-solid" data-confirm="¿Eliminar este producto?" data-confirm-title="Eliminar producto" data-confirm-action="Eliminar" data-confirm-tone="danger">Eliminar</button>

@@ -364,11 +364,26 @@
 
                 <!-- Image Gallery Panel -->
                 @if ($photoFiles->isNotEmpty())
-                    <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 shadow-xl" x-data="{ lightboxOpen: false, currentImage: '' }">
+                    <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 shadow-xl" 
+                         x-data="{ 
+                             lightboxOpen: false, 
+                             activeIndex: 0,
+                             photos: [
+                                 @foreach($photoFiles as $photo)
+                                 { url: '{{ $photo->url }}', title: '{{ addslashes((string)$photo->title) }}' }{{ $loop->last ? '' : ',' }}
+                                 @endforeach
+                             ],
+                             next() {
+                                 if (this.activeIndex < this.photos.length - 1) this.activeIndex++;
+                             },
+                             prev() {
+                                 if (this.activeIndex > 0) this.activeIndex--;
+                             }
+                         }">
                         <h3 class="font-display text-xl uppercase tracking-[.18em] text-white border-b border-white/5 pb-3 mb-5">Galería</h3>
                         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-                            @foreach ($photoFiles as $photo)
-                                <button type="button" @click="currentImage = '{{ $photo->url }}'; lightboxOpen = true" class="group relative aspect-square overflow-hidden rounded-[8px] bg-black/40 border border-white/5 hover:border-[var(--lucille-accent)]/50 transition-all focus:outline-none">
+                            @foreach ($photoFiles as $index => $photo)
+                                <button type="button" @click="activeIndex = {{ $index }}; lightboxOpen = true" class="group relative aspect-square overflow-hidden rounded-[8px] bg-black/40 border border-white/5 hover:border-[var(--lucille-accent)]/50 transition-all focus:outline-none">
                                     <img src="{{ $photo->url }}" alt="{{ $photo->title }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110">
                                     <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                                         <svg class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
@@ -377,13 +392,58 @@
                             @endforeach
                         </div>
                         
-                        <!-- Lightbox Modal -->
-                        <div x-show="lightboxOpen" x-transition.opacity.duration.300ms class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4" style="display: none;" @keydown.escape.window="lightboxOpen = false">
-                            <button type="button" @click="lightboxOpen = false" class="absolute top-6 right-6 text-white/50 hover:text-white transition-colors p-2" aria-label="Cerrar">
-                                <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                            <img :src="currentImage" class="max-h-[90vh] max-w-[90vw] object-contain rounded-md shadow-2xl" @click.away="lightboxOpen = false">
-                        </div>
+                        <!-- Lightbox Modal (Coverflow Carousel) -->
+                        <template x-teleport="body">
+                            <div x-show="lightboxOpen" style="display: none;"
+                                 x-transition:enter="transition ease-out duration-300"
+                                 x-transition:enter-start="opacity-0"
+                                 x-transition:enter-end="opacity-100"
+                                 x-transition:leave="transition ease-in duration-300"
+                                 x-transition:leave-start="opacity-100"
+                                 x-transition:leave-end="opacity-0"
+                                 class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-xl"
+                                 @keydown.escape.window="lightboxOpen = false"
+                                 @keydown.right.window="if(lightboxOpen) next()"
+                                 @keydown.left.window="if(lightboxOpen) prev()">
+                                 
+                                <button type="button" @click="lightboxOpen = false" class="absolute top-6 right-6 z-50 text-white/50 hover:text-white transition-colors p-2" aria-label="Cerrar">
+                                    <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+
+                                <div class="relative w-full max-w-[100vw] h-[75vh] flex items-center justify-center overflow-hidden">
+                                    <template x-for="(photo, index) in photos" :key="index">
+                                        <div class="absolute transition-all duration-500 ease-out flex flex-col items-center justify-center"
+                                             :class="{
+                                                 'z-50 scale-100 opacity-100 translate-x-0': index === activeIndex,
+                                                 'z-40 scale-75 opacity-50 -translate-x-[60%] md:-translate-x-[50%] blur-[2px] hover:opacity-75 cursor-pointer': index === activeIndex - 1,
+                                                 'z-40 scale-75 opacity-50 translate-x-[60%] md:translate-x-[50%] blur-[2px] hover:opacity-75 cursor-pointer': index === activeIndex + 1,
+                                                 'z-30 scale-50 opacity-0 -translate-x-[120%] pointer-events-none': index < activeIndex - 1,
+                                                 'z-30 scale-50 opacity-0 translate-x-[120%] pointer-events-none': index > activeIndex + 1
+                                             }"
+                                             @click="
+                                                 if (index === activeIndex - 1) prev();
+                                                 else if (index === activeIndex + 1) next();
+                                             ">
+                                            <img :src="photo.url" :alt="photo.title" class="max-h-[75vh] max-w-[85vw] md:max-w-[70vw] object-contain rounded-[12px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10">
+                                            
+                                            <div x-show="index === activeIndex && photo.title" x-transition.opacity.duration.300ms class="absolute -bottom-12 text-center w-full">
+                                                <span class="text-white/80 font-sans text-sm tracking-wide" x-text="photo.title"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                
+                                <!-- Mobile Navigation Controls -->
+                                <div class="absolute bottom-8 flex gap-6 z-50 md:hidden">
+                                    <button @click="prev()" :class="activeIndex === 0 ? 'opacity-30 cursor-not-allowed' : 'opacity-80 hover:opacity-100'" class="p-3 bg-white/10 rounded-full backdrop-blur-md">
+                                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                                    </button>
+                                    <button @click="next()" :class="activeIndex === photos.length - 1 ? 'opacity-30 cursor-not-allowed' : 'opacity-80 hover:opacity-100'" class="p-3 bg-white/10 rounded-full backdrop-blur-md">
+                                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 @endif
 

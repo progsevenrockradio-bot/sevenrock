@@ -9,7 +9,7 @@
         <div class="grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
             <div class="border border-white/10 bg-[#10161b] p-8">
                 <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Media</h1>
-                <p class="mt-2 text-sm text-[#7b7b7b]">Sube fotos, MP3, documentos o videos al almacenamiento de Backblaze B2.</p>
+                <p class="mt-2 text-sm text-[#7b7b7b]">Sube fotos, MP3, documentos o videos al almacenamiento de Cloudflare.</p>
                 <div class="mt-6 border border-white/5 bg-white/[0.02] p-5 rounded-[8px] text-xs space-y-3 text-[#7b7b7b] font-sans">
                     <div class="font-display uppercase tracking-wider text-[#dcdcdc] font-semibold text-xs border-b border-white/5 pb-2 mb-1">
                         Resumen de Límites (Plan: {{ strtoupper($talent->plan) }})

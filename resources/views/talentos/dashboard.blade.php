@@ -85,7 +85,7 @@
             </div>
             <div class="border border-white/10 bg-[#10161b] p-5">
                 <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Días como miembro</div>
-                <div class="mt-2 font-display text-3xl text-white">{{ $talent->created_at?->diffInDays(now()) ?? 0 }}</div>
+                <div class="mt-2 font-display text-3xl text-white">{{ number_format($talent->created_at?->diffInDays(now()) ?? 0, 2) }}</div>
             </div>
         </div>
 

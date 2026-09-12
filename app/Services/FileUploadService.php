@@ -161,6 +161,14 @@ class FileUploadService
             && trim((string) config('filesystems.disks.backblaze.url', '')) !== '';
     }
 
+    public function isR2Configured(): bool
+    {
+        return trim((string) config('filesystems.disks.r2.key', '')) !== ''
+            && trim((string) config('filesystems.disks.r2.secret', '')) !== ''
+            && trim((string) config('filesystems.disks.r2.bucket', '')) !== ''
+            && trim((string) config('filesystems.disks.r2.url', '')) !== '';
+    }
+
     public function disk(string $preferred = 'backblaze'): FilesystemAdapter
     {
         $preferred = $this->normalizeDisk($preferred);
@@ -191,6 +199,10 @@ class FileUploadService
 
         $candidates[] = 'public';
 
+        if ($this->isR2Configured()) {
+            $candidates[] = 'r2';
+        }
+
         if ($this->isB2Configured()) {
             $candidates[] = 'backblaze';
         }
@@ -205,7 +217,15 @@ class FileUploadService
             }
         }
 
-        return $preferred !== null ? $this->normalizeDisk($preferred) : ($this->isB2Configured() ? 'backblaze' : 'public');
+        if ($preferred !== null) {
+            return $this->normalizeDisk($preferred);
+        }
+
+        if ($this->isR2Configured()) {
+            return 'r2';
+        }
+
+        return $this->isB2Configured() ? 'backblaze' : 'public';
     }
 
     public function localPath(string $key, ?string $disk = null): ?string
@@ -581,6 +601,8 @@ class FileUploadService
 
         if ($preferred !== null && trim($preferred) !== '') {
             $candidates[] = $this->normalizeDisk($preferred);
+        } elseif ($this->isR2Configured()) {
+            $candidates[] = 'r2';
         } elseif ($this->isB2Configured()) {
             $candidates[] = 'backblaze';
         }
