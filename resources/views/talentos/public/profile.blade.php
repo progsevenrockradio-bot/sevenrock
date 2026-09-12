@@ -1,4 +1,15 @@
 @php
+    // Obtenemos las fotos para poder extraer la imagen principal si no tiene logo
+    $photoFiles = $media->where('type', 'photo')->values();
+    
+    $bestImage = $talent->logoUrl();
+    if (!$bestImage && $photoFiles->isNotEmpty()) {
+        $bestImage = $photoFiles->first()->url;
+    }
+    if (!$bestImage) {
+        $bestImage = asset('assets/lucille/logo.png');
+    }
+
     // Título principal: Solo el nombre de la banda (similar a como Spotify pone el nombre de la canción)
     $shareTitle = $talent->band_name;
     
@@ -16,7 +27,8 @@
 
 <x-layouts.site :title="$shareTitle"
     :description="$shareDesc"
-    :og-image="$talent->logoUrl() ?? asset('assets/lucille/logo.png')">
+    :og-image="$bestImage"
+    :twitter-card="'summary'">
     
     @php
         $planKey = strtolower((string) ($talent->plan ?? 'free'));
@@ -44,7 +56,7 @@
                 <div class="relative group">
                     <div class="absolute inset-0 rounded-full blur-[15px] opacity-60 bg-[var(--lucille-accent)] group-hover:opacity-85 transition-opacity duration-300"></div>
                     <div class="relative h-[160px] w-[160px] overflow-hidden rounded-full border-4 border-white/15 hover:border-[var(--lucille-accent)] transition-colors duration-300 shadow-2xl">
-                        <img src="{{ $talent->logoUrl() ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" width="160" height="160">
+                        <img src="{{ $bestImage === asset('assets/lucille/logo.png') ? asset('assets/lucille/beatles_t_shirt.jpeg') : $bestImage }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" width="160" height="160">
                     </div>
                 </div>
                 <h1 class="font-display text-4xl md:text-6xl uppercase tracking-[.18em] text-white mt-6 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]" style="text-shadow: 0 4px 20px rgba(0,0,0,0.9);">{{ $talent->band_name }}</h1>

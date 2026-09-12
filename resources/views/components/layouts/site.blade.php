@@ -8,6 +8,7 @@
     'showPlayer' => true,
     'showSocialFlyout' => true,
     'ogType' => 'website',
+    'twitterCard' => 'summary_large_image',
     'ogArticlePublishedTime' => null,
     'ogArticleAuthor' => null,
 ])
@@ -178,7 +179,7 @@
     <?php endif; ?>
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:card" content="{{ $twitterCard }}">
     <meta name="twitter:title" content="{!! htmlspecialchars(html_entity_decode($finalOgTitle, ENT_QUOTES, 'UTF-8'), ENT_COMPAT, 'UTF-8') !!}">
     <meta name="twitter:description" content="{!! htmlspecialchars(html_entity_decode($finalOgDescription, ENT_QUOTES, 'UTF-8'), ENT_COMPAT, 'UTF-8') !!}">
     <meta name="twitter:image" content="{{ $finalOgImage }}">
