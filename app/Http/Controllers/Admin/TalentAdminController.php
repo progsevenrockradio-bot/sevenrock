@@ -13,6 +13,7 @@ use App\Services\BackblazeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class TalentAdminController extends Controller
@@ -81,7 +82,7 @@ class TalentAdminController extends Controller
     public function update(Request $request, Talent $talent): RedirectResponse
     {
         $validated = $request->validate([
-            'band_name' => ['required', 'string', 'max:255'],
+            'band_name' => ['required', 'string', 'max:255', Rule::unique('talents', 'band_name')->ignore($talent->id)],
             'bio' => ['nullable', 'string'],
             'plan' => ['required', 'in:free,basic,pro,premium'],
             'is_featured' => ['nullable', 'boolean'],

@@ -33,9 +33,13 @@
                     <div class="grid gap-5 md:grid-cols-2">
                         <div>
                             <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre de banda</label>
-                            <input name="name" value="{{ old('name') }}" class="lucille-product-field w-full rounded-[8px] @error('name') border-red-500/50 @enderror">
-                            @error('name')
+                            <input name="band_name" value="{{ old('band_name', old('name')) }}" class="lucille-product-field w-full rounded-[8px] @if($errors->has('band_name') || $errors->has('name')) border-red-500/50 @endif" placeholder="Ej. Los Prisioneros">
+                            @error('band_name')
                                 <span class="mt-1.5 block text-[10px] text-red-400 uppercase tracking-wider font-mono">{{ $message }}</span>
+                            @else
+                                @error('name')
+                                    <span class="mt-1.5 block text-[10px] text-red-400 uppercase tracking-wider font-mono">{{ $message }}</span>
+                                @enderror
                             @enderror
                         </div>
                         <div>

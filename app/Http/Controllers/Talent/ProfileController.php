@@ -9,6 +9,7 @@ use App\Services\BackblazeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -27,9 +28,14 @@ class ProfileController extends Controller
             return redirect()->route('talents.login');
         }
 
+        $rawBandName = trim((string) ($request->input('band_name') ?? $request->input('name', '')));
+        if ($rawBandName !== '') {
+            $request->merge(['band_name' => $rawBandName]);
+        }
+
         $validated = $request->validate([
+            'band_name' => ['nullable', 'string', 'max:255', Rule::unique('talents', 'band_name')->ignore($talent->id)],
             'name' => ['nullable', 'string', 'max:255'],
-            'band_name' => ['nullable', 'string', 'max:255'],
             'bio' => ['nullable', 'string'],
             'logo' => ['nullable', 'image', 'max:4096'],
             'instagram_url' => ['nullable', 'url', 'max:2048'],

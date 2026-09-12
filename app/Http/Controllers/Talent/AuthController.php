@@ -31,24 +31,26 @@ class AuthController extends Controller
     {
         return $this->showRegisterForm();
     }
-
     public function register(Request $request): RedirectResponse
     {
+        $rawBandName = trim((string) ($request->input('band_name') ?? $request->input('name', '')));
+        $request->merge(['band_name' => $rawBandName]);
+
         $validated = $request->validate([
-            'name' => ['nullable', 'string', 'max:255'],
-            'band_name' => ['nullable', 'string', 'max:255'],
+            'band_name' => ['required', 'string', 'max:255', Rule::unique('talents', 'band_name')],
             'email' => ['required', 'email', 'max:255', Rule::unique('talents', 'email')],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'plan' => ['required', Rule::in(TalentPlan::keys())],
+        ], [
+            'band_name.required' => 'El nombre de la banda es obligatorio.',
+            'band_name.unique' => 'Este nombre de banda ya está registrado en Seven Rock Radio. Por favor, elige otro nombre o contacta con soporte.',
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.unique' => 'Este correo electrónico ya tiene una cuenta registrada.',
+            'password.confirmed' => 'La confirmación de la contraseña no coincide.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ]);
 
-        $bandName = trim((string) ($validated['name'] ?? ''));
-        $bandName = $bandName !== '' ? $bandName : trim((string) ($request->input('band_name', '')));
-        if ($bandName === '') {
-            return back()->withInput()->withErrors([
-                'name' => 'El nombre de la banda es obligatorio.',
-            ]);
-        }
+        $bandName = $validated['band_name'];
 
         $talent = DB::transaction(function () use ($validated, $bandName): Talent {
             $user = User::query()->firstOrCreate(
