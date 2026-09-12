@@ -51,28 +51,32 @@
         @php
             $planThemes = [
                 'premium' => [
-                    'badge' => 'border-[#d4af37]/40 bg-[#d4af37]/15 text-[#d4af37] shadow-[0_0_12px_rgba(212,175,55,0.2)]',
-                    'hover' => 'hover:border-[#d4af37]/60 hover:shadow-[0_8px_35px_rgba(212,175,55,0.25)]',
-                    'text'  => 'text-[#d4af37]',
-                    'label' => 'Plan Premium',
+                    'badge'     => 'border-[#d4af37]/40 bg-[#d4af37]/15 text-[#d4af37] shadow-[0_0_12px_rgba(212,175,55,0.2)]',
+                    'hover'     => 'hover:border-[#d4af37]/60 hover:shadow-[0_8px_35px_rgba(212,175,55,0.25)]',
+                    'hoverText' => 'group-hover:text-[#d4af37]',
+                    'text'      => 'text-[#d4af37]',
+                    'label'     => 'Plan Premium',
                 ],
                 'pro' => [
-                    'badge' => 'border-[#3b82f6]/40 bg-[#3b82f6]/15 text-[#60a5fa] shadow-[0_0_12px_rgba(59,130,246,0.2)]',
-                    'hover' => 'hover:border-[#3b82f6]/60 hover:shadow-[0_8px_35px_rgba(59,130,246,0.25)]',
-                    'text'  => 'text-[#60a5fa]',
-                    'label' => 'Plan Pro',
+                    'badge'     => 'border-[#3b82f6]/40 bg-[#3b82f6]/15 text-[#60a5fa] shadow-[0_0_12px_rgba(59,130,246,0.2)]',
+                    'hover'     => 'hover:border-[#3b82f6]/60 hover:shadow-[0_8px_35px_rgba(59,130,246,0.25)]',
+                    'hoverText' => 'group-hover:text-[#60a5fa]',
+                    'text'      => 'text-[#60a5fa]',
+                    'label'     => 'Plan Pro',
                 ],
                 'basic' => [
-                    'badge' => 'border-[#10b981]/40 bg-[#10b981]/15 text-[#34d399] shadow-[0_0_12px_rgba(16,185,129,0.2)]',
-                    'hover' => 'hover:border-[#10b981]/60 hover:shadow-[0_8px_35px_rgba(16,185,129,0.25)]',
-                    'text'  => 'text-[#34d399]',
-                    'label' => 'Plan Basic',
+                    'badge'     => 'border-[#10b981]/40 bg-[#10b981]/15 text-[#34d399] shadow-[0_0_12px_rgba(16,185,129,0.2)]',
+                    'hover'     => 'hover:border-[#10b981]/60 hover:shadow-[0_8px_35px_rgba(16,185,129,0.25)]',
+                    'hoverText' => 'group-hover:text-[#34d399]',
+                    'text'      => 'text-[#34d399]',
+                    'label'     => 'Plan Basic',
                 ],
                 'free' => [
-                    'badge' => 'border-[#a855f7]/40 bg-[#a855f7]/15 text-[#c084fc] shadow-[0_0_12px_rgba(168,85,247,0.2)]',
-                    'hover' => 'hover:border-[#a855f7]/60 hover:shadow-[0_8px_35px_rgba(168,85,247,0.25)]',
-                    'text'  => 'text-[#c084fc]',
-                    'label' => 'Plan Free',
+                    'badge'     => 'border-[#a855f7]/40 bg-[#a855f7]/15 text-[#c084fc] shadow-[0_0_12px_rgba(168,85,247,0.2)]',
+                    'hover'     => 'hover:border-[#a855f7]/60 hover:shadow-[0_8px_35px_rgba(168,85,247,0.25)]',
+                    'hoverText' => 'group-hover:text-[#c084fc]',
+                    'text'      => 'text-[#c084fc]',
+                    'label'     => 'Plan Free',
                 ],
             ];
         @endphp
@@ -122,7 +126,7 @@
                         <div class="min-w-0 flex-1 flex flex-col justify-between">
                             <div>
                                 <div class="flex items-center justify-between gap-3">
-                                    <h2 class="font-display text-2xl uppercase tracking-[.12em] text-white truncate group-hover:text-[var(--lucille-accent)] transition-colors">
+                                    <h2 class="font-display text-2xl uppercase tracking-[.12em] text-white truncate {{ $theme['hoverText'] }} transition-colors">
                                         <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="hover:underline">
                                             {{ $talent->band_name }}
                                         </a>
@@ -185,7 +189,7 @@
                             </div>
                             <div class="min-w-0 flex-1">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <h2 class="font-display text-xl uppercase tracking-[.12em] text-white truncate group-hover:text-[var(--lucille-accent)] transition-colors">{{ $talent->band_name }}</h2>
+                                    <h2 class="font-display text-xl uppercase tracking-[.12em] text-white truncate {{ $theme['hoverText'] }} transition-colors">{{ $talent->band_name }}</h2>
                                     @if ($talent->is_featured)
                                         <span class="border border-[#d4af37]/40 bg-[#d4af37]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.15em] text-[#d4af37] rounded-sm shadow-[0_0_8px_rgba(212,175,55,0.2)]">★</span>
                                     @endif
