@@ -433,7 +433,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
 
 Route::prefix('talentos')->name('talents.')->group(function (): void {
     Route::get('/', [TalentPublicProfileController::class, 'index'])->middleware('throttle:public-search')->name('explore');
-    Route::get('/{talent}/og-image', [\App\Http\Controllers\TalentOgImageController::class, 'show'])->name('og-image');
+    Route::get('/{talent}/og-image.png', [\App\Http\Controllers\TalentOgImageController::class, 'show'])->name('og-image');
 
     Route::post('/webhook/{gateway}', [TalentSubscriptionController::class, 'webhook'])->name('payment.webhook');
 
