@@ -1,12 +1,20 @@
 <x-layouts.site :title="'Seven Rock Radio - Talentos'" description="Descubre nuevos talentos musicales en Seven Rock Radio. Bandas independientes, artistas emergentes y musica original.">
-    
+    @push('styles')
+        <style>
+            /* Ocultar el fondo global anterior que tenía texto de tarjetas antiguas */
+            .lucille-fixed-bg {
+                display: none !important;
+            }
+        </style>
+    @endpush
+
     {{-- Exclusivo Fondo de Pared de Rock con Glassmorphism para Muro del Rock --}}
-    <div class="relative min-h-screen">
+    <div class="relative min-h-screen bg-[#0a0a0b]">
         {{-- Imagen de Fondo Fijo / Parallax Vívida --}}
-        <div class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-90" style="background-image: url('{{ asset('assets/lucille/muro-bg.png') }}');"></div>
+        <div class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-85" style="background-image: url('{{ asset('assets/lucille/muro-bg.png') }}');"></div>
         
         {{-- Capa de Cristal Esmerilado (Glassmorphism Overlay Translúcido) --}}
-        <div class="fixed inset-0 z-0 bg-gradient-to-b from-[#0a0a0b]/20 via-[#0a0a0b]/40 to-[#0a0a0b]/75 pointer-events-none backdrop-blur-[1px]"></div>
+        <div class="fixed inset-0 z-0 bg-gradient-to-b from-[#0a0a0b]/30 via-[#0a0a0b]/45 to-[#0a0a0b]/80 pointer-events-none backdrop-blur-[1px]"></div>
 
         <section class="relative z-10 mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
         <!-- Section Header Banner (Impeccable Design) -->
