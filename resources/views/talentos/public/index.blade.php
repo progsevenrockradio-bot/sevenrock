@@ -8,34 +8,9 @@
         <div class="fixed inset-0 z-0 bg-gradient-to-b from-[#0a0a0b]/60 via-[#0a0a0b]/80 to-[#0a0a0b] pointer-events-none"></div>
 
         <section class="relative z-10 mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
-        <!-- Section Header Banner (Impeccable Design) -->
-        <div class="relative overflow-hidden mb-8 rounded-[20px] border border-white/10 p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.6)] group">
-            {{-- Background Image --}}
-            <div class="absolute inset-0 z-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style="background-image: url('{{ asset('assets/lucille/rock-wall.jpg') }}');"></div>
-            
-            {{-- Glass Overlay (Vidrio) - Less opacity to make image visible --}}
-            <div class="absolute inset-0 z-0 bg-gradient-to-br from-[#161214]/40 via-[#0f0e11]/50 to-[#08080a]/75 backdrop-blur-[3px] pointer-events-none"></div>
-
-            {{-- Ambient radial background glow --}}
-            <div class="absolute -top-24 -left-24 w-96 h-96 opacity-40 pointer-events-none bg-[radial-gradient(circle,var(--lucille-accent)_0%,transparent_70%)] blur-2xl z-0 mix-blend-screen"></div>
-            <div class="absolute -bottom-24 -right-24 w-96 h-96 opacity-30 pointer-events-none bg-[radial-gradient(circle,#d4af37_0%,transparent_70%)] blur-2xl z-0 mix-blend-screen"></div>
-            
-            <div class="relative z-10">
-                <div class="inline-flex items-center gap-2 rounded-full border border-[var(--lucille-accent)]/30 bg-[var(--lucille-accent)]/10 px-3.5 py-1 text-[10px] font-bold uppercase tracking-[.25em] text-[var(--lucille-accent)] shadow-[0_0_15px_rgba(195,39,32,0.25)]">
-                    <span class="h-1.5 w-1.5 rounded-full bg-[var(--lucille-accent)] animate-pulse"></span>
-                    Talentos de la Comunidad
-                </div>
-
-                <h1 class="mt-4 font-display text-4xl md:text-6xl uppercase tracking-[.14em] text-white drop-shadow-md">
-                    Muro del <span class="text-[var(--lucille-accent)] drop-shadow-[0_0_30px_rgba(195,39,32,0.5)]">Rock</span>
-                </h1>
-
-                <div class="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-[var(--lucille-accent)] via-[var(--lucille-accent)]/50 to-transparent"></div>
-
-                <p class="mt-4 max-w-2xl text-sm md:text-base text-gray-300 font-sans leading-relaxed">
-                    Descubre las bandas y artistas independientes de nuestra comunidad. Ordenados por actividad — las más activas primero.
-                </p>
-            </div>
+        <!-- Section Header Banner (Image Only) -->
+        <div class="mb-8 w-full flex justify-center">
+            <img src="{{ asset('assets/lucille/muro-del-rock-banner.png') }}" alt="Muro del Rock - Talentos de la Comunidad" class="w-full h-auto max-w-full">
         </div>
 
         @php
