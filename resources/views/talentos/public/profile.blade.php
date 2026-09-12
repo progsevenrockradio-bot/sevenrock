@@ -70,6 +70,11 @@
         </div>
 
         <!-- Main Layout Grid -->
+        @php
+            $audioFiles = $media->where('type', 'mp3')->values();
+            $photoFiles = $media->where('type', 'photo')->values();
+            $otherMedia = $media->whereNotIn('type', ['mp3', 'photo'])->values();
+        @endphp
         <div class="grid gap-8 lg:grid-cols-[1.2fr_.8fr] mt-12">
             <!-- Left Column: Biography, Media, Store, etc. -->
             <div class="space-y-8">
@@ -96,11 +101,11 @@
                 @endif
 
                 <!-- Multimedia Content Panel -->
-                @if ($media->isNotEmpty())
+                @if ($otherMedia->isNotEmpty())
                     <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:p-8 shadow-xl">
                         <h3 class="font-display text-xl uppercase tracking-[.18em] text-white border-b border-white/5 pb-3">Contenido</h3>
                         <div class="mt-6 grid gap-6 md:grid-cols-2">
-                            @foreach ($media as $item)
+                            @foreach ($otherMedia as $item)
                                 <article class="overflow-hidden rounded-[12px] bg-white/[0.02] border border-white/5 p-4 hover:border-white/15 hover:bg-white/[0.04] transition-all duration-300 group" data-type="{{ $item->type }}">
                                     @if ($item->is_exclusive && !Auth::guard('web')->check() && !Auth::guard('talent')->check())
                                         <div class="p-4 bg-black/40 rounded-[8px] text-center flex flex-col justify-between items-center h-full min-h-[140px]">
@@ -120,65 +125,7 @@
                                             </a>
                                         </div>
                                     @else
-                                        @if ($item->type === 'photo')
-                                            <div class="aspect-video w-full overflow-hidden rounded-[8px] bg-black/40 relative">
-                                                <img src="{{ $item->url }}" alt="{{ $item->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" width="400" height="225">
-                                            </div>
-                                            <p class="mt-3 text-sm font-semibold text-white truncate">{{ $item->title ?: $item->filename }}</p>
-                                        @elseif ($item->type === 'mp3')
-                                            <!-- Custom Styled Audio Player using Alpine.js -->
-                                            <div class="custom-audio-player-wrapper py-1" x-data="{
-                                                playing: false,
-                                                duration: 0,
-                                                currentTime: 0,
-                                                audio: null,
-                                                init() {
-                                                    this.audio = new Audio('{{ $item->url }}');
-                                                    this.audio.preload = 'none';
-                                                    this.audio.addEventListener('durationchange', () => this.duration = this.audio.duration);
-                                                    this.audio.addEventListener('timeupdate', () => this.currentTime = this.audio.currentTime);
-                                                    this.audio.addEventListener('ended', () => this.playing = false);
-                                                },
-                                                togglePlay() {
-                                                    if (this.playing) {
-                                                        this.audio.pause();
-                                                        this.playing = false;
-                                                    } else {
-                                                        window.dispatchEvent(new CustomEvent('stop-all-audio', { detail: { except: this.audio } }));
-                                                        this.audio.play();
-                                                        this.playing = true;
-                                                    }
-                                                },
-                                                formatTime(secs) {
-                                                    if (isNaN(secs)) return '0:00';
-                                                    const minutes = Math.floor(secs / 60);
-                                                    const seconds = Math.floor(secs % 60);
-                                                    return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-                                                },
-                                                seek(event) {
-                                                    const percent = event.target.value / 100;
-                                                    this.audio.currentTime = percent * this.duration;
-                                                }
-                                            }" x-on:stop-all-audio.window="if (audio !== $event.detail.except) { audio.pause(); playing = false; }">
-                                                <div class="flex items-center gap-4">
-                                                    <button type="button" @click="togglePlay()" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--lucille-accent)] text-white hover:scale-105 transition-transform shadow-md" aria-label="Reproducir/Pausar">
-                                                        <template x-if="!playing">
-                                                            <svg class="h-5 w-5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                                        </template>
-                                                        <template x-if="playing">
-                                                            <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                                                        </template>
-                                                    </button>
-                                                    <div class="min-w-0 flex-1">
-                                                        <p class="truncate text-sm font-semibold text-white">{{ $item->title ?: $item->filename }}</p>
-                                                        <div class="mt-1.5 flex items-center gap-3">
-                                                            <input type="range" min="0" max="100" :value="duration ? (currentTime / duration) * 100 : 0" @input="seek($event)" class="audio-slider flex-1">
-                                                            <span class="text-[10px] text-gray-400 font-mono shrink-0" x-text="formatTime(currentTime) + ' / ' + (duration ? formatTime(duration) : '0:00')">0:00 / 0:00</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @elseif ($item->type === 'video')
+                                        @if ($item->type === 'video')
                                              <div class="relative group aspect-video w-full overflow-hidden rounded-[8px] bg-black/60 border border-white/5 shadow-md" x-data="{
                                                  playing: false,
                                                  video: null,
@@ -268,8 +215,83 @@
                 @endif
             </div>
 
-            <!-- Right Column: Likes, Comments -->
+            <!-- Right Column: Likes, Comments, Player, Gallery -->
             <div class="space-y-8">
+                <!-- Music Player Panel -->
+                @if ($audioFiles->isNotEmpty())
+                    <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 shadow-xl" x-data="audioPlaylist()">
+                        <h3 class="font-display text-xl uppercase tracking-[.18em] text-white border-b border-white/5 pb-3 mb-5">Reproductor</h3>
+                        <!-- Player UI -->
+                        <div class="bg-black/40 rounded-[12px] p-4 border border-white/5 mb-4">
+                            <div class="flex items-center gap-4">
+                                <button type="button" @click="togglePlay()" class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--lucille-accent)] text-white hover:scale-105 transition-transform shadow-[0_4px_15px_rgba(195,39,32,0.4)]" aria-label="Reproducir/Pausar">
+                                    <template x-if="!playing">
+                                        <svg class="h-6 w-6 fill-current ml-1" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                    </template>
+                                    <template x-if="playing">
+                                        <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                    </template>
+                                </button>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm md:text-base font-bold text-white uppercase tracking-wider" x-text="currentTrackTitle">Selecciona una pista</p>
+                                    <div class="mt-2 flex items-center gap-3">
+                                        <input type="range" min="0" max="100" :value="duration ? (currentTime / duration) * 100 : 0" @input="seek($event)" class="audio-slider flex-1" :disabled="!currentTrackUrl">
+                                        <span class="text-[10px] md:text-xs text-gray-400 font-mono shrink-0" x-text="formatTime(currentTime) + ' / ' + (duration ? formatTime(duration) : '0:00')">0:00 / 0:00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Playlist -->
+                        <div class="space-y-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                            @foreach ($audioFiles as $index => $item)
+                                <button type="button" @click="playTrack({{ $index }}, '{{ $item->url }}', '{{ addslashes($item->title ?: $item->filename) }}')" 
+                                    class="w-full text-left flex items-center justify-between p-3 rounded-[8px] border transition-all duration-200 group"
+                                    :class="currentIndex === {{ $index }} ? 'border-[var(--lucille-accent)]/50 bg-[var(--lucille-accent)]/10' : 'border-transparent hover:bg-white/5'">
+                                    <div class="flex items-center gap-3 truncate">
+                                        <span class="text-xs font-mono" :class="currentIndex === {{ $index }} ? 'text-[var(--lucille-accent)]' : 'text-gray-500'">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</span>
+                                        <span class="text-sm truncate" :class="currentIndex === {{ $index }} ? 'text-white font-semibold' : 'text-gray-300 group-hover:text-white'">{{ $item->title ?: $item->filename }}</span>
+                                    </div>
+                                    <template x-if="currentIndex === {{ $index }} && playing">
+                                        <!-- Animated bars -->
+                                        <div class="flex items-end gap-[2px] h-4 shrink-0 ml-2">
+                                            <div class="w-1 h-2 bg-[var(--lucille-accent)] animate-pulse"></div>
+                                            <div class="w-1 h-4 bg-[var(--lucille-accent)] animate-pulse" style="animation-delay: 150ms"></div>
+                                            <div class="w-1 h-3 bg-[var(--lucille-accent)] animate-pulse" style="animation-delay: 300ms"></div>
+                                        </div>
+                                    </template>
+                                </button>
+                            @endforeach
+                        </div>
+                        <!-- Audio element (hidden) -->
+                        <audio x-ref="audioPlayer" @durationchange="duration = $event.target.duration" @timeupdate="currentTime = $event.target.currentTime" @ended="nextTrack()"></audio>
+                    </div>
+                @endif
+
+                <!-- Image Gallery Panel -->
+                @if ($photoFiles->isNotEmpty())
+                    <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 shadow-xl" x-data="{ lightboxOpen: false, currentImage: '' }">
+                        <h3 class="font-display text-xl uppercase tracking-[.18em] text-white border-b border-white/5 pb-3 mb-5">Galería</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+                            @foreach ($photoFiles as $photo)
+                                <button type="button" @click="currentImage = '{{ $photo->url }}'; lightboxOpen = true" class="group relative aspect-square overflow-hidden rounded-[8px] bg-black/40 border border-white/5 hover:border-[var(--lucille-accent)]/50 transition-all focus:outline-none">
+                                    <img src="{{ $photo->url }}" alt="{{ $photo->title }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110">
+                                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                                    </div>
+                                </button>
+                            @endforeach
+                        </div>
+                        
+                        <!-- Lightbox Modal -->
+                        <div x-show="lightboxOpen" x-transition.opacity.duration.300ms class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4" style="display: none;" @keydown.escape.window="lightboxOpen = false">
+                            <button type="button" @click="lightboxOpen = false" class="absolute top-6 right-6 text-white/50 hover:text-white transition-colors p-2" aria-label="Cerrar">
+                                <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                            <img :src="currentImage" class="max-h-[90vh] max-w-[90vw] object-contain rounded-md shadow-2xl" @click.away="lightboxOpen = false">
+                        </div>
+                    </div>
+                @endif
+
                 <!-- Like Button & Comment Form Panel -->
                 <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:p-8 shadow-xl space-y-6">
                     <div>
@@ -396,6 +418,72 @@
 
     @push('scripts')
         <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('audioPlaylist', () => ({
+                    playing: false,
+                    duration: 0,
+                    currentTime: 0,
+                    currentIndex: -1,
+                    currentTrackUrl: '',
+                    currentTrackTitle: 'Selecciona una pista',
+                    tracks: [
+                        @foreach ($audioFiles as $item)
+                            { url: '{{ $item->url }}', title: '{{ addslashes($item->title ?: $item->filename) }}' },
+                        @endforeach
+                    ],
+                    init() {
+                        if (this.tracks.length > 0) {
+                            this.currentIndex = 0;
+                            this.currentTrackUrl = this.tracks[0].url;
+                            this.currentTrackTitle = this.tracks[0].title;
+                            this.$refs.audioPlayer.src = this.currentTrackUrl;
+                            this.$refs.audioPlayer.preload = 'none';
+                        }
+                    },
+                    togglePlay() {
+                        if (!this.currentTrackUrl) return;
+                        if (this.playing) {
+                            this.$refs.audioPlayer.pause();
+                            this.playing = false;
+                        } else {
+                            window.dispatchEvent(new CustomEvent('stop-all-audio', { detail: { except: this.$refs.audioPlayer } }));
+                            this.$refs.audioPlayer.play();
+                            this.playing = true;
+                        }
+                    },
+                    playTrack(index, url, title) {
+                        if (this.currentIndex === index) {
+                            this.togglePlay();
+                            return;
+                        }
+                        this.currentIndex = index;
+                        this.currentTrackUrl = url;
+                        this.currentTrackTitle = title;
+                        this.$refs.audioPlayer.src = url;
+                        this.playing = false;
+                        this.togglePlay();
+                    },
+                    nextTrack() {
+                        if (this.currentIndex < this.tracks.length - 1) {
+                            const next = this.tracks[this.currentIndex + 1];
+                            this.playTrack(this.currentIndex + 1, next.url, next.title);
+                        } else {
+                            this.playing = false;
+                        }
+                    },
+                    formatTime(secs) {
+                        if (isNaN(secs)) return '0:00';
+                        const minutes = Math.floor(secs / 60);
+                        const seconds = Math.floor(secs % 60);
+                        return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+                    },
+                    seek(event) {
+                        const percent = event.target.value / 100;
+                        this.$refs.audioPlayer.currentTime = percent * this.duration;
+                    }
+                }));
+            });
+
             const btnLike = document.querySelector('.btn-like');
             if (btnLike) {
                 btnLike.addEventListener('click', function () {
