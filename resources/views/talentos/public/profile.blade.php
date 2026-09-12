@@ -28,11 +28,22 @@
                 </div>
                 <h1 class="font-display text-4xl md:text-6xl uppercase tracking-[.18em] text-white mt-6 drop-shadow-lg">{{ $talent->band_name }}</h1>
                 <div class="mt-4 flex flex-wrap justify-center items-center gap-3">
-                    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4.5 py-1.5 text-xs font-semibold uppercase tracking-[.15em] text-gray-300">
+                    @php
+                        $planKey = strtolower((string) ($talent->plan ?? 'free'));
+                        $planBadgeThemes = [
+                            'premium' => 'border-[#d4af37]/40 bg-[#d4af37]/15 text-[#d4af37] shadow-[0_0_15px_rgba(212,175,55,0.25)]',
+                            'pro'     => 'border-[#3b82f6]/40 bg-[#3b82f6]/15 text-[#60a5fa] shadow-[0_0_15px_rgba(59,130,246,0.25)]',
+                            'basic'   => 'border-[#10b981]/40 bg-[#10b981]/15 text-[#34d399] shadow-[0_0_15px_rgba(16,185,129,0.25)]',
+                            'free'    => 'border-[#a855f7]/40 bg-[#a855f7]/15 text-[#c084fc] shadow-[0_0_15px_rgba(168,85,247,0.25)]',
+                        ];
+                        $headerBadgeStyle = $planBadgeThemes[$planKey] ?? $planBadgeThemes['free'];
+                    @endphp
+
+                    <span class="inline-flex items-center gap-2 rounded-full border px-4.5 py-1.5 text-xs font-bold uppercase tracking-[.15em] {{ $headerBadgeStyle }}">
                         Plan: {{ ucfirst($talent->plan) }}
                     </span>
                     @if ($talent->is_featured)
-                        <span class="inline-flex items-center gap-1.5 rounded-full border border-[#d4af37]/30 bg-[#d4af37]/10 px-4.5 py-1.5 text-xs font-bold uppercase tracking-[.15em] text-[#d4af37] shadow-[0_0_15px_rgba(212,175,55,0.25)] animate-pulse">
+                        <span class="inline-flex items-center gap-1.5 rounded-full border border-[#d4af37]/40 bg-[#d4af37]/15 px-4.5 py-1.5 text-xs font-bold uppercase tracking-[.15em] text-[#d4af37] shadow-[0_0_15px_rgba(212,175,55,0.35)] animate-pulse">
                             ⭐ Destacado
                         </span>
                     @endif
