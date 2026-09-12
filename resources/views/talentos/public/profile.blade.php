@@ -26,15 +26,8 @@
         ];
         $accentColor = $planColors[$planKey] ?? '#c32720';
     @endphp
-    
-    <style>
-        /* Override primary accent color for this specific profile based on plan */
-        :root {
-            --lucille-accent: {{ $accentColor }};
-        }
-    </style>
 
-    <section class="mx-auto max-w-7xl px-5 py-16" style="padding-top: 150px;">
+    <section class="mx-auto max-w-7xl px-5 py-16" style="padding-top: 150px; --lucille-accent: {{ $accentColor }};">
         <!-- Profile Header -->
         <div class="relative overflow-hidden rounded-[20px] bg-[#070a0d] border border-white/10 p-8 md:p-12 text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
             <!-- Background Banner -->
