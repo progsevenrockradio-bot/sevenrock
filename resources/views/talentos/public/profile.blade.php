@@ -39,7 +39,7 @@
         <div class="relative overflow-hidden rounded-[20px] bg-[#070a0d] border border-white/10 p-8 md:p-12 text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
             <!-- Background Banner -->
             <div class="absolute inset-0 z-0 opacity-40 mix-blend-luminosity">
-                <img src="{{ asset('assets/lucille/dark-background.jpg') }}" alt="Banner" class="w-full h-full object-cover">
+                <img src="{{ \App\Models\ThemeSetting::current()->talents_banner_url ?? asset('assets/lucille/dark-background.jpg') }}" alt="Banner" class="w-full h-full object-cover">
             </div>
             <!-- Overlay Gradient for Readability -->
             <div class="absolute inset-0 z-0 bg-gradient-to-t from-[#10151a] via-[#10151a]/60 to-transparent"></div>
