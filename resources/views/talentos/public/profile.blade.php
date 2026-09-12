@@ -74,6 +74,47 @@
             $audioFiles = $media->where('type', 'mp3')->values();
             $photoFiles = $media->where('type', 'photo')->values();
             $otherMedia = $media->whereNotIn('type', ['mp3', 'photo'])->values();
+
+            // MOCK DATA PARA PREVISUALIZACIÓN: Si la banda no tiene archivos, mostramos estos de prueba
+            if ($audioFiles->isEmpty()) {
+                $audioFiles = collect([
+                    (object)[
+                        'url' => 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+                        'title' => 'Canción de Rock Demo 1',
+                        'filename' => 'demo-1.mp3'
+                    ],
+                    (object)[
+                        'url' => 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+                        'title' => 'Riff Potente Demo 2',
+                        'filename' => 'demo-2.mp3'
+                    ],
+                    (object)[
+                        'url' => 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+                        'title' => 'Balada Acústica Demo 3',
+                        'filename' => 'demo-3.mp3'
+                    ]
+                ]);
+            }
+            if ($photoFiles->isEmpty()) {
+                $photoFiles = collect([
+                    (object)[
+                        'url' => asset('assets/lucille/muro-del-rock-banner.png'),
+                        'title' => 'Foto Demo 1'
+                    ],
+                    (object)[
+                        'url' => asset('assets/lucille/dark-background.jpg'),
+                        'title' => 'Foto Demo 2'
+                    ],
+                    (object)[
+                        'url' => asset('assets/lucille/beatles_t_shirt.jpeg'),
+                        'title' => 'Foto Demo 3'
+                    ],
+                    (object)[
+                        'url' => asset('assets/lucille/logo.png'),
+                        'title' => 'Foto Demo 4'
+                    ]
+                ]);
+            }
         @endphp
         <div class="grid gap-8 lg:grid-cols-[1.2fr_.8fr] mt-12">
             <!-- Left Column: Biography, Media, Store, etc. -->
