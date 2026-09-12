@@ -1,7 +1,16 @@
 <x-layouts.site :title="'Seven Rock Radio - Talentos'" description="Descubre nuevos talentos musicales en Seven Rock Radio. Bandas independientes, artistas emergentes y musica original.">
-    <section class="mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
+    
+    {{-- Exclusivo Fondo de Pared de Rock con Glassmorphism para Muro del Rock --}}
+    <div class="relative min-h-screen overflow-hidden">
+        {{-- Imagen de Fondo Fijo / Parallax --}}
+        <div class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-30 scale-105" style="background-image: url('{{ asset('assets/lucille/muro-bg.png') }}');"></div>
+        
+        {{-- Capa de Cristal Esmerilado (Glassmorphism Overlay) --}}
+        <div class="fixed inset-0 z-0 bg-gradient-to-b from-[#0a0a0b]/80 via-[#0d0d10]/85 to-[#0a0a0b]/95 pointer-events-none backdrop-blur-[2px]"></div>
+
+        <section class="relative z-10 mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
         <!-- Section Header Banner (Impeccable Design) -->
-        <div class="relative overflow-hidden mb-8 rounded-[20px] bg-gradient-to-br from-[#161214] via-[#0f0e11] to-[#08080a] border border-white/10 p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-md">
+        <div class="relative overflow-hidden mb-8 rounded-[20px] bg-gradient-to-br from-[#161214]/90 via-[#0f0e11]/90 to-[#08080a]/95 border border-white/10 p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-md">
             {{-- Ambient radial background glow --}}
             <div class="absolute -top-24 -left-24 w-96 h-96 opacity-25 pointer-events-none bg-[radial-gradient(circle,var(--lucille-accent)_0%,transparent_70%)] blur-2xl"></div>
             <div class="absolute -bottom-24 -right-24 w-96 h-96 opacity-15 pointer-events-none bg-[radial-gradient(circle,#d4af37_0%,transparent_70%)] blur-2xl"></div>
@@ -112,7 +121,7 @@
 
                 @if ($isWide)
                     {{-- Tarjeta Ancha (2 Columnas en tablet/desktop) con Hover Neon --}}
-                    <div class="col-span-1 md:col-span-2 group relative border border-white/10 {{ $theme['hover'] }} bg-gradient-to-br from-white/[0.03] via-white/[0.01] to-[#0c0c0e] backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 flex flex-col md:flex-row gap-6 justify-between overflow-hidden min-h-[260px]">
+                    <div class="col-span-1 md:col-span-2 group relative border border-white/10 {{ $theme['hover'] }} bg-gradient-to-br from-[#141214]/90 via-[#0d0d10]/95 to-[#08080a]/98 backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 flex flex-col md:flex-row gap-6 justify-between overflow-hidden min-h-[260px]">
                         {{-- Portada Grande y Badges --}}
                         <div class="flex flex-row md:flex-col items-center md:items-start gap-4 shrink-0">
                             <div class="h-28 w-28 md:h-36 md:w-36 shrink-0 overflow-hidden rounded-[14px] border border-white/10 bg-black/40 relative shadow-inner">
@@ -189,7 +198,7 @@
                     </div>
                 @else
                     {{-- Tarjeta Estándar (1 Columna) con Hover Neon --}}
-                    <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="col-span-1 group relative border border-white/10 {{ $theme['hover'] }} bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between min-h-[260px]">
+                    <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="col-span-1 group relative border border-white/10 {{ $theme['hover'] }} bg-[#101014]/90 backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between min-h-[260px]">
                         <div class="flex items-start gap-4">
                             <div class="h-20 w-20 shrink-0 overflow-hidden rounded-[12px] border border-white/10 bg-black/30 relative">
                                 @if ($talent->logoUrl())
@@ -226,11 +235,11 @@
                     </a>
                 @endif
             @empty
-                <div class="col-span-full border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-8 text-sm text-gray-500 text-center shadow-lg">No hay talentos publicados todavía con estos criterios de búsqueda.</div>
+                <div class="col-span-full border border-white/10 bg-[#101014]/90 backdrop-blur-md rounded-[16px] p-8 text-sm text-gray-500 text-center shadow-lg">No hay talentos publicados todavía con estos criterios de búsqueda.</div>
             @endforelse
 
             @if(count($talents) < 6)
-                <div class="col-span-1 border border-dashed border-white/10 bg-white/[0.01] backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.03] shadow-lg flex flex-col justify-between min-h-[260px] text-center items-center group">
+                <div class="col-span-1 border border-dashed border-white/10 bg-[#101014]/80 backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.03] shadow-lg flex flex-col justify-between min-h-[260px] text-center items-center group">
                     <div class="flex-1 flex flex-col items-center justify-center">
                         <div class="h-12 w-12 rounded-full border border-white/10 flex items-center justify-center bg-white/[0.02] mb-3 group-hover:border-[var(--lucille-accent)]/30 group-hover:bg-[var(--lucille-accent)]/5 transition-all duration-300">
                             <svg class="h-6 w-6 text-gray-400 group-hover:text-[var(--lucille-accent)] transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -248,5 +257,6 @@
         <div class="mt-8">
             {{ $talents->links() }}
         </div>
-    </section>
+        </section>
+    </div>
 </x-layouts.site>
