@@ -9,8 +9,8 @@
 
         <section class="relative z-10 mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
         <!-- Section Header Banner (Image Only) -->
-        <div class="mb-8 w-full flex justify-center">
-            <img src="{{ asset('assets/lucille/muro-del-rock-banner.png') }}" alt="Muro del Rock - Talentos de la Comunidad" class="w-full h-auto max-w-full">
+        <div class="mb-8 w-full flex justify-center rounded-[var(--radius-box,16px)] overflow-hidden">
+            <img src="{{ \App\Models\ThemeSetting::current()->talents_banner_url }}" alt="Muro del Rock - Talentos de la Comunidad" class="w-full h-auto max-w-full">
         </div>
 
         @php

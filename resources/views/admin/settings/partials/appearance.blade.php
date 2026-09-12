@@ -333,6 +333,26 @@
                 @error('home_album_cover')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
             </div>
 
+            <!-- BANNER TALENTOS -->
+            <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] p-5 rounded">
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Banner Muro del Rock</label>
+                <div class="flex flex-col sm:flex-row gap-4 items-center">
+                    @if($settings->talents_banner_path)
+                        <div class="relative group shrink-0 border border-[#3b3b3b] p-2 bg-[rgba(0,0,0,.4)] rounded">
+                            <img src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($settings->talents_banner_path) }}" class="h-14 w-24 object-cover">
+                            <div class="text-[9px] text-center mt-1 text-[#9a9a9a] font-mono truncate max-w-[96px]">{{ basename($settings->talents_banner_path) }}</div>
+                        </div>
+                    @else
+                        <div class="h-16 w-16 bg-[#101012] border border-[#2b2b2b] flex items-center justify-center text-[10px] text-[#9a9a9a] uppercase text-center p-1 leading-tight rounded shrink-0">Sin banner</div>
+                    @endif
+                    <div class="flex-1 w-full">
+                        <input type="file" name="talents_banner" class="lucille-product-field w-full text-xs file:bg-[#16161a] file:border-[#2b2b2b] file:text-[#dcdcdc] file:text-xs">
+                        <p class="mt-2 text-[10px] text-[#9a9a9a]">Banner para el Muro del Rock. Máx 6MB.</p>
+                    </div>
+                </div>
+                @error('talents_banner')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
             <!-- ÁLBUM DESTACADO SELECT -->
             <div>
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Álbum destacado del menú</label>

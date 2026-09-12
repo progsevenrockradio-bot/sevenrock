@@ -39,6 +39,7 @@ class ThemeSetting extends Model
         'hero_slide_secondary_path',
         'hero_slides',
         'home_album_cover_path',
+        'talents_banner_path',
         'featured_album_slug',
         'home_video_image_path',
         'contact_form_title',
@@ -116,6 +117,7 @@ class ThemeSetting extends Model
                 ['image' => 'assets/lucille/live-slider-bg.jpg'],
             ],
             'home_album_cover_path' => 'assets/lucille/album3.jpg',
+            'talents_banner_path' => 'assets/lucille/muro-del-rock-banner.png',
             'featured_album_slug' => null,
             'home_video_image_path' => 'assets/lucille/freedom-at-21-header.jpg',
             'contact_form_title' => 'Envíanos un mensaje',
@@ -592,6 +594,7 @@ class ThemeSetting extends Model
             'hero_slide_primary_path' => $this->hero_slide_primary_path,
             'hero_slide_secondary_path' => $this->hero_slide_secondary_path,
             'home_album_cover_path' => $this->home_album_cover_path,
+            'talents_banner_path' => $this->talents_banner_path,
             'home_video_image_path' => $this->home_video_image_path,
             'contact_form_title' => $this->contact_form_title,
             'contact_info_title' => $this->contact_info_title,
@@ -640,6 +643,11 @@ class ThemeSetting extends Model
     public function getHomeAlbumCoverUrlAttribute(): string
     {
         return $this->resolveAsset($this->home_album_cover_path, 'assets/lucille/album3.jpg');
+    }
+
+    public function getTalentsBannerUrlAttribute(): string
+    {
+        return $this->resolveAsset($this->talents_banner_path, 'assets/lucille/muro-del-rock-banner.png');
     }
 
     public function featuredAlbumUrl(): string
@@ -750,6 +758,7 @@ class ThemeSetting extends Model
             'hero_slide_primary_url' => $this->hero_slide_primary_url,
             'hero_slide_secondary_url' => $this->hero_slide_secondary_url,
             'home_album_cover_url' => $this->home_album_cover_url,
+            'talents_banner_url' => $this->talents_banner_url,
             'home_video_image_url' => $this->home_video_image_url,
             'hero_video_media_url' => $this->hero_video_media_url,
         ]);
