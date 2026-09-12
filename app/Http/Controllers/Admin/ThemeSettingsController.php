@@ -248,9 +248,13 @@ class ThemeSettingsController extends Controller
         $settings->email_daily_posts_limit = isset($validated['email_daily_posts_limit']) ? (int) $validated['email_daily_posts_limit'] : 3;
         $settings->email_daily_releases_limit = isset($validated['email_daily_releases_limit']) ? (int) $validated['email_daily_releases_limit'] : 3;
         $settings->email_whitelist_senders = trim((string) ($validated['email_whitelist_senders'] ?? '')) ?: null;
-        $settings->gemini_api_key = trim((string) ($validated['gemini_api_key'] ?? '')) ?: null;
+        if ($request->filled('gemini_api_key')) {
+            $settings->gemini_api_key = trim((string) $validated['gemini_api_key']);
+        }
         $settings->archive_access_key = trim((string) ($validated['archive_access_key'] ?? '')) ?: null;
-        $settings->archive_secret_key = trim((string) ($validated['archive_secret_key'] ?? '')) ?: null;
+        if ($request->filled('archive_secret_key')) {
+            $settings->archive_secret_key = trim((string) $validated['archive_secret_key']);
+        }
         $settings->featured_stories = $this->decodeJsonSection($validated['featured_stories_json'] ?? '', 'featured_stories_json', $settings->featuredStories());
         $settings->latest_podcasts = $this->decodeJsonSection($validated['latest_podcasts_json'] ?? '', 'latest_podcasts_json', $settings->latestPodcasts());
         $settings->home_headings = $this->decodeJsonSection($validated['home_headings_json'] ?? '', 'home_headings_json', $settings->homeHeadings());

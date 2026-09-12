@@ -265,7 +265,7 @@
             <div class="border-t border-[#2b2b2b] pt-5 mt-3 md:col-span-2 grid gap-5 md:grid-cols-3">
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Google Gemini API Key</label>
-                    <input type="password" name="gemini_api_key" value="{{ old('gemini_api_key', $settings->gemini_api_key) }}" class="lucille-product-field w-full text-xs font-mono" placeholder="AI API Key de Google">
+                    <input type="password" name="gemini_api_key" class="lucille-product-field w-full text-xs font-mono" placeholder="{{ $settings->gemini_api_key ? '******** (Guardada, dejar en blanco para mantener)' : 'AI API Key de Google' }}">
                     @error('gemini_api_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
                 <div>
@@ -275,7 +275,7 @@
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Archive.org Secret Key</label>
-                    <input type="password" name="archive_secret_key" value="{{ old('archive_secret_key', $settings->archive_secret_key) }}" class="lucille-product-field w-full text-xs font-mono" placeholder="Secret Key">
+                    <input type="password" name="archive_secret_key" class="lucille-product-field w-full text-xs font-mono" placeholder="{{ $settings->archive_secret_key ? '******** (Guardada, dejar en blanco para mantener)' : 'Secret Key' }}">
                     @error('archive_secret_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
                 </div>
             </div>
