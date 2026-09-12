@@ -1,10 +1,27 @@
 <x-layouts.site :title="'Seven Rock Radio - Talentos'" description="Descubre nuevos talentos musicales en Seven Rock Radio. Bandas independientes, artistas emergentes y musica original.">
     <section class="mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
-        <!-- Section Header -->
-        <div class="mb-8 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-8 shadow-xl">
-            <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Talentos</div>
-            <h1 class="mt-2 font-display text-4xl uppercase tracking-[.12em] text-white">Muro del Rock</h1>
-            <p class="mt-3 max-w-3xl text-sm text-[#8b8b8b]">Descubre las bandas y artistas independientes de nuestra comunidad. Ordenados por actividad — las más activas primero.</p>
+        <!-- Section Header Banner (Impeccable Design) -->
+        <div class="relative overflow-hidden mb-8 rounded-[20px] bg-gradient-to-br from-[#161214] via-[#0f0e11] to-[#08080a] border border-white/10 p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-md">
+            {{-- Ambient radial background glow --}}
+            <div class="absolute -top-24 -left-24 w-96 h-96 opacity-25 pointer-events-none bg-[radial-gradient(circle,var(--lucille-accent)_0%,transparent_70%)] blur-2xl"></div>
+            <div class="absolute -bottom-24 -right-24 w-96 h-96 opacity-15 pointer-events-none bg-[radial-gradient(circle,#d4af37_0%,transparent_70%)] blur-2xl"></div>
+            
+            <div class="relative z-10">
+                <div class="inline-flex items-center gap-2 rounded-full border border-[var(--lucille-accent)]/30 bg-[var(--lucille-accent)]/10 px-3.5 py-1 text-[10px] font-bold uppercase tracking-[.25em] text-[var(--lucille-accent)] shadow-[0_0_15px_rgba(195,39,32,0.25)]">
+                    <span class="h-1.5 w-1.5 rounded-full bg-[var(--lucille-accent)] animate-pulse"></span>
+                    Talentos de la Comunidad
+                </div>
+
+                <h1 class="mt-4 font-display text-4xl md:text-6xl uppercase tracking-[.14em] text-white drop-shadow-md">
+                    Muro del <span class="text-[var(--lucille-accent)] drop-shadow-[0_0_30px_rgba(195,39,32,0.5)]">Rock</span>
+                </h1>
+
+                <div class="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-[var(--lucille-accent)] via-[var(--lucille-accent)]/50 to-transparent"></div>
+
+                <p class="mt-4 max-w-2xl text-sm md:text-base text-gray-300 font-sans leading-relaxed">
+                    Descubre las bandas y artistas independientes de nuestra comunidad. Ordenados por actividad — las más activas primero.
+                </p>
+            </div>
         </div>
 
         <!-- Filter Form -->

@@ -1,15 +1,31 @@
 <x-layouts.site :title="'Muro de la Comunidad'">
     <section class="mx-auto max-w-[1400px] px-5 py-12" style="padding-top: 150px;">
         
-        {{-- Cabecera de la Sección --}}
-        <div class="mb-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-6">
-            <div>
-                <span class="text-[10px] uppercase tracking-[.25em] text-[var(--lucille-accent)] font-semibold font-display">Espacio de Interacción</span>
-                <h1 class="font-display text-4xl uppercase tracking-[.12em] text-[#dcdcdc] mt-1">Muro de la Comunidad</h1>
-                <p class="mt-2 text-sm text-[#7b7b7b]">El punto de encuentro oficial entre bandas, oyentes y locutores de Seven Rock Radio.</p>
+        {{-- Cabecera de la Sección Banner (Impeccable Design) --}}
+        <div class="relative overflow-hidden mb-10 rounded-[20px] bg-gradient-to-br from-[#161214] via-[#0f0e11] to-[#08080a] border border-white/10 p-8 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-md flex flex-wrap items-center justify-between gap-6">
+            {{-- Ambient radial background glow --}}
+            <div class="absolute -top-24 -left-24 w-96 h-96 opacity-25 pointer-events-none bg-[radial-gradient(circle,var(--lucille-accent)_0%,transparent_70%)] blur-2xl"></div>
+            <div class="absolute -bottom-24 -right-24 w-96 h-96 opacity-15 pointer-events-none bg-[radial-gradient(circle,#d4af37_0%,transparent_70%)] blur-2xl"></div>
+
+            <div class="relative z-10 min-w-0 flex-1">
+                <div class="inline-flex items-center gap-2 rounded-full border border-[var(--lucille-accent)]/30 bg-[var(--lucille-accent)]/10 px-3.5 py-1 text-[10px] font-bold uppercase tracking-[.25em] text-[var(--lucille-accent)] shadow-[0_0_15px_rgba(195,39,32,0.25)]">
+                    <span class="h-1.5 w-1.5 rounded-full bg-[var(--lucille-accent)] animate-pulse"></span>
+                    Espacio de Interacción
+                </div>
+
+                <h1 class="mt-4 font-display text-4xl md:text-6xl uppercase tracking-[.14em] text-white drop-shadow-md">
+                    Muro de la <span class="text-[var(--lucille-accent)] drop-shadow-[0_0_30px_rgba(195,39,32,0.5)]">Comunidad</span>
+                </h1>
+
+                <div class="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-[var(--lucille-accent)] via-[var(--lucille-accent)]/50 to-transparent"></div>
+
+                <p class="mt-4 max-w-2xl text-sm md:text-base text-gray-300 font-sans leading-relaxed">
+                    El punto de encuentro oficial entre bandas, oyentes y locutores de Seven Rock Radio.
+                </p>
             </div>
-            <div class="flex items-center gap-3">
-                <a href="{{ route('comunidad.exclusivos') }}" class="lucille-button-solid rounded-[8px] px-5 py-2.5 text-xs font-display uppercase tracking-wider flex items-center gap-2">
+
+            <div class="relative z-10 flex items-center gap-3 shrink-0">
+                <a href="{{ route('comunidad.exclusivos') }}" class="lucille-button-solid rounded-[10px] px-6 py-3 text-xs font-display uppercase tracking-wider flex items-center gap-2 shadow-[0_6px_20px_rgba(195,39,32,0.3)] hover:scale-105 transition-transform">
                     🎵 Descargas & Exclusivos
                 </a>
             </div>
