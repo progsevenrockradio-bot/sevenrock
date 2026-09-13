@@ -365,17 +365,17 @@
                 <!-- Image Gallery Panel -->
                 @if ($photoFiles->isNotEmpty())
                     <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 shadow-xl" 
-                         x-data='{ 
+                         x-data="{ 
                              lightboxOpen: false, 
                              activeIndex: 0,
-                             photos: @json($photoFiles->map(fn($p) => ['url' => $p->url, 'title' => (string) $p->title])->values()->all()),
+                             photos: {{ json_encode($photoFiles->map(fn($p) => ['url' => $p->url, 'title' => (string) $p->title])->values()->all()) }},
                              next() {
                                  if (this.activeIndex < this.photos.length - 1) this.activeIndex++;
                              },
                              prev() {
                                  if (this.activeIndex > 0) this.activeIndex--;
                              }
-                         }'>
+                         }">
                         <h3 class="font-display text-xl uppercase tracking-[.18em] text-white border-b border-white/5 pb-3 mb-5">Galería</h3>
                         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-3">
                             @foreach ($photoFiles as $index => $photo)
