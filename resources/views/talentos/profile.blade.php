@@ -6,6 +6,16 @@
             </div>
         @endif
 
+        @if ($errors->any())
+            <div class="mb-6 border border-red-500 bg-red-500/20 px-4 py-3 text-sm text-red-200">
+                <ul class="list-disc pl-5">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <div class="border border-white/10 bg-[#10161b] p-8">
             <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Editar perfil</h1>
 

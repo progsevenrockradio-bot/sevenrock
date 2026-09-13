@@ -76,8 +76,9 @@ class ProfileController extends Controller
             ], static fn ($value): bool => filled($value));
             $talent->save();
         } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Profile update failed: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
             return back()->withInput()->withErrors([
-                'logo' => 'No se pudo actualizar el perfil.',
+                'logo' => 'No se pudo actualizar el perfil: ' . $e->getMessage(),
             ]);
         }
 
