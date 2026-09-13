@@ -119,6 +119,13 @@ class FileUploadService
             }
         }
 
+        if ($disk === 'r2' && $this->isR2Configured()) {
+            $r2Url = trim((string) config('filesystems.disks.r2.url', ''));
+            if ($r2Url !== '') {
+                return rtrim($r2Url, '/') . '/' . ltrim($key, '/');
+            }
+        }
+
         try {
             return Storage::disk('public')->url($key);
         } catch (Throwable) {
