@@ -34,7 +34,7 @@ class ProfileController extends Controller
         }
 
         $validated = $request->validate([
-            'band_name' => ['nullable', 'string', 'max:255', Rule::unique('talents', 'band_name')->ignore($talent->id)],
+            'band_name' => ['nullable', 'string', 'max:255', Rule::unique('talents', 'band_name')->ignore($talent->id)->withoutTrashed()],
             'name' => ['nullable', 'string', 'max:255'],
             'bio' => ['nullable', 'string'],
             'logo' => ['nullable', 'image', 'max:4096'],
