@@ -19,10 +19,11 @@ class PostImageResolverTest extends TestCase
     {
         parent::setUp();
         
-        $settings = ThemeSetting::current();
-        $settings->email_default_cover_path = 'assets/lucille/default-test.jpg';
-        $settings->press_feeds_extra = "example.com=https://example.com/feed";
-        $settings->save();
+        \Illuminate\Support\Facades\DB::table('theme_settings')->insert([
+            'email_default_cover_path' => 'assets/lucille/default-test.jpg',
+            'press_feeds_extra' => "example.com=https://example.com/feed",
+            'site_name' => 'Test',
+        ]);
         
         $reflection = new \ReflectionClass(ThemeSetting::class);
         $property = $reflection->getProperty('currentSettings');
@@ -127,5 +128,17 @@ class PostImageResolverTest extends TestCase
 
         $this->assertStringContainsString('default-test.jpg', $result['url']);
         $this->assertEquals('default', $result['source']);
+    }
+    public function test_post_featured_image_fallback()
+    {
+        $post = new \App\Models\Post();
+        $post->featured_image_path = null;
+        $post->featured_image = null;
+
+        $resolved = $post->featured_image;
+
+        $this->assertNotNull($resolved);
+        $this->assertIsString($resolved);
+        $this->assertTrue(str_contains($resolved, 'default-test.jpg') || str_contains($resolved, 'album3.jpg'));
     }
 }

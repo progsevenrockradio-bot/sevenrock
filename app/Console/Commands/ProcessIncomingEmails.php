@@ -635,6 +635,11 @@ class ProcessIncomingEmails extends Command
                             'artist_name' => $parsed['artist_name'] ?? null
                         ]);
 
+                        if (empty($resolverInfo['url'])) {
+                            $resolverInfo['url'] = $settings->email_default_cover_path;
+                            Log::warning("ProcessIncomingEmails: Fallback de imagen aplicado para Post (PostImageResolver devolvió vacío).", ['message_id' => $messageId]);
+                        }
+
                         Log::info("ProcessIncomingEmails: Creando post.", [
                             'title'       => $title,
                             'slug'        => $slug,
@@ -699,6 +704,11 @@ class ProcessIncomingEmails extends Command
                             'is_dark_vader' => $isDarkVaderAgent,
                             'artist_name' => $artistName
                         ]);
+
+                        if (empty($resolverInfo['url'])) {
+                            $resolverInfo['url'] = $settings->email_default_cover_path;
+                            Log::warning("ProcessIncomingEmails: Fallback de imagen aplicado para NewRelease (PostImageResolver devolvió vacío).", ['message_id' => $messageId]);
+                        }
 
                         // Crear Lanzamiento
                         $isActive = (bool) $settings->email_auto_publish;

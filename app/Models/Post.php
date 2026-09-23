@@ -108,9 +108,20 @@ class Post extends Model
         $this->attributes['content'] = json_encode($blocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[]';
     }
 
-    public function getFeaturedImageAttribute(?string $value): ?string
+    public function getFeaturedImageAttribute(?string $value): string
     {
-        return $value ?: ($this->featured_image_path ?: null);
+        $path = $value ?: ($this->featured_image_path ?: null);
+        
+        if ($path) {
+            return $path;
+        }
+
+        $defaultCover = \App\Models\ThemeSetting::current()?->email_default_cover_path;
+        if ($defaultCover) {
+            return \App\Support\PublicMediaUrl::normalizePublicUrl($defaultCover) ?: asset('assets/lucille/album3.jpg');
+        }
+
+        return asset('assets/lucille/album3.jpg');
     }
 
     public function setFeaturedImageAttribute(?string $value): void
