@@ -26,12 +26,25 @@ class OpenRouterContentParser implements ContentParserInterface
         return $this->callApi($prompt, $apiKey, [
             'type' => 'OBJECT',
             'properties' => [
-                'type' => ['type' => 'STRING', 'enum' => ['post', 'release', 'discard']],
+                'type' => ['type' => 'STRING', 'enum' => ['post', 'release', 'event', 'discard']],
                 'importance' => ['type' => 'INTEGER'],
                 'title' => ['type' => 'STRING'],
                 'artist_name' => ['type' => 'STRING'],
                 'excerpt' => ['type' => 'STRING'],
                 'content' => ['type' => 'STRING'],
+                'events' => [
+                    'type' => 'ARRAY',
+                    'items' => [
+                        'type' => 'OBJECT',
+                        'properties' => [
+                            'title' => ['type' => 'STRING'],
+                            'starts_at' => ['type' => 'STRING'],
+                            'location' => ['type' => 'STRING'],
+                            'venue' => ['type' => 'STRING'],
+                            'ticket_url' => ['type' => 'STRING']
+                        ]
+                    ]
+                ],
                 'youtube_url' => ['type' => 'STRING'],
                 'spotify_url' => ['type' => 'STRING'],
                 'facebook_url' => ['type' => 'STRING'],

@@ -762,6 +762,63 @@ class ProcessIncomingEmails extends Command
                             }
                         }
                     }
+                } elseif ($type === 'event') {
+                    $this->info("Procesando Eventos/Gira: {$title}");
+                    $events = $parsed['events'] ?? [];
+                    if (empty($events)) {
+                        $this->warn("El correo fue marcado como event, pero no devolvió lista de eventos (events).");
+                    } else {
+                        // Intentar obtener póster genérico del adjunto si lo hay
+                        $resolverInfo = app(\App\Services\PostImageResolver::class)->resolveForPost([
+                            'message' => $message,
+                            'body' => $body,
+                            'subject' => $subject,
+                            'clean_title' => $title,
+                            'is_dark_vader' => $isDarkVaderAgent,
+                            'artist_name' => $parsed['artist_name'] ?? null
+                        ]);
+                        $posterUrl = $resolverInfo['url'] ?? $settings->email_default_cover_path;
+
+                        $eventsCreated = 0;
+                        foreach ($events as $ev) {
+                            $evTitle = $ev['title'] ?? $title;
+                            $startsAtStr = $ev['starts_at'] ?? null;
+                            if (!$startsAtStr) continue;
+
+                            try {
+                                $startsAt = \Illuminate\Support\Carbon::parse($startsAtStr);
+                            } catch (\Throwable $e) {
+                                continue;
+                            }
+
+                            // Evitar duplicados
+                            $exists = \App\Models\Event::query()
+                                ->where('title', 'like', '%' . mb_substr($evTitle, 0, 30) . '%')
+                                ->whereDate('starts_at', $startsAt->toDateString())
+                                ->exists();
+
+                            if ($exists) {
+                                $this->info("Ignorando evento duplicado: {$evTitle} el {$startsAt->toDateString()}");
+                                continue;
+                            }
+
+                            \App\Models\Event::create([
+                                'title' => $evTitle,
+                                'slug' => Str::slug($evTitle . '-' . $startsAt->format('Y-m-d') . '-' . Str::random(4)),
+                                'starts_at' => $startsAt,
+                                'location' => $ev['location'] ?? null,
+                                'venue' => $ev['venue'] ?? null,
+                                'ticket_url' => $ev['ticket_url'] ?? null,
+                                'ticket_label' => !empty($ev['ticket_url']) ? 'Tickets' : 'Details',
+                                'categories' => ['Conciertos'],
+                                'content' => $parsed['content'] ?? '',
+                                'poster' => $posterUrl,
+                                'is_cancelled' => false,
+                            ]);
+                            $eventsCreated++;
+                        }
+                        $this->info("Se agregaron {$eventsCreated} fechas a Próximos Conciertos.");
+                    }
                 }
 
                 // Borrar archivos temporales remanentes si no se encoló la subida

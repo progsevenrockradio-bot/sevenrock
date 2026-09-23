@@ -18,6 +18,7 @@ Sigue estas reglas estrictas:
 1. Identifica el tipo de contenido ("type"):
    - "release": Si habla de un nuevo disco, EP, single, videoclip o canción recién lanzada por una banda/artista de rock/metal.
    - "post": Si es una noticia de música, crónica de concierto, artículo de opinión o texto informativo general relevante sobre rock/metal.
+   - "event": Si es un anuncio de gira, un concierto, un festival o presentaciones en vivo, que contiene fechas y lugares específicos donde se presentará un artista.
    - "discard": Si es correo no deseado (spam), promociones o publicidad pagada de agencias de relaciones públicas sobre sus planes/servicios, correos personales sin información musical, o cualquier otra cosa que no sea de interés periodístico sobre artistas o bandas de rock.
 2. Evalúa la importancia/relevancia del correo para la audiencia de la radio ("importance"): un número entero del 1 al 5 (donde 5 es de importancia crítica como lanzamientos o noticias de bandas muy reconocidas, 3-4 es para lanzamientos y noticias normales del género, 2 es para comunicados poco interesantes o periféricos, y 1 es para publicidad descartada o irrelevante).
 3. Limpia el texto de firmas de correo, saludos iniciales (ej. "Hola Seven Rock Radio"), despedidas e información de contacto del email.
@@ -30,8 +31,8 @@ Sigue estas reglas estrictas:
    - "facebook_url": Enlace a una página o publicación de Facebook.
    - "instagram_url": Enlace a Instagram.
    - "twitter_url": Enlace a Twitter/X.
-8. Genera un "excerpt" (resumen corto de 150-180 caracteres) y el "content" (el cuerpo principal limpio y bien redactado, separado por párrafos con salto de línea doble). Si el correo es "discard", puedes poner texto genérico de descarte en estos campos.
-
+8. Si es "event", extrae una lista de fechas/conciertos en el arreglo "events". Cada item debe tener "title" (el nombre del evento, de la gira o del artista + ciudad), "starts_at" (fecha en formato YYYY-MM-DD o YYYY-MM-DD HH:mm:ss si hay hora), "location" (Ciudad y País/Estado), "venue" (Lugar, sala o recinto del concierto) y "ticket_url" (URL de venta de entradas, si se menciona).
+9. Genera un "excerpt" (resumen corto de 150-180 caracteres) y el "content" (el cuerpo principal limpio y bien redactado, separado por párrafos con salto de línea doble). Si el correo es "discard", puedes poner texto genérico de descarte en estos campos.
 Devuelve la respuesta estrictamente en formato JSON utilizando el esquema indicado.
 
 Asunto del correo: {$subject}

@@ -74,7 +74,7 @@ class GeminiContentParser implements ContentParserInterface
                         'properties' => [
                             'type' => [
                                 'type' => 'STRING',
-                                'enum' => ['post', 'release', 'discard'],
+                                'enum' => ['post', 'release', 'event', 'discard'],
                                 'description' => 'El tipo de contenido clasificado.'
                             ],
                             'importance' => [
@@ -96,6 +96,20 @@ class GeminiContentParser implements ContentParserInterface
                             'content' => [
                                 'type' => 'STRING',
                                 'description' => 'El cuerpo principal del artículo o descripción redactado en español.'
+                            ],
+                            'events' => [
+                                'type' => 'ARRAY',
+                                'description' => 'Lista de conciertos, giras o eventos mencionados (solo para tipo event).',
+                                'items' => [
+                                    'type' => 'OBJECT',
+                                    'properties' => [
+                                        'title' => ['type' => 'STRING', 'description' => 'El título del evento o ciudad de la gira.'],
+                                        'starts_at' => ['type' => 'STRING', 'description' => 'Fecha de inicio del evento en formato YYYY-MM-DD o YYYY-MM-DD HH:mm:ss'],
+                                        'location' => ['type' => 'STRING', 'description' => 'Ciudad y País/Estado del evento.'],
+                                        'venue' => ['type' => 'STRING', 'description' => 'Lugar, sala o recinto del concierto.'],
+                                        'ticket_url' => ['type' => 'STRING', 'description' => 'Enlace para comprar tickets.']
+                                    ]
+                                ]
                             ],
                             'youtube_url' => [
                                 'type' => 'STRING',
