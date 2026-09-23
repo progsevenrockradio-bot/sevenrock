@@ -12,7 +12,7 @@
             $imageUrl = \App\Support\PublicMediaUrl::normalizePublicUrl($image)
                 ?: (str_starts_with((string) $image, 'http') ? (string) $image : asset((string) $image));
         @endphp
-        <article class="group relative min-h-[455px] overflow-hidden bg-[#111722] text-center">
+        <article class="group relative h-full min-h-[455px] overflow-hidden bg-[#111722] text-center">
             @if ($image)
                 <!-- Fondo difuminado -->
                 <div class="absolute inset-0 bg-cover bg-center opacity-40 blur-md transition duration-500 group-hover:scale-[1.05]" style="background-image: url('{{ $imageUrl }}');"></div>
@@ -23,7 +23,7 @@
             @else
                 <div class="absolute inset-0 bg-[rgba(7,16,33,.45)]"></div>
             @endif
-            <div class="relative z-10 flex min-h-[455px] flex-col items-center px-11 py-10">
+            <div class="relative z-10 flex h-full min-h-[455px] flex-col items-center px-11 py-10">
                 <h3 class="font-display text-[26px] font-normal uppercase leading-tight tracking-[1px] text-[#f9f9f9] transition duration-300 group-hover:text-lucille-accent">{{ $title }}</h3>
                 <p class="mt-3 text-sm italic leading-[26px] text-[#cbcbcb]">{{ $date }} by admin in {{ $category }}</p>
                 <p class="mt-7 text-[14px] leading-[26px] text-[#d8d8d8]">{{ $excerpt }}</p>
