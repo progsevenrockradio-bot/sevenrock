@@ -253,6 +253,14 @@
                 @error('email_daily_posts_limit')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
             </div>
 
+            <!-- Umbral de Similitud para Duplicados -->
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Umbral de Similitud para Deduplicado (0 a 1)</label>
+                <input type="number" step="0.01" name="post_duplicate_similarity_threshold" value="{{ old('post_duplicate_similarity_threshold', $settings->post_duplicate_similarity_threshold ?? 0.82) }}" class="lucille-product-field w-full text-xs" min="0" max="1">
+                <p class="mt-2 text-[10px] text-[#9a9a9a]">Nivel de similitud necesario para descartar un post nuevo por ser idéntico a uno existente en las últimas 48h (ej. 0.82).</p>
+                @error('post_duplicate_similarity_threshold')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
             <!-- Límite diario de Lanzamientos -->
             <div>
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Límite Diario de Lanzamientos</label>

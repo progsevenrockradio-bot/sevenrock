@@ -1,0 +1,1 @@
+<?php $f = fopen('test.mp3', 'w'); fwrite($f, 'hello'); fclose($f); $c = ftp_connect('c30.radioboss.fm'); ftp_login($c, 'DarkVader', 'R@DIOBOZZ_2026*-User'); ftp_pasv($c, true); if(!ftp_put($c, 'test.mp3', 'test.mp3', FTP_BINARY)) { print_r(error_get_last()); } else { echo 'Success'; ftp_delete($c, 'test.mp3'); } ftp_close($c);

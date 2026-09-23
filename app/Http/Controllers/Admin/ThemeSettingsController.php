@@ -134,6 +134,7 @@ class ThemeSettingsController extends Controller
             'email_whitelist_senders' => ['nullable', 'string'],
             'email_daily_posts_limit' => ['required', 'integer', 'min:1', 'max:100'],
             'email_daily_releases_limit' => ['required', 'integer', 'min:1', 'max:100'],
+            'post_duplicate_similarity_threshold' => ['required', 'numeric', 'min:0', 'max:1'],
             'gemini_api_key' => ['nullable', 'string', 'max:255'],
             'archive_access_key' => ['nullable', 'string', 'max:255'],
             'archive_secret_key' => ['nullable', 'string', 'max:255'],
@@ -187,6 +188,7 @@ class ThemeSettingsController extends Controller
             'email_whitelist_senders',
             'email_daily_posts_limit',
             'email_daily_releases_limit',
+            'post_duplicate_similarity_threshold',
             'gemini_api_key',
             'archive_access_key',
             'archive_secret_key',
@@ -250,6 +252,7 @@ class ThemeSettingsController extends Controller
         $settings->email_min_importance = isset($validated['email_min_importance']) ? (int) $validated['email_min_importance'] : 1;
         $settings->email_daily_posts_limit = isset($validated['email_daily_posts_limit']) ? (int) $validated['email_daily_posts_limit'] : 3;
         $settings->email_daily_releases_limit = isset($validated['email_daily_releases_limit']) ? (int) $validated['email_daily_releases_limit'] : 3;
+        $settings->post_duplicate_similarity_threshold = isset($validated['post_duplicate_similarity_threshold']) ? (float) $validated['post_duplicate_similarity_threshold'] : 0.82;
         $settings->email_whitelist_senders = trim((string) ($validated['email_whitelist_senders'] ?? '')) ?: null;
         if ($request->filled('gemini_api_key')) {
             $settings->gemini_api_key = trim((string) $validated['gemini_api_key']);

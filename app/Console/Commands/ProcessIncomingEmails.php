@@ -12,9 +12,10 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Models\PostTaxonomy;
+use App\Support\TextNormalizer;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Webklex\PHPIMAP\ClientManager;
 
@@ -41,6 +42,7 @@ class ProcessIncomingEmails extends Command
      */
     public function handle(): int
     {
+        try {
         if ($this->option('reset')) {
             DB::table('processed_emails')->truncate();
             $this->info('Registro de correos procesados vaciado con éxito.');
@@ -54,6 +56,7 @@ class ProcessIncomingEmails extends Command
         }
 
         $geminiKey = trim((string) $settings->gemini_api_key) ?: config('services.gemini.api_key');
+        Log::info("geminiKey actual: " . $geminiKey . ", db value: " . $settings->gemini_api_key);
         if ($geminiKey === '') {
             $this->error('La API Key de Gemini no está configurada en los Ajustes del Tema.');
             $this->sendAdminAlert(
@@ -62,7 +65,7 @@ class ProcessIncomingEmails extends Command
                 'El cron de procesamiento de correos se ha detenido porque la API Key de Gemini no está configurada o se ha borrado en los Ajustes del Tema.', 
                 $settings
             );
-            return 1;
+            throw new \Exception("Gemini key missing");
         }
 
         Cache::forget('admin_alert_sent_gemini_api_key_missing');
@@ -75,13 +78,13 @@ class ProcessIncomingEmails extends Command
 
         if (empty($imapPassword)) {
             $this->error('La contraseña de IMAP no está configurada en los Ajustes del Tema (Contraseña de correo) ni en el archivo .env.');
-            return 1;
+            throw new \Exception("IMAP password missing");
         }
 
         $this->info("Conectando a {$imapHost}:{$imapPort} para el usuario {$imapUsername}...");
 
         try {
-            $cm = app(ClientManager::class);
+            $cm = app(\Webklex\PHPIMAP\ClientManager::class);
             $client = $cm->make([
                 'host'          => $imapHost,
                 'port'          => $imapPort,
@@ -102,7 +105,8 @@ class ProcessIncomingEmails extends Command
                 "El cron no pudo conectarse al servidor de correo.\n\nError: " . $e->getMessage(),
                 $settings
             );
-            return 1;
+            file_put_contents('scratch/test_output.txt', 'IMAP FAIL: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            throw new \Exception("IMAP Fail: " . $e->getMessage());
         }
 
         Cache::forget('admin_alert_sent_imap_connection_failed');
@@ -141,14 +145,14 @@ class ProcessIncomingEmails extends Command
                 }
 
                 // Obtener remitente
-                $fromAttribute = $message->getFrom();
-                $senderAddress = $fromAttribute ? $fromAttribute->first() : null;
+                $senderAddress = $message->getFrom()->first();
                 $senderEmail = $senderAddress instanceof \Webklex\PHPIMAP\Address ? trim((string) $senderAddress->mail) : null;
 
                 // Dark Vader es un agente de confianza: siempre pasa el filtro de relevancia sin depender de la whitelist manual
                 $isDarkVaderAgent = strtolower((string) $senderEmail) === 'dark.vader.agent@gmail.com';
 
                 $isWhitelisted = $isDarkVaderAgent; // Dark Vader siempre está en whitelist implícita
+                file_put_contents('scratch/test_output.txt', "Sender: {$senderEmail}, Whitelist Setting: " . ($settings->email_whitelist_senders ?? 'NULL') . "\n", FILE_APPEND);
                 if (! $isWhitelisted && $senderEmail && $settings->email_whitelist_senders) {
                     $whitelist = array_values(array_filter(array_map('trim', explode(',', $settings->email_whitelist_senders))));
                     foreach ($whitelist as $allowed) {
@@ -294,10 +298,13 @@ class ProcessIncomingEmails extends Command
                     }
                 }
 
-                // Comprobar si es un correo especial de Dark Vader (reutilizamos $isDarkVaderAgent calculado arriba)
+                // Comprobar si es un correo especial
                 $isDarkVader = $isDarkVaderAgent;
-                $isEfemerides = $isDarkVader && (str_contains(strtolower($subject), 'efeméride') || str_contains(strtolower($subject), 'efemerides'));
-                $isNoticiaRock = $isDarkVader && str_starts_with(strtolower(trim($subject)), 'noticia');
+                $subjectLower = mb_strtolower($subject);
+                $isEfemerides = str_starts_with($subjectLower, 'hoy en el rock') || 
+                                str_contains($subjectLower, 'efeméride') || 
+                                str_contains($subjectLower, 'efemerides');
+                $isNoticiaRock = $isWhitelisted && !$isEfemerides;
 
                 Log::info("ProcessIncomingEmails: Tipo de correo Dark Vader detectado.", [
                     'is_dark_vader'   => $isDarkVader,
@@ -432,14 +439,40 @@ class ProcessIncomingEmails extends Command
                 if ($isNoticiaRock) {
                     $this->info("[DARK VADER] Procesando Noticia Rock directamente (sin Gemini)...");
 
-                    // Limpiar el asunto: quitar prefijos como "Noticia - ", "Noticia: ", "Noticia "
-                    $cleanTitle = preg_replace('/^noticia[\s\-–:]+/iu', '', trim($subject));
-                    $cleanTitle = trim($cleanTitle) ?: $subject;
+                    // Limpiar el asunto: quitar prefijos
+                    $cleanTitle = TextNormalizer::normalizeTitle($subject);
+                    $cleanTitle = $cleanTitle ?: $subject;
 
                     $status = $settings->email_auto_publish ? 'published' : 'draft';
 
-                    if (Post::where('title', $cleanTitle)->exists()) {
-                        $this->info("Ignorando Noticia Rock duplicada: {$cleanTitle}");
+                    $normalizedTitle = TextNormalizer::normalizeTitle($cleanTitle);
+                    $normalizedSlug = TextNormalizer::normalizeSlug($cleanTitle);
+                    $originalSubjectNormalized = TextNormalizer::normalizeSlug($subject);
+                    $threshold = (float) ($settings->post_duplicate_similarity_threshold ?? 0.82);
+
+                    $recentPosts = Post::where('created_at', '>=', now()->subHours(48))->get();
+                    $isDuplicate = false;
+                    $similarPostId = null;
+
+                    foreach ($recentPosts as $recent) {
+                        $recentSubjectNorm = TextNormalizer::normalizeSlug($recent->source_subject ?? '');
+                        if ($recentSubjectNorm !== '' && $recentSubjectNorm === $originalSubjectNormalized) {
+                            $isDuplicate = true;
+                            $similarPostId = $recent->id;
+                            break;
+                        }
+
+                        $recentNormSlug = TextNormalizer::normalizeSlug($recent->title);
+                        if ($recentNormSlug === $normalizedSlug || TextNormalizer::similarity($recentNormSlug, $normalizedSlug) >= $threshold) {
+                            $isDuplicate = true;
+                            $similarPostId = $recent->id;
+                            break;
+                        }
+                    }
+
+                    if ($isDuplicate) {
+                        $this->info("Ignorando Noticia Rock duplicada (similar a post ID: {$similarPostId})");
+                        Log::info("ProcessIncomingEmails: Noticia Rock duplicada ignorada.", ['title' => $cleanTitle, 'subject' => $subject, 'similar_to_post_id' => $similarPostId]);
                     } else {
                         $baseSlug = Str::slug($cleanTitle);
                         $slug = $baseSlug; $suffix = 1;
@@ -466,6 +499,7 @@ class ProcessIncomingEmails extends Command
                             'featured_image' => $coverUrl,
                             'author_email'   => $senderEmail,
                             'categories'     => ['Noticias Rock'],
+                            'source_subject' => $subject,
                         ]);
                         $this->syncTaxonomies($post, ['Noticias Rock'], $this->extractHashtags($cleanTitle . ' ' . strip_tags($contentToSave)));
                         $this->info("[OK] Noticia Rock creada en estado [{$status}]: ID {$post->id} — {$cleanTitle}");
@@ -576,21 +610,49 @@ class ProcessIncomingEmails extends Command
                         continue; // No marcamos como leído (SEEN) para procesarlo otro día
                     }
 
-                    // Evitar duplicados por título
-                    if (Post::where('title', $title)->exists()) {
-                        $this->info("Ignorando post duplicado con el título: {$title}");
-                        Log::info("ProcessIncomingEmails: Post duplicado ignorado.", ['title' => $title, 'subject' => $subject]);
+                    $normalizedTitle = TextNormalizer::normalizeTitle($title);
+                    $normalizedSlug = TextNormalizer::normalizeSlug($title);
+                    $originalSubjectNormalized = TextNormalizer::normalizeSlug($subject);
+                    $threshold = (float) ($settings->post_duplicate_similarity_threshold ?? 0.82);
+
+                    $recentPosts = Post::where('created_at', '>=', now()->subHours(48))->get();
+                    $isDuplicate = false;
+                    $similarPostId = null;
+
+                    foreach ($recentPosts as $recent) {
+                        $recentSubjectNorm = TextNormalizer::normalizeSlug($recent->source_subject ?? '');
+                        if ($recentSubjectNorm !== '' && $recentSubjectNorm === $originalSubjectNormalized) {
+                            $isDuplicate = true;
+                            $similarPostId = $recent->id;
+                            break;
+                        }
+
+                        $recentNormSlug = TextNormalizer::normalizeSlug($recent->title);
+                        if ($recentNormSlug === $normalizedSlug || TextNormalizer::similarity($recentNormSlug, $normalizedSlug) >= $threshold) {
+                            $isDuplicate = true;
+                            $similarPostId = $recent->id;
+                            break;
+                        }
+                    }
+
+                    if ($isDuplicate) {
+                        $this->info("Ignorando post duplicado por similitud (similar a post ID: {$similarPostId})");
+                        Log::info("ProcessIncomingEmails: Post duplicado ignorado.", ['title' => $title, 'subject' => $subject, 'similar_to_post_id' => $similarPostId]);
                     } else {
                         // Crear Post
                         $status = $settings->email_auto_publish ? 'published' : 'draft';
 
-                        // Asignar categoría correcta según el tipo de correo Dark Vader
-                        if ($isNoticiaRock) {
-                            $categories = ['Noticias Rock'];
-                        } elseif ($isEfemerides) {
+                        // Asignar categoría correcta
+                        if ($isEfemerides) {
                             $categories = ['Hoy en el Rock'];
+                        } elseif ($isNoticiaRock) {
+                            $categories = ['Noticias Rock'];
                         } else {
-                            $categories = [];
+                            $categories = $parsed['categories'] ?? [];
+                            if (empty($categories)) {
+                                $categories = ['Noticias Rock'];
+                                Log::warning("ProcessIncomingEmails: Correo procesado como post sin categoría devuelta por la IA. Se asignó 'Noticias Rock' por defecto.", ['message_id' => $messageId]);
+                            }
                         }
 
                         // Generar slug único con sufijo numérico si ya existe
@@ -626,6 +688,7 @@ class ProcessIncomingEmails extends Command
                             'twitter_url'    => $parsed['twitter_url'] ?? null,
                             'author_email'   => $senderEmail,
                             'categories'     => $categories,
+                            'source_subject' => $subject,
                         ]);
                         $this->syncTaxonomies($post, $categories);
                         if (! $isNoticiaRock) $postsCreatedToday++;
@@ -727,11 +790,15 @@ class ProcessIncomingEmails extends Command
         } catch (\Throwable $e) {
             Log::error("ProcessIncomingEmails: Excepción general en el procesamiento de correos: " . $e->getMessage() . "\n" . $e->getTraceAsString());
             $this->error("Excepción: " . $e->getMessage());
-            return 1;
+            throw new \Exception("Excepción general: " . $e->getMessage(), 0, $e);
         }
 
-        $this->info("Procesamiento de correos finalizado.");
-        return 0;
+        $this->info("Proceso de revisión de correos completado.");
+        return self::SUCCESS;
+        } catch (\Throwable $e) {
+            file_put_contents('scratch/test_output.txt', "ERROR IN HANDLE: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            throw $e;
+        }
     }
 
     /**

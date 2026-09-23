@@ -1,0 +1,1 @@
+<?php require 'vendor/autoload.php'; $app = require_once 'bootstrap/app.php'; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $failed = Illuminate\Support\Facades\DB::table('failed_jobs')->orderBy('failed_at', 'desc')->first(); if($failed){ echo $failed->payload; } else { echo 'No failed jobs'; }

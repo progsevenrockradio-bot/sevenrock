@@ -1,0 +1,69 @@
+ERROR IN HANDLE: Excepción general: App\Services\GeminiContentParser::parse(): Argument #3 ($apiKey) must be of type string, null given, called in C:\laragon\www\SevenRockRadio\app\Console\Commands\ProcessIncomingEmails.php on line 518
+#0 C:\laragon\www\SevenRockRadio\vendor\laravel\framework\src\Illuminate\Container\BoundMethod.php(36): App\Console\Commands\ProcessIncomingEmails->handle()
+#1 C:\laragon\www\SevenRockRadio\vendor\laravel\framework\src\Illuminate\Container\Util.php(43): Illuminate\Container\BoundMethod::Illuminate\Container\{closure}()
+#2 C:\laragon\www\SevenRockRadio\vendor\laravel\framework\src\Illuminate\Container\BoundMethod.php(96): Illuminate\Container\Util::unwrapIfClosure(Object(Closure))
+#3 C:\laragon\www\SevenRockRadio\vendor\laravel\framework\src\Illuminate\Container\BoundMethod.php(35): Illuminate\Container\BoundMethod::callBoundMethod(Object(Illuminate\Foundation\Application), Array, Object(Closure))
+#4 C:\laragon\www\SevenRockRadio\vendor\laravel\framework\src\Illuminate\Container\Container.php(799): Illuminate\Container\BoundMethod::call(Object(Illuminate\Foundation\Application), Array, Array, NULL)
+#5 C:\laragon\www\SevenRockRadio\vendor\laravel\framework\src\Illuminate\Console\Command.php(280): Illuminate\Container\Container->call(Array)
+#6 C:\laragon\www\SevenRockRadio\vendor\symfony\console\Command\Command.php(341): Illuminate\Console\Command->execute(Object(Symfony\Component\Console\Input\StringInput), Object(Mockery_1_Illuminate_Console_OutputStyle))
+#7 C:\laragon\www\SevenRockRadio\vendor\laravel\framework\src\Illuminate\Console\Command.php(249): Symfony\Component\Console\Command\Command->run(Object(Symfony\Component\Console\Input\StringInput), Object(Mockery_1_Illuminate_Console_OutputStyle))
+#8 C:\laragon\www\SevenRockRadio\vendor\symfony\console\Application.php(1094): Illuminate\Console\Command->run(Object(Symfony\Component\Console\Input\StringInput), Object(Mockery_1_Illuminate_Console_OutputStyle))
+#9 C:\laragon\www\SevenRockRadio\vendor\symfony\console\Application.php(356): Symfony\Component\Console\Application->doRunCommand(Object(App\Console\Commands\ProcessIncomingEmails), Object(Symfony\Component\Console\Input\StringInput), Object(Mockery_1_Illuminate_Console_OutputStyle))
+#10 C:\laragon\www\SevenRockRadio\vendor\symfony\console\Application.php(195): Symfony\Component\Console\Application->doRun(Object(Symfony\Component\Console\Input\StringInput), Object(Mockery_1_Illuminate_Console_OutputStyle))
+#11 C:\laragon\www\SevenRockRadio\vendor\laravel\framework\src\Illuminate\Console\Application.php(165): Symfony\Component\Console\Application->run(Object(Symfony\Component\Console\Input\StringInput), Object(Mockery_1_Illuminate_Console_OutputStyle))
+#12 C:\laragon\www\SevenRockRadio\vendor\laravel\framework\src\Illuminate\Foundation\Console\Kernel.php(447): Illuminate\Console\Application->call('emails:process', Array, Object(Mockery_1_Illuminate_Console_OutputStyle))
+#13 C:\laragon\www\SevenRockRadio\vendor\laravel\framework\src\Illuminate\Testing\PendingCommand.php(451): Illuminate\Foundation\Console\Kernel->call('emails:process', Array, Object(Mockery_1_Illuminate_Console_OutputStyle))
+#14 C:\laragon\www\SevenRockRadio\vendor\laravel\framework\src\Illuminate\Testing\PendingCommand.php(675): Illuminate\Testing\PendingCommand->run()
+#15 C:\laragon\www\SevenRockRadio\tests\Feature\PostPipelineTest.php(135): Illuminate\Testing\PendingCommand->__destruct()
+#16 C:\laragon\www\SevenRockRadio\vendor\phpunit\phpunit\src\Framework\TestCase.php(1318): Tests\Feature\PostPipelineTest->test_post_pipeline()
+#17 C:\laragon\www\SevenRockRadio\vendor\phpunit\phpunit\src\Framework\TestCase.php(1355): PHPUnit\Framework\TestCase->invokeTestMethod('test_post_pipel...', Array)
+#18 C:\laragon\www\SevenRockRadio\vendor\phpunit\phpunit\src\Framework\TestCase.php(521): PHPUnit\Framework\TestCase->runTest()
+#19 C:\laragon\www\SevenRockRadio\vendor\phpunit\phpunit\src\Framework\TestRunner\TestRunner.php(99): PHPUnit\Framework\TestCase->runBare()
+#20 C:\laragon\www\SevenRockRadio\vendor\phpunit\phpunit\src\Framework\TestCase.php(361): PHPUnit\Framework\TestRunner->run(Object(Tests\Feature\PostPipelineTest))
+#21 C:\laragon\www\SevenRockRadio\vendor\phpunit\phpunit\src\Framework\TestSuite.php(374): PHPUnit\Framework\TestCase->run()
+#22 C:\laragon\www\SevenRockRadio\vendor\phpunit\phpunit\src\TextUI\TestRunner.php(64): PHPUnit\Framework\TestSuite->run()
+#23 C:\laragon\www\SevenRockRadio\vendor\phpunit\phpunit\src\TextUI\Application.php(229): PHPUnit\TextUI\TestRunner->run(Object(PHPUnit\TextUI\Configuration\Configuration), Object(PHPUnit\Runner\ResultCache\NullResultCache), Object(PHPUnit\Framework\TestSuite))
+#24 C:\laragon\www\SevenRockRadio\vendor\phpunit\phpunit\phpunit(104): PHPUnit\TextUI\Application->run(Array)
+#25 C:\laragon\www\SevenRockRadio\vendor\bin\phpunit(122): include('C:\\laragon\\www\\...')
+#26 {main}Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: NULL
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: , Whitelist Setting: redaccion@sevenrockradio.com
+Sender: redaccion@sevenrockradio.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: dark.vader.agent@gmail.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: otro@dominio.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: otro@dominio.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: otro@dominio.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: redaccion@sevenrockradio.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: redaccion@sevenrockradio.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: redaccion@sevenrockradio.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: dark.vader.agent@gmail.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: otro@dominio.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: otro@dominio.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: otro@dominio.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: redaccion@sevenrockradio.com, Whitelist Setting: redaccion@sevenrockradio.com
+Sender: redaccion@sevenrockradio.com, Whitelist Setting: redaccion@sevenrockradio.com
