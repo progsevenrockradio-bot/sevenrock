@@ -100,30 +100,101 @@ class PostImageResolver
     private function resolveFromAttachment(Message $message, bool $isDarkVader): ?string
     {
         $imageMinSize = $isDarkVader ? 10240 : 40960;
+        $candidates = [];
         
         foreach ($message->getAttachments() as $attachment) {
             $filename = (string) $attachment->getName();
             $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
             
-            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                $content = $attachment->getContent();
-                $sizeInBytes = strlen((string) $content);
+            // Ignorar explicitamente archivos que no puedan ser imagenes
+            if (in_array($ext, ['mp3', 'wav', 'flac', 'pdf', 'zip', 'rar', 'doc', 'docx'])) {
+                continue;
+            }
 
-                if ($sizeInBytes < $imageMinSize) {
-                    continue;
+            $content = $attachment->getContent();
+            $sizeInBytes = strlen((string) $content);
+
+            $info = @getimagesizefromstring($content);
+            if ($info === false) {
+                continue;
+            }
+
+            $width = $info[0];
+            $height = $info[1];
+            $mime = $info['mime'];
+
+            if ($width < 200 || $height < 200) {
+                continue;
+            }
+
+            if ($sizeInBytes < $imageMinSize) {
+                continue;
+            }
+
+            $realExt = match ($mime) {
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                'image/gif' => 'gif',
+                default => null,
+            };
+
+            if (!$realExt) {
+                continue;
+            }
+
+            $ratio = $width / $height;
+            $area = $width * $height;
+            $isSquare = ($ratio >= 0.9 && $ratio <= 1.1);
+
+            $candidates[] = [
+                'content' => $content,
+                'ext' => $realExt,
+                'width' => $width,
+                'height' => $height,
+                'area' => $area,
+                'is_square' => $isSquare,
+            ];
+        }
+
+        if (empty($candidates)) {
+            return null;
+        }
+
+        usort($candidates, function ($a, $b) {
+            if ($a['is_square'] && !$b['is_square']) {
+                return -1;
+            }
+            if (!$a['is_square'] && $b['is_square']) {
+                return 1;
+            }
+
+            if (!$a['is_square'] && !$b['is_square']) {
+                $aValidWidth = $a['width'] >= 400;
+                $bValidWidth = $b['width'] >= 400;
+                if ($aValidWidth && !$bValidWidth) {
+                    return -1;
                 }
-
-                try {
-                    $uploaded = app(\App\Services\FileUploadService::class)->uploadRaw(
-                        $content,
-                        'catalog/releases/covers/' . Str::uuid()->toString() . '.' . $ext
-                    );
-                    return rtrim(config('app.url'), '/') . '/' . ltrim($uploaded['url'], '/');
-                } catch (\Throwable $e) {
-                    Log::error("PostImageResolver: Fallo al subir portada adjunta: " . $e->getMessage());
+                if (!$aValidWidth && $bValidWidth) {
+                    return 1;
                 }
             }
+
+            return $b['area'] <=> $a['area'];
+        });
+
+        $bestCandidate = $candidates[0];
+
+        try {
+            $uploaded = app(\App\Services\FileUploadService::class)->uploadRaw(
+                $bestCandidate['content'],
+                'catalog/releases/covers/' . Str::uuid()->toString() . '.' . $bestCandidate['ext']
+            );
+            return rtrim(config('app.url'), '/') . '/' . ltrim($uploaded['url'], '/');
+        } catch (\Throwable $e) {
+            Log::error("PostImageResolver: Fallo al subir portada adjunta: " . $e->getMessage());
         }
+
         return null;
     }
 
