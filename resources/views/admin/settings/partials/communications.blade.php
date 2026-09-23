@@ -281,8 +281,24 @@
             <div class="border-t border-[#2b2b2b] pt-5 mt-3 md:col-span-2 grid gap-5 md:grid-cols-3">
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Google Gemini API Key</label>
-                    <input type="password" name="gemini_api_key" class="lucille-product-field w-full text-xs font-mono" placeholder="{{ $settings->gemini_api_key ? '******** (Guardada, dejar en blanco para mantener)' : 'AI API Key de Google' }}">
+                    <input type="password" name="gemini_api_key" class="lucille-product-field w-full text-xs font-mono" placeholder="{{ $settings->gemini_api_key ? '********' . substr($settings->gemini_api_key, -4) . ' (Guardada)' : 'AI API Key de Google' }}">
                     @error('gemini_api_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">OpenRouter API Key</label>
+                    <input type="password" name="openrouter_api_key" class="lucille-product-field w-full text-xs font-mono" placeholder="{{ $settings->openrouter_api_key ? '********' . substr($settings->openrouter_api_key, -4) . ' (Guardada)' : 'OpenRouter API Key' }}">
+                    @error('openrouter_api_key')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                </div>
+                <div class="md:col-span-1">
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Cadena de Fallback IA</label>
+                    <input type="text" name="ai_provider_chain" value="{{ old('ai_provider_chain', $settings->ai_provider_chain ?? 'gemini,openrouter') }}" class="lucille-product-field w-full text-xs font-mono">
+                    @error('ai_provider_chain')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="mb-2 flex items-center gap-2 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
+                        <input type="checkbox" name="ai_fallback_enabled" value="1" {{ old('ai_fallback_enabled', $settings->ai_fallback_enabled ?? true) ? 'checked' : '' }} class="lucille-checkbox">
+                        Habilitar Fallback IA
+                    </label>
                 </div>
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Archive.org Access Key</label>

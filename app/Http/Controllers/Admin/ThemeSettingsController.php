@@ -137,6 +137,9 @@ class ThemeSettingsController extends Controller
             'post_duplicate_similarity_threshold' => ['required', 'numeric', 'min:0', 'max:1'],
             'press_feeds_extra' => ['nullable', 'string'],
             'gemini_api_key' => ['nullable', 'string', 'max:255'],
+            'openrouter_api_key' => ['nullable', 'string', 'max:255'],
+            'ai_fallback_enabled' => ['nullable', 'boolean'],
+            'ai_provider_chain' => ['nullable', 'string', 'max:100', 'in:gemini,openrouter,openrouter,gemini'],
             'archive_access_key' => ['nullable', 'string', 'max:255'],
             'archive_secret_key' => ['nullable', 'string', 'max:255'],
             'email_default_cover' => ['nullable', 'image', 'max:4096'],
@@ -192,6 +195,9 @@ class ThemeSettingsController extends Controller
             'post_duplicate_similarity_threshold',
             'press_feeds_extra',
             'gemini_api_key',
+            'openrouter_api_key',
+            'ai_fallback_enabled',
+            'ai_provider_chain',
             'archive_access_key',
             'archive_secret_key',
             'email_default_cover',
@@ -260,6 +266,13 @@ class ThemeSettingsController extends Controller
         if ($request->filled('gemini_api_key')) {
             $settings->gemini_api_key = trim((string) $validated['gemini_api_key']);
         }
+        
+        if ($request->filled('openrouter_api_key')) {
+            $settings->openrouter_api_key = trim((string) $validated['openrouter_api_key']);
+        }
+        
+        $settings->ai_fallback_enabled = (bool) ($validated['ai_fallback_enabled'] ?? false);
+        $settings->ai_provider_chain = $validated['ai_provider_chain'] ?? 'gemini,openrouter';
         $settings->archive_access_key = trim((string) ($validated['archive_access_key'] ?? '')) ?: null;
         if ($request->filled('archive_secret_key')) {
             $settings->archive_secret_key = trim((string) $validated['archive_secret_key']);

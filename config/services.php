@@ -58,6 +58,18 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
     ],
 
+    'openrouter' => [
+        'api_key' => env('OPENROUTER_API_KEY'),
+        'model' => env('OPENROUTER_MODEL', 'google/gemini-2.5-flash'),
+        'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+    ],
+
+    'ai' => [
+        'provider_chain' => array_values(array_filter(explode(',', env('AI_PROVIDER_CHAIN', 'gemini,openrouter')))),
+        'timeout' => (int) env('AI_TIMEOUT', 45),
+        'max_attempts' => (int) env('AI_MAX_ATTEMPTS', 3),
+    ],
+
     'press_feeds' => [
         'blabbermouth.net' => 'https://blabbermouth.net/feed',
         'mariskalrock.com' => 'https://mariskalrock.com/feed/',

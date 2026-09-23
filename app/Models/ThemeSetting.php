@@ -92,6 +92,9 @@ class ThemeSetting extends Model
         'email_daily_releases_limit',
         'post_duplicate_similarity_threshold',
         'press_feeds_extra',
+        'openrouter_api_key',
+        'ai_fallback_enabled',
+        'ai_provider_chain',
     ];
 
     public static function defaults(): array

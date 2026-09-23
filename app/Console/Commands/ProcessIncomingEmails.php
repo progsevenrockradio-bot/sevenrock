@@ -26,7 +26,7 @@ class ProcessIncomingEmails extends Command
      *
      * @var string
      */
-    protected $signature = 'emails:process {--reset : Vaciar el registro de correos procesados antes de iniciar}';
+    protected $signature = 'emails:process {--reset : Vaciar el registro de correos procesados antes de iniciar} {--retry-failed : Reintentar los correos que fallaron en el procesamiento}';
 
     /**
      * The console command description.
@@ -47,6 +47,11 @@ class ProcessIncomingEmails extends Command
             DB::table('processed_emails')->truncate();
             $this->info('Registro de correos procesados vaciado con éxito.');
         }
+        
+        if ($this->option('retry-failed')) {
+            DB::table('processed_emails')->where('status', 'failed')->delete();
+            $this->info('Correos en estado "failed" marcados para reintento.');
+        }
 
         $settings = ThemeSetting::current();
 
@@ -55,20 +60,19 @@ class ProcessIncomingEmails extends Command
             return 0;
         }
 
-        $geminiKey = trim((string) $settings->gemini_api_key) ?: config('services.gemini.api_key');
-        Log::info("geminiKey actual: " . $geminiKey . ", db value: " . $settings->gemini_api_key);
-        if ($geminiKey === '') {
-            $this->error('La API Key de Gemini no está configurada en los Ajustes del Tema.');
+        $aiManager = app(\App\Services\AiParserManager::class);
+        if (! $aiManager->hasAnyProvider()) {
+            $this->error('No hay ningún proveedor de IA configurado en los Ajustes del Tema (Gemini u OpenRouter).');
             $this->sendAdminAlert(
-                'gemini_api_key_missing', 
-                '⚠️ Error Crítico: API Key de Gemini faltante en SevenRockRadio', 
-                'El cron de procesamiento de correos se ha detenido porque la API Key de Gemini no está configurada o se ha borrado en los Ajustes del Tema.', 
+                'ai_api_key_missing', 
+                '⚠️ Error Crítico: Proveedor de IA faltante en SevenRockRadio', 
+                'El cron de procesamiento de correos se ha detenido porque no hay ningún proveedor de IA configurado (Gemini u OpenRouter) en los Ajustes del Tema.', 
                 $settings
             );
-            throw new \Exception("Gemini key missing");
+            throw new \Exception("AI provider missing");
         }
 
-        Cache::forget('admin_alert_sent_gemini_api_key_missing');
+        Cache::forget('admin_alert_sent_ai_api_key_missing');
 
         $imapHost = config('services.imap.host', 'imap.gmail.com');
         $imapPort = (int) config('services.imap.port', 993);
@@ -446,48 +450,74 @@ class ProcessIncomingEmails extends Command
                     continue;
                 }
 
-                // Llamar a Gemini API para correos normales o Noticias Rock
-                $this->info("Consultando a Gemini API para redactar y clasificar...");
-                $parsed = $parser->parse($subject, $body, $geminiKey);
+                // Llamar a la IA para redactar y clasificar
+                $this->info("Consultando a la IA para redactar y clasificar...");
+                $parserManager = app(\App\Services\AiParserManager::class);
+                $parsed = $parserManager->parse($subject, $body);
 
                 if (! $parsed || ! isset($parsed['type'])) {
-                    $this->error("Gemini no pudo clasificar o procesar este correo.");
-                    if ($parser->lastError) {
-                        $this->error("  -> Detalle del error: " . $parser->lastError);
+                    $this->error("La IA no pudo clasificar o procesar este correo.");
+                    if ($parserManager->lastError) {
+                        $this->error("  -> Detalle del error: " . $parserManager->lastError);
                     }
-                    Log::error("ProcessIncomingEmails: Fallo de Gemini.", [
-                        'message_id' => $messageId,
-                        'subject'    => $subject,
-                        'sender'     => $senderEmail,
-                        'error'      => $parser->lastError,
-                    ]);
-                    DB::table('processed_emails')->insert([
-                        'message_id' => $messageId,
-                        'subject' => $subject,
-                        'status' => 'failed',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                    if ($tempMp3Path && file_exists($tempMp3Path)) {
-                        @unlink($tempMp3Path);
+                    
+                    $isFallbackEnabled = $settings->ai_fallback_enabled ?? true;
+                    if ($isFallbackEnabled && !$isDarkVaderAgent) {
+                        $this->warn("[FALLBACK] Aplicando fallback determinista para el correo: {$subject}");
+                        $parsed = [
+                            'type' => 'post',
+                            'importance' => 3,
+                            'title' => TextNormalizer::normalizeTitle($subject) ?: $subject,
+                            'excerpt' => Str::limit(strip_tags($body), 160),
+                            'content' => strip_tags($body),
+                            'categories' => ['Noticias Rock'],
+                            'fallback_used' => true
+                        ];
+                        
+                        $this->sendAdminAlert(
+                            'ai_deterministic_fallback', 
+                            '⚠️ Fallback de IA activado', 
+                            "Todos los proveedores de IA fallaron al procesar el correo '{$subject}'. Se ha creado un borrador usando el fallback determinista. Error: " . $parserManager->lastError, 
+                            $settings
+                        );
+                    } else {
+                        Log::error("ProcessIncomingEmails: Fallo de la IA.", [
+                            'message_id' => $messageId,
+                            'subject'    => $subject,
+                            'sender'     => $senderEmail,
+                            'error'      => $parserManager->lastError,
+                        ]);
+                        DB::table('processed_emails')->insert([
+                            'message_id' => $messageId,
+                            'subject' => $subject,
+                            'status' => 'failed',
+                            'attempts' => 1,
+                            'last_error' => Str::limit($parserManager->lastError ?? '', 490),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        if ($tempMp3Path && file_exists($tempMp3Path)) {
+                            @unlink($tempMp3Path);
+                        }
+                        continue;
                     }
-                    continue;
                 }
 
-                $geminiType = $parsed['type'];
-                $type = $isNoticiaRock ? 'post' : $geminiType;
+                $aiType = $parsed['type'];
+                $type = $isNoticiaRock ? 'post' : $aiType;
                 $title = $parsed['title'] ?? 'Sin título';
                 $importance = isset($parsed['importance']) ? (int) $parsed['importance'] : 1;
+                $isFallback = $parsed['fallback_used'] ?? false;
 
-                Log::info("ProcessIncomingEmails: Gemini clasificó el correo.", [
+                Log::info("ProcessIncomingEmails: IA clasificó el correo.", [
                     'subject'       => $subject,
-                    'gemini_type'   => $geminiType,
+                    'ai_type'       => $aiType,
                     'effective_type' => $type,
                     'title'         => $title,
                     'importance'    => $importance,
                     'is_noticia_rock' => $isNoticiaRock,
                 ]);
-                $this->info("[GEMINI] Tipo Gemini: {$geminiType} | Tipo efectivo: {$type} | Importancia: {$importance} | Título: {$title}");
+                $this->info("[IA] Tipo devuelto: {$aiType} | Tipo efectivo: {$type} | Importancia: {$importance} | Título: {$title}");
 
                 // 1. Filtrar si es descarte/spam
                 if ($type === 'discard') {
@@ -572,7 +602,7 @@ class ProcessIncomingEmails extends Command
                         Log::info("ProcessIncomingEmails: Post duplicado ignorado.", ['title' => $title, 'subject' => $subject, 'similar_to_post_id' => $similarPostId]);
                     } else {
                         // Crear Post
-                        $status = $settings->email_auto_publish ? 'published' : 'draft';
+                        $status = ($settings->email_auto_publish && !$isFallback) ? 'published' : 'draft';
 
                         // Asignar categoría correcta
                         if ($isEfemerides) {
