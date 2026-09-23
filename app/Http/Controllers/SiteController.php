@@ -1189,7 +1189,7 @@ class SiteController extends Controller
             "site.gallery.images.v{$version}.limit{$limit}",
             now()->addMinutes($minutes),
             function () use ($limit) {
-                return \App\Models\GalleryImage::query()
+                return GalleryImage::query()
                     ->ordered()
                     ->limit($limit)
                     ->get()
