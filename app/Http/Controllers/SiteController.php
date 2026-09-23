@@ -1189,17 +1189,14 @@ class SiteController extends Controller
             "site.gallery.images.v{$version}.limit{$limit}",
             now()->addMinutes($minutes),
             function () use ($limit) {
-                if (! Schema::hasTable('talent_media') || ! Schema::hasTable('talents')) {
-                    return [];
-                }
-
-                return \App\Models\TalentMedia::query()
-                    ->where('type', 'photo')
-                    ->whereHas('talent', fn ($q) => $q->where('subscription_status', 'active'))
-                    ->with('talent')
-                    ->latest()
+                return \App\Models\GalleryImage::query()
+                    ->ordered()
                     ->limit($limit)
                     ->get()
+                    ->map(fn ($img) => [
+                        'image_url' => $img->image_url,
+                        'caption' => $img->caption,
+                    ])
                     ->toArray();
             }
         );

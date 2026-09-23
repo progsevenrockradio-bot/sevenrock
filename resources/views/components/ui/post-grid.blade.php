@@ -14,8 +14,12 @@
         @endphp
         <article class="group relative min-h-[455px] overflow-hidden bg-[#111722] text-center">
             @if ($image)
-                <div class="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.03]" style="background-image: url('{{ $imageUrl }}');"></div>
-                <div class="absolute inset-0 bg-[rgba(21,21,21,.48)] transition duration-300 group-hover:bg-[rgba(21,21,21,.34)]"></div>
+                <!-- Fondo difuminado -->
+                <div class="absolute inset-0 bg-cover bg-center opacity-40 blur-md transition duration-500 group-hover:scale-[1.05]" style="background-image: url('{{ $imageUrl }}');"></div>
+                <!-- Imagen contenida -->
+                <div class="absolute inset-0 bg-contain bg-center bg-no-repeat transition duration-500 group-hover:scale-[1.03]" style="background-image: url('{{ $imageUrl }}');"></div>
+                <!-- Capa oscurecedora para texto -->
+                <div class="absolute inset-0 bg-[rgba(21,21,21,.65)] transition duration-300 group-hover:bg-[rgba(21,21,21,.45)]"></div>
             @else
                 <div class="absolute inset-0 bg-[rgba(7,16,33,.45)]"></div>
             @endif
