@@ -56,6 +56,7 @@ class Post extends Model
         'external_link_label',
         'source_name',
         'source_url',
+        'image_source',
         'meta_title',
         'meta_description',
         'published_at',

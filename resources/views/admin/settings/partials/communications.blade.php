@@ -245,6 +245,14 @@
                 @error('email_whitelist_senders')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
             </div>
 
+            <!-- RSS Feeds Adicionales para Medios -->
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Feeds RSS Adicionales (Medios)</label>
+                <textarea name="press_feeds_extra" rows="2" class="lucille-product-field w-full text-xs" placeholder="dominio.com=https://dominio.com/feed&#10;otro.net=https://otro.net/rss">{{ old('press_feeds_extra', $settings->press_feeds_extra) }}</textarea>
+                <p class="mt-2 text-[10px] text-[#9a9a9a]">Añade feeds RSS adicionales para buscar la imagen del artículo. Formato: <code>dominio.com=url_feed</code> por línea.</p>
+                @error('press_feeds_extra')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
             <!-- Límite diario de Posts -->
             <div>
                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Límite Diario de Noticias (Posts)</label>

@@ -58,6 +58,11 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
     ],
 
+    'press_feeds' => [
+        'blabbermouth.net' => 'https://blabbermouth.net/feed',
+        'mariskalrock.com' => 'https://mariskalrock.com/feed/',
+    ],
+
     'archive_org' => [
         'access_key' => env('ARCHIVE_ORG_ACCESS_KEY'),
         'secret_key' => env('ARCHIVE_ORG_SECRET_KEY'),

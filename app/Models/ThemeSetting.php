@@ -91,6 +91,7 @@ class ThemeSetting extends Model
         'email_daily_posts_limit',
         'email_daily_releases_limit',
         'post_duplicate_similarity_threshold',
+        'press_feeds_extra',
     ];
 
     public static function defaults(): array
@@ -104,6 +105,7 @@ class ThemeSetting extends Model
             'email_daily_releases_limit' => 3,
             'post_duplicate_similarity_threshold' => 0.82,
             'email_whitelist_senders' => null,
+            'press_feeds_extra' => null,
             'gemini_api_key' => null,
             'archive_access_key' => null,
             'archive_secret_key' => null,
