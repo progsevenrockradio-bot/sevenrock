@@ -108,7 +108,7 @@
                     <div class="relative w-full h-[65vh] md:h-[75vh]" @mouseleave="changeBg('{{ $defaultBg }}')">
                         @foreach (($auto['programs'] ?? []) as $pi => $prog)
                             @php $st = $prog['styles']; @endphp
-                            <div class="absolute group transition-transform duration-500 ease-out hover:scale-110 hover:!z-[999]"
+                            <div class="absolute group transition-transform duration-500 ease-out hover:scale-110 hover:!z-[999] pointer-events-none"
                                  style="
                                     width: {{ $st['size'] }}px;
                                     top: calc(50% + {{ $st['offset_y'] }}%);
@@ -125,8 +125,13 @@
                                 @endif
 
                                 {{-- Cover Image --}}
-                                <div class="relative w-full aspect-square bg-[#111] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] border-4 transition-all duration-300 {{ $prog['is_main'] ? 'border-[#c32720] shadow-[#c32720]/20' : 'border-white/10' }}"
+                                <div class="relative w-full aspect-square bg-[#111] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] border-4 transition-all duration-300 {{ $prog['is_main'] ? 'border-[#c32720] shadow-[#c32720]/20' : 'border-white/10' }} pointer-events-auto"
                                      style="clip-path: {{ $st['clip'] }};">
+                                     
+                                    {{-- Textura de desgaste en las orillas (ruido y sombra interior) --}}
+                                    <div class="absolute inset-0 pointer-events-none shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] mix-blend-overlay z-10 transition-opacity duration-300 group-hover:opacity-0"
+                                         style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%221.5%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22 opacity=%220.3%22/%3E%3C/svg%3E');"></div>
+
                                     <img src="{{ $prog['image'] }}" alt="{{ $prog['title'] }}" loading="{{ $pi === 0 ? 'eager' : 'lazy' }}"
                                          class="w-full h-full object-cover transition-all duration-300 group-hover:opacity-100 group-hover:filter-none group-hover:mix-blend-normal group-hover:brightness-110"
                                          style="
@@ -141,7 +146,7 @@
                                 </div>
                                 
                                 {{-- Título y texto debajo --}}
-                                <div class="mt-3 text-center opacity-90 transition-opacity duration-300 group-hover:opacity-100 bg-black/60 backdrop-blur-md p-2 rounded">
+                                <div class="mt-3 text-center opacity-90 transition-opacity duration-300 group-hover:opacity-100 bg-black/60 backdrop-blur-md p-2 rounded pointer-events-auto">
                                     <p class="font-display text-white text-sm md:text-base uppercase tracking-wider drop-shadow-md leading-tight">{{ $prog['title'] }}</p>
                                     @if ($prog['host'])
                                         <p class="font-sans text-gray-300 text-xs mt-1 uppercase truncate">{{ $prog['host'] }}</p>

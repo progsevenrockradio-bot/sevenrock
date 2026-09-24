@@ -265,13 +265,13 @@ class SiteController extends Controller
             'offset_x'   => $offsetX,
             'offset_y'   => $offsetY,
             'z_index'    => mt_rand(1, 10),
-            'opacity'    => mt_rand(85, 100) / 100, // Más opaco (menos oscuro)
-            'sepia'      => mt_rand(10, 30) / 100,  // Menos sepia
-            'grayscale'  => mt_rand(0, 15) / 100,   // Menos gris
-            'contrast'   => mt_rand(100, 120) / 100, // Contraste equilibrado
-            'brightness' => mt_rand(80, 105) / 100,
-            'hue'        => mt_rand(-15, 15),
-            'blend'      => ['normal', 'normal', 'overlay'][mt_rand(0, 2)], // Eliminados multiply y soft-light
+            'opacity'    => 1, // Opacidad completa para no oscurecer
+            'sepia'      => mt_rand(0, 15) / 100,  // Sepia muy sutil
+            'grayscale'  => mt_rand(0, 10) / 100,   // Casi nada de gris
+            'contrast'   => mt_rand(100, 110) / 100, // Contraste normal
+            'brightness' => mt_rand(95, 105) / 100, // Brillo casi intacto
+            'hue'        => mt_rand(-10, 10),
+            'blend'      => 'normal', // Siempre normal para que no se oscurezca contra el fondo
             'clip'       => ['none', 'polygon(0 0,100% 0,100% 95%,0 100%)', 'polygon(2% 0,100% 0,98% 100%,0 100%)', 'polygon(0 2%,100% 0,100% 98%,0 100%)'][mt_rand(0, 3)],
             'tape'       => (bool) mt_rand(0, 1),
         ];
