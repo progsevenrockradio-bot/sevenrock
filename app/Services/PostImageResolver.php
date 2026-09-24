@@ -84,7 +84,15 @@ class PostImageResolver
             }
         }
 
-        // d) Artist Catalog
+        // d) Imagenes incrustadas en el cuerpo HTML (boletines de discograficas sin adjuntos)
+        $bodyImageUrl = $this->resolveFromHtmlBody($body, $isDarkVader);
+        if ($bodyImageUrl) {
+            $result['url'] = $bodyImageUrl;
+            $result['source'] = 'html_body';
+            return $result;
+        }
+
+        // e) Artist Catalog
         if ($artistName) {
             $artistUrl = $this->resolveFromArtistCatalog($artistName);
             if ($artistUrl) {
@@ -95,6 +103,113 @@ class PostImageResolver
         }
 
         return $result;
+    }
+
+/**
+     * Busca imagenes incrustadas en el cuerpo del correo. Cubre los boletines de discograficas
+     * que no adjuntan nada y llevan la foto detras de un redirector (haulix, brevo, sendgrid...).
+     */
+    private function resolveFromHtmlBody(string $body, bool $isDarkVader): ?string
+    {
+        if (! preg_match_all('/<img[^>]+src=["\']([^"\']+)["\']/i', $body, $matches)) {
+            return null;
+        }
+
+        $minSize = $isDarkVader ? 10240 : 40960;
+        $skipHosts = ['googleusercontent', 'googleapis', 'paypal.com', 'canva.com', 'mailchimp',
+                      'list-manage', 'ct.sendgrid.net', 'sp1-brevo.net'];
+        $candidates = [];
+
+        foreach (array_unique($matches[1]) as $url) {
+            $url = html_entity_decode(trim($url), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if (! preg_match('#^https?://#i', $url)) {
+                continue;
+            }
+            $skip = false;
+            foreach ($skipHosts as $host) {
+                if (str_contains($url, $host)) { $skip = true; break; }
+            }
+            if ($skip) {
+                continue;
+            }
+
+            try {
+                $response = Http::withHeaders(['User-Agent' => 'SevenRockBot/1.0 (+https://sevenrockradio.com/bot)'])
+                    ->timeout(30)
+                    ->withOptions(['allow_redirects' => ['max' => 5]])
+                    ->get($url);
+            } catch (\Throwable $e) {
+                Log::debug("PostImageResolver HTML: fallo al descargar {$url}: " . $e->getMessage());
+                continue;
+            }
+
+            if (! $response->successful()) {
+                continue;
+            }
+
+            $content = $response->body();
+            if (strlen($content) < $minSize) {
+                continue;
+            }
+
+            $info = @getimagesizefromstring($content);
+            if ($info === false) {
+                continue;
+            }
+
+            [$width, $height] = $info;
+            if ($width < 300 || $height < 300) {
+                continue;
+            }
+
+            $realExt = match ($info['mime']) {
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                'image/gif' => 'gif',
+                default => null,
+            };
+            if ($realExt === null) {
+                continue;
+            }
+
+            $ratio = $width / $height;
+
+            $candidates[] = [
+                'content' => $content,
+                'ext' => $realExt,
+                'width' => $width,
+                'height' => $height,
+                'area' => $width * $height,
+                'is_square' => ($ratio >= 0.9 && $ratio <= 1.1),
+            ];
+        }
+
+        if (empty($candidates)) {
+            return null;
+        }
+
+        usort($candidates, function ($a, $b) {
+            if ($a['is_square'] !== $b['is_square']) {
+                return $a['is_square'] ? -1 : 1;
+            }
+            return $b['area'] <=> $a['area'];
+        });
+
+        $best = $candidates[0];
+
+        try {
+            $uploaded = app(\App\Services\FileUploadService::class)->uploadRaw(
+                $best['content'],
+                'catalog/releases/covers/' . Str::uuid()->toString() . '.' . $best['ext']
+            );
+            $uploadedUrl = (string) ($uploaded['url'] ?? '');
+            return $uploadedUrl === '' ? null : \App\Support\PublicMediaUrl::normalizePublicUrl($uploadedUrl);
+        } catch (\Throwable $e) {
+            Log::error('PostImageResolver: fallo al subir la imagen del cuerpo HTML: ' . $e->getMessage());
+        }
+
+        return null;
     }
 
     private function resolveFromAttachment(Message $message, bool $isDarkVader): ?string
@@ -190,7 +305,9 @@ class PostImageResolver
                 $bestCandidate['content'],
                 'catalog/releases/covers/' . Str::uuid()->toString() . '.' . $bestCandidate['ext']
             );
-            return rtrim(config('app.url'), '/') . '/' . ltrim($uploaded['url'], '/');
+            // La URL que devuelve el almacenamiento ya es absoluta: NO anteponer el dominio.
+            $uploadedUrl = (string) ($uploaded['url'] ?? '');
+            return $uploadedUrl === '' ? null : \App\Support\PublicMediaUrl::normalizePublicUrl($uploadedUrl);
         } catch (\Throwable $e) {
             Log::error("PostImageResolver: Fallo al subir portada adjunta: " . $e->getMessage());
         }
