@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 
 class AdminCleanupCommand extends Command
 {
-    protected $signature = 'admin:cleanup {--list-users : Solo listar los usuarios} {--clean-bands : Borrar bandas de prueba y archivos}';
+    protected $signature = 'admin:cleanup {--list-users : Solo listar los usuarios} {--clean-bands : Borrar bandas de prueba y archivos} {--clean-users : Borrar todos los usuarios excepto los especificados}';
     protected $description = 'Lista usuarios o borra bandas de prueba y sus archivos exceptuando a Aetherfrost.';
 
     public function handle()
@@ -24,7 +24,12 @@ class AdminCleanupCommand extends Command
             return 0;
         }
 
-        $this->info("Por favor, usa --list-users o --clean-bands.");
+        if ($this->option('clean-users')) {
+            $this->cleanUsers();
+            return 0;
+        }
+
+        $this->info("Por favor, usa --list-users, --clean-bands o --clean-users.");
         return 0;
     }
 
@@ -74,6 +79,30 @@ class AdminCleanupCommand extends Command
         }
 
         $this->info("Limpieza terminada. Bandas borradas: {$deletedCount}.");
+    }
+
+    private function cleanUsers()
+    {
+        $this->info("Iniciando borrado de usuarios...");
+
+        $keepEmails = [
+            'prog.sevenrockradio@gmail.com',
+            'press.sevenrockradio@gmail.com',
+            'aetherfrost002@gmail.com',
+        ];
+
+        $usersToDelete = User::whereNotIn('email', $keepEmails)->get();
+        $deletedCount = 0;
+
+        foreach ($usersToDelete as $user) {
+            $this->line("Borrando usuario: " . $user->email);
+            // También podemos borrar el talento asociado si existe y no queremos que quede huérfano, 
+            // pero como ya corriste clean-bands, solo borramos el usuario.
+            $user->delete();
+            $deletedCount++;
+        }
+
+        $this->info("Limpieza terminada. Usuarios borrados: {$deletedCount}.");
     }
 }
 
