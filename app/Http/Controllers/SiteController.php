@@ -33,16 +33,74 @@ class SiteController extends Controller
 {
     public function home(ArchiveOrgService $archiveOrgService): View
     {
-        $theme = ThemeSetting::current();
-        $latestPodcasts = $this->safeValue(fn () => $archiveOrgService->homePodcastPayload(20), []);
+        $theme          = ThemeSetting::current();
+        $latestPodcasts = $this->resolveHomePodcasts($archiveOrgService, $theme);
+        $galleryImages  = $this->cachedGalleryImages(7, 15);
+        $latestAlbum    = $this->cachedLatestAlbum(15);
 
-        if (! is_array($latestPodcasts) || empty($latestPodcasts['episodes'] ?? [])) {
-            $latestPodcasts = $theme->latestPodcasts();
+        [$events, $newReleases, $agencies] = $this->homeCollections();
+        [$noticiasRock, $efemerides]       = $this->homePosts();
+
+        [$heroAutoSlides, $nextProgramData] = $this->buildHeroAutoSlides(
+            $theme, $noticiasRock, $newReleases
+        );
+
+        return view('pages.home', [
+            'events'         => $events,
+            'album'          => $latestAlbum,
+            'featuredVideos' => $this->safeValue(
+                fn () => Video::query()->where('is_featured', true)->latest()->take(3)->get(),
+                collect()
+            ),
+            'galleryImages'   => $galleryImages,
+            'posts'           => $this->latestPosts(),
+            'noticiasRock'    => $noticiasRock,
+            'efemerides'      => $efemerides,
+            'newReleases'     => $newReleases,
+            'nextProgram'     => $nextProgramData ?? $this->safeValue(
+                fn () => app(ProgramScheduleService::class)->resolve(5),
+                app(ProgramScheduleService::class)->fallback()
+            ),
+            'headlineTicker'  => $this->headlineTicker(),
+            'featuredStories' => $this->safeValue(
+                fn () => $theme->featuredStories(),
+                ThemeSetting::defaults()['featured_stories'] ?? []
+            ),
+            'latestPodcasts'  => $latestPodcasts,
+            'agencies'        => $agencies,
+            'heroAutoSlides'  => $heroAutoSlides,
+        ]);
+    }
+
+    /**
+     * Resolve latest podcasts for the home page.
+     *
+     * @return array<string, mixed>
+     */
+    private function resolveHomePodcasts(ArchiveOrgService $archiveOrgService, ThemeSetting $theme): array
+    {
+        $payload = $this->safeValue(fn () => $archiveOrgService->homePodcastPayload(20), []);
+
+        if (! is_array($payload) || empty($payload['episodes'] ?? [])) {
+            return $theme->latestPodcasts();
         }
 
-        $events = $this->cachedEvents('home-upcoming', fn () => Event::query()->upcoming()->orderBy('starts_at')->limit(3)->get(), 10);
-        $galleryImages = $this->cachedGalleryImages(7, 15);
-        $latestAlbum = $this->cachedLatestAlbum(15);
+        return $payload;
+    }
+
+    /**
+     * Fetch home page collections: events, new releases, agencies.
+     *
+     * @return array{0: \Illuminate\Database\Eloquent\Collection, 1: \Illuminate\Database\Eloquent\Collection, 2: \Illuminate\Database\Eloquent\Collection}
+     */
+    private function homeCollections(): array
+    {
+        $events = $this->cachedEvents(
+            'home-upcoming',
+            fn () => Event::query()->upcoming()->orderBy('starts_at')->limit(3)->get(),
+            10
+        );
+
         $newReleases = $this->safeValue(
             fn () => NewRelease::query()
                 ->where('is_active', true)
@@ -63,6 +121,16 @@ class SiteController extends Controller
             collect()
         );
 
+        return [$events, $newReleases, $agencies];
+    }
+
+    /**
+     * Fetch news posts and rock ephemeris for the home page.
+     *
+     * @return array{0: \Illuminate\Database\Eloquent\Collection, 1: \Illuminate\Database\Eloquent\Collection}
+     */
+    private function homePosts(): array
+    {
         $noticiasRock = $this->safeValue(
             fn () => Post::query()
                 ->published()
@@ -83,105 +151,121 @@ class SiteController extends Controller
             collect()
         );
 
-        // ---------- Dynamic Hero Slides ----------
-        $heroAutoSlides = [];
-        if ($theme->hero_auto_slides) {
-            // Slide: Noticias del Día (scattered collage de 3 fotos)
-            $newsForSlide = $noticiasRock->take(3)->filter(fn ($p) => $p->featured_image_url)->values();
-            if ($newsForSlide->count() >= 2) {
-                $heroAutoSlides[] = [
-                    'type'   => 'scattered-collage',
-                    'label'  => 'Noticias del Día',
-                    'items'  => $newsForSlide->map(fn ($p) => [
-                        'image' => $p->featured_image_url,
-                        'title' => $p->title,
-                    ])->toArray(),
-                ];
-            }
+        return [$noticiasRock, $efemerides];
+    }
 
-            // Slide: Nuevos Lanzamientos (protagonista + miniaturas)
-            $releasesForSlide = $newReleases->take(3)->filter(fn ($r) => $r->cover_image_url)->values();
-            if ($releasesForSlide->count() >= 2) {
-                $heroAutoSlides[] = [
-                    'type'   => 'scattered-featured',
-                    'label'  => 'Nuevos Lanzamientos',
-                    'items'  => $releasesForSlide->map(fn ($r) => [
-                        'image'  => $r->cover_image_url,
-                        'title'  => $r->title,
-                        'artist' => $r->artist_name,
-                    ])->toArray(),
-                ];
-            }
-
-            // Slide: Programas del Día (grilla multi-programa)
-            $nextProgramData = $this->safeValue(
-                fn () => app(ProgramScheduleService::class)->resolve(5),
-                app(ProgramScheduleService::class)->fallback()
-            );
-            $programImage = $nextProgramData['image'] ?? null;
-            if ($programImage && !str_contains($programImage, 'lucille/')) {
-                // Construir la lista completa: programa actual + próximos
-                $allProgramCards = [];
-
-                // 1. Programa actual/on-deck
-                $mainImg = str_starts_with($programImage, 'http') ? $programImage : asset($programImage);
-                $allProgramCards[] = [
-                    'image'    => $mainImg,
-                    'title'    => $nextProgramData['title'] ?? 'PROGRAMACIÓN',
-                    'host'     => $nextProgramData['host'] ?? '',
-                    'schedule' => $nextProgramData['schedule'] ?? '',
-                    'badge'    => $nextProgramData['badge'] ?? 'On Deck',
-                    'is_main'  => true,
-                ];
-
-                // 2. Programas upcoming del mismo día
-                foreach ($nextProgramData['upcoming'] ?? [] as $up) {
-                    $upImg = $up['image'] ?? null;
-                    if (!$upImg || str_contains($upImg, 'lucille/')) continue;
-                    $upImg = str_starts_with($upImg, 'http') ? $upImg : asset($upImg);
-                    $allProgramCards[] = [
-                        'image'    => $upImg,
-                        'title'    => $up['title'] ?? '',
-                        'host'     => $up['host'] ?? '',
-                        'schedule' => $up['time'] ?? $up['schedule'] ?? '',
-                        'badge'    => 'Próximo',
-                        'is_main'  => false,
-                    ];
-                }
-
-                if (count($allProgramCards) >= 1) {
-                    $heroAutoSlides[] = [
-                        'type'     => 'scattered-program',
-                        'label'    => 'Programación de Hoy',
-                        'programs' => $allProgramCards,
-                    ];
-                }
-            }
+    /**
+     * Build the dynamic hero auto-slides array.
+     *
+     * @param  \Illuminate\Database\Eloquent\Collection  $noticiasRock
+     * @param  \Illuminate\Database\Eloquent\Collection  $newReleases
+     * @return array{0: array<int, array<string, mixed>>, 1: array<string, mixed>|null}
+     */
+    private function buildHeroAutoSlides(
+        ThemeSetting $theme,
+        \Illuminate\Support\Collection $noticiasRock,
+        \Illuminate\Support\Collection $newReleases
+    ): array {
+        if (! $theme->hero_auto_slides) {
+            return [[], null];
         }
 
-        return view('pages.home', [
-            'events' => $events,
-            'album' => $latestAlbum,
-            'featuredVideos' => $this->safeValue(fn () => Video::query()->where('is_featured', true)->latest()->take(3)->get(), collect()),
-            'galleryImages' => $galleryImages,
-            'posts' => $this->latestPosts(),
-            'noticiasRock' => $noticiasRock,
-            'efemerides' => $efemerides,
-            'newReleases' => $newReleases,
-            'nextProgram' => $nextProgramData ?? $this->safeValue(
-                fn () => app(ProgramScheduleService::class)->resolve(5),
-                app(ProgramScheduleService::class)->fallback()
-            ),
-            'headlineTicker' => $this->headlineTicker(),
-            'featuredStories' => $this->safeValue(
-                fn () => $theme->featuredStories(),
-                ThemeSetting::defaults()['featured_stories'] ?? []
-            ),
-            'latestPodcasts' => $latestPodcasts,
-            'agencies' => $agencies,
-            'heroAutoSlides' => $heroAutoSlides,
-        ]);
+        $slides = [];
+
+        // Slide 1 — Noticias del Día (scattered collage)
+        $newsItems = $noticiasRock->take(3)->filter(fn ($p) => $p->featured_image_url)->values();
+        if ($newsItems->count() >= 2) {
+            $slides[] = [
+                'type'  => 'scattered-collage',
+                'label' => 'Noticias del Día',
+                'items' => $newsItems->map(fn ($p) => [
+                    'image' => $p->featured_image_url,
+                    'title' => $p->title,
+                ])->toArray(),
+            ];
+        }
+
+        // Slide 2 — Nuevos Lanzamientos (featured + thumbs)
+        $releaseItems = $newReleases->take(3)->filter(fn ($r) => $r->cover_image_url)->values();
+        if ($releaseItems->count() >= 2) {
+            $slides[] = [
+                'type'  => 'scattered-featured',
+                'label' => 'Nuevos Lanzamientos',
+                'items' => $releaseItems->map(fn ($r) => [
+                    'image'  => $r->cover_image_url,
+                    'title'  => $r->title,
+                    'artist' => $r->artist_name,
+                ])->toArray(),
+            ];
+        }
+
+        // Slide 3 — Programas del Día (multi-card grid)
+        $nextProgramData = $this->safeValue(
+            fn () => app(ProgramScheduleService::class)->resolve(5),
+            app(ProgramScheduleService::class)->fallback()
+        );
+
+        $programSlide = $this->buildProgramSlide($nextProgramData);
+        if ($programSlide !== null) {
+            $slides[] = $programSlide;
+        }
+
+        return [$slides, $nextProgramData];
     }
+
+    /**
+     * Build the program grid slide card list from the resolved program data.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>|null
+     */
+    private function buildProgramSlide(array $data): ?array
+    {
+        $programImage = $data['image'] ?? null;
+
+        if (! $programImage || str_contains($programImage, 'lucille/')) {
+            return null;
+        }
+
+        $mainImg = str_starts_with($programImage, 'http') ? $programImage : asset($programImage);
+
+        $cards = [[
+            'image'    => $mainImg,
+            'title'    => $data['title'] ?? 'PROGRAMACIÓN',
+            'host'     => $data['host'] ?? '',
+            'schedule' => $data['schedule'] ?? '',
+            'badge'    => $data['badge'] ?? 'On Deck',
+            'is_main'  => true,
+        ]];
+
+        foreach ($data['upcoming'] ?? [] as $up) {
+            $upImg = $up['image'] ?? null;
+            if (! $upImg || str_contains($upImg, 'lucille/')) {
+                continue;
+            }
+            $upImg   = str_starts_with($upImg, 'http') ? $upImg : asset($upImg);
+            $cards[] = [
+                'image'    => $upImg,
+                'title'    => $up['title'] ?? '',
+                'host'     => $up['host'] ?? '',
+                'schedule' => $up['time'] ?? $up['schedule'] ?? '',
+                'badge'    => 'Próximo',
+                'is_main'  => false,
+            ];
+        }
+
+        if (count($cards) < 1) {
+            return null;
+        }
+
+        return [
+            'type'     => 'scattered-program',
+            'label'    => 'Programación de Hoy',
+            'programs' => $cards,
+        ];
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     public function events(): View
     {
