@@ -46,6 +46,11 @@
                             onmouseenter="switchVideoBackground({{ $index }}, {{ $videos->count() }})"
                         >
                             <div class="lucille-video-thumb relative aspect-video bg-cover bg-center border border-[#2b2b2b]/40" style="background-image: url('{{ $videoImage }}');">
+                                @if ($index === 0)
+                                    <div class="absolute top-3 right-3 z-20">
+                                        <span class="rounded bg-[#c32720] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg">Nuevo</span>
+                                    </div>
+                                @endif
                                 <div class="absolute inset-0 z-10 flex items-center justify-center">
                                     <span class="lucille-video-play flex items-center justify-center pl-1 {{ $videos->count() === 1 ? 'h-[84px] w-[84px] text-3xl' : 'h-[64px] w-[64px] text-2xl' }}">
                                         ▶
