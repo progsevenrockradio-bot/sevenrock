@@ -108,7 +108,7 @@
                     <div class="relative w-full h-[65vh] md:h-[75vh]" @mouseleave="changeBg('{{ $defaultBg }}')">
                         @foreach (($auto['programs'] ?? []) as $pi => $prog)
                             @php $st = $prog['styles']; @endphp
-                            <div class="absolute group transition-transform duration-500 ease-out hover:scale-110 hover:!z-[99]"
+                            <div class="absolute group transition-transform duration-500 ease-out hover:scale-110 hover:!z-[999]"
                                  style="
                                     width: {{ $st['size'] }}px;
                                     top: calc(50% + {{ $st['offset_y'] }}%);
@@ -128,7 +128,7 @@
                                 <div class="relative w-full aspect-square bg-[#111] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] border-4 transition-all duration-300 {{ $prog['is_main'] ? 'border-[#c32720] shadow-[#c32720]/20' : 'border-white/10' }}"
                                      style="clip-path: {{ $st['clip'] }};">
                                     <img src="{{ $prog['image'] }}" alt="{{ $prog['title'] }}" loading="{{ $pi === 0 ? 'eager' : 'lazy' }}"
-                                         class="w-full h-full object-cover transition-all duration-300 group-hover:opacity-100 group-hover:filter-none group-hover:mix-blend-normal"
+                                         class="w-full h-full object-cover transition-all duration-300 group-hover:opacity-100 group-hover:filter-none group-hover:mix-blend-normal group-hover:brightness-110"
                                          style="
                                             opacity: {{ $st['opacity'] }};
                                             filter: sepia({{ $st['sepia'] }}) grayscale({{ $st['grayscale'] }}) contrast({{ $st['contrast'] }}) brightness({{ $st['brightness'] }}) hue-rotate({{ $st['hue'] }}deg);
@@ -160,8 +160,8 @@
     @endforeach
 
     {{-- ═══════════ Overlays ═══════════ --}}
-    <div class="absolute inset-0 bg-[rgba(0,0,0,.24)]"></div>
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_72%_42%,rgba(195,39,32,.12),transparent_30%),linear-gradient(90deg,rgba(0,0,0,.26),transparent_54%)]"></div>
+    <div class="absolute inset-0 pointer-events-none bg-[rgba(0,0,0,.24)]"></div>
+    <div class="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_72%_42%,rgba(195,39,32,.12),transparent_30%),linear-gradient(90deg,rgba(0,0,0,.26),transparent_54%)]"></div>
 
     @if(!empty($themeAppearance['hero_floating_text']))
         @php

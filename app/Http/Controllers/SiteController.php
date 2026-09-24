@@ -178,6 +178,7 @@ class SiteController extends Controller
         // Slide 1 — Noticias del Día (scattered grid)
         $newsItems = $noticiasRock->take(5)->filter(fn ($p) => $p->featured_image_url)->values();
         if ($newsItems->count() >= 2) {
+            $ptsNews = [];
             $slides[] = [
                 'type'     => 'scattered-grid',
                 'label'    => 'Noticias del Día',
@@ -188,7 +189,7 @@ class SiteController extends Controller
                     'schedule' => '',
                     'badge'    => 'Noticia',
                     'is_main'  => $idx === 0,
-                    'styles'   => $this->generateRandomStylesForCard(),
+                    'styles'   => $this->generateRandomStylesForCard($ptsNews),
                 ])->toArray(),
             ];
         }
@@ -196,6 +197,7 @@ class SiteController extends Controller
         // Slide 2 — Nuevos Lanzamientos (scattered grid)
         $releaseItems = $newReleases->take(5)->filter(fn ($r) => $r->cover_image_url)->values();
         if ($releaseItems->count() >= 2) {
+            $ptsRel = [];
             $slides[] = [
                 'type'     => 'scattered-grid',
                 'label'    => 'Nuevos Lanzamientos',
@@ -206,7 +208,7 @@ class SiteController extends Controller
                     'schedule' => '',
                     'badge'    => 'Lanzamiento',
                     'is_main'  => $idx === 0,
-                    'styles'   => $this->generateRandomStylesForCard(),
+                    'styles'   => $this->generateRandomStylesForCard($ptsRel),
                 ])->toArray(),
             ];
         }
@@ -225,13 +227,36 @@ class SiteController extends Controller
         return [$slides, $nextProgramData];
     }
 
-    private function generateRandomStylesForCard(): array
+    private function generateRandomStylesForCard(array &$existingPoints): array
     {
+        $maxAttempts = 15;
+        $offsetX = 0;
+        $offsetY = 0;
+
+        for ($i = 0; $i < $maxAttempts; $i++) {
+            $offsetX = mt_rand(-60, 60);
+            $offsetY = mt_rand(-40, 70);
+            
+            $collision = false;
+            foreach ($existingPoints as $pt) {
+                // Minimum distance of 28% to prevent complete overlap
+                if (sqrt(pow($offsetX - $pt['x'], 2) + pow($offsetY - $pt['y'], 2)) < 28) {
+                    $collision = true;
+                    break;
+                }
+            }
+            if (!$collision) {
+                break;
+            }
+        }
+        
+        $existingPoints[] = ['x' => $offsetX, 'y' => $offsetY];
+
         return [
-            'size'       => mt_rand(160, 360),
+            'size'       => mt_rand(240, 480),
             'rotation'   => mt_rand(-20, -2),
-            'offset_x'   => mt_rand(-45, 45),
-            'offset_y'   => mt_rand(-30, 45),
+            'offset_x'   => $offsetX,
+            'offset_y'   => $offsetY,
             'z_index'    => mt_rand(1, 10),
             'opacity'    => mt_rand(75, 95) / 100,
             'sepia'      => mt_rand(10, 60) / 100,
@@ -261,6 +286,7 @@ class SiteController extends Controller
 
         $mainImg = str_starts_with($programImage, 'http') ? $programImage : asset($programImage);
 
+        $ptsProg = [];
         $cards = [[
             'image'    => $mainImg,
             'title'    => $data['title'] ?? 'PROGRAMACIÓN',
@@ -268,7 +294,7 @@ class SiteController extends Controller
             'schedule' => $data['schedule'] ?? '',
             'badge'    => $data['badge'] ?? 'On Deck',
             'is_main'  => true,
-            'styles'   => $this->generateRandomStylesForCard(),
+            'styles'   => $this->generateRandomStylesForCard($ptsProg),
         ]];
 
         foreach ($data['upcoming'] ?? [] as $up) {
@@ -284,7 +310,7 @@ class SiteController extends Controller
                 'schedule' => $up['time'] ?? $up['schedule'] ?? '',
                 'badge'    => 'Próximo',
                 'is_main'  => false,
-                'styles'   => $this->generateRandomStylesForCard(),
+                'styles'   => $this->generateRandomStylesForCard($ptsProg),
             ];
         }
 
