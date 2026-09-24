@@ -172,29 +172,36 @@ class SiteController extends Controller
 
         $slides = [];
 
-        // Slide 1 — Noticias del Día (scattered collage)
-        $newsItems = $noticiasRock->take(3)->filter(fn ($p) => $p->featured_image_url)->values();
+        // Slide 1 — Noticias del Día (scattered grid)
+        $newsItems = $noticiasRock->take(5)->filter(fn ($p) => $p->featured_image_url)->values();
         if ($newsItems->count() >= 2) {
             $slides[] = [
-                'type'  => 'scattered-collage',
-                'label' => 'Noticias del Día',
-                'items' => $newsItems->map(fn ($p) => [
-                    'image' => $p->featured_image_url,
-                    'title' => $p->title,
+                'type'     => 'scattered-grid',
+                'label'    => 'Noticias del Día',
+                'programs' => $newsItems->map(fn ($p, $idx) => [
+                    'image'    => $p->featured_image_url,
+                    'title'    => $p->title,
+                    'host'     => '',
+                    'schedule' => '',
+                    'badge'    => 'Noticia',
+                    'is_main'  => $idx === 0,
                 ])->toArray(),
             ];
         }
 
-        // Slide 2 — Nuevos Lanzamientos (featured + thumbs)
-        $releaseItems = $newReleases->take(3)->filter(fn ($r) => $r->cover_image_url)->values();
+        // Slide 2 — Nuevos Lanzamientos (scattered grid)
+        $releaseItems = $newReleases->take(5)->filter(fn ($r) => $r->cover_image_url)->values();
         if ($releaseItems->count() >= 2) {
             $slides[] = [
-                'type'  => 'scattered-featured',
-                'label' => 'Nuevos Lanzamientos',
-                'items' => $releaseItems->map(fn ($r) => [
-                    'image'  => $r->cover_image_url,
-                    'title'  => $r->title,
-                    'artist' => $r->artist_name,
+                'type'     => 'scattered-grid',
+                'label'    => 'Nuevos Lanzamientos',
+                'programs' => $releaseItems->map(fn ($r, $idx) => [
+                    'image'    => $r->cover_image_url,
+                    'title'    => $r->title,
+                    'host'     => $r->artist_name,
+                    'schedule' => '',
+                    'badge'    => 'Lanzamiento',
+                    'is_main'  => $idx === 0,
                 ])->toArray(),
             ];
         }
@@ -259,7 +266,7 @@ class SiteController extends Controller
         }
 
         return [
-            'type'     => 'scattered-program',
+            'type'     => 'scattered-grid',
             'label'    => 'Programación de Hoy',
             'programs' => $cards,
         ];
