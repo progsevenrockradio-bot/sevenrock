@@ -58,17 +58,19 @@ class AdminCleanupCommand extends Command
         foreach ($talents as $talent) {
             $this->line("Borrando banda: " . $talent->band_name);
             
-            if ($talent->logo) {
+            if (!empty($talent->logo)) {
                 Storage::disk('public')->delete($talent->logo);
             }
             
             foreach ($talent->media as $media) {
-                Storage::disk('public')->delete($media->path);
+                if (!empty($media->path)) {
+                    Storage::disk('public')->delete($media->path);
+                }
                 $media->delete();
             }
             
             foreach ($talent->albums as $album) {
-                if ($album->cover_image_path) {
+                if (!empty($album->cover_image_path)) {
                     Storage::disk('public')->delete($album->cover_image_path);
                 }
                 $album->delete();
