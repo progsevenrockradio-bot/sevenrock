@@ -88,7 +88,7 @@ class ProcessIncomingEmails extends Command
         $this->info("Conectando a {$imapHost}:{$imapPort} para el usuario {$imapUsername}...");
 
         try {
-            $cm = app(\Webklex\PHPIMAP\ClientManager::class);
+            $cm = app(ClientManager::class);
             $client = $cm->make([
                 'host'          => $imapHost,
                 'port'          => $imapPort,

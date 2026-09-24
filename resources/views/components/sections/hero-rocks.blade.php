@@ -108,28 +108,62 @@
             </div>
 
         @elseif (($auto['type'] ?? '') === 'scattered-program')
-            {{-- Programa del día: carátula con info --}}
+            {{-- Grilla de Programas del Día --}}
             <div
                 x-show="active === {{ $slideIndex }}"
                 {!! $transitionModifiers !!}
-                class="absolute inset-0 flex items-center justify-center scattered-slide-bg"
+                class="absolute inset-0 program-grid-slide"
             >
-                <div class="scattered-program-container">
-                    <div class="scattered-photo scattered-program-cover">
-                        <img src="{{ $auto['image'] ?? '' }}" alt="{{ $auto['title'] ?? '' }}" loading="lazy">
+                {{-- Fondo atmosférico: imagen del programa principal desenfocada --}}
+                @if (!empty($auto['programs'][0]['image']))
+                    <div class="program-grid-bg-blur"
+                         style="background-image: url('{{ $auto['programs'][0]['image'] }}');"></div>
+                @endif
+                {{-- Capa de ruido/grano --}}
+                <div class="program-grid-noise"></div>
+                {{-- Viñeta lateral izquierda (texto vertical) --}}
+                <div class="program-grid-vignette-left"></div>
+                {{-- Viñeta lateral derecha --}}
+                <div class="program-grid-vignette-right"></div>
+                {{-- Overlay oscuro general --}}
+                <div class="program-grid-overlay"></div>
+
+                {{-- Contenido: label + grilla de tarjetas --}}
+                <div class="program-grid-content">
+                    {{-- Encabezado --}}
+                    <div class="program-grid-header">
+                        <span class="program-grid-eyebrow">📻 {{ $auto['label'] ?? 'Hoy en 7RR' }}</span>
+                        <p class="program-grid-date">{{ \Carbon\Carbon::now()->locale('es')->isoFormat('dddd D [de] MMMM') }}</p>
                     </div>
-                    <div class="scattered-program-info">
-                        <span class="scattered-program-badge">{{ $auto['label'] ?? 'Programa' }}</span>
-                        <h2 class="scattered-program-title">{{ $auto['title'] ?? '' }}</h2>
-                        @if (!empty($auto['host']))
-                            <p class="scattered-program-host">{{ $auto['host'] }}</p>
-                        @endif
-                        @if (!empty($auto['schedule']))
-                            <p class="scattered-program-schedule">{{ $auto['schedule'] }}</p>
-                        @endif
+
+                    {{-- Tarjetas de programas --}}
+                    <div class="program-grid-cards">
+                        @foreach (($auto['programs'] ?? []) as $pi => $prog)
+                            <div class="pgc {{ $prog['is_main'] ? 'pgc--main' : 'pgc--next' }}">
+                                {{-- Portada --}}
+                                <div class="pgc-cover">
+                                    <img src="{{ $prog['image'] }}" alt="{{ $prog['title'] }}" loading="{{ $pi === 0 ? 'eager' : 'lazy' }}">
+                                    {{-- Badge --}}
+                                    <span class="pgc-badge pgc-badge--{{ $prog['is_main'] ? 'live' : 'next' }}">
+                                        {{ $prog['badge'] }}
+                                    </span>
+                                </div>
+                                {{-- Info --}}
+                                <div class="pgc-info">
+                                    <p class="pgc-title">{{ $prog['title'] }}</p>
+                                    @if ($prog['host'])
+                                        <p class="pgc-host">{{ $prog['host'] }}</p>
+                                    @endif
+                                    @if ($prog['schedule'])
+                                        <p class="pgc-schedule">{{ $prog['schedule'] }}</p>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             </div>
+
         @endif
     @endforeach
 

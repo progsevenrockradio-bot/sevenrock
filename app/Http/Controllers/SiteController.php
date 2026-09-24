@@ -113,21 +113,49 @@ class SiteController extends Controller
                 ];
             }
 
-            // Slide: Programa del Día
+            // Slide: Programas del Día (grilla multi-programa)
             $nextProgramData = $this->safeValue(
                 fn () => app(ProgramScheduleService::class)->resolve(5),
                 app(ProgramScheduleService::class)->fallback()
             );
             $programImage = $nextProgramData['image'] ?? null;
             if ($programImage && !str_contains($programImage, 'lucille/')) {
-                $heroAutoSlides[] = [
-                    'type'     => 'scattered-program',
-                    'label'    => $nextProgramData['badge'] ?? 'Programa',
-                    'image'    => str_starts_with($programImage, 'http') ? $programImage : asset($programImage),
+                // Construir la lista completa: programa actual + próximos
+                $allProgramCards = [];
+
+                // 1. Programa actual/on-deck
+                $mainImg = str_starts_with($programImage, 'http') ? $programImage : asset($programImage);
+                $allProgramCards[] = [
+                    'image'    => $mainImg,
                     'title'    => $nextProgramData['title'] ?? 'PROGRAMACIÓN',
                     'host'     => $nextProgramData['host'] ?? '',
                     'schedule' => $nextProgramData['schedule'] ?? '',
+                    'badge'    => $nextProgramData['badge'] ?? 'On Deck',
+                    'is_main'  => true,
                 ];
+
+                // 2. Programas upcoming del mismo día
+                foreach ($nextProgramData['upcoming'] ?? [] as $up) {
+                    $upImg = $up['image'] ?? null;
+                    if (!$upImg || str_contains($upImg, 'lucille/')) continue;
+                    $upImg = str_starts_with($upImg, 'http') ? $upImg : asset($upImg);
+                    $allProgramCards[] = [
+                        'image'    => $upImg,
+                        'title'    => $up['title'] ?? '',
+                        'host'     => $up['host'] ?? '',
+                        'schedule' => $up['time'] ?? $up['schedule'] ?? '',
+                        'badge'    => 'Próximo',
+                        'is_main'  => false,
+                    ];
+                }
+
+                if (count($allProgramCards) >= 1) {
+                    $heroAutoSlides[] = [
+                        'type'     => 'scattered-program',
+                        'label'    => 'Programación de Hoy',
+                        'programs' => $allProgramCards,
+                    ];
+                }
             }
         }
 
