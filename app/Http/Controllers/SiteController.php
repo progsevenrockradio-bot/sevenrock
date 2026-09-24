@@ -177,8 +177,8 @@ class SiteController extends Controller
 
         // Slide 1 — Noticias del Día (scattered grid)
         $newsItems = $noticiasRock->take(5)->filter(fn ($p) => $p->featured_image_url)->values();
-        if ($newsItems->count() >= 2) {
-            $ptsNews = [];
+        $newsTotal = $newsItems->count();
+        if ($newsTotal >= 2) {
             $slides[] = [
                 'type'     => 'scattered-grid',
                 'label'    => 'Noticias del Día',
@@ -189,15 +189,15 @@ class SiteController extends Controller
                     'schedule' => '',
                     'badge'    => 'Noticia',
                     'is_main'  => $idx === 0,
-                    'styles'   => $this->generateRandomStylesForCard($ptsNews),
+                    'styles'   => $this->generateRandomStylesForCard($idx, $newsTotal),
                 ])->toArray(),
             ];
         }
 
         // Slide 2 — Nuevos Lanzamientos (scattered grid)
         $releaseItems = $newReleases->take(5)->filter(fn ($r) => $r->cover_image_url)->values();
-        if ($releaseItems->count() >= 2) {
-            $ptsRel = [];
+        $releaseTotal = $releaseItems->count();
+        if ($releaseTotal >= 2) {
             $slides[] = [
                 'type'     => 'scattered-grid',
                 'label'    => 'Nuevos Lanzamientos',
@@ -208,7 +208,7 @@ class SiteController extends Controller
                     'schedule' => '',
                     'badge'    => 'Lanzamiento',
                     'is_main'  => $idx === 0,
-                    'styles'   => $this->generateRandomStylesForCard($ptsRel),
+                    'styles'   => $this->generateRandomStylesForCard($idx, $releaseTotal),
                 ])->toArray(),
             ];
         }
@@ -227,44 +227,51 @@ class SiteController extends Controller
         return [$slides, $nextProgramData];
     }
 
-    private function generateRandomStylesForCard(array &$existingPoints): array
+    private function generateRandomStylesForCard(int $idx, int $total): array
     {
-        $maxAttempts = 15;
-        $offsetX = 0;
-        $offsetY = 0;
-
-        for ($i = 0; $i < $maxAttempts; $i++) {
-            $offsetX = mt_rand(-60, 60);
-            $offsetY = mt_rand(-40, 70);
-            
-            $collision = false;
-            foreach ($existingPoints as $pt) {
-                // Minimum distance of 28% to prevent complete overlap
-                if (sqrt(pow($offsetX - $pt['x'], 2) + pow($offsetY - $pt['y'], 2)) < 28) {
-                    $collision = true;
-                    break;
-                }
-            }
-            if (!$collision) {
-                break;
-            }
-        }
+        // Distribución polar balanceada para que colonicen toda la pantalla.
+        // Dividimos 360 grados entre el total de items.
+        $baseAngle = ($total > 1) ? ($idx / $total) * M_PI * 2 : 0;
         
-        $existingPoints[] = ['x' => $offsetX, 'y' => $offsetY];
+        // Jitter (desviación aleatoria) para que no sea un círculo perfecto
+        $jitter = (mt_rand(-40, 40) / 100); 
+        $angle = $baseAngle + $jitter;
+
+        // Distancia desde el centro (radio elíptico, X más ancho que Y)
+        $distX = mt_rand(15, 55); // 15% a 55%
+        $distY = mt_rand(10, 40); // 10% a 40%
+
+        if ($total === 1) {
+            $distX = 0; 
+            $distY = 0;
+        } elseif ($total === 2) {
+            // Si solo hay dos, alejarlos bien del centro
+            $distX = mt_rand(30, 55);
+        }
+
+        $offsetX = cos($angle) * $distX;
+        $offsetY = sin($angle) * $distY;
+        
+        // Tamaños basados en la cantidad total de imágenes
+        if ($total <= 3) {
+            $size = mt_rand(340, 500); // Gigantes si son pocas
+        } else {
+            $size = mt_rand(240, 480); // Variadas si son muchas
+        }
 
         return [
-            'size'       => mt_rand(240, 480),
+            'size'       => $size,
             'rotation'   => mt_rand(-20, -2),
             'offset_x'   => $offsetX,
             'offset_y'   => $offsetY,
             'z_index'    => mt_rand(1, 10),
-            'opacity'    => mt_rand(75, 95) / 100,
-            'sepia'      => mt_rand(10, 60) / 100,
-            'grayscale'  => mt_rand(0, 30) / 100,
-            'contrast'   => mt_rand(100, 140) / 100,
-            'brightness' => mt_rand(70, 105) / 100,
-            'hue'        => mt_rand(-25, 25),
-            'blend'      => ['normal', 'multiply', 'overlay', 'soft-light'][mt_rand(0, 3)],
+            'opacity'    => mt_rand(85, 100) / 100, // Más opaco (menos oscuro)
+            'sepia'      => mt_rand(10, 30) / 100,  // Menos sepia
+            'grayscale'  => mt_rand(0, 15) / 100,   // Menos gris
+            'contrast'   => mt_rand(100, 120) / 100, // Contraste equilibrado
+            'brightness' => mt_rand(80, 105) / 100,
+            'hue'        => mt_rand(-15, 15),
+            'blend'      => ['normal', 'normal', 'overlay'][mt_rand(0, 2)], // Eliminados multiply y soft-light
             'clip'       => ['none', 'polygon(0 0,100% 0,100% 95%,0 100%)', 'polygon(2% 0,100% 0,98% 100%,0 100%)', 'polygon(0 2%,100% 0,100% 98%,0 100%)'][mt_rand(0, 3)],
             'tape'       => (bool) mt_rand(0, 1),
         ];
@@ -286,7 +293,18 @@ class SiteController extends Controller
 
         $mainImg = str_starts_with($programImage, 'http') ? $programImage : asset($programImage);
 
-        $ptsProg = [];
+        // Precalcular items válidos para saber el total
+        $validUpcoming = [];
+        foreach ($data['upcoming'] ?? [] as $up) {
+            $upImg = $up['image'] ?? null;
+            if (! $upImg || str_contains($upImg, 'lucille/')) {
+                continue;
+            }
+            $validUpcoming[] = $up;
+        }
+        $totalPrograms = 1 + count($validUpcoming);
+
+        $idx = 0;
         $cards = [[
             'image'    => $mainImg,
             'title'    => $data['title'] ?? 'PROGRAMACIÓN',
@@ -294,15 +312,11 @@ class SiteController extends Controller
             'schedule' => $data['schedule'] ?? '',
             'badge'    => $data['badge'] ?? 'On Deck',
             'is_main'  => true,
-            'styles'   => $this->generateRandomStylesForCard($ptsProg),
+            'styles'   => $this->generateRandomStylesForCard($idx++, $totalPrograms),
         ]];
 
-        foreach ($data['upcoming'] ?? [] as $up) {
-            $upImg = $up['image'] ?? null;
-            if (! $upImg || str_contains($upImg, 'lucille/')) {
-                continue;
-            }
-            $upImg   = str_starts_with($upImg, 'http') ? $upImg : asset($upImg);
+        foreach ($validUpcoming as $up) {
+            $upImg   = str_starts_with($up['image'], 'http') ? $up['image'] : asset($up['image']);
             $cards[] = [
                 'image'    => $upImg,
                 'title'    => $up['title'] ?? '',
@@ -310,7 +324,7 @@ class SiteController extends Controller
                 'schedule' => $up['time'] ?? $up['schedule'] ?? '',
                 'badge'    => 'Próximo',
                 'is_main'  => false,
-                'styles'   => $this->generateRandomStylesForCard($ptsProg),
+                'styles'   => $this->generateRandomStylesForCard($idx++, $totalPrograms),
             ];
         }
 
