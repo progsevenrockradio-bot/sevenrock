@@ -99,8 +99,9 @@
                     </div>
 
                     {{-- Tarjetas caóticas --}}
-                    <div class="relative w-full h-[65vh] md:h-[75vh]">
-                        @foreach (($auto['programs'] ?? []) as $pi => $prog)
+                    <div class="relative w-full h-[65vh] md:h-[75vh] flex items-center justify-center overflow-visible">
+                        <div class="relative w-full h-full scale-[0.55] sm:scale-75 md:scale-100 origin-center">
+                            @foreach (($auto['programs'] ?? []) as $pi => $prog)
                             @php $st = $prog['styles']; @endphp
                             <div class="absolute group transition-transform duration-500 ease-out hover:scale-110 hover:!z-[999] pointer-events-none"
                                  style="
@@ -146,6 +147,7 @@
                                 </div>
                             </div>
                         @endforeach
+                        </div>
                     </div>
                 </div>
             </div>
