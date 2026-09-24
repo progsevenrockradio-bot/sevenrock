@@ -338,7 +338,7 @@
                                     </template>
                                 </button>
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm md:text-base font-bold text-white uppercase tracking-wider" x-text="currentTrackTitle">Selecciona una pista</p>
+                                    <p class="line-clamp-2 text-sm md:text-base font-bold text-white uppercase tracking-wider" x-text="currentTrackTitle">Selecciona una pista</p>
                                     <div class="mt-2 flex items-center gap-3">
                                         <input type="range" min="0" max="100" :value="duration ? (currentTime / duration) * 100 : 0" @input="seek($event)" class="audio-slider flex-1" :disabled="!currentTrackUrl">
                                         <span class="text-[10px] md:text-xs text-gray-400 font-mono shrink-0" x-text="formatTime(currentTime) + ' / ' + (duration ? formatTime(duration) : '0:00')">0:00 / 0:00</span>
@@ -352,9 +352,9 @@
                                 <button type="button" @click="playTrack({{ $index }}, '{{ $item->url }}', '{{ addslashes($item->title ?: $item->filename) }}')" 
                                     class="w-full text-left flex items-center justify-between p-3 rounded-[8px] border transition-all duration-200 group"
                                     :class="currentIndex === {{ $index }} ? 'border-[var(--lucille-accent)]/50 bg-[var(--lucille-accent)]/10' : 'border-transparent hover:bg-white/5'">
-                                    <div class="flex items-center gap-3 truncate">
-                                        <span class="text-xs font-mono" :class="currentIndex === {{ $index }} ? 'text-[var(--lucille-accent)]' : 'text-gray-500'">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</span>
-                                        <span class="text-sm truncate" :class="currentIndex === {{ $index }} ? 'text-white font-semibold' : 'text-gray-300 group-hover:text-white'">{{ $item->title ?: $item->filename }}</span>
+                                    <div class="flex items-start gap-3 flex-1 min-w-0 pr-2">
+                                        <span class="text-xs font-mono shrink-0 mt-0.5" :class="currentIndex === {{ $index }} ? 'text-[var(--lucille-accent)]' : 'text-gray-500'">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</span>
+                                        <span class="text-sm line-clamp-2" :class="currentIndex === {{ $index }} ? 'text-white font-semibold' : 'text-gray-300 group-hover:text-white'">{{ $item->title ?: $item->filename }}</span>
                                     </div>
                                     <template x-if="currentIndex === {{ $index }} && playing">
                                         <!-- Animated bars -->
