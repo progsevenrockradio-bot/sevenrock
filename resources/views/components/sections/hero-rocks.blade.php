@@ -61,29 +61,21 @@
         @php $slideIndex = count($slides) + $autoIndex; @endphp
 
         @if (($auto['type'] ?? '') === 'scattered-grid')
-            @php $defaultBg = $auto['programs'][0]['image'] ?? ''; @endphp
-            {{-- Grilla de tarjetas (Noticias, Lanzamientos, Programas) con fondo reactivo al hover --}}
+            {{-- Filtro SVG para efecto de papel rasgado --}}
+            <svg width="0" height="0" class="absolute pointer-events-none">
+              <filter id="torn-paper">
+                <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
+              </filter>
+            </svg>
+
+            {{-- Grilla de tarjetas (Noticias, Lanzamientos, Programas) con fondo de acero oxidado --}}
             <div
                 x-show="active === {{ $slideIndex }}"
                 {!! $transitionModifiers !!}
-                class="absolute inset-0 program-grid-slide"
-                x-data="{
-                    bgImg: '{{ $defaultBg }}',
-                    bgAlpha: 1,
-                    changeBg(url) {
-                        if (url === this.bgImg) return;
-                        this.bgAlpha = 0;
-                        setTimeout(() => { this.bgImg = url; this.bgAlpha = 1; }, 220);
-                    }
-                }"
-                @mouseenter="$dispatch('hero-pause')"
-                @mouseleave="$dispatch('hero-resume')"
+                class="absolute inset-0 program-grid-slide bg-[#1a1512]"
+                style="background-image: url('https://images.unsplash.com/photo-1518599904199-0ca897819ddb?q=80&w=1920&auto=format&fit=crop'); background-size: cover; background-position: center;"
             >
-                {{-- Fondo blurred reactivo --}}
-                @if ($defaultBg)
-                    <div class="program-grid-bg-blur"
-                         :style="{ backgroundImage: 'url(' + bgImg + ')', opacity: bgAlpha }"></div>
-                @endif
                 <div class="program-grid-noise"></div>
                 <div class="program-grid-vignette-left"></div>
                 <div class="program-grid-vignette-right"></div>
@@ -105,7 +97,7 @@
                     </div>
 
                     {{-- Tarjetas caóticas --}}
-                    <div class="relative w-full h-[65vh] md:h-[75vh]" @mouseleave="changeBg('{{ $defaultBg }}')">
+                    <div class="relative w-full h-[65vh] md:h-[75vh]">
                         @foreach (($auto['programs'] ?? []) as $pi => $prog)
                             @php $st = $prog['styles']; @endphp
                             <div class="absolute group transition-transform duration-500 ease-out hover:scale-110 hover:!z-[999] pointer-events-none"
@@ -115,32 +107,27 @@
                                     left: calc(50% + {{ $st['offset_x'] }}%);
                                     transform: translate(-50%, -50%) rotate({{ $st['rotation'] }}deg);
                                     z-index: {{ $st['z_index'] }};
-                                 "
-                                 @mouseenter="changeBg('{{ $prog['image'] }}')">
+                                 ">
                                  
-                                {{-- Cinta adhesiva aleatoria --}}
-                                @if($st['tape'])
-                                    <div class="absolute -top-4 -right-4 w-14 h-6 bg-white/30 backdrop-blur-sm shadow-sm transform rotate-45 z-30 pointer-events-none"></div>
-                                    <div class="absolute -bottom-4 -left-4 w-14 h-6 bg-white/30 backdrop-blur-sm shadow-sm transform rotate-45 z-30 pointer-events-none"></div>
-                                @endif
-
-                                {{-- Cover Image --}}
-                                <div class="relative w-full aspect-square bg-[#111] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] border-4 transition-all duration-300 {{ $prog['is_main'] ? 'border-[#c32720] shadow-[#c32720]/20' : 'border-white/10' }} pointer-events-auto"
-                                     style="clip-path: {{ $st['clip'] }};">
+                                {{-- Borde blanco rasgado (Torn Paper Effect) --}}
+                                <div class="relative w-full aspect-square bg-gray-100 p-3 shadow-[0_20px_50px_rgba(0,0,0,0.9)] pointer-events-auto transition-all duration-300 {{ $prog['is_main'] ? 'bg-white' : '' }}"
+                                     style="filter: url(#torn-paper);">
                                      
-                                    {{-- Textura de desgaste en las orillas (ruido y sombra interior) --}}
-                                    <div class="absolute inset-0 pointer-events-none shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] mix-blend-overlay z-10 transition-opacity duration-300 group-hover:opacity-0"
-                                         style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%221.5%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22 opacity=%220.3%22/%3E%3C/svg%3E');"></div>
+                                    <div class="relative w-full h-full bg-[#111] overflow-hidden" style="clip-path: {{ $st['clip'] }};">
+                                        {{-- Textura de desgaste en las orillas (ruido y sombra interior) --}}
+                                        <div class="absolute inset-0 pointer-events-none shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] mix-blend-overlay z-10 transition-opacity duration-300 group-hover:opacity-0"
+                                             style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%221.5%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22 opacity=%220.3%22/%3E%3C/svg%3E');"></div>
 
-                                    <img src="{{ $prog['image'] }}" alt="{{ $prog['title'] }}" loading="{{ $pi === 0 ? 'eager' : 'lazy' }}"
-                                         class="w-full h-full object-cover transition-all duration-300 group-hover:opacity-100 group-hover:filter-none group-hover:mix-blend-normal group-hover:brightness-110"
-                                         style="
-                                            opacity: {{ $st['opacity'] }};
-                                            filter: sepia({{ $st['sepia'] }}) grayscale({{ $st['grayscale'] }}) contrast({{ $st['contrast'] }}) brightness({{ $st['brightness'] }}) hue-rotate({{ $st['hue'] }}deg);
-                                            mix-blend-mode: {{ $st['blend'] }};
-                                         ">
+                                        <img src="{{ $prog['image'] }}" alt="{{ $prog['title'] }}" loading="{{ $pi === 0 ? 'eager' : 'lazy' }}"
+                                             class="w-full h-full object-cover transition-all duration-300 group-hover:opacity-100 group-hover:filter-none group-hover:mix-blend-normal group-hover:brightness-110"
+                                             style="
+                                                opacity: {{ $st['opacity'] }};
+                                                filter: sepia({{ $st['sepia'] }}) grayscale({{ $st['grayscale'] }}) contrast({{ $st['contrast'] }}) brightness({{ $st['brightness'] }}) hue-rotate({{ $st['hue'] }}deg);
+                                                mix-blend-mode: {{ $st['blend'] }};
+                                             ">
+                                    </div>
                                          
-                                    <span class="absolute top-2 left-2 bg-[#c32720] text-white text-[10px] uppercase font-bold tracking-widest px-2 py-1 shadow-md z-20">
+                                    <span class="absolute top-4 left-4 bg-[#c32720] text-white text-[10px] uppercase font-bold tracking-widest px-2 py-1 shadow-md z-20">
                                         {{ $prog['badge'] }}
                                     </span>
                                 </div>
