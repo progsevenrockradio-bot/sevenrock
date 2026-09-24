@@ -172,6 +172,9 @@ class SiteController extends Controller
 
         $slides = [];
 
+        $seed = crc32(date('Y-m-d'));
+        mt_srand($seed);
+
         // Slide 1 — Noticias del Día (scattered grid)
         $newsItems = $noticiasRock->take(5)->filter(fn ($p) => $p->featured_image_url)->values();
         if ($newsItems->count() >= 2) {
@@ -185,6 +188,7 @@ class SiteController extends Controller
                     'schedule' => '',
                     'badge'    => 'Noticia',
                     'is_main'  => $idx === 0,
+                    'styles'   => $this->generateRandomStylesForCard(),
                 ])->toArray(),
             ];
         }
@@ -202,6 +206,7 @@ class SiteController extends Controller
                     'schedule' => '',
                     'badge'    => 'Lanzamiento',
                     'is_main'  => $idx === 0,
+                    'styles'   => $this->generateRandomStylesForCard(),
                 ])->toArray(),
             ];
         }
@@ -218,6 +223,26 @@ class SiteController extends Controller
         }
 
         return [$slides, $nextProgramData];
+    }
+
+    private function generateRandomStylesForCard(): array
+    {
+        return [
+            'size'       => mt_rand(160, 360),
+            'rotation'   => mt_rand(-20, -2),
+            'offset_x'   => mt_rand(-45, 45),
+            'offset_y'   => mt_rand(-30, 45),
+            'z_index'    => mt_rand(1, 10),
+            'opacity'    => mt_rand(75, 95) / 100,
+            'sepia'      => mt_rand(10, 60) / 100,
+            'grayscale'  => mt_rand(0, 30) / 100,
+            'contrast'   => mt_rand(100, 140) / 100,
+            'brightness' => mt_rand(70, 105) / 100,
+            'hue'        => mt_rand(-25, 25),
+            'blend'      => ['normal', 'multiply', 'overlay', 'soft-light'][mt_rand(0, 3)],
+            'clip'       => ['none', 'polygon(0 0,100% 0,100% 95%,0 100%)', 'polygon(2% 0,100% 0,98% 100%,0 100%)', 'polygon(0 2%,100% 0,100% 98%,0 100%)'][mt_rand(0, 3)],
+            'tape'       => (bool) mt_rand(0, 1),
+        ];
     }
 
     /**
@@ -243,6 +268,7 @@ class SiteController extends Controller
             'schedule' => $data['schedule'] ?? '',
             'badge'    => $data['badge'] ?? 'On Deck',
             'is_main'  => true,
+            'styles'   => $this->generateRandomStylesForCard(),
         ]];
 
         foreach ($data['upcoming'] ?? [] as $up) {
@@ -258,6 +284,7 @@ class SiteController extends Controller
                 'schedule' => $up['time'] ?? $up['schedule'] ?? '',
                 'badge'    => 'Próximo',
                 'is_main'  => false,
+                'styles'   => $this->generateRandomStylesForCard(),
             ];
         }
 

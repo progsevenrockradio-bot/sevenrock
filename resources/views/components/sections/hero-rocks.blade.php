@@ -89,38 +89,65 @@
                 <div class="program-grid-vignette-right"></div>
                 <div class="program-grid-overlay"></div>
 
-                {{-- Contenido --}}
-                <div class="program-grid-content">
-                    <div class="program-grid-header">
-                        <span class="program-grid-eyebrow">📻 {{ $auto['label'] ?? 'Hoy en 7RR' }}</span>
-                        <p class="program-grid-date">{{ \Carbon\Carbon::now()->locale('es')->isoFormat('dddd D [de] MMMM') }}</p>
+                {{-- Contenido Collage --}}
+                <div class="relative w-full h-full max-w-[1200px] mx-auto overflow-hidden flex flex-col justify-center items-center">
+                    {{-- Encabezado Centrado --}}
+                    <div class="absolute top-8 w-full text-center z-50 pointer-events-none">
+                        <span class="font-display text-[10px] uppercase tracking-[0.24em] text-[#c32720] block mb-1">📻 {{ $auto['label'] ?? 'Hoy en 7RR' }}</span>
+                        <h2 class="font-display text-[clamp(18px,2.4vw,30px)] uppercase tracking-[0.06em] text-[#f0f0f0] drop-shadow-[0_2px_24px_rgba(0,0,0,0.9)] m-0 leading-none">
+                            {{ \Carbon\Carbon::now()->locale('es')->isoFormat('dddd D [de] MMMM') }}
+                        </h2>
                     </div>
 
-                    {{-- Tarjetas con hover reactivo --}}
-                    <div class="program-grid-cards"
-                         @mouseleave="changeBg('{{ $defaultBg }}')">
+                    {{-- Overlay de textura global (manchas/grano) para ensuciar todo el collage --}}
+                    <div class="absolute inset-0 pointer-events-none opacity-40 mix-blend-multiply z-10"
+                         style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E');">
+                    </div>
+
+                    {{-- Tarjetas caóticas --}}
+                    <div class="relative w-full h-[65vh] md:h-[75vh]" @mouseleave="changeBg('{{ $defaultBg }}')">
                         @foreach (($auto['programs'] ?? []) as $pi => $prog)
-                            @php
-                                $randRot = rand(-45, 45) / 10; // -4.5deg a 4.5deg
-                                $randY = rand(-20, 20); // -20px a 20px
-                                $randScale = rand(88, 108) / 100; // 0.88 a 1.08
-                            @endphp
-                            <div class="pgc {{ $prog['is_main'] ? 'pgc--main' : 'pgc--next' }}"
-                                 style="--rand-rot: {{ $randRot }}deg; --rand-y: {{ $randY }}px; --rand-scale: {{ $randScale }};"
+                            @php $st = $prog['styles']; @endphp
+                            <div class="absolute group transition-transform duration-500 ease-out hover:scale-110 hover:!z-[99]"
+                                 style="
+                                    width: {{ $st['size'] }}px;
+                                    top: calc(50% + {{ $st['offset_y'] }}%);
+                                    left: calc(50% + {{ $st['offset_x'] }}%);
+                                    transform: translate(-50%, -50%) rotate({{ $st['rotation'] }}deg);
+                                    z-index: {{ $st['z_index'] }};
+                                 "
                                  @mouseenter="changeBg('{{ $prog['image'] }}')">
-                                <div class="pgc-cover">
-                                    <img src="{{ $prog['image'] }}" alt="{{ $prog['title'] }}" loading="{{ $pi === 0 ? 'eager' : 'lazy' }}">
-                                    <span class="pgc-badge pgc-badge--{{ $prog['is_main'] ? 'live' : 'next' }}">
+                                 
+                                {{-- Cinta adhesiva aleatoria --}}
+                                @if($st['tape'])
+                                    <div class="absolute -top-4 -right-4 w-14 h-6 bg-white/30 backdrop-blur-sm shadow-sm transform rotate-45 z-30 pointer-events-none"></div>
+                                    <div class="absolute -bottom-4 -left-4 w-14 h-6 bg-white/30 backdrop-blur-sm shadow-sm transform rotate-45 z-30 pointer-events-none"></div>
+                                @endif
+
+                                {{-- Cover Image --}}
+                                <div class="relative w-full aspect-square bg-[#111] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] border-4 transition-all duration-300 {{ $prog['is_main'] ? 'border-[#c32720] shadow-[#c32720]/20' : 'border-white/10' }}"
+                                     style="clip-path: {{ $st['clip'] }};">
+                                    <img src="{{ $prog['image'] }}" alt="{{ $prog['title'] }}" loading="{{ $pi === 0 ? 'eager' : 'lazy' }}"
+                                         class="w-full h-full object-cover transition-all duration-300 group-hover:opacity-100 group-hover:filter-none group-hover:mix-blend-normal"
+                                         style="
+                                            opacity: {{ $st['opacity'] }};
+                                            filter: sepia({{ $st['sepia'] }}) grayscale({{ $st['grayscale'] }}) contrast({{ $st['contrast'] }}) brightness({{ $st['brightness'] }}) hue-rotate({{ $st['hue'] }}deg);
+                                            mix-blend-mode: {{ $st['blend'] }};
+                                         ">
+                                         
+                                    <span class="absolute top-2 left-2 bg-[#c32720] text-white text-[10px] uppercase font-bold tracking-widest px-2 py-1 shadow-md z-20">
                                         {{ $prog['badge'] }}
                                     </span>
                                 </div>
-                                <div class="pgc-info">
-                                    <p class="pgc-title">{{ $prog['title'] }}</p>
+                                
+                                {{-- Título y texto debajo --}}
+                                <div class="mt-3 text-center opacity-90 transition-opacity duration-300 group-hover:opacity-100 bg-black/60 backdrop-blur-md p-2 rounded">
+                                    <p class="font-display text-white text-sm md:text-base uppercase tracking-wider drop-shadow-md leading-tight">{{ $prog['title'] }}</p>
                                     @if ($prog['host'])
-                                        <p class="pgc-host">{{ $prog['host'] }}</p>
+                                        <p class="font-sans text-gray-300 text-xs mt-1 uppercase truncate">{{ $prog['host'] }}</p>
                                     @endif
                                     @if ($prog['schedule'])
-                                        <p class="pgc-schedule">{{ $prog['schedule'] }}</p>
+                                        <p class="font-sans text-[#c32720] text-[10px] mt-1 font-bold">{{ $prog['schedule'] }}</p>
                                     @endif
                                 </div>
                             </div>
