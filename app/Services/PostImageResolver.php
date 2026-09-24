@@ -75,7 +75,7 @@ class PostImageResolver
 
         // c) RSS
         if ($credit) {
-            $rssImageInfo = $this->resolveFromRss($credit, $cleanTitle, $settings);
+            $rssImageInfo = $this->resolveFromRss($credit, $cleanTitle, $settings, $artistName);
             if ($rssImageInfo && $rssImageInfo['url']) {
                 $result['url'] = $rssImageInfo['url'];
                 $result['source'] = 'rss';
@@ -244,12 +244,12 @@ class PostImageResolver
         return null;
     }
 
-    private function resolveFromRss(string $creditDomain, string $cleanTitle, ThemeSetting $settings): ?array
+    private function resolveFromRss(string $creditDomain, string $cleanTitle, ThemeSetting $settings, ?string $artistName = null): ?array
     {
         $creditDomain = strtolower($creditDomain);
-        
+
         $feeds = config('services.press_feeds', []);
-        
+
         if ($settings->press_feeds_extra) {
             $lines = explode("\n", $settings->press_feeds_extra);
             foreach ($lines as $line) {
@@ -279,7 +279,7 @@ class PostImageResolver
                 $response = Http::timeout(15)
                     ->withUserAgent('SevenRockBot/1.0 (+https://sevenrockradio.com/bot)')
                     ->get($feedUrl);
-                    
+
                 if ($response->successful()) {
                     return $response->body();
                 }
@@ -295,71 +295,194 @@ class PostImageResolver
 
         $dom = new DOMDocument();
         @$dom->loadXML($xmlContent);
-        
-        $items = $dom->getElementsByTagName('item');
-        $normSearch = TextNormalizer::normalizeSlug($cleanTitle);
 
+        $items = $dom->getElementsByTagName('item');
+
+        // --- Entidades del titular del post (en español) ---
+        $entities = $this->extractEntities($cleanTitle);
+
+        // Si el contexto trae artist_name y no hay entidades suficientes, usarlo como entidad principal
+        if ($artistName && array_sum(array_column($entities, 'score')) < 2) {
+            $artistWords = explode(' ', TextNormalizer::normalizeSlug($artistName));
+            if (count($artistWords) >= 2) {
+                $entities[] = ['term' => implode(' ', $artistWords), 'score' => 2];
+            } elseif (count($artistWords) === 1 && $artistWords[0] !== '') {
+                $entities[] = ['term' => $artistWords[0], 'score' => 1];
+            }
+        }
+
+        Log::debug("PostImageResolver RSS: título='{$cleanTitle}' entidades=" . json_encode(array_column($entities, 'term')));
+
+        // --- Puntuar cada ítem del feed ---
+        $candidates = [];
         foreach ($items as $item) {
             $itemTitleNode = $item->getElementsByTagName('title')->item(0);
-            if (!$itemTitleNode) continue;
-            
-            $itemTitle = $itemTitleNode->nodeValue;
+            if (!$itemTitleNode) {
+                continue;
+            }
+
+            $itemTitle    = $itemTitleNode->nodeValue;
             $normItemTitle = TextNormalizer::normalizeSlug($itemTitle);
-            
+
+            // Calcular puntuación por entidades
+            $score = 0;
+            foreach ($entities as $entity) {
+                if (str_contains($normItemTitle, $entity['term'])) {
+                    $score += $entity['score'];
+                }
+            }
+
+            if ($score < 2) {
+                continue;
+            }
+
+            // Desempate: similitud de títulos (sin umbral mínimo, solo ordena)
             $similarity = 0;
-            similar_text($normSearch, $normItemTitle, $similarity);
-            
-            if ($similarity >= 75 || str_contains($normItemTitle, $normSearch) || str_contains($normSearch, $normItemTitle)) {
-                $imageUrl = null;
-                $articleUrl = null;
+            similar_text(TextNormalizer::normalizeSlug($cleanTitle), $normItemTitle, $similarity);
 
-                $linkNode = $item->getElementsByTagName('link')->item(0);
-                if ($linkNode) {
-                    $articleUrl = $linkNode->nodeValue;
-                }
+            $candidates[] = [
+                'item'       => $item,
+                'itemTitle'  => $itemTitle,
+                'score'      => $score,
+                'similarity' => $similarity,
+            ];
+        }
 
-                $mediaNodes = $item->getElementsByTagNameNS('http://search.yahoo.com/mrss/', 'content');
-                if ($mediaNodes->length > 0) {
-                    $imageUrl = $mediaNodes->item(0)->getAttribute('url');
-                }
+        if (empty($candidates)) {
+            Log::info("PostImageResolver RSS: sin coincidencia para '{$cleanTitle}' (entidades: " . implode(', ', array_column($entities, 'term')) . ")");
+            return null;
+        }
 
-                if (!$imageUrl) {
-                    $enclosures = $item->getElementsByTagName('enclosure');
-                    if ($enclosures->length > 0) {
-                        foreach ($enclosures as $enclosure) {
-                            $type = strtolower($enclosure->getAttribute('type'));
-                            if (str_contains($type, 'image')) {
-                                $imageUrl = $enclosure->getAttribute('url');
-                                break;
-                            }
-                        }
+        // Ordenar: mayor puntuación primero; en empate, mayor similitud
+        usort($candidates, fn ($a, $b) =>
+            $b['score'] <=> $a['score'] ?: $b['similarity'] <=> $a['similarity']
+        );
+
+        $best = $candidates[0];
+        $item = $best['item'];
+
+        // --- Extraer imagen y URL del ítem ganador ---
+        $imageUrl   = null;
+        $articleUrl = null;
+
+        $linkNode = $item->getElementsByTagName('link')->item(0);
+        if ($linkNode) {
+            $articleUrl = $linkNode->nodeValue;
+        }
+
+        $mediaNodes = $item->getElementsByTagNameNS('http://search.yahoo.com/mrss/', 'content');
+        if ($mediaNodes->length > 0) {
+            $imageUrl = $mediaNodes->item(0)->getAttribute('url');
+        }
+
+        if (!$imageUrl) {
+            $enclosures = $item->getElementsByTagName('enclosure');
+            if ($enclosures->length > 0) {
+                foreach ($enclosures as $enclosure) {
+                    $type = strtolower($enclosure->getAttribute('type'));
+                    if (str_contains($type, 'image')) {
+                        $imageUrl = $enclosure->getAttribute('url');
+                        break;
                     }
-                }
-
-                if (!$imageUrl) {
-                    $descNode = $item->getElementsByTagName('description')->item(0);
-                    if ($descNode) {
-                        $desc = $descNode->nodeValue;
-                        if (preg_match('/<img[^>]+src=["\']([^"\']+)["\']/i', $desc, $matches)) {
-                            $imageUrl = html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5);
-                        }
-                    }
-                }
-
-                if (!$imageUrl && $articleUrl) {
-                    $imageUrl = $this->resolveFromOgImage($articleUrl);
-                }
-
-                if ($imageUrl && $this->isValidImageDomain($imageUrl)) {
-                    return [
-                        'url' => $imageUrl,
-                        'article_url' => $articleUrl,
-                    ];
                 }
             }
         }
 
+        if (!$imageUrl) {
+            $descNode = $item->getElementsByTagName('description')->item(0);
+            if ($descNode) {
+                $desc = $descNode->nodeValue;
+                if (preg_match('/<img[^>]+src=["\']([^"\']+)["\']/i', $desc, $matches)) {
+                    $imageUrl = html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5);
+                }
+            }
+        }
+
+        // Si el ítem no trae imagen pero sí URL, extraer og:image de la página
+        if (!$imageUrl && $articleUrl) {
+            $imageUrl = $this->resolveFromOgImage($articleUrl);
+        }
+
+        if ($imageUrl && $this->isValidImageDomain($imageUrl)) {
+            Log::info(sprintf(
+                "PostImageResolver RSS: ✅ Match '%s' → '%s' (score=%d, sim=%.1f%%) url=%s entidades=%s",
+                $cleanTitle, $best['itemTitle'], $best['score'], $best['similarity'],
+                $articleUrl, implode(', ', array_column($entities, 'term'))
+            ));
+            return [
+                'url'         => $imageUrl,
+                'article_url' => $articleUrl,
+            ];
+        }
+
         return null;
+    }
+
+    /**
+     * Extrae entidades significativas del titular del post para el emparejamiento con feeds.
+     *
+     * Reglas:
+     * - Palabras capitalizadas y frases entre comillas, normalizadas (minúsculas, sin acentos).
+     * - Descarta palabras vacías en español y números de 4 dígitos.
+     * - Frases multi-palabra valen 2 puntos; palabras sueltas valen 1 punto.
+     *
+     * @return array<int, array{term: string, score: int}>
+     */
+    private function extractEntities(string $title): array
+    {
+        static $stopwords = [
+            'de','la','el','y','en','con','sin','para','un','una','los','las',
+            'del','al','mas','hoy','septiembre','octubre','noviembre','diciembre',
+            'enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+            'que','por','se','su','sus','le','les','nos','es','fue','son','era',
+            'este','esta','estos','estas','ese','esa','esos','esas',
+            'pero','como','sobre','hasta','desde','entre','durante',
+            'nuevo','nueva','nuevos','nuevas','gran','grandes','todo','todos',
+            'a','o','e','u','ni','si','no','ya',
+        ];
+
+        $entities = [];
+
+        // 1. Frases entre comillas (alta confianza, 2 pts)
+        if (preg_match_all('/[«»"""\'\'](.*?)[«»"""\'\']/u', $title, $m)) {
+            foreach ($m[1] as $phrase) {
+                $norm = TextNormalizer::normalizeSlug($phrase);
+                if ($norm !== '' && !in_array($norm, $stopwords, true)) {
+                    $entities[] = ['term' => $norm, 'score' => str_contains($norm, ' ') ? 2 : 1];
+                }
+            }
+        }
+
+        // 2. Palabras capitalizadas (secuencias de 1 o más palabras con inicial mayúscula)
+        // Extraer secuencias de palabras capitalizadas (ej: "East Bay Ray", "Pink Floyd")
+        preg_match_all('/(?:[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü0-9]+(?:\s+[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü0-9]+)*)/u', $title, $capMatches);
+
+        foreach ($capMatches[0] as $phrase) {
+            $norm = TextNormalizer::normalizeSlug($phrase);
+            $words = explode(' ', $norm);
+
+            // Filtrar palabras vacías de la secuencia
+            $filtered = array_filter($words, fn ($w) =>
+                $w !== '' && !in_array($w, $stopwords, true) && !preg_match('/^\d{4}$/', $w)
+            );
+
+            if (count($filtered) === 0) {
+                continue;
+            }
+
+            $term = implode(' ', $filtered);
+
+            // Evitar duplicados
+            $already = array_column($entities, 'term');
+            if (in_array($term, $already, true)) {
+                continue;
+            }
+
+            $score = count($filtered) >= 2 ? 2 : 1;
+            $entities[] = ['term' => $term, 'score' => $score];
+        }
+
+        return $entities;
     }
 
     private function resolveFromArtistCatalog(string $artistName): ?string
