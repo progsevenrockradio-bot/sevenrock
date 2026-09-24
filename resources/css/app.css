@@ -5958,8 +5958,8 @@ audio.dark-audio {
     object-fit: cover;
 }
 .scattered-photo:hover {
-    transform: scale(1.04) rotate(0deg) !important;
-    z-index: 10;
+    transform: scale(1.12) rotate(0deg) !important;
+    z-index: 20;
 }
 
 /* --- Collage layout (3 photos) --- */
@@ -5969,6 +5969,7 @@ audio.dark-audio {
     max-width: 900px;
     height: 60%;
     min-height: 350px;
+    margin-top: 4vh; /* Centrado visual compensando el header */
 }
 .scattered-container .scattered-photo {
     position: absolute;
@@ -6008,6 +6009,7 @@ audio.dark-audio {
     display: flex;
     align-items: center;
     gap: 30px;
+    margin-top: 4vh; /* Centrado visual compensando el header */
 }
 .scattered-main {
     width: 52%;
@@ -6172,6 +6174,7 @@ audio.dark-audio {
     display: flex;
     flex-direction: column;
     gap: 22px;
+    margin-top: 5vh; /* Centrado visual compensando el header */
 }
 
 /* Encabezado */
@@ -6203,8 +6206,8 @@ audio.dark-audio {
     display: flex;
     flex-direction: row;
     gap: 20px;
-    align-items: flex-end;           /* base común para que las alturas "roten" bien */
-    padding-bottom: 24px;            /* espacio para las rotaciones negativas */
+    align-items: center;           /* Alineación central para que las rotaciones se vean equilibradas */
+    padding-bottom: 24px;
 }
 
 /* ── TARJETA INDIVIDUAL ─────────────────────────────────────────────────── */
@@ -6218,15 +6221,15 @@ audio.dark-audio {
 }
 
 /* Rotaciones "tiradas" por posición — efecto fotos sobre la mesa */
-.pgc:nth-child(1) { transform: rotate(-2.5deg) translateY(0px);   }
-.pgc:nth-child(2) { transform: rotate(3deg)    translateY(-18px);  }
-.pgc:nth-child(3) { transform: rotate(-1.8deg) translateY(10px);   }
-.pgc:nth-child(4) { transform: rotate(2.8deg)  translateY(-22px);  }
-.pgc:nth-child(5) { transform: rotate(-3.2deg) translateY(6px);    }
+.pgc:nth-child(1) { transform: rotate(-2.5deg) translateY(8px);   }
+.pgc:nth-child(2) { transform: rotate(3deg)    translateY(-6px);  }
+.pgc:nth-child(3) { transform: rotate(-1.8deg) translateY(12px);  }
+.pgc:nth-child(4) { transform: rotate(2.8deg)  translateY(-10px); }
+.pgc:nth-child(5) { transform: rotate(-3.2deg) translateY(6px);   }
 
 /* Al hacer hover: se "levanta" y endereza */
 .pgc:hover {
-    transform: rotate(0deg) translateY(-10px) scale(1.04) !important;
+    transform: rotate(0deg) translateY(-10px) scale(1.12) !important;
     z-index: 20;
 }
 
@@ -6249,7 +6252,7 @@ audio.dark-audio {
     transition: transform 0.5s cubic-bezier(.22,1,.36,1);
 }
 .pgc:hover .pgc-cover img {
-    transform: scale(1.07);
+    transform: scale(1.10);
 }
 
 /* Tarjeta principal: borde acento + sombra roja */

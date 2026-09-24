@@ -17,9 +17,10 @@
         total: {{ $totalSlideCount }},
         interval: null,
         delay: {{ (int) $interval }},
+        paused: false,
         init() {
             if (this.total < 2) return;
-            this.interval = setInterval(() => this.next(), this.delay);
+            this.interval = setInterval(() => { if (!this.paused) this.next(); }, this.delay);
         },
         next() {
             this.active = (this.active + 1) % this.total;
@@ -27,10 +28,14 @@
         go(index) {
             clearInterval(this.interval);
             this.active = index;
-            this.interval = setInterval(() => this.next(), this.delay);
+            this.interval = setInterval(() => { if (!this.paused) this.next(); }, this.delay);
         },
+        pause() { this.paused = true; },
+        resume() { this.paused = false; },
     }"
     x-init="init"
+    @hero-pause.window="pause()"
+    @hero-resume.window="resume()"
     class="relative min-h-[340px] overflow-hidden sm:min-h-[70svh] md:min-h-[960px] xl:min-h-[868px] hero-rocks-section"
 >
     {{-- ═══════════ Manual Slides (imágenes estáticas) ═══════════ --}}
@@ -71,6 +76,8 @@
                         setTimeout(() => { this.bgImg = url; this.bgAlpha = 1; }, 220);
                     }
                 }"
+                @mouseenter="$dispatch('hero-pause')"
+                @mouseleave="$dispatch('hero-resume')"
             >
                 {{-- Fondo blurred reactivo --}}
                 @if ($defaultBg)
@@ -108,6 +115,8 @@
                         setTimeout(() => { this.bgImg = url; this.bgAlpha = 1; }, 220);
                     }
                 }"
+                @mouseenter="$dispatch('hero-pause')"
+                @mouseleave="$dispatch('hero-resume')"
             >
                 {{-- Fondo blurred reactivo --}}
                 @if ($defaultBg)
@@ -158,6 +167,8 @@
                         setTimeout(() => { this.bgImg = url; this.bgAlpha = 1; }, 220);
                     }
                 }"
+                @mouseenter="$dispatch('hero-pause')"
+                @mouseleave="$dispatch('hero-resume')"
             >
                 {{-- Fondo blurred reactivo --}}
                 @if ($defaultBg)
