@@ -56,36 +56,71 @@
         @php $slideIndex = count($slides) + $autoIndex; @endphp
 
         @if (($auto['type'] ?? '') === 'scattered-collage')
-            {{-- Collage: 3 fotos "tiradas" con rotaciones --}}
+            @php $defaultBg = $auto['items'][0]['image'] ?? ''; @endphp
+            {{-- Collage: 3 fotos "tiradas" — fondo reactivo al hover --}}
             <div
                 x-show="active === {{ $slideIndex }}"
                 {!! $transitionModifiers !!}
                 class="absolute inset-0 flex items-center justify-center scattered-slide-bg"
+                x-data="{
+                    bgImg: '{{ $defaultBg }}',
+                    bgAlpha: 1,
+                    changeBg(url) {
+                        if (url === this.bgImg) return;
+                        this.bgAlpha = 0;
+                        setTimeout(() => { this.bgImg = url; this.bgAlpha = 1; }, 220);
+                    }
+                }"
             >
-                <div class="scattered-container">
+                {{-- Fondo blurred reactivo --}}
+                @if ($defaultBg)
+                    <div class="scattered-bg-blur"
+                         :style="{ backgroundImage: 'url(' + bgImg + ')', opacity: bgAlpha }"></div>
+                @endif
+
+                <div class="scattered-container"
+                     @mouseleave="changeBg('{{ $defaultBg }}')">
                     @foreach (($auto['items'] ?? []) as $i => $item)
-                        <div class="scattered-photo scattered-pos-{{ $i }}">
+                        <div class="scattered-photo scattered-pos-{{ $i }}"
+                             @mouseenter="changeBg('{{ $item['image'] }}')">
                             <img src="{{ $item['image'] }}" alt="{{ $item['title'] ?? '' }}" loading="lazy">
                         </div>
                     @endforeach
                 </div>
-                {{-- Label overlay --}}
                 <div class="scattered-label">
                     <span class="scattered-label-accent">{{ $auto['label'] ?? '' }}</span>
                 </div>
             </div>
 
         @elseif (($auto['type'] ?? '') === 'scattered-featured')
-            {{-- Featured: una grande + miniaturas --}}
+            @php $defaultBg = $auto['items'][0]['image'] ?? ''; @endphp
+            {{-- Featured: una grande + miniaturas — fondo reactivo al hover --}}
             <div
                 x-show="active === {{ $slideIndex }}"
                 {!! $transitionModifiers !!}
                 class="absolute inset-0 flex items-center justify-center scattered-slide-bg"
+                x-data="{
+                    bgImg: '{{ $defaultBg }}',
+                    bgAlpha: 1,
+                    changeBg(url) {
+                        if (url === this.bgImg) return;
+                        this.bgAlpha = 0;
+                        setTimeout(() => { this.bgImg = url; this.bgAlpha = 1; }, 220);
+                    }
+                }"
             >
-                <div class="scattered-featured-container">
+                {{-- Fondo blurred reactivo --}}
+                @if ($defaultBg)
+                    <div class="scattered-bg-blur"
+                         :style="{ backgroundImage: 'url(' + bgImg + ')', opacity: bgAlpha }"></div>
+                @endif
+
+                <div class="scattered-featured-container"
+                     @mouseleave="changeBg('{{ $defaultBg }}')">
                     {{-- Imagen protagonista --}}
                     @if (!empty($auto['items'][0]))
-                        <div class="scattered-photo scattered-main">
+                        <div class="scattered-photo scattered-main"
+                             @mouseenter="changeBg('{{ $auto['items'][0]['image'] }}')">
                             <img src="{{ $auto['items'][0]['image'] }}" alt="{{ $auto['items'][0]['title'] ?? '' }}" loading="lazy">
                             @if (!empty($auto['items'][0]['artist']))
                                 <div class="scattered-photo-caption">{{ $auto['items'][0]['artist'] }}</div>
@@ -95,60 +130,64 @@
                     {{-- Miniaturas "tiradas" --}}
                     <div class="scattered-thumbs">
                         @foreach (array_slice($auto['items'] ?? [], 1) as $ti => $thumb)
-                            <div class="scattered-photo scattered-thumb-{{ $ti }}">
+                            <div class="scattered-photo scattered-thumb-{{ $ti }}"
+                                 @mouseenter="changeBg('{{ $thumb['image'] }}')">
                                 <img src="{{ $thumb['image'] }}" alt="{{ $thumb['title'] ?? '' }}" loading="lazy">
                             </div>
                         @endforeach
                     </div>
                 </div>
-                {{-- Label overlay --}}
                 <div class="scattered-label">
                     <span class="scattered-label-accent">{{ $auto['label'] ?? '' }}</span>
                 </div>
             </div>
 
         @elseif (($auto['type'] ?? '') === 'scattered-program')
-            {{-- Grilla de Programas del Día --}}
+            @php $defaultBg = $auto['programs'][0]['image'] ?? ''; @endphp
+            {{-- Grilla de Programas del Día con fondo reactivo al hover --}}
             <div
                 x-show="active === {{ $slideIndex }}"
                 {!! $transitionModifiers !!}
                 class="absolute inset-0 program-grid-slide"
+                x-data="{
+                    bgImg: '{{ $defaultBg }}',
+                    bgAlpha: 1,
+                    changeBg(url) {
+                        if (url === this.bgImg) return;
+                        this.bgAlpha = 0;
+                        setTimeout(() => { this.bgImg = url; this.bgAlpha = 1; }, 220);
+                    }
+                }"
             >
-                {{-- Fondo atmosférico: imagen del programa principal desenfocada --}}
-                @if (!empty($auto['programs'][0]['image']))
+                {{-- Fondo blurred reactivo --}}
+                @if ($defaultBg)
                     <div class="program-grid-bg-blur"
-                         style="background-image: url('{{ $auto['programs'][0]['image'] }}');"></div>
+                         :style="{ backgroundImage: 'url(' + bgImg + ')', opacity: bgAlpha }"></div>
                 @endif
-                {{-- Capa de ruido/grano --}}
                 <div class="program-grid-noise"></div>
-                {{-- Viñeta lateral izquierda (texto vertical) --}}
                 <div class="program-grid-vignette-left"></div>
-                {{-- Viñeta lateral derecha --}}
                 <div class="program-grid-vignette-right"></div>
-                {{-- Overlay oscuro general --}}
                 <div class="program-grid-overlay"></div>
 
-                {{-- Contenido: label + grilla de tarjetas --}}
+                {{-- Contenido --}}
                 <div class="program-grid-content">
-                    {{-- Encabezado --}}
                     <div class="program-grid-header">
                         <span class="program-grid-eyebrow">📻 {{ $auto['label'] ?? 'Hoy en 7RR' }}</span>
                         <p class="program-grid-date">{{ \Carbon\Carbon::now()->locale('es')->isoFormat('dddd D [de] MMMM') }}</p>
                     </div>
 
-                    {{-- Tarjetas de programas --}}
-                    <div class="program-grid-cards">
+                    {{-- Tarjetas con hover reactivo --}}
+                    <div class="program-grid-cards"
+                         @mouseleave="changeBg('{{ $defaultBg }}')">
                         @foreach (($auto['programs'] ?? []) as $pi => $prog)
-                            <div class="pgc {{ $prog['is_main'] ? 'pgc--main' : 'pgc--next' }}">
-                                {{-- Portada --}}
+                            <div class="pgc {{ $prog['is_main'] ? 'pgc--main' : 'pgc--next' }}"
+                                 @mouseenter="changeBg('{{ $prog['image'] }}')">
                                 <div class="pgc-cover">
                                     <img src="{{ $prog['image'] }}" alt="{{ $prog['title'] }}" loading="{{ $pi === 0 ? 'eager' : 'lazy' }}">
-                                    {{-- Badge --}}
                                     <span class="pgc-badge pgc-badge--{{ $prog['is_main'] ? 'live' : 'next' }}">
                                         {{ $prog['badge'] }}
                                     </span>
                                 </div>
-                                {{-- Info --}}
                                 <div class="pgc-info">
                                     <p class="pgc-title">{{ $prog['title'] }}</p>
                                     @if ($prog['host'])
