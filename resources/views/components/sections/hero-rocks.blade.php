@@ -74,7 +74,7 @@
                 x-show="active === {{ $slideIndex }}"
                 {!! $transitionModifiers !!}
                 class="absolute inset-0 program-grid-slide bg-[#1a1512]"
-                style="background-image: url('https://images.unsplash.com/photo-1518599904199-0ca897819ddb?q=80&w=1920&auto=format&fit=crop'); background-size: cover; background-position: center;"
+                style="background-image: url('https://images.unsplash.com/photo-1501166222995-ff4133408a04?q=80&w=1920&auto=format&fit=crop'); background-size: cover; background-position: center;"
             >
                 <div class="program-grid-noise"></div>
                 <div class="program-grid-vignette-left"></div>
