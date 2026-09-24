@@ -33,6 +33,7 @@ class VideoController extends Controller
         $data = $this->validated($request);
         $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
         $data['image'] = $this->resolveImage($request, null, $data['image'] ?? null, 'catalog/videos');
+        $data['is_manual'] = true;
 
         Video::query()->create($data);
 
@@ -49,6 +50,7 @@ class VideoController extends Controller
         $data = $this->validated($request, $video->id);
         $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
         $data['image'] = $this->resolveImage($request, $video->image, $data['image'] ?? null, 'catalog/videos');
+        $data['is_manual'] = true;
 
         $video->update($data);
 
@@ -61,6 +63,13 @@ class VideoController extends Controller
         $video->delete();
 
         return redirect()->route('admin.videos.index')->with('status', 'Video deleted.');
+    }
+
+    public function toggleManual(Video $video): RedirectResponse
+    {
+        $video->update(['is_manual' => !$video->is_manual]);
+
+        return back()->with('status', 'Estado manual/automático actualizado.');
     }
 
     private function validated(Request $request, ?int $ignoreId = null): array

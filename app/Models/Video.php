@@ -16,10 +16,16 @@ class Video extends Model
         'youtube_url',
         'summary',
         'is_featured',
+        'is_manual',
+        'source_type',
+        'source_id',
+        'featured_at',
     ];
 
     protected $casts = [
         'is_featured' => 'boolean',
+        'is_manual'   => 'boolean',
+        'featured_at' => 'datetime',
     ];
 
     public function getImageUrlAttribute(): string

@@ -378,9 +378,14 @@ Schedule::command('emails:process')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/emails-process.log'));
 
-// Rotate featured videos every Monday at 00:00
+// Rotate featured videos every Monday at 00:00 (legacy, not to be confused with the new rotator)
 Schedule::command('videos:rotate-releases')
     ->weeklyOn(1, '00:00')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/videos-rotate.log'));
+
+// Rotate featured video in the home page every Sunday at 23:50
+Schedule::command('videos:rotate-featured')
+    ->weeklyOn(0, '23:50')
+    ->withoutOverlapping();

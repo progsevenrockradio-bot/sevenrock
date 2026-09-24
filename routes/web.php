@@ -316,6 +316,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/{video}/edit', 'edit')->name('edit');
         Route::put('/{video}', 'update')->name('update');
         Route::delete('/{video}', 'destroy')->name('destroy');
+        Route::post('/{video}/toggle-manual', 'toggleManual')->name('toggle-manual');
     });
 
     Route::controller(AdminGalleryImageController::class)->prefix('gallery')->name('gallery.')->group(function (): void {

@@ -220,6 +220,23 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Toggle 3: Rotación automática del vídeo destacado -->
+            <div class="flex items-center justify-between p-4 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] rounded-lg md:col-span-2">
+                <div class="pr-4">
+                    <label class="block text-xs uppercase tracking-[.18em] text-[#dcdcdc] font-bold">Rotación automática del vídeo destacado</label>
+                    <span class="text-[10px] text-[#9a9a9a] block mt-1">Rota automáticamente los videos de la portada cada domingo usando nuevos lanzamientos.</span>
+                </div>
+                <div x-data="{ enabled: {{ old('featured_video_rotation_enabled', $settings->featured_video_rotation_enabled) ? 'true' : 'false' }} }" class="flex items-center shrink-0">
+                    <input type="hidden" name="featured_video_rotation_enabled" :value="enabled ? '1' : '0'">
+                    <button type="button" @click="enabled = !enabled" 
+                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                        :class="enabled ? 'bg-[#c32720]' : 'bg-[#2b2b2b]'">
+                        <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                            :class="enabled ? 'translate-x-5' : 'translate-x-0'"></span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="grid gap-5 md:grid-cols-2">

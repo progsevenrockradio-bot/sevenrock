@@ -27,6 +27,7 @@ class ThemeSetting extends Model
         'email_daily_releases_limit' => 'integer',
         'post_duplicate_similarity_threshold' => 'float',
         'hero_auto_slides' => 'bool',
+        'featured_video_rotation_enabled' => 'bool',
     ];
 
     protected $fillable = [
@@ -66,6 +67,7 @@ class ThemeSetting extends Model
         'hero_video_disabled',
         'hero_floating_text',
         'hero_floating_text_position',
+        'featured_video_rotation_enabled',
         'social_facebook',
         'social_instagram',
         'social_youtube',
@@ -131,6 +133,7 @@ class ThemeSetting extends Model
             'talents_banner_path' => 'assets/lucille/muro-del-rock-banner.png',
             'featured_album_slug' => null,
             'home_video_image_path' => 'assets/lucille/freedom-at-21-header.jpg',
+            'featured_video_rotation_enabled' => true,
             'contact_form_title' => 'Envíanos un mensaje',
             'contact_info_title' => 'Donde encontrarnos',
             'contact_description' => 'Whether you like our music or you just would like to say hello, we would love to hear from you. Follow us on social media or simply use this contact form to send us an email.',
