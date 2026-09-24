@@ -100,7 +100,13 @@
                     <div class="program-grid-cards"
                          @mouseleave="changeBg('{{ $defaultBg }}')">
                         @foreach (($auto['programs'] ?? []) as $pi => $prog)
+                            @php
+                                $randRot = rand(-45, 45) / 10; // -4.5deg a 4.5deg
+                                $randY = rand(-20, 20); // -20px a 20px
+                                $randScale = rand(88, 108) / 100; // 0.88 a 1.08
+                            @endphp
                             <div class="pgc {{ $prog['is_main'] ? 'pgc--main' : 'pgc--next' }}"
+                                 style="--rand-rot: {{ $randRot }}deg; --rand-y: {{ $randY }}px; --rand-scale: {{ $randScale }};"
                                  @mouseenter="changeBg('{{ $prog['image'] }}')">
                                 <div class="pgc-cover">
                                     <img src="{{ $prog['image'] }}" alt="{{ $prog['title'] }}" loading="{{ $pi === 0 ? 'eager' : 'lazy' }}">
