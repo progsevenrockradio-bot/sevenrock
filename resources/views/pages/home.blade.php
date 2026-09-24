@@ -17,7 +17,7 @@
         $ui = $themeAppearance['ui_texts'];
     @endphp
 
-    <x-sections.hero-rocks :slides="$themeAppearance['hero_slides']" :interval="$themeAppearance['hero_slides_interval']" :transition="$themeAppearance['hero_slides_transition']" />
+    <x-sections.hero-rocks :slides="$themeAppearance['hero_slides']" :auto-slides="$heroAutoSlides ?? []" :interval="$themeAppearance['hero_slides_interval']" :transition="$themeAppearance['hero_slides_transition']" />
 
     <x-home.headline-ticker :ticker="$headlineTicker" />
 

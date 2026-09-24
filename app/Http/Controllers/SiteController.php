@@ -83,6 +83,54 @@ class SiteController extends Controller
             collect()
         );
 
+        // ---------- Dynamic Hero Slides ----------
+        $heroAutoSlides = [];
+        if ($theme->hero_auto_slides) {
+            // Slide: Noticias del Día (scattered collage de 3 fotos)
+            $newsForSlide = $noticiasRock->take(3)->filter(fn ($p) => $p->featured_image_url)->values();
+            if ($newsForSlide->count() >= 2) {
+                $heroAutoSlides[] = [
+                    'type'   => 'scattered-collage',
+                    'label'  => 'Noticias del Día',
+                    'items'  => $newsForSlide->map(fn ($p) => [
+                        'image' => $p->featured_image_url,
+                        'title' => $p->title,
+                    ])->toArray(),
+                ];
+            }
+
+            // Slide: Nuevos Lanzamientos (protagonista + miniaturas)
+            $releasesForSlide = $newReleases->take(3)->filter(fn ($r) => $r->cover_image_url)->values();
+            if ($releasesForSlide->count() >= 2) {
+                $heroAutoSlides[] = [
+                    'type'   => 'scattered-featured',
+                    'label'  => 'Nuevos Lanzamientos',
+                    'items'  => $releasesForSlide->map(fn ($r) => [
+                        'image'  => $r->cover_image_url,
+                        'title'  => $r->title,
+                        'artist' => $r->artist_name,
+                    ])->toArray(),
+                ];
+            }
+
+            // Slide: Programa del Día
+            $nextProgramData = $this->safeValue(
+                fn () => app(ProgramScheduleService::class)->resolve(5),
+                app(ProgramScheduleService::class)->fallback()
+            );
+            $programImage = $nextProgramData['image'] ?? null;
+            if ($programImage && !str_contains($programImage, 'lucille/')) {
+                $heroAutoSlides[] = [
+                    'type'     => 'scattered-program',
+                    'label'    => $nextProgramData['badge'] ?? 'Programa',
+                    'image'    => str_starts_with($programImage, 'http') ? $programImage : asset($programImage),
+                    'title'    => $nextProgramData['title'] ?? 'PROGRAMACIÓN',
+                    'host'     => $nextProgramData['host'] ?? '',
+                    'schedule' => $nextProgramData['schedule'] ?? '',
+                ];
+            }
+        }
+
         return view('pages.home', [
             'events' => $events,
             'album' => $latestAlbum,
@@ -92,7 +140,7 @@ class SiteController extends Controller
             'noticiasRock' => $noticiasRock,
             'efemerides' => $efemerides,
             'newReleases' => $newReleases,
-            'nextProgram' => $this->safeValue(
+            'nextProgram' => $nextProgramData ?? $this->safeValue(
                 fn () => app(ProgramScheduleService::class)->resolve(5),
                 app(ProgramScheduleService::class)->fallback()
             ),
@@ -103,6 +151,7 @@ class SiteController extends Controller
             ),
             'latestPodcasts' => $latestPodcasts,
             'agencies' => $agencies,
+            'heroAutoSlides' => $heroAutoSlides,
         ]);
     }
 

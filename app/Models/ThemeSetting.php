@@ -26,6 +26,7 @@ class ThemeSetting extends Model
         'email_daily_posts_limit' => 'integer',
         'email_daily_releases_limit' => 'integer',
         'post_duplicate_similarity_threshold' => 'float',
+        'hero_auto_slides' => 'bool',
     ];
 
     protected $fillable = [
@@ -95,6 +96,7 @@ class ThemeSetting extends Model
         'openrouter_api_key',
         'ai_fallback_enabled',
         'ai_provider_chain',
+        'hero_auto_slides',
     ];
 
     public static function defaults(): array
@@ -124,6 +126,7 @@ class ThemeSetting extends Model
                 ['image' => 'assets/lucille/audience_opt.jpg'],
                 ['image' => 'assets/lucille/live-slider-bg.jpg'],
             ],
+            'hero_auto_slides' => true,
             'home_album_cover_path' => 'assets/lucille/album3.jpg',
             'talents_banner_path' => 'assets/lucille/muro-del-rock-banner.png',
             'featured_album_slug' => null,
