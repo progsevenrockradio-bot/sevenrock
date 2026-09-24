@@ -48,6 +48,7 @@
         <div
             x-show="active === {{ $index }}"
             {!! $transitionModifiers !!}
+            :class="active === {{ $index }} ? 'z-20' : 'z-10'"
             class="absolute inset-0 hero-slide"
             style="background-image: url('{{ $slideImage }}');"
             aria-hidden="{{ $index === 0 ? 'false' : 'true' }}"
@@ -73,6 +74,7 @@
             <div
                 x-show="active === {{ $slideIndex }}"
                 {!! $transitionModifiers !!}
+                :class="active === {{ $slideIndex }} ? 'z-20' : 'z-10'"
                 class="absolute inset-0 program-grid-slide bg-[#1a1512]"
                 style="background-image: url('https://images.unsplash.com/photo-1501166222995-ff4133408a04?q=80&w=1920&auto=format&fit=crop'); background-size: cover; background-position: center;"
             >
