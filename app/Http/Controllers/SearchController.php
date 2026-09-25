@@ -33,7 +33,7 @@ final class SearchController extends Controller
             $albums = Album::query()->where('title', 'like', "%{$query}%")->get();
             $results = $results->merge($albums->map(fn ($item) => ['type' => 'Album', 'data' => $item]));
 
-            $events = Event::query()->where('title', 'like', "%{$query}%")->get();
+            $events = Event::query()->published()->where('title', 'like', "%{$query}%")->get();
             $results = $results->merge($events->map(fn ($item) => ['type' => 'Event', 'data' => $item]));
 
             $videos = Video::query()->where('title', 'like', "%{$query}%")->get();

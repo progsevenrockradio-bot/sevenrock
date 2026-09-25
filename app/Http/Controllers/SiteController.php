@@ -97,7 +97,7 @@ class SiteController extends Controller
     {
         $events = $this->cachedEvents(
             'home-upcoming',
-            fn () => Event::query()->upcoming()->orderBy('starts_at')->limit(3)->get(),
+            fn () => Event::query()->published()->upcoming()->orderBy('starts_at')->limit(3)->get(),
             10
         );
 
@@ -347,7 +347,7 @@ class SiteController extends Controller
             title: 'Upcoming Shows',
             subtitle: 'Tour Dates 2026',
             description: 'Proximos eventos, conciertos y festivales de rock. Mantente al dia con la agenda musical de Seven Rock Radio.',
-            events: $this->cachedEvents('upcoming', fn () => Event::query()->upcoming()->orderBy('starts_at')->get(), 15)
+            events: $this->cachedEvents('upcoming', fn () => Event::query()->published()->upcoming()->orderBy('starts_at')->get(), 15)
         );
     }
 
@@ -357,7 +357,7 @@ class SiteController extends Controller
             title: 'Próximos eventos',
             subtitle: 'Eventos futuros',
             description: 'Eventos futuros, conciertos y festivales de rock. Mantente al dia con la agenda musical de Seven Rock Radio.',
-            events: $this->cachedEvents('upcoming', fn () => Event::query()->upcoming()->orderBy('starts_at')->get(), 15)
+            events: $this->cachedEvents('upcoming', fn () => Event::query()->published()->upcoming()->orderBy('starts_at')->get(), 15)
         );
     }
 
@@ -367,7 +367,7 @@ class SiteController extends Controller
             title: 'Eventos pasados',
             subtitle: 'Eventos ya ocurridos',
             description: 'Eventos ya ocurridos, conciertos y festivales de rock archivados por fecha.',
-            events: $this->cachedEvents('past', fn () => Event::query()->where('starts_at', '<', now()->startOfDay())->orderByDesc('starts_at')->get(), 15)
+            events: $this->cachedEvents('past', fn () => Event::query()->published()->where('starts_at', '<', now()->startOfDay())->orderByDesc('starts_at')->get(), 15)
         );
     }
 
@@ -377,7 +377,7 @@ class SiteController extends Controller
             title: 'Todos los eventos',
             subtitle: 'Agenda completa',
             description: 'Todos los eventos, conciertos y festivales de rock listados por fecha.',
-            events: $this->cachedEvents('all', fn () => Event::query()->orderByDesc('starts_at')->get(), 20)
+            events: $this->cachedEvents('all', fn () => Event::query()->published()->orderByDesc('starts_at')->get(), 20)
         );
     }
 
@@ -1858,52 +1858,30 @@ class SiteController extends Controller
 
     private function singleEvent(string $slug): array
     {
-        $event = Event::query()->where('slug', $slug)->first();
+        $event = Event::query()->published()->where('slug', $slug)->first();
 
-        if ($event instanceof Event) {
-            $startsAt = $event->starts_at ?? now();
-
-            return [
-                'title' => $event->title,
-                'categories' => $event->categories ?? [],
-                'date' => $startsAt->format('F j, Y'),
-                'time' => $startsAt->format('g:i a'),
-                'location' => $event->location,
-                'venue' => $event->venue,
-                'venue_url' => $event->venue_url ?: '#',
-                'ticket_url' => $event->ticket_url ?: '#',
-                'ticket_label' => $event->ticket_label ?: 'Tickets',
-                'facebook_url' => $event->facebook_url ?: '',
-                'poster' => PublicMediaUrl::normalizePublicUrl($event->poster) ?: 'assets/lucille/ozzfest_poster.jpg',
-                'embed' => $event->embed_url ?: '',
-                'map' => $event->map_url ?: '',
-                'content' => \App\Support\TextList::toArray($event->content),
-            ];
+        if (! $event instanceof Event) {
+            abort(404);
         }
 
-        $events = [
-            'rockness-festival' => [
-                'title' => 'Rockness Festival',
-                'categories' => ['Guest Appearance', 'Music Festivals'],
-                'date' => 'March 21, 2026',
-                'time' => '8:00 pm',
-                'location' => null,
-                'venue' => 'Rockness Festival',
-                'venue_url' => 'http://www.rockness.co.uk/',
-                'ticket_url' => 'http://www.ticketmaster.co.uk/',
-                'facebook_url' => 'https://www.facebook.com/OfficialRockNess',
-                'poster' => 'assets/lucille/ozzfest_poster.jpg',
-                'embed' => '',
-                'map' => '',
-                'content' => [
-                    'Cloudhouses, Yurts and Squrts are back again with their ever popular unique festival accommodation options. Cosy, and watertight structures to sleep 2 to 8 people with lovely staff at hand to help make guests feel at home and offering an authentic, bohemian experience.',
-                    'Please note that customers wishing to use these facilities must purchase a standard or VIP weekend camping ticket. Booking the boutique camping alone will not permit you entry to the festival.',
-                    'In celebration of National Catch the Bus Week, RockNess is inviting you to catch the bus to the festival. There are loads of reasons to get on board: convenience, value for money and helping the environment.',
-                ],
-            ],
-        ];
+        $startsAt = $event->starts_at ?? now();
 
-        return $events[$slug] ?? $events['rockness-festival'];
+        return [
+            'title'        => $event->title,
+            'categories'   => $event->categories ?? [],
+            'date'         => $startsAt->format('F j, Y'),
+            'time'         => $startsAt->format('g:i a'),
+            'location'     => $event->location,
+            'venue'        => $event->venue,
+            'venue_url'    => $event->venue_url ?: '#',
+            'ticket_url'   => $event->ticket_url ?: '#',
+            'ticket_label' => $event->ticket_label ?: 'Tickets',
+            'facebook_url' => $event->facebook_url ?: '',
+            'poster'       => PublicMediaUrl::normalizePublicUrl($event->poster) ?: 'assets/lucille/ozzfest_poster.jpg',
+            'embed'        => $event->embed_url ?: '',
+            'map'          => $event->map_url ?: '',
+            'content'      => \App\Support\TextList::toArray($event->content),
+        ];
     }
 
     /**
