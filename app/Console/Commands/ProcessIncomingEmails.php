@@ -577,7 +577,10 @@ class ProcessIncomingEmails extends Command
                     $originalSubjectNormalized = TextNormalizer::normalizeSlug($subject);
                     $threshold = (float) ($settings->post_duplicate_similarity_threshold ?? 0.82);
 
-                    $recentPosts = Post::where('created_at', '>=', now()->subHours(48))->get();
+                    $windowHours = (int) config('services.dedupe.window_hours', 48);
+                    $minShared = (int) config('services.dedupe.entity_min_shared', 2);
+                    
+                    $recentPosts = Post::where('created_at', '>=', now()->subHours($windowHours))->get();
                     $isDuplicate = false;
                     $similarPostId = null;
 
@@ -590,15 +593,34 @@ class ProcessIncomingEmails extends Command
                         }
 
                         $recentNormSlug = TextNormalizer::normalizeSlug($recent->title);
-                        if ($recentNormSlug === $normalizedSlug || TextNormalizer::similarity($recentNormSlug, $normalizedSlug) >= $threshold) {
-                            $isDuplicate = true;
-                            $similarPostId = $recent->id;
-                            break;
+                        
+                        if ($isEfemerides) {
+                            // "Hoy en el Rock" (efemérides): dedupe SOLO por título exacto. 
+                            // NUNCA por entidades (ya que comparten demasiadas palabras/entidades como el mes y "Rock").
+                            if ($recentNormSlug === $normalizedSlug) {
+                                $isDuplicate = true;
+                                $similarPostId = $recent->id;
+                                break;
+                            }
+                        } else {
+                            // Resto de noticias: título exacto o 2+ entidades compartidas
+                            if ($recentNormSlug === $normalizedSlug) {
+                                $isDuplicate = true;
+                                $similarPostId = $recent->id;
+                                break;
+                            }
+
+                            $shared = \App\Support\EntityMatcher::sharedEntities($recent->title, $title);
+                            if (count($shared) >= $minShared) {
+                                $isDuplicate = true;
+                                $similarPostId = $recent->id;
+                                break;
+                            }
                         }
                     }
 
                     if ($isDuplicate) {
-                        $this->info("Ignorando post duplicado por similitud (similar a post ID: {$similarPostId})");
+                        $this->info("Ignorando post duplicado (similar a post ID: {$similarPostId})");
                         Log::info("ProcessIncomingEmails: Post duplicado ignorado.", ['title' => $title, 'subject' => $subject, 'similar_to_post_id' => $similarPostId]);
                     } else {
                         // Crear Post
