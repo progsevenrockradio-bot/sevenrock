@@ -79,31 +79,6 @@ return [
             'report' => false,
         ],
 
-        'backblaze' => [
-            'driver' => 'backblaze',
-            'account_id' => env('BACKBLAZE_ACCOUNT_ID', env('BACKBLAZE_B2_KEY_ID', '')),
-            'application_key' => env('BACKBLAZE_APPLICATION_KEY', env('BACKBLAZE_B2_APPLICATION_KEY', '')),
-            'bucket_id' => env('BACKBLAZE_BUCKET_ID', env('BACKBLAZE_B2_BUCKET_ID', '')),
-            'bucket_name' => env('BACKBLAZE_BUCKET_NAME', env('BACKBLAZE_B2_BUCKET', '')),
-            'url' => env('BACKBLAZE_URL', env('BACKBLAZE_B2_URL', '')),
-            'prefix' => env('BACKBLAZE_PREFIX', env('BACKBLAZE_B2_PREFIX', '')),
-            'custom_url_resolves' => env('BACKBLAZE_CUSTOM_URL_RESOLVES', null),
-            'throw' => false,
-            'report' => false,
-        ],
-
-        'backblaze-b2' => [
-            'driver' => 'backblaze',
-            'account_id' => env('BACKBLAZE_ACCOUNT_ID', env('BACKBLAZE_B2_KEY_ID', '')),
-            'application_key' => env('BACKBLAZE_APPLICATION_KEY', env('BACKBLAZE_B2_APPLICATION_KEY', '')),
-            'bucket_id' => env('BACKBLAZE_BUCKET_ID', env('BACKBLAZE_B2_BUCKET_ID', '')),
-            'bucket_name' => env('BACKBLAZE_BUCKET_NAME', env('BACKBLAZE_B2_BUCKET', '')),
-            'url' => env('BACKBLAZE_URL', env('BACKBLAZE_B2_URL', '')),
-            'prefix' => env('BACKBLAZE_PREFIX', env('BACKBLAZE_B2_PREFIX', '')),
-            'custom_url_resolves' => env('BACKBLAZE_CUSTOM_URL_RESOLVES', null),
-            'throw' => false,
-            'report' => false,
-        ],
 
         'r2' => [
             'driver' => 's3',
