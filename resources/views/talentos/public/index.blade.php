@@ -170,8 +170,8 @@
 
                                 {{-- Track Audio Preview --}}
                                 @if ($latestTrack && $latestTrack->url)
-                                    <div class="mt-3 p-3 rounded-[10px] bg-black/50 border border-white/10 flex flex-wrap items-center gap-3">
-                                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                                    <div class="mt-3 p-3 rounded-[10px] bg-black/50 border border-white/10 flex flex-col sm:flex-row sm:items-center gap-3">
+                                        <div class="flex items-center gap-2 min-w-0 w-full sm:flex-1">
                                             <div class="h-7 w-7 rounded-full bg-[var(--lucille-accent)]/20 text-[var(--lucille-accent)] flex items-center justify-center shrink-0 animate-pulse">
                                                 <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
                                             </div>
@@ -180,7 +180,7 @@
                                                 <div class="text-xs font-semibold text-white truncate font-mono">{{ $latestTrack->title ?: $latestTrack->filename }}</div>
                                             </div>
                                         </div>
-                                        <audio controls controlsList="nodownload" class="h-8 max-w-[220px] w-full text-xs">
+                                        <audio controls controlsList="nodownload" class="h-8 w-full sm:w-auto sm:max-w-[220px] shrink-0 text-xs">
                                             <source src="{{ $latestTrack->url }}" type="{{ $latestTrack->mime_type ?: 'audio/mpeg' }}">
                                             Tu navegador no soporta el reproductor de audio.
                                         </audio>
@@ -189,7 +189,7 @@
                             </div>
 
                             {{-- Barra Inferior --}}
-                            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] uppercase tracking-[.18em] text-gray-400 font-mono">
+                            <div class="mt-4 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 text-[10px] uppercase tracking-[.18em] text-gray-400 font-mono">
                                 <div class="flex gap-4">
                                     <span>📁 {{ $talent->media_count }} archivos</span>
                                     <span>🔥 {{ $talent->interacts }} interacciones</span>
