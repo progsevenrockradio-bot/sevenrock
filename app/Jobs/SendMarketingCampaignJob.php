@@ -61,7 +61,7 @@ class SendMarketingCampaignJob implements ShouldQueue
             return;
         }
 
-        $contacts = MarketingContact::where('is_active', true)->get();
+        $contacts = MarketingContact::where('is_active', true)->whereNull('unsubscribed_at')->get();
         $totalContacts = count($contacts);
 
         if ($totalContacts === 0) {
@@ -105,6 +105,8 @@ class SendMarketingCampaignJob implements ShouldQueue
                     ]
                 ]);
 
+                $unsubscribeUrl = \Illuminate\Support\Facades\URL::signedRoute('marketing.unsubscribe', ['token' => $contact->unsubscribe_token]);
+
                 Mail::mailer('dynamic')->to($contact->email)->send(new MarketingMail(
                     $campaign->template,
                     $campaign->subject,
@@ -113,7 +115,8 @@ class SendMarketingCampaignJob implements ShouldQueue
                     $campaign->button_url,
                     $account->email,
                     $account->sender_name,
-                    $contact->name
+                    $contact->name,
+                    $unsubscribeUrl
                 ));
 
                 $campaign->increment('sent_contacts');

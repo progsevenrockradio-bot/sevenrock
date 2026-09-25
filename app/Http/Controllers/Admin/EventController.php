@@ -62,7 +62,7 @@ class EventController extends Controller
             'event' => $event,
             'posterPreview' => PublicMediaUrl::normalizePublicUrl($event->poster),
             'categoriesText' => implode(', ', $event->categories ?? []),
-            'contentText' => implode("\n\n", $event->content ?? []),
+            'contentText' => \App\Support\TextList::toString($event->content),
         ]);
     }
 
@@ -116,7 +116,7 @@ class EventController extends Controller
         $validated['location'] = trim((string) ($validated['location'] ?? ''));
         $validated['venue'] = trim((string) ($validated['venue'] ?? ''));
         $validated['categories'] = $this->splitTerms((string) ($validated['categories_text'] ?? ''));
-        $validated['content'] = $this->splitParagraphs((string) ($validated['content_text'] ?? ''));
+        $validated['content'] = \App\Support\TextList::toArray($validated['content_text'] ?? '');
         $validated['is_cancelled'] = $request->boolean('is_cancelled');
 
         unset($validated['categories_text'], $validated['content_text'], $validated['poster_file']);
@@ -154,17 +154,5 @@ class EventController extends Controller
         $terms = preg_split('/[\r\n,]+/', $text) ?: [];
 
         return array_values(array_filter(array_map('trim', $terms)));
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function splitParagraphs(string $text): array
-    {
-        $paragraphs = preg_split('/\R{2,}/', trim($text)) ?: [];
-
-        return array_values(array_filter(array_map(static function (string $paragraph): string {
-            return trim(preg_replace('/\s+/u', ' ', $paragraph) ?? '');
-        }, $paragraphs)));
     }
 }

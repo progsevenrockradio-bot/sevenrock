@@ -54,6 +54,15 @@ class SubmissionController extends Controller
             'status'        => 'pending',
         ]);
 
+        app(\App\Services\ModerationService::class)->register('submission', [
+            'subject_type' => TrackSubmission::class,
+            'subject_id' => $submission->id,
+            'title' => "Maqueta: {$submission->band_name} - {$submission->song_title}",
+            'summary' => "Enlace: " . ($submission->social_link ?? 'N/A'),
+            'submitter_name' => $submission->band_name,
+            'submitter_email' => $submission->contact_email,
+        ]);
+
         // 4. Enviar correo de confirmación al artista
         Mail::to($submission->contact_email)->send(new TrackSubmissionReceived($submission));
 

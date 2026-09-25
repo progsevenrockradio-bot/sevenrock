@@ -27,7 +27,8 @@ class MarketingMail extends Mailable
         public readonly ?string $buttonUrl,
         public readonly string $senderEmail,
         public readonly string $senderName,
-        public readonly ?string $contactName = null
+        public readonly ?string $contactName = null,
+        public readonly ?string $unsubscribeUrl = null
     ) {
     }
 
@@ -57,6 +58,8 @@ class MarketingMail extends Mailable
                 'buttonText' => $this->buttonText,
                 'buttonUrl' => $this->buttonUrl,
                 'contactName' => $this->contactName,
+                'unsubscribeUrl' => $this->unsubscribeUrl,
+                'senderAddress' => 'Seven Rock Radio - Dirección de contacto: prog.sevenrockradio@gmail.com',
             ],
         );
     }

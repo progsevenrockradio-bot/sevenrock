@@ -14,6 +14,7 @@ class TalentInteraction extends Model
         'visitor_ip',
         'type',
         'content',
+        'approved',
     ];
 
     protected function casts(): array

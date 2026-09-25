@@ -100,9 +100,21 @@ class DashboardController extends Controller
         $data = $this->validateBand($request);
         $data['agency_id'] = $agency->id; // Vincular automáticamente a la agencia
 
-        RadioArtist::query()->create($data);
+        $isPending = app(\App\Services\ModerationService::class)->needsModeration('agency_band');
 
-        return redirect()->route('agency.bands')->with('status', 'Banda registrada y vinculada a tu agencia.');
+        $data['status'] = $isPending ? 'pending' : 'active';
+        $band = RadioArtist::query()->create($data);
+
+        app(\App\Services\ModerationService::class)->registerIfRequired('agency_band', [
+            'subject_type' => RadioArtist::class,
+            'subject_id' => $band->id,
+            'title' => "Banda de Agencia: {$band->name}",
+            'summary' => "Agencia: {$agency->name}",
+            'submitter_name' => $agency->name,
+            'submitter_email' => $agency->email,
+        ]);
+
+        return redirect()->route('agency.bands')->with('status', $isPending ? 'Banda enviada a moderación.' : 'Banda registrada y vinculada a tu agencia.');
     }
 
     public function editBand(RadioArtist $band): View

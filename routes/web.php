@@ -49,6 +49,13 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ContractSigningController;
 use App\Http\Controllers\SubmissionController;
 
+Route::controller(\App\Http\Controllers\Admin\ModerationController::class)->prefix('moderation')->name('admin.moderation.')->middleware('signed')->group(function (): void {
+    Route::get('/{item}/approve-email', 'approveFromEmail')->name('approve-email')
+        ->missing(function () { abort(403, 'El enlace ha caducado o el ítem no existe.'); });
+    Route::get('/{item}/reject-email', 'rejectFromEmail')->name('reject-email')
+        ->missing(function () { abort(403, 'El enlace ha caducado o el ítem no existe.'); });
+});
+
 Route::get('/', [SiteController::class, 'home'])->name('home');
 Route::get('/events', [SiteController::class, 'events'])->name('events');
 Route::redirect('/eventos', '/events');
@@ -194,6 +201,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/{post}/edit', 'edit')->name('edit');
         Route::put('/{post}', 'update')->name('update');
         Route::delete('/{post}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(\App\Http\Controllers\Admin\ModerationController::class)->prefix('moderation')->name('moderation.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{item}', 'show')->name('show');
+        Route::post('/{item}/approve', 'approve')->name('approve');
+        Route::post('/{item}/reject', 'reject')->name('reject');
     });
 
     Route::controller(AdminCommentController::class)->prefix('comments')->name('comments.')->group(function (): void {
@@ -547,5 +561,18 @@ Route::get('/storage/{path}', function (string $path) {
 
 Route::get('/descargar-app', [\App\Http\Controllers\AppDownloadController::class, 'download'])->name('app.download');
 
+// Ruta de baja de correos de marketing
+Route::get('/baja/{token}', function (\Illuminate\Http\Request $request, $token) {
+    $contact = \App\Models\MarketingContact::where('unsubscribe_token', $token)->firstOrFail();
+    
+    if (!$contact->unsubscribed_at) {
+        $contact->update([
+            'is_active' => false,
+            'unsubscribed_at' => now(),
+        ]);
+    }
+
+    return response('<html><body style="font-family: sans-serif; padding: 2rem; max-width: 600px; margin: auto; text-align: center;"><h2>Te hemos dado de baja</h2><p>No volverás a recibir nuestros correos promocionales.</p></body></html>');
+})->name('marketing.unsubscribe')->middleware('signed');
 
 

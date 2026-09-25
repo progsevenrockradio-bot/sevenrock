@@ -152,6 +152,19 @@ class ThemeSettingsController extends Controller
             'email_heading_new_release_published' => ['nullable', 'string', 'max:255'],
             'email_title_post_published' => ['nullable', 'string', 'max:255'],
             'email_heading_post_published' => ['nullable', 'string', 'max:255'],
+            'moderation_extra_emails' => ['nullable', 'string'],
+            'moderation_require_submission' => ['nullable', 'boolean'],
+            'moderation_require_talent_registration' => ['nullable', 'boolean'],
+            'moderation_require_media' => ['nullable', 'boolean'],
+            'moderation_require_album' => ['nullable', 'boolean'],
+            'moderation_require_product' => ['nullable', 'boolean'],
+            'moderation_require_wall_post' => ['nullable', 'boolean'],
+            'moderation_require_comment' => ['nullable', 'boolean'],
+            'moderation_require_contact' => ['nullable', 'boolean'],
+            'moderation_require_affiliate' => ['nullable', 'boolean'],
+            'moderation_require_agency_band' => ['nullable', 'boolean'],
+            'moderation_require_contract' => ['nullable', 'boolean'],
+            'moderation_require_event' => ['nullable', 'boolean'],
         ]);
 
         $settings->fill(collect($validated)->except([

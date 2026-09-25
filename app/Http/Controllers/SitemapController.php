@@ -17,7 +17,7 @@ final class SitemapController extends Controller
     public function xml(): Response
     {
         $posts = Post::query()->whereNotNull('published_at')->orderBy('published_at', 'desc')->get();
-        $events = Event::query()->orderByDesc('created_at')->get();
+        $events = Event::query()->published()->orderByDesc('created_at')->get();
         $videos = Video::query()->orderByDesc('created_at')->get();
         $programs = MasterProgram::query()->orderByDesc('updated_at')->get();
         $releases = NewRelease::query()->where('is_active', true)->orderByDesc('released_at')->get();

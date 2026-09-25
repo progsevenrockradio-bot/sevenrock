@@ -18,6 +18,7 @@ class CommunityWallController extends Controller
     {
         $posts = CommunityPost::query()
             ->with(['user', 'talent'])
+            ->where('status', 'approved')
             ->latest()
             ->paginate(20);
 
@@ -49,14 +50,29 @@ class CommunityWallController extends Controller
             abort(403, 'Debes iniciar sesión para publicar.');
         }
 
-        CommunityPost::query()->create([
+        $isPending = app(\App\Services\ModerationService::class)->needsModeration('wall_post');
+
+        $post = CommunityPost::query()->create([
             'user_id' => $userId,
             'talent_id' => $talentId,
             'content' => strip_tags((string) $validated['content']),
             'youtube_url' => $validated['youtube_url'] ?: null,
+            'status' => $isPending ? 'pending' : 'approved',
         ]);
 
-        return back()->with('status', '¡Mensaje publicado en el Muro!');
+        $name = Auth::guard('talent')->check() ? Auth::guard('talent')->user()->band_name : Auth::guard('web')->user()->name;
+        $email = Auth::guard('talent')->check() ? Auth::guard('talent')->user()->email : Auth::guard('web')->user()->email;
+
+        app(\App\Services\ModerationService::class)->registerIfRequired('wall_post', [
+            'subject_type' => CommunityPost::class,
+            'subject_id' => $post->id,
+            'title' => 'Publicación en el Muro',
+            'summary' => Str::limit($post->content, 50),
+            'submitter_name' => $name,
+            'submitter_email' => $email,
+        ]);
+
+        return back()->with('status', $isPending ? '¡Mensaje enviado a moderación!' : '¡Mensaje publicado en el Muro!');
     }
 
     public function exclusivos(): View

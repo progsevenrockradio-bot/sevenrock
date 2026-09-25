@@ -24,6 +24,7 @@ class Event extends Model
     protected $fillable = [
         'title',
         'slug',
+        'status',
         'starts_at',
         'ends_at',
         'location',
@@ -57,6 +58,16 @@ class Event extends Model
             'content' => 'array',
             'is_cancelled' => 'boolean',
         ];
+    }
+
+    /**
+     * Scope: only events approved for public display.
+     * Use this on every public-facing query. Do NOT use as a globalScope
+     * because admin panel and pipeline need to see pending events too.
+     */
+    public function scopePublished(Builder $query): Builder
+    {
+        return $query->where('status', 'approved');
     }
 
     public function scopeUpcoming(Builder $query): Builder

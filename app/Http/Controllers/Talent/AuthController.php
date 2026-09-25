@@ -91,6 +91,15 @@ class AuthController extends Controller
         Auth::guard('talent')->login($talent, true);
         $request->session()->regenerate();
 
+        app(\App\Services\ModerationService::class)->registerIfRequired('talent_registration', [
+            'subject_type' => Talent::class,
+            'subject_id' => $talent->id,
+            'title' => "Registro de Talento: {$talent->band_name}",
+            'summary' => "Plan: {$talent->plan}",
+            'submitter_name' => $talent->band_name,
+            'submitter_email' => $talent->email,
+        ]);
+
         if (filled($talent->email)) {
             Mail::to($talent->email)->queue(new WelcomeTalentMail($talent));
         }

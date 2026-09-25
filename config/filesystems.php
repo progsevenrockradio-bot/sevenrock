@@ -81,17 +81,44 @@ return [
 
 
         'r2' => [
-            'driver' => 's3',
-            'key' => env('CLOUDFLARE_R2_ACCESS_KEY_ID'),
-            'secret' => env('CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
-            'region' => 'auto',
-            'bucket' => env('CLOUDFLARE_R2_BUCKET'),
-            'url' => env('CLOUDFLARE_R2_URL'),
-            'endpoint' => env('CLOUDFLARE_R2_ENDPOINT'),
+            'driver'              => 's3',
+            'key'                 => env('CLOUDFLARE_R2_ACCESS_KEY_ID'),
+            'secret'              => env('CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
+            'region'              => 'auto',
+            'bucket'              => env('CLOUDFLARE_R2_BUCKET'),
+            'url'                 => env('CLOUDFLARE_R2_URL'),
+            'endpoint'            => env('CLOUDFLARE_R2_ENDPOINT'),
             'use_path_style_endpoint' => true,
-            'throw' => false,
-            'report' => false,
+            'throw'               => false,
+            'report'              => false,
         ],
+
+        // ─── STAND BY: Backblaze B2 ──────────────────────────────────────────
+        // Desactivado. Para reactivarlo algún día:
+        //   1) Rellena las variables BACKBLAZE_* en el .env de producción.
+        //   2) Pon BACKBLAZE_ENABLED=true en el .env.
+        // Mientras enabled=false, isB2Configured() / isBackblazeConfigured()
+        // devuelven false y NINGUNA parte del código lo usa.
+        // El registro del driver sigue activo en BackblazeServiceProvider.php
+        // para que no haya errores si el disco se referencia accidentalmente.
+        'backblaze' => [
+            'driver'                  => 'backblaze',
+            'enabled'                 => env('BACKBLAZE_ENABLED', false),
+            'key'                     => env('BACKBLAZE_APPLICATION_KEY'),
+            'secret'                  => env('BACKBLAZE_ACCOUNT_ID'),
+            'region'                  => env('BACKBLAZE_REGION', 'us-west-004'),
+            'bucket'                  => env('BACKBLAZE_BUCKET_NAME'),
+            'bucket_id'               => env('BACKBLAZE_BUCKET_ID'),
+            'account_id'              => env('BACKBLAZE_ACCOUNT_ID'),
+            'application_key'         => env('BACKBLAZE_APPLICATION_KEY'),
+            'bucket_name'             => env('BACKBLAZE_BUCKET_NAME'),
+            'url'                     => env('BACKBLAZE_URL'),
+            'prefix'                  => env('BACKBLAZE_PREFIX'),
+            'endpoint'                => env('BACKBLAZE_ENDPOINT'),
+            'use_path_style_endpoint' => true,
+            'throw'                   => false,
+        ],
+        // ────────────────────────────────────────────────────────────────────
 
     ],
 

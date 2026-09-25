@@ -118,7 +118,7 @@ class PostImageResolver
             return null;
         }
 
-        $minSize = $isDarkVader ? 10240 : 40960;
+        $minSize = $isDarkVader ? 3072 : 5120;
         $skipHosts = ['googleusercontent', 'googleapis', 'paypal.com', 'canva.com', 'mailchimp',
                       'list-manage', 'ct.sendgrid.net', 'sp1-brevo.net'];
         $candidates = [];
@@ -161,7 +161,7 @@ class PostImageResolver
             }
 
             [$width, $height] = $info;
-            if ($width < 300 || $height < 300) {
+            if ($width < 400 || $height < 300) {
                 continue;
             }
 
@@ -289,7 +289,7 @@ class PostImageResolver
 
     private function resolveFromAttachment(Message $message, bool $isDarkVader): ?string
     {
-        $imageMinSize = $isDarkVader ? 10240 : 40960;
+        $minBytes = $isDarkVader ? 3072 : 5120;
         $candidates = [];
         
         foreach ($message->getAttachments() as $attachment) {
@@ -313,11 +313,11 @@ class PostImageResolver
             $height = $info[1];
             $mime = $info['mime'];
 
-            if ($width < 200 || $height < 200) {
+            if ($width < 300 || $height < 300) {
                 continue;
             }
 
-            if ($sizeInBytes < $imageMinSize) {
+            if ($sizeInBytes < $minBytes) {
                 continue;
             }
 
@@ -342,6 +342,7 @@ class PostImageResolver
                 'ext' => $realExt,
                 'width' => $width,
                 'height' => $height,
+                'bytes' => $sizeInBytes,
                 'area' => $area,
                 'is_square' => $isSquare,
             ];
@@ -374,6 +375,8 @@ class PostImageResolver
         });
 
         $bestCandidate = $candidates[0];
+
+        Log::debug('PostImageResolver adjunto elegido', ['width' => $bestCandidate['width'], 'height' => $bestCandidate['height'], 'bytes' => $bestCandidate['bytes']]);
 
         try {
             $uploaded = app(\App\Services\FileUploadService::class)->uploadRaw(

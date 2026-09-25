@@ -24,7 +24,11 @@ class RehostExternalCovers extends Command
             $this->warn("MODO DRY-RUN ACTIVADO: No se guardarán cambios.");
         }
 
-        $postColumn = \Illuminate\Support\Facades\Schema::hasColumn('posts', 'featured_image') ? 'featured_image' : 'featured_image_path';
+        // La columna correcta es 'featured_image_path'. La guarda defensiva mantiene
+        // compatibilidad por si alguna instancia antigua aún tuviera 'featured_image'.
+        $postColumn = \Illuminate\Support\Facades\Schema::hasColumn('posts', 'featured_image_path')
+            ? 'featured_image_path'
+            : (\Illuminate\Support\Facades\Schema::hasColumn('posts', 'featured_image') ? 'featured_image' : 'featured_image_path');
 
         $posts = Post::whereNotNull($postColumn)
             ->where($postColumn, 'NOT LIKE', 'https://media.sevenrockradio.com%')

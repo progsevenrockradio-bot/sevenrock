@@ -285,6 +285,12 @@ class PublicMediaUrl
 
     private static function isBackblazeConfigured(): bool
     {
+        // STAND BY: el interruptor BACKBLAZE_ENABLED manda.
+        // Con false (o ausente), retorna false sin evaluar el resto de variables.
+        if (! (bool) config('filesystems.disks.backblaze.enabled', false)) {
+            return false;
+        }
+
         return trim((string) config('filesystems.disks.backblaze.account_id', '')) !== ''
             && trim((string) config('filesystems.disks.backblaze.application_key', '')) !== ''
             && trim((string) config('filesystems.disks.backblaze.bucket_id', '')) !== ''

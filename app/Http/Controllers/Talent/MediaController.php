@@ -80,7 +80,9 @@ class MediaController extends Controller
             $folder = "talents/{$talent->id}/media/{$validated['type']}";
             $upload = app(BackblazeService::class)->upload($file, $folder);
 
-            TalentMedia::query()->create([
+            $isPending = app(\App\Services\ModerationService::class)->needsModeration('media');
+
+            $media = TalentMedia::query()->create([
                 'talent_id' => $talent->id,
                 'type' => $validated['type'],
                 'filename' => $file->getClientOriginalName(),
@@ -91,6 +93,16 @@ class MediaController extends Controller
                 'mime_type' => (string) $file->getMimeType(),
                 'size' => $fileSize,
                 'is_exclusive' => $request->boolean('is_exclusive'),
+                'status' => $isPending ? 'pending' : 'approved',
+            ]);
+
+            app(\App\Services\ModerationService::class)->registerIfRequired('media', [
+                'subject_type' => TalentMedia::class,
+                'subject_id' => $media->id,
+                'title' => "Archivo multimedia de talento: {$media->title}",
+                'summary' => "Tipo: {$media->type}",
+                'submitter_name' => $talent->band_name,
+                'submitter_email' => $talent->email,
             ]);
         } catch (\Throwable $e) {
             return back()->withInput()->withErrors([

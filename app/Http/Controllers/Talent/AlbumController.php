@@ -58,6 +58,8 @@ class AlbumController extends Controller
             }
         }
 
+        $isPending = app(\App\Services\ModerationService::class)->needsModeration('album');
+
         $album = TalentAlbum::query()->create([
             'talent_id' => $talent->id,
             'title' => $validated['title'],
@@ -66,6 +68,7 @@ class AlbumController extends Controller
             'description' => $validated['description'] ?? null,
             'tracks' => $tracks,
             'is_published' => (bool) ($validated['is_published'] ?? false),
+            'status' => $isPending ? 'pending' : 'approved',
         ]);
 
         if ($request->hasFile('cover_image')) {
@@ -81,6 +84,15 @@ class AlbumController extends Controller
                     ->with('warning', 'Álbum creado pero no se pudo subir la portada.');
             }
         }
+
+        app(\App\Services\ModerationService::class)->registerIfRequired('album', [
+            'subject_type' => TalentAlbum::class,
+            'subject_id' => $album->id,
+            'title' => "Álbum: {$album->title}",
+            'summary' => "Lanzamiento: {$album->release_date}",
+            'submitter_name' => $talent->band_name,
+            'submitter_email' => $talent->email,
+        ]);
 
         return redirect()->route('talents.albums.index')
             ->with('status', 'Álbum creado correctamente.');

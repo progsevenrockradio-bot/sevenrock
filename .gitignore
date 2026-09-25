@@ -43,3 +43,9 @@ prog_srr.zip
 storage/framework/cache/data/
 *.backup_*
 composer.phar
+
+# Copias de seguridad y temporales de trabajo
+*.bak
+*.bak-*
+/scratch/
+/storage/app/temp/

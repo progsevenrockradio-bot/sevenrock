@@ -22,33 +22,30 @@ final class CommentController extends Controller
         $comment = new Comment($validated);
         $comment->post_id = $post->id;
 
+        $isPending = app(\App\Services\ModerationService::class)->needsModeration('comment');
+        
         if (Auth::check()) {
             $comment->user_id = Auth::id();
             $comment->author_name = Auth::user()->name;
             $comment->author_email = Auth::user()->email;
-            $comment->approved = true;
+            // Si requiere moderación, todos pasan por caja. Si no, todos aprobados.
+            $comment->approved = !$isPending;
         } else {
-            $comment->approved = false;
+            // Anonimos requieren moderacion siempre si está activada
+            $comment->approved = !$isPending;
         }
 
         $comment->save();
 
-        // Notificar a todos los administradores
-        try {
-            $admins = User::query()
-                ->where('role', 'admin')
-                ->whereNotNull('email')
-                ->get();
+        app(\App\Services\ModerationService::class)->registerIfRequired('comment', [
+            'subject_type' => Comment::class,
+            'subject_id' => $comment->id,
+            'title' => 'Nuevo Comentario',
+            'summary' => \Illuminate\Support\Str::limit($comment->content, 50),
+            'submitter_name' => $comment->author_name,
+            'submitter_email' => $comment->author_email,
+        ]);
 
-            foreach ($admins as $admin) {
-                Mail::to($admin->email)
-                    ->send(new NewCommentNotification($comment));
-            }
-        } catch (\Throwable $e) {
-            // Si falla el envío de email, no interrumpimos el flujo
-            logger()->error('Error enviando notificación de comentario: ' . $e->getMessage());
-        }
-
-        return back()->with('status', 'Comentario enviado. Será visible una vez aprobado.');
+        return back()->with('status', $isPending ? 'Comentario enviado. Será visible una vez aprobado.' : 'Comentario publicado.');
     }
 }

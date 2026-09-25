@@ -28,6 +28,20 @@ class ThemeSetting extends Model
         'post_duplicate_similarity_threshold' => 'float',
         'hero_auto_slides' => 'bool',
         'featured_video_rotation_enabled' => 'bool',
+        'moderation_enabled' => 'bool',
+        'moderation_digest_minutes' => 'integer',
+        'moderation_require_submission' => 'bool',
+        'moderation_require_media' => 'bool',
+        'moderation_require_album' => 'bool',
+        'moderation_require_product' => 'bool',
+        'moderation_require_wall_post' => 'bool',
+        'moderation_require_comment' => 'bool',
+        'moderation_require_talent_registration' => 'bool',
+        'moderation_require_affiliate' => 'bool',
+        'moderation_require_agency_band' => 'bool',
+        'moderation_require_contact' => 'bool',
+        'moderation_require_contract' => 'bool',
+        'moderation_require_event' => 'bool',
     ];
 
     protected $fillable = [
@@ -99,6 +113,21 @@ class ThemeSetting extends Model
         'ai_fallback_enabled',
         'ai_provider_chain',
         'hero_auto_slides',
+        'moderation_enabled',
+        'moderation_extra_emails',
+        'moderation_digest_minutes',
+        'moderation_require_submission',
+        'moderation_require_media',
+        'moderation_require_album',
+        'moderation_require_product',
+        'moderation_require_wall_post',
+        'moderation_require_comment',
+        'moderation_require_talent_registration',
+        'moderation_require_affiliate',
+        'moderation_require_agency_band',
+        'moderation_require_contact',
+        'moderation_require_contract',
+        'moderation_require_event',
     ];
 
     public static function defaults(): array
