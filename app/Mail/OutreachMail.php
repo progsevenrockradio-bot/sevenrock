@@ -21,6 +21,7 @@ final class OutreachMail extends Mailable
         public readonly string $campaignName,
         public readonly string $bandName,
         public readonly string $contactPerson = '',
+        public readonly ?string $unsubscribeUrl = null,
     ) {
     }
 
@@ -41,6 +42,8 @@ final class OutreachMail extends Mailable
                 'contactPerson' => $this->contactPerson,
                 'websiteUrl' => 'https://sevenrockradio.com',
                 'registerUrl' => 'https://sevenrockradio.com/talentos/register',
+                'unsubscribeUrl' => $this->unsubscribeUrl,
+                'senderAddress' => 'Seven Rock Radio - Dirección de contacto: prog.sevenrockradio@gmail.com',
             ],
         );
     }

@@ -23,40 +23,48 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    /**
-     * The number of seconds the job can run before timing out.
-     *
-     * @var int
-     */
     public $timeout = 600;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(
         public readonly int $mailAccountId,
         public readonly string $folderName = 'INBOX',
-        public readonly int $limit = 100
+        public readonly int $limit = 100,
+        public readonly bool $isDryRun = false
     ) {
         $this->onQueue('marketing');
     }
 
-    /**
-     * Execute the job.
-     */
-    public function handle(): void
+    public function handle(): array
     {
+        $stats = [
+            'total_reviewed' => 0,
+            'total_new' => 0,
+            'total_skipped' => 0,
+            'total_discarded' => 0,
+            'total_errors' => 0,
+            'new_contacts' => []
+        ];
+
         $account = MarketingMailAccount::find($this->mailAccountId);
         if (! $account || ! $account->is_active) {
             Log::warning("ScrapeAndEnrichContactsJob: Cuenta de correo ID {$this->mailAccountId} no válida o inactiva.");
-            return;
+            $stats['total_errors']++;
+            return $stats;
+        }
+
+        // RESTRICCION: NUNCA escanear prog.sevenrockradio@gmail.com
+        if ($account->email === 'prog.sevenrockradio@gmail.com') {
+            Log::warning("ScrapeAndEnrichContactsJob: Saltando cuenta {$account->email} por restriccion estricta.");
+            $stats['total_skipped']++;
+            return $stats;
         }
 
         $settings = ThemeSetting::current();
         $geminiKey = trim((string) $settings->gemini_api_key) ?: config('services.gemini.api_key');
         if ($geminiKey === '') {
             Log::error("ScrapeAndEnrichContactsJob: Gemini API Key no configurada.");
-            return;
+            $stats['total_errors']++;
+            return $stats;
         }
 
         Log::info("ScrapeAndEnrichContactsJob: Conectando a IMAP de {$account->email}...");
@@ -69,14 +77,15 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
                 'encryption'    => $account->imap_encryption,
                 'validate_cert' => config('services.imap.validate_cert', false),
                 'username'      => $account->email,
-                'password'      => $account->imap_password, // Desencriptado automáticamente
+                'password'      => $account->imap_password,
                 'protocol'      => 'imap'
             ]);
 
             $client->connect();
         } catch (\Throwable $e) {
             Log::error("ScrapeAndEnrichContactsJob: Fallo de conexión IMAP para {$account->email}: " . $e->getMessage());
-            return;
+            $stats['total_errors']++;
+            return $stats;
         }
 
         try {
@@ -92,14 +101,18 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
 
             if (! $targetFolder) {
                 Log::warning("ScrapeAndEnrichContactsJob: No se encontró la carpeta '{$this->folderName}' en la cuenta {$account->email}.");
-                return;
+                $stats['total_errors']++;
+                return $stats;
             }
 
             Log::info("ScrapeAndEnrichContactsJob: Escaneando carpeta '{$targetFolder->path}'...");
             $messages = $targetFolder->query()->all()->setFetchOrder("desc")->limit($this->limit)->get();
-
-            Log::info("ScrapeAndEnrichContactsJob: Analizando " . count($messages) . " correos...");
+            
+            $stats['total_reviewed'] = count($messages);
+            Log::info("ScrapeAndEnrichContactsJob: Analizando {$stats['total_reviewed']} correos...");
+            
             $parser = app(GeminiContentParser::class);
+            $processedEmails = [];
 
             foreach ($messages as $message) {
                 $fromAttribute = $message->getFrom();
@@ -116,12 +129,33 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
                     continue;
                 }
 
-                // Si ya existe en contactos, omitir
-                if (MarketingContact::where('email', $email)->exists()) {
+                // Descartar si el mismo remitente aparece varias veces en el lote (procesar una sola vez)
+                if (in_array($email, $processedEmails)) {
+                    $stats['total_skipped']++;
+                    continue;
+                }
+                $processedEmails[] = $email;
+
+                // Aplicar Filtro de calidad A) Correos técnicos y de software ANTES de nada
+                $reason = '';
+                if (!$this->isQualityContactEmail($email, $reason)) {
+                    Log::info("ScrapeAndEnrichContactsJob: Descartado por filtro de email ({$email}) -> Motivo: {$reason}");
+                    $stats['total_discarded']++;
                     continue;
                 }
 
-                // Si no existe, usar Gemini para analizar e intentar enriquecerlo
+                // Comprobar si ya existe en la base de datos ANTES de llamar a Gemini
+                $existingContact = MarketingContact::where('email', $email)->first();
+                if ($existingContact) {
+                    if (!$this->isDryRun) {
+                        $existingContact->update(['last_scraped_at' => now()]);
+                    }
+                    Log::info("ScrapeAndEnrichContactsJob: Contacto ya existente, last_scraped_at actualizado: {$email}");
+                    $stats['total_skipped']++;
+                    continue;
+                }
+
+                // Usar Gemini para analizar e intentar enriquecerlo
                 $subject = (string) $message->getSubject();
                 $body = $message->getHTMLBody() ?: $message->getTextBody() ?: '';
 
@@ -129,10 +163,11 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
                 $companyOrBand = null;
                 $role = null;
 
-                // Solo llamar a Gemini si el cuerpo del mensaje tiene contenido útil
                 if (trim($body) !== '') {
                     try {
                         Log::info("ScrapeAndEnrichContactsJob: Consultando Gemini para el remitente {$email}...");
+                        
+                        // Mock en entorno de test para evitar llamas reales. El test usará un mock de GeminiContentParser
                         $enriched = $parser->parseContactInfo($subject, $body, $geminiKey);
 
                         if ($enriched) {
@@ -140,7 +175,6 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
                             $companyOrBand = trim((string) ($enriched['company_or_band'] ?? ''));
                             $role = trim((string) ($enriched['role'] ?? ''));
 
-                            // Limpiar valores por defecto vacíos
                             if (strcasecmp($companyOrBand, 'Independiente') === 0 || strcasecmp($companyOrBand, 'Desconocido') === 0) {
                                 $companyOrBand = null;
                             }
@@ -153,29 +187,98 @@ class ScrapeAndEnrichContactsJob implements ShouldQueue
                     }
                 }
 
-                // Si Gemini no devolvió un nombre válido, caer al nombre del remitente de IMAP
                 if (empty($name)) {
                     $name = $rawName ?: explode('@', $email)[0];
                 }
 
-                MarketingContact::create([
+                // Aplicar Filtro de calidad B) Rol no comercial
+                if (!$this->isQualityContactRole($role, $reason)) {
+                    Log::info("ScrapeAndEnrichContactsJob: Descartado por filtro de rol ({$email}) -> Rol: {$role}, Motivo: {$reason}");
+                    $stats['total_discarded']++;
+                    continue;
+                }
+
+                if (!$this->isDryRun) {
+                    MarketingContact::create([
+                        'email' => $email,
+                        'name' => $name,
+                        'company_or_band' => $companyOrBand,
+                        'role' => $role,
+                        'is_active' => true,
+                        'source_account_id' => $account->id,
+                        'source_type' => 'scraped_' . strtolower(str_replace(['[', ']'], '', $this->folderName)),
+                        'last_scraped_at' => now(),
+                    ]);
+                }
+
+                $stats['total_new']++;
+                $stats['new_contacts'][] = [
                     'email' => $email,
                     'name' => $name,
-                    'company_or_band' => $companyOrBand,
-                    'role' => $role,
-                    'is_active' => true,
-                    'source_account_id' => $account->id,
-                    'source_type' => 'scraped_' . strtolower(str_replace(['[', ']'], '', $this->folderName)),
-                    'last_scraped_at' => now(),
-                ]);
+                    'company' => $companyOrBand ?: 'N/A',
+                    'role' => $role ?: 'N/A'
+                ];
 
-                Log::info("ScrapeAndEnrichContactsJob: Contacto guardado: {$email} ({$name} - {$companyOrBand})");
+                Log::info("ScrapeAndEnrichContactsJob: Contacto guardado" . ($this->isDryRun ? " (DRY-RUN)" : "") . ": {$email} ({$name} - {$companyOrBand})");
             }
 
             Log::info("ScrapeAndEnrichContactsJob: Sincronización completada con éxito.");
 
         } catch (\Throwable $e) {
             Log::error("ScrapeAndEnrichContactsJob: Error general al procesar carpeta: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            $stats['total_errors']++;
         }
+
+        return $stats;
+    }
+
+    private function isQualityContactEmail(string $email, string &$reason): bool
+    {
+        $domain = substr(strrchr($email, "@"), 1);
+        $prefix = explode('@', $email)[0];
+
+        $badDomains = ['wpallimport', 'apob', 'hubspot', 'mailchimp', 'sendgrid', 'mailgun', 'constantcontact', 'shopify', 'wordpress', 'elementor', 'cloudflare'];
+        foreach ($badDomains as $bd) {
+            if (str_contains($domain, $bd)) {
+                $reason = "Dominio de software/herramienta ($bd)";
+                return false;
+            }
+        }
+
+        $badPrefixes = ['noreply', 'no-reply', 'donotreply', 'postmaster', 'bounce', 'mailer-daemon', 'support', 'soporte', 'help', 'billing', 'invoice', 'notification', 'newsletter', 'marketing', 'unsubscribe'];
+        if (in_array($prefix, $badPrefixes)) {
+            $reason = "Prefijo técnico ($prefix)";
+            return false;
+        }
+
+        $relayDomains = ['mailchimpapp', 'sendgrid.net', 'mailgun.org', 'amazonses', 'mandrillapp', 'hubspotemail'];
+        foreach ($relayDomains as $rd) {
+            if (str_contains($domain, $rd)) {
+                $reason = "Relé de email ($rd)";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function isQualityContactRole(?string $role, string &$reason): bool
+    {
+        if (empty($role)) {
+            return true; // Cualquier rol vacío o dudoso se guarda igual
+        }
+
+        $validRoles = ['banda', 'artista', 'manager', 'representante', 'booking', 'agencia', 'sello', 'discografico', 'productora', 'festival', 'promotor', 'prensa', 'pr', 'radio', 'sincronizacion', 'distribucion'];
+        
+        // Normalize role to lower without accents could be good, but str_contains handles exact match.
+        // It's safer to check str_contains case insensitive. (str_contains is case sensitive in PHP 8, so use stripos).
+        foreach ($validRoles as $vr) {
+            if (stripos($role, $vr) !== false) {
+                return true;
+            }
+        }
+
+        $reason = "Rol no comercial ($role)";
+        return false;
     }
 }

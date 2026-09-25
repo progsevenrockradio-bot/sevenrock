@@ -70,8 +70,18 @@ class SendOutreachEmailsJob implements ShouldQueue
                 continue;
             }
 
+            // Excluir si está de baja
+            if (\App\Models\MarketingContact::isEmailUnsubscribed($email)) {
+                Log::info("SendOutreachEmailsJob: Omitiendo {$email} porque está dado de baja.");
+                continue;
+            }
+
             $subject = $template->renderSubject($program, $contact);
             $body = $template->renderBody($program, $contact);
+
+            // Obtener link de baja
+            $token = \App\Models\MarketingContact::getUnsubscribeTokenForEmail($email);
+            $unsubscribeUrl = \Illuminate\Support\Facades\URL::signedRoute('marketing.unsubscribe', ['token' => $token]);
 
             try {
                 Mail::to($email)->send(new OutreachMail(
@@ -80,6 +90,7 @@ class SendOutreachEmailsJob implements ShouldQueue
                     campaignName: $campaign->name,
                     bandName: $contact instanceof BandContact ? $contact->bandName() : (string) ($program?->name ?? 'Programa'),
                     contactPerson: (string) ($contact?->contact_person ?? $program?->conductor ?? ''),
+                    unsubscribeUrl: $unsubscribeUrl
                 ));
 
                 OutreachLog::query()->create([

@@ -389,3 +389,8 @@ Schedule::command('videos:rotate-releases')
 Schedule::command('videos:rotate-featured')
     ->weeklyOn(0, '23:50')
     ->withoutOverlapping();
+
+// Rutina de captacion de contactos (Lunes a las 04:30, hora valle)
+Schedule::command('marketing:scrape-contacts --limit=500')
+    ->weeklyOn(1, '04:30')
+    ->withoutOverlapping();

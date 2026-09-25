@@ -561,5 +561,18 @@ Route::get('/storage/{path}', function (string $path) {
 
 Route::get('/descargar-app', [\App\Http\Controllers\AppDownloadController::class, 'download'])->name('app.download');
 
+// Ruta de baja de correos de marketing
+Route::get('/baja/{token}', function (\Illuminate\Http\Request $request, $token) {
+    $contact = \App\Models\MarketingContact::where('unsubscribe_token', $token)->firstOrFail();
+    
+    if (!$contact->unsubscribed_at) {
+        $contact->update([
+            'is_active' => false,
+            'unsubscribed_at' => now(),
+        ]);
+    }
+
+    return response('<html><body style="font-family: sans-serif; padding: 2rem; max-width: 600px; margin: auto; text-align: center;"><h2>Te hemos dado de baja</h2><p>No volverás a recibir nuestros correos promocionales.</p></body></html>');
+})->name('marketing.unsubscribe')->middleware('signed');
 
 
