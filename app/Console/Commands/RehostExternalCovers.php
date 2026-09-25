@@ -24,8 +24,10 @@ class RehostExternalCovers extends Command
             $this->warn("MODO DRY-RUN ACTIVADO: No se guardarán cambios.");
         }
 
-        $posts = Post::whereNotNull('featured_image')
-            ->where('featured_image', 'NOT LIKE', 'https://media.sevenrockradio.com%')
+        $postColumn = \Illuminate\Support\Facades\Schema::hasColumn('posts', 'featured_image') ? 'featured_image' : 'featured_image_path';
+
+        $posts = Post::whereNotNull($postColumn)
+            ->where($postColumn, 'NOT LIKE', 'https://media.sevenrockradio.com%')
             ->orderByDesc('created_at')
             ->limit($limit)
             ->get();
@@ -45,7 +47,8 @@ class RehostExternalCovers extends Command
 
         foreach ($items as $item) {
             $type = $item instanceof Post ? 'Post' : 'Release';
-            $imageUrl = $item instanceof Post ? $item->featured_image : $item->cover_image;
+            $imageUrl = clone $item;
+            $imageUrl = $item instanceof Post ? $item->getAttribute($postColumn) : $item->cover_image;
             
             if (!$imageUrl) continue;
 
@@ -85,7 +88,7 @@ class RehostExternalCovers extends Command
                 if ($rehostedUrl) {
                     if ($item instanceof Post) {
                         $item->source_url = $imageUrl;
-                        $item->featured_image = $rehostedUrl;
+                        $item->setAttribute($postColumn, $rehostedUrl);
                     } else {
                         // En NewRelease podríamos no tener source_url tan directo, guardamos la imagen
                         $item->cover_image = $rehostedUrl;
