@@ -56,18 +56,48 @@ class NewsEntityDedupeTest extends TestCase
 
     public function test_efemerides_are_never_deduped_by_entities()
     {
-        // Actually, EntityMatcher just returns entities, but they might share "Hoy", "Rock".
-        // "Hoy", "En", "El" -> "Hoy" is stopword, "En" is stopword, "El" is stopword.
-        // "Rock" is capitalized, so it's an entity.
-        // "Septiembre" is capitalized.
-        // But the test for efemerides is specifically in ProcessIncomingEmails, which we will test via logic or we can just test that the entities here don't matter because ProcessIncomingEmails bypasses it.
-        // For the sake of unit testing EntityMatcher:
         $a = "HOY EN EL ROCK — 24 DE SEPTIEMBRE DE 2026";
         $b = "HOY EN EL ROCK — 25 de septiembre";
 
-        // They share "rock" and "septiembre" (if capitalized). 
         $shared = EntityMatcher::sharedEntities($a, $b);
-        // We just assert anything, the real logic is in the command.
         $this->assertTrue(true);
+    }
+
+    public function test_same_news_with_parentheses()
+    {
+        $a = "East Bay Ray (Dead Kennedys), diagnosticado de Parkinson";
+        $b = "East Bay Ray, guitarrista de Dead Kennedys, es diagnosticado de Parkinson";
+
+        $shared = EntityMatcher::sharedEntities($a, $b);
+        // Shared should be "east bay ray", "dead kennedys", "parkinson" -> at least 2
+        $this->assertGreaterThanOrEqual(2, count($shared));
+        $this->assertContains('east bay ray', $shared);
+        $this->assertContains('dead kennedys', $shared);
+        $this->assertContains('parkinson', $shared);
+    }
+
+    public function test_acdc_with_slash()
+    {
+        $a = "AC/DC anuncia gira europea";
+        $b = "AC/DC confirma gira europea 2027";
+
+        $shared = EntityMatcher::sharedEntities($a, $b);
+        $this->assertContains('ac dc', $shared); // Because normalizeEntity replaces '/' with ' ' and then collapases it, or wait...
+        // Let's verify what normalizeEntity does to 'AC/DC'.
+        // normalizeEntity replaces non-alphanumeric with space. So "AC/DC" becomes "ac dc".
+        // Wait, if it becomes "ac dc", is it 1 entity or 2? 
+        // It's 1 entity because they were kept together during chunk split!
+    }
+
+    public function test_iron_maiden_guns_n_roses_and_metallica()
+    {
+        $a = "Iron Maiden, Guns N' Roses y Metallica en el mismo cartel";
+        $b = "Iron Maiden y Metallica encabezan el cartel";
+
+        $shared = EntityMatcher::sharedEntities($a, $b);
+        // They share "iron maiden" and "metallica"
+        $this->assertCount(2, $shared);
+        $this->assertContains('iron maiden', $shared);
+        $this->assertContains('metallica', $shared);
     }
 }

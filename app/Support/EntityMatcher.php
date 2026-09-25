@@ -27,37 +27,46 @@ class EntityMatcher
         }
 
         // 2. Palabras y secuencias de palabras en mayúscula
-        // Hacemos split por cualquier cosa que no sea letra o número
-        $words = preg_split('/[^\p{L}\p{N}]+/u', $title);
-        $currentEntity = [];
+        // Primero separamos por puntuación de cláusula para no fusionar nombres
+        $chunks = preg_split('/[,.;:()\[\]!?—|]/u', $title);
+        
+        foreach ($chunks as $chunk) {
+            // Hacemos split manteniendo letras, números y caracteres que forman nombres reales (', -, &, /)
+            $words = preg_split('/[^\p{L}\p{N}\'&\/-]+/u', $chunk);
+            $currentEntity = [];
 
-        foreach ($words as $word) {
-            if (empty($word)) continue;
-            
-            // Si la palabra empieza por mayúscula
-            if (preg_match('/^\p{Lu}/u', $word)) {
-                $normWord = self::normalizeEntity($word);
-                // Si es una stopword (ej. Muere, El, La) no forma parte de la entidad
-                if (!self::isStopWord($normWord) && !empty($normWord)) {
-                    $currentEntity[] = $normWord;
+            foreach ($words as $word) {
+                if (empty($word)) continue;
+                
+                // Limpiamos la palabra de posibles guiones o comillas sueltas en los extremos
+                $word = trim($word, "'&-/ \t\n\r\0\x0B");
+                if (empty($word)) continue;
+
+                // Si la palabra empieza por mayúscula
+                if (preg_match('/^\p{Lu}/u', $word)) {
+                    $normWord = self::normalizeEntity($word);
+                    // Si es una stopword (ej. Muere, El, La) no forma parte de la entidad
+                    if (!self::isStopWord($normWord) && !empty($normWord)) {
+                        $currentEntity[] = $normWord;
+                    } else {
+                        // Si era stopword, corta la secuencia actual
+                        if (count($currentEntity) > 0) {
+                            $entities[] = implode(' ', $currentEntity);
+                            $currentEntity = [];
+                        }
+                    }
                 } else {
-                    // Si era stopword, corta la secuencia actual
+                    // Palabra en minúscula o número, rompe la secuencia
                     if (count($currentEntity) > 0) {
                         $entities[] = implode(' ', $currentEntity);
                         $currentEntity = [];
                     }
                 }
-            } else {
-                // Palabra en minúscula o número, rompe la secuencia
-                if (count($currentEntity) > 0) {
-                    $entities[] = implode(' ', $currentEntity);
-                    $currentEntity = [];
-                }
             }
-        }
-        
-        if (count($currentEntity) > 0) {
-            $entities[] = implode(' ', $currentEntity);
+            
+            if (count($currentEntity) > 0) {
+                $entities[] = implode(' ', $currentEntity);
+            }
         }
 
         // Filtrar vacíos y duplicados
