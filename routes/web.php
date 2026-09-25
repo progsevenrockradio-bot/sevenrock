@@ -49,6 +49,11 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ContractSigningController;
 use App\Http\Controllers\SubmissionController;
 
+Route::controller(\App\Http\Controllers\Admin\ModerationController::class)->prefix('moderation')->name('admin.moderation.')->middleware('signed')->group(function (): void {
+    Route::get('/{item}/approve-email', 'approveFromEmail')->name('approve-email');
+    Route::get('/{item}/reject-email', 'rejectFromEmail')->name('reject-email');
+});
+
 Route::get('/', [SiteController::class, 'home'])->name('home');
 Route::get('/events', [SiteController::class, 'events'])->name('events');
 Route::redirect('/eventos', '/events');
@@ -194,6 +199,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/{post}/edit', 'edit')->name('edit');
         Route::put('/{post}', 'update')->name('update');
         Route::delete('/{post}', 'destroy')->name('destroy');
+    });
+
+    Route::controller(\App\Http\Controllers\Admin\ModerationController::class)->prefix('moderation')->name('moderation.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{item}', 'show')->name('show');
+        Route::post('/{item}/approve', 'approve')->name('approve');
+        Route::post('/{item}/reject', 'reject')->name('reject');
     });
 
     Route::controller(AdminCommentController::class)->prefix('comments')->name('comments.')->group(function (): void {
