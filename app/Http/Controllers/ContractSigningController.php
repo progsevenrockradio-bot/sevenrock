@@ -46,8 +46,10 @@ class ContractSigningController extends Controller
             'city' => ['required', 'string', 'max:255'],
         ]);
 
+        $isPending = app(\App\Services\ModerationService::class)->needsModeration('contract');
+
         // 1. Update status and audit data, including user-provided location
-        $contract->status = 'signed';
+        $contract->status = $isPending ? 'pending' : 'signed';
         $contract->signed_at = Carbon::now();
         $contract->signing_ip = $request->ip();
         $contract->signer_name = $request->input('nombre_completo');
@@ -126,6 +128,15 @@ class ContractSigningController extends Controller
             logger()->error('Error al enviar correos de contrato firmado: ' . $e->getMessage());
         }
 
+        app(\App\Services\ModerationService::class)->registerIfRequired('contract', [
+            'subject_type' => Contract::class,
+            'subject_id' => $contract->id,
+            'title' => "Contrato firmado: {$contract->title}",
+            'summary' => "Firmante: {$contract->signer_name}",
+            'submitter_name' => $contract->signer_name,
+            'submitter_email' => $contract->signer_email,
+        ]);
+
         return redirect()->route('contratos.exito', ['token' => $token])
             ->with('status', 'Contrato firmado electrónicamente con éxito absoluto.');
     }
@@ -134,7 +145,7 @@ class ContractSigningController extends Controller
     {
         $contract = Contract::query()->where('token', $token)->firstOrFail();
 
-        if ($contract->status !== 'signed') {
+        if (!in_array($contract->status, ['signed', 'pending', 'approved'])) {
             return redirect()->route('contratos.firmar', ['token' => $token]);
         }
 

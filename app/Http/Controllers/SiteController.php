@@ -1720,6 +1720,16 @@ class SiteController extends Controller
                 bandName: $validated['band_name'] ?? null,
             ));
 
+            app(\App\Services\ModerationService::class)->registerIfRequired('contact', [
+                'subject_type' => null,
+                'subject_id' => null,
+                'title' => 'Formulario de Contacto',
+                'summary' => \Illuminate\Support\Str::limit($validated['message'], 100),
+                'submitter_name' => $validated['name'],
+                'submitter_email' => $validated['email'],
+                'payload' => $validated,
+            ]);
+
             if (($validated['subject'] ?? '') === 'join_radio') {
                 Mail::to($validated['email'])->send(new \App\Mail\TalentProspectMail(
                     senderName: $validated['name'],
@@ -1746,6 +1756,16 @@ class SiteController extends Controller
                 source: 'Inicio',
                 bandName: $validated['band_name'] ?? null,
             ));
+
+            app(\App\Services\ModerationService::class)->registerIfRequired('contact', [
+                'subject_type' => null,
+                'subject_id' => null,
+                'title' => 'Formulario de Contacto (Inicio)',
+                'summary' => \Illuminate\Support\Str::limit($validated['message'], 100),
+                'submitter_name' => $validated['name'],
+                'submitter_email' => $validated['email'],
+                'payload' => $validated,
+            ]);
 
             if (($validated['subject'] ?? '') === 'join_radio') {
                 Mail::to($validated['email'])->send(new \App\Mail\TalentProspectMail(
@@ -1857,7 +1877,7 @@ class SiteController extends Controller
                 'poster' => PublicMediaUrl::normalizePublicUrl($event->poster) ?: 'assets/lucille/ozzfest_poster.jpg',
                 'embed' => $event->embed_url ?: '',
                 'map' => $event->map_url ?: '',
-                'content' => array_values(array_filter(array_map('strval', $event->content ?? []))),
+                'content' => \App\Support\TextList::toArray($event->content),
             ];
         }
 

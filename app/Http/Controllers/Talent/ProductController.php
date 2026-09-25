@@ -58,7 +58,19 @@ class ProductController extends Controller
         $validated['is_talent_product'] = true;
         $validated['image'] = $this->uploadImage($request, $backblaze, $talent->id);
 
-        Product::query()->create($validated);
+        $isPending = app(\App\Services\ModerationService::class)->needsModeration('product');
+        $validated['status'] = $isPending ? 'pending' : 'approved';
+
+        $product = Product::query()->create($validated);
+
+        app(\App\Services\ModerationService::class)->registerIfRequired('product', [
+            'subject_type' => Product::class,
+            'subject_id' => $product->id,
+            'title' => "Producto: {$product->title}",
+            'summary' => "Precio: {$product->price}",
+            'submitter_name' => $talent->band_name,
+            'submitter_email' => $talent->email,
+        ]);
 
         return redirect()->route('talentos.store.index')->with('status', 'Producto creado.');
     }

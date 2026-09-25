@@ -27,16 +27,31 @@ class AffiliateAuthController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
+        $isPending = app(\App\Services\ModerationService::class)->needsModeration('affiliate');
+
         $user = User::query()->create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'is_active' => !$isPending,
         ]);
 
-        Auth::guard('web')->login($user, true);
-        $request->session()->regenerate();
+        app(\App\Services\ModerationService::class)->registerIfRequired('affiliate', [
+            'subject_type' => User::class,
+            'subject_id' => $user->id,
+            'title' => "Registro de Fan: {$user->name}",
+            'summary' => "Usuario: {$user->email}",
+            'submitter_name' => $user->name,
+            'submitter_email' => $user->email,
+        ]);
 
-        return redirect()->route('comunidad.muro')->with('status', '¡Bienvenido al Fan Club de Seven Rock Radio!');
+        if (!$isPending) {
+            Auth::guard('web')->login($user, true);
+            $request->session()->regenerate();
+            return redirect()->route('comunidad.muro')->with('status', '¡Bienvenido al Fan Club de Seven Rock Radio!');
+        }
+
+        return redirect()->route('comunidad.muro')->with('status', 'Tu cuenta ha sido creada y está pendiente de aprobación.');
     }
 
     public function showLoginForm(): View

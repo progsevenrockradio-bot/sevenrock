@@ -15,6 +15,31 @@ class ModerationService
      * Registra un elemento pendiente de moderación y lanza el aviso por correo.
      * Nunca aborta el proceso si el registro falla (envuelto en try/catch).
      */
+    public function needsModeration(string $type): bool
+    {
+        $settings = \App\Models\ThemeSetting::current();
+        
+        if (!$settings->moderation_enabled) {
+            return false;
+        }
+
+        $switchField = "moderation_require_{$type}";
+        return (bool) $settings->getAttribute($switchField);
+    }
+
+    /**
+     * Registra un ítem de moderación solo si la configuración del sistema lo requiere.
+     * Si no, asume que el contenido ya está aprobado.
+     */
+    public function registerIfRequired(string $type, array $data): ?ModerationItem
+    {
+        if (!$this->needsModeration($type)) {
+            return null;
+        }
+
+        return $this->register($type, $data);
+    }
+
     public function register(string $type, array $data): ?ModerationItem
     {
         try {
@@ -178,12 +203,14 @@ class ModerationService
             case 'media':
             case 'album':
             case 'product':
+            case 'wall_post':
+            case 'agency_band':
+            case 'contract':
                 // Requieren columna status
                 $subject->update(['status' => $status]);
                 break;
             case 'talent_registration':
             case 'affiliate':
-            case 'agency_band':
                 if ($status === 'approved') {
                     // Activa
                     if (method_exists($subject, 'activate')) {

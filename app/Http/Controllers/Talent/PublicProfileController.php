@@ -141,6 +141,7 @@ class PublicProfileController extends Controller
             'recommended' => $recommended,
             'topComments' => $talent->interactions()
                 ->where('type', 'comment')
+                ->where('approved', true)
                 ->latest()
                 ->limit(10)
                 ->get(),
@@ -198,19 +199,31 @@ class PublicProfileController extends Controller
             ->orWhere('band_name', $normalizedName)
             ->firstOrFail();
 
-        TalentInteraction::query()->create([
+        $isPending = app(\App\Services\ModerationService::class)->needsModeration('comment');
+
+        $interaction = TalentInteraction::query()->create([
             'talent_id' => $talent->id,
             'visitor_ip' => (string) $request->ip(),
             'type' => 'comment',
             'content' => strip_tags((string) $validated['content']),
+            'approved' => !$isPending,
         ]);
 
         $talent->increment('interacts');
+
+        app(\App\Services\ModerationService::class)->registerIfRequired('comment', [
+            'subject_type' => TalentInteraction::class,
+            'subject_id' => $interaction->id,
+            'title' => "Comentario en perfil: {$talent->band_name}",
+            'summary' => \Illuminate\Support\Str::limit($interaction->content, 50),
+            'submitter_name' => 'Visitante anónimo',
+            'submitter_email' => null,
+        ]);
 
         if (filled($talent->email) && $talent->notificationPreferenceEnabled('comments')) {
             Mail::to($talent->email)->queue(new NewInteractionMail($talent, 'comment', (string) $request->ip()));
         }
 
-        return back()->with('success', 'Comentario publicado');
+        return back()->with('success', $isPending ? 'Comentario enviado a moderación' : 'Comentario publicado');
     }
 }

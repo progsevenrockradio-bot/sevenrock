@@ -57,11 +57,28 @@
             'notification_mailer',
         ];
 
+        $tab4Fields = [
+            'moderation_extra_emails',
+            'moderation_require_submission',
+            'moderation_require_talent_registration',
+            'moderation_require_media',
+            'moderation_require_album',
+            'moderation_require_product',
+            'moderation_require_wall_post',
+            'moderation_require_comment',
+            'moderation_require_contact',
+            'moderation_require_affiliate',
+            'moderation_require_agency_band',
+            'moderation_require_contract',
+            'moderation_require_event',
+        ];
+
         $tab1HasErrors = $errors->hasAny($tab1Fields);
         $tab2HasErrors = $errors->hasAny($tab2Fields);
         $tab3HasErrors = $errors->hasAny($tab3Fields);
+        $tab4HasErrors = $errors->hasAny($tab4Fields);
 
-        $initialTab = $tab1HasErrors ? 'tab1' : ($tab2HasErrors ? 'tab2' : ($tab3HasErrors ? 'tab3' : 'tab1'));
+        $initialTab = $tab1HasErrors ? 'tab1' : ($tab2HasErrors ? 'tab2' : ($tab3HasErrors ? 'tab3' : ($tab4HasErrors ? 'tab4' : 'tab1')));
     @endphp
 
     @if (session('status'))
@@ -147,6 +164,12 @@
                             <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[#7a2b2b] bg-[rgba(195,39,32,.15)] px-1 text-[10px] text-[#ff9e9e] font-bold">!</span>
                         @endif
                     </button>
+                    <button type="button" class="lucille-button flex items-center gap-2" :class="activeTab === 'tab4' ? 'lucille-button-solid' : ''" @click="activeTab = 'tab4'">
+                        <span>🛡️</span> Moderación
+                        @if ($tab4HasErrors)
+                            <span class="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[#7a2b2b] bg-[rgba(195,39,32,.15)] px-1 text-[10px] text-[#ff9e9e] font-bold">!</span>
+                        @endif
+                    </button>
                 </div>
 
                 <div class="flex gap-2">
@@ -167,6 +190,10 @@
 
         <section x-cloak x-show="activeTab === 'tab3'" x-transition>
             @include('admin.settings.partials.communications')
+        </section>
+
+        <section x-cloak x-show="activeTab === 'tab4'" x-transition>
+            @include('admin.settings.partials.moderation')
         </section>
 
         <section class="sticky bottom-0 z-10 border border-[#2b2b2b] bg-[rgba(10,10,11,.96)] px-4 py-4 shadow-[0_-18px_40px_rgba(0,0,0,.35)] backdrop-blur">

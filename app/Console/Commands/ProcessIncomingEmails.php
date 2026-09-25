@@ -824,7 +824,7 @@ class ProcessIncomingEmails extends Command
                                 continue;
                             }
 
-                            \App\Models\Event::create([
+                            $newEvent = \App\Models\Event::create([
                                 'title' => $evTitle,
                                 'slug' => Str::slug($evTitle . '-' . $startsAt->format('Y-m-d') . '-' . Str::random(4)),
                                 'starts_at' => $startsAt,
@@ -833,10 +833,21 @@ class ProcessIncomingEmails extends Command
                                 'ticket_url' => $ev['ticket_url'] ?? null,
                                 'ticket_label' => !empty($ev['ticket_url']) ? 'Tickets' : 'Details',
                                 'categories' => ['Conciertos'],
-                                'content' => $parsed['content'] ?? '',
+                                'content' => \App\Support\TextList::toArray($parsed['content'] ?? ''),
                                 'poster' => $posterUrl,
                                 'is_cancelled' => false,
+                                'status' => 'pending',
                             ]);
+
+                            app(\App\Services\ModerationService::class)->register('event', [
+                                'subject_type' => \App\Models\Event::class,
+                                'subject_id' => $newEvent->id,
+                                'title' => "Evento: {$newEvent->title}",
+                                'summary' => "Fecha: {$newEvent->starts_at->format('Y-m-d')}",
+                                'submitter_name' => 'Sistema (Dark Vader)',
+                                'submitter_email' => 'dark.vader.agent@gmail.com',
+                            ]);
+
                             $eventsCreated++;
                         }
                         $this->info("Se agregaron {$eventsCreated} fechas a Próximos Conciertos.");
