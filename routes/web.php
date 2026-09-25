@@ -50,8 +50,10 @@ use App\Http\Controllers\ContractSigningController;
 use App\Http\Controllers\SubmissionController;
 
 Route::controller(\App\Http\Controllers\Admin\ModerationController::class)->prefix('moderation')->name('admin.moderation.')->middleware('signed')->group(function (): void {
-    Route::get('/{item}/approve-email', 'approveFromEmail')->name('approve-email');
-    Route::get('/{item}/reject-email', 'rejectFromEmail')->name('reject-email');
+    Route::get('/{item}/approve-email', 'approveFromEmail')->name('approve-email')
+        ->missing(function () { abort(403, 'El enlace ha caducado o el ítem no existe.'); });
+    Route::get('/{item}/reject-email', 'rejectFromEmail')->name('reject-email')
+        ->missing(function () { abort(403, 'El enlace ha caducado o el ítem no existe.'); });
 });
 
 Route::get('/', [SiteController::class, 'home'])->name('home');

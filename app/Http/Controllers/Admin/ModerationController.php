@@ -48,8 +48,16 @@ class ModerationController extends Controller
             abort(403, 'El enlace ha caducado o no es válido.');
         }
 
-        $this->service->approve($item, null, 'Aprobado desde el correo');
-        return response("Aprobado: {$item->title}");
+        $wasPending = $item->status === 'pending';
+        if ($wasPending) {
+            $this->service->approve($item, null, 'Aprobado desde el correo');
+        }
+
+        return view('moderation.result', [
+            'item' => $item,
+            'action' => 'Aprobado',
+            'wasPending' => $wasPending
+        ]);
     }
 
     public function rejectFromEmail(Request $request, ModerationItem $item)
@@ -58,7 +66,15 @@ class ModerationController extends Controller
             abort(403, 'El enlace ha caducado o no es válido.');
         }
 
-        $this->service->reject($item, null, 'Denegado desde el correo');
-        return response("Denegado: {$item->title}");
+        $wasPending = $item->status === 'pending';
+        if ($wasPending) {
+            $this->service->reject($item, null, 'Denegado desde el correo');
+        }
+
+        return view('moderation.result', [
+            'item' => $item,
+            'action' => 'Denegado',
+            'wasPending' => $wasPending
+        ]);
     }
 }

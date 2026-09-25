@@ -102,6 +102,8 @@ class ModerationService
     {
         if ($item->status !== 'pending') return;
 
+        $before = $item->getOriginal();
+
         $item->update([
             'status' => 'approved',
             'decided_by' => $userId,
@@ -111,12 +113,26 @@ class ModerationService
 
         $this->applyDecision($item, 'approved');
         
-        \App\Models\AuditLog::log('moderation_approved', $item->id, $userId, ['note' => $note, 'type' => $item->type]);
+        try {
+            app(\App\Services\AuditTrailService::class)->recordModel(
+                'moderation.approved',
+                $item,
+                $before,
+                $item->fresh()?->toArray() ?? [],
+                [],
+                ['note' => $note, 'type' => $item->type],
+                'info'
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('ModerationService: Fallo en auditoría', ['error' => $e->getMessage()]);
+        }
     }
 
     public function reject(ModerationItem $item, ?int $userId, ?string $note = null): void
     {
         if ($item->status !== 'pending') return;
+
+        $before = $item->getOriginal();
 
         $item->update([
             'status' => 'rejected',
@@ -127,7 +143,19 @@ class ModerationService
 
         $this->applyDecision($item, 'rejected');
 
-        \App\Models\AuditLog::log('moderation_rejected', $item->id, $userId, ['note' => $note, 'type' => $item->type]);
+        try {
+            app(\App\Services\AuditTrailService::class)->recordModel(
+                'moderation.rejected',
+                $item,
+                $before,
+                $item->fresh()?->toArray() ?? [],
+                [],
+                ['note' => $note, 'type' => $item->type],
+                'warning'
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('ModerationService: Fallo en auditoría', ['error' => $e->getMessage()]);
+        }
     }
 
     private function applyDecision(ModerationItem $item, string $status): void
