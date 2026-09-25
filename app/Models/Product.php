@@ -7,7 +7,7 @@ use App\Support\PublicMediaUrl;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
+
 
 class Product extends Model
 {
@@ -79,11 +79,12 @@ class Product extends Model
             return (string) $this->image;
         }
 
+        // Si hay talent_id, intentar resolver desde cualquier disco configurado
+        // (incluyendo backblaze si está habilitado, R2, o public según corresponda)
         if ($this->talent_id) {
-            try {
-                return Storage::disk('backblaze')->url($this->image);
-            } catch (\Throwable) {
-                // fallback below
+            $resolved = PublicMediaUrl::normalizePublicUrl($this->image);
+            if ($resolved !== '') {
+                return $resolved;
             }
         }
 
