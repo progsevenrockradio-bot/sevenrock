@@ -38,7 +38,10 @@ class PostImageResolver
         
         $settings = ThemeSetting::current();
         
-        $defaultUrl = rtrim(config('app.url'), '/') . '/' . ltrim($settings->email_default_cover_path ?: 'assets/lucille/album3.jpg', '/');
+        $configuredCover = (string) ($settings->email_default_cover_path ?: 'assets/lucille/album3.jpg');
+        $defaultUrl = str_starts_with($configuredCover, 'http')
+            ? $configuredCover
+            : rtrim(config('app.url'), '/') . '/' . ltrim($configuredCover, '/');
 
         $result = [
             'url' => $defaultUrl,
@@ -612,7 +615,9 @@ class PostImageResolver
             $dbName = $this->normalizeArtistName($artist->name);
             
             if ($dbName === $normName || str_contains($normName, $dbName) || str_contains($dbName, $normName)) {
-                return rtrim(config('app.url'), '/') . '/' . ltrim($artist->image_path, '/');
+                return str_starts_with((string) $artist->image_path, 'http')
+                    ? (string) $artist->image_path
+                    : rtrim(config('app.url'), '/') . '/' . ltrim($artist->image_path, '/');
             }
         }
         
