@@ -13,18 +13,19 @@ class MarketingScrapeTest extends TestCase
         $job = new ScrapeAndEnrichContactsJob(1, 'INBOX', 10);
         $method = new ReflectionMethod($job, 'isQualityContactEmail');
         $method->setAccessible(true);
+        $reason = '';
 
-        $this->assertTrue($method->invoke($job, 'promocion@sevenrockradio.com'));
-        $this->assertTrue($method->invoke($job, 'hello.john@gmail.com'));
-        $this->assertTrue($method->invoke($job, 'prensa@banda.com'));
+        $this->assertTrue($method->invokeArgs($job, ['promocion@sevenrockradio.com', &$reason]));
+        $this->assertTrue($method->invokeArgs($job, ['hello.john@gmail.com', &$reason]));
+        $this->assertTrue($method->invokeArgs($job, ['prensa@banda.com', &$reason]));
         
-        $this->assertFalse($method->invoke($job, 'info@banda.com'));
-        $this->assertFalse($method->invoke($job, 'admin@sevenrockradio.com'));
-        $this->assertFalse($method->invoke($job, 'support@empresa.com'));
-        $this->assertFalse($method->invoke($job, 'cualquiera@sentry.io'));
-        $this->assertFalse($method->invoke($job, 'hola@apob.ai'));
-        $this->assertFalse($method->invoke($job, 'notificaciones@mailchimpapp.net'));
-        $this->assertFalse($method->invoke($job, 'contacto@wpallimport.com'));
+        $this->assertFalse($method->invokeArgs($job, ['info@banda.com', &$reason]));
+        $this->assertFalse($method->invokeArgs($job, ['admin@sevenrockradio.com', &$reason]));
+        $this->assertFalse($method->invokeArgs($job, ['support@empresa.com', &$reason]));
+        $this->assertFalse($method->invokeArgs($job, ['cualquiera@sentry.io', &$reason]));
+        $this->assertFalse($method->invokeArgs($job, ['hola@apob.ai', &$reason]));
+        $this->assertFalse($method->invokeArgs($job, ['notificaciones@mailchimpapp.net', &$reason]));
+        $this->assertFalse($method->invokeArgs($job, ['contacto@wpallimport.com', &$reason]));
     }
 
     public function test_it_filters_invalid_roles()
@@ -32,16 +33,17 @@ class MarketingScrapeTest extends TestCase
         $job = new ScrapeAndEnrichContactsJob(1, 'INBOX', 10);
         $method = new ReflectionMethod($job, 'isQualityContactRole');
         $method->setAccessible(true);
+        $reason = '';
 
-        $this->assertTrue($method->invoke($job, 'manager'));
-        $this->assertTrue($method->invoke($job, 'banda'));
-        $this->assertTrue($method->invoke($job, 'rrpp'));
-        $this->assertTrue($method->invoke($job, 'prensa'));
-        $this->assertTrue($method->invoke($job, 'A&R'));
+        $this->assertTrue($method->invokeArgs($job, ['manager', &$reason]));
+        $this->assertTrue($method->invokeArgs($job, ['banda', &$reason]));
+        $this->assertTrue($method->invokeArgs($job, ['rrpp', &$reason]));
+        $this->assertTrue($method->invokeArgs($job, ['prensa', &$reason]));
+        $this->assertTrue($method->invokeArgs($job, ['A&R', &$reason]));
 
-        $this->assertFalse($method->invoke($job, 'fan'));
-        $this->assertFalse($method->invoke($job, 'oyente'));
-        $this->assertFalse($method->invoke($job, 'suscripción'));
-        $this->assertFalse($method->invoke($job, 'robot'));
+        $this->assertFalse($method->invokeArgs($job, ['fan', &$reason]));
+        $this->assertFalse($method->invokeArgs($job, ['oyente', &$reason]));
+        $this->assertFalse($method->invokeArgs($job, ['suscripción', &$reason]));
+        $this->assertFalse($method->invokeArgs($job, ['robot', &$reason]));
     }
 }
