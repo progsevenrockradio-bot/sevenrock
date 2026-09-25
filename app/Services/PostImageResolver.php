@@ -185,6 +185,7 @@ class PostImageResolver
                 'height' => $height,
                 'area' => $width * $height,
                 'is_square' => ($ratio >= 0.9 && $ratio <= 1.1),
+                'url' => $url,
             ];
         }
 
@@ -201,18 +202,89 @@ class PostImageResolver
 
         $best = $candidates[0];
 
-        try {
-            $uploaded = app(\App\Services\FileUploadService::class)->uploadRaw(
-                $best['content'],
-                'catalog/releases/covers/' . Str::uuid()->toString() . '.' . $best['ext']
-            );
-            $uploadedUrl = (string) ($uploaded['url'] ?? '');
-            return $uploadedUrl === '' ? null : \App\Support\PublicMediaUrl::normalizePublicUrl($uploadedUrl);
-        } catch (\Throwable $e) {
-            Log::error('PostImageResolver: fallo al subir la imagen del cuerpo HTML: ' . $e->getMessage());
+        $rehosted = $this->rehostExternalImage($best['url'], 'html_body');
+        if ($rehosted) {
+            return $rehosted;
         }
 
         return null;
+    }
+
+    private function rehostExternalImage(string $url, string $context = 'news'): ?string
+    {
+        if (str_starts_with($url, 'https://media.sevenrockradio.com')) {
+            return $url;
+        }
+
+        try {
+            $response = Http::withHeaders(['User-Agent' => 'SevenRockBot/1.0 (+https://sevenrockradio.com/bot)'])
+                ->timeout(40)
+                ->withOptions(['allow_redirects' => true])
+                ->get($url);
+
+            if (!$response->successful()) {
+                Log::debug("PostImageResolver: Error al descargar imagen externa ({$context}) [HTTP {$response->status()}]: {$url}");
+                return null;
+            }
+
+            $content = $response->body();
+            if (strlen($content) < 8192) {
+                Log::debug("PostImageResolver: Imagen externa ignorada por tamaño menor a 8KB ({$context}): {$url}");
+                return null;
+            }
+
+            $info = @getimagesizefromstring($content);
+            if ($info === false) {
+                Log::debug("PostImageResolver: Contenido descargado no es una imagen válida ({$context}): {$url}");
+                return null;
+            }
+
+            $width = $info[0];
+            $mime = $info['mime'];
+
+            if ($width < 300) {
+                Log::debug("PostImageResolver: Imagen externa ignorada por anchura < 300px ({$context}): {$url}");
+                return null;
+            }
+
+            $ext = match ($mime) {
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                'image/gif' => 'gif',
+                default => null,
+            };
+
+            if (!$ext) {
+                Log::debug("PostImageResolver: Tipo MIME no soportado ({$mime}) en {$context}: {$url}");
+                return null;
+            }
+
+            $uploaded = app(\App\Services\FileUploadService::class)->uploadRaw(
+                $content,
+                'posts/covers/' . Str::uuid()->toString() . '.' . $ext,
+                'r2'
+            );
+
+            $uploadedUrl = (string) ($uploaded['url'] ?? '');
+            if ($uploadedUrl === '') {
+                Log::error("PostImageResolver: uploadRaw no devolvió URL para {$context}: {$url}");
+                return null;
+            }
+
+            $normalizedUrl = \App\Support\PublicMediaUrl::normalizePublicUrl($uploadedUrl);
+
+            if (!str_starts_with($normalizedUrl, 'https://media.sevenrockradio.com') || str_contains($normalizedUrl, '/file/7RR-DATOS')) {
+                Log::error("PostImageResolver: URL rehospedada inválida o contiene /file/7RR-DATOS: {$normalizedUrl}");
+                return null;
+            }
+
+            return $normalizedUrl;
+
+        } catch (\Throwable $e) {
+            Log::error("PostImageResolver: Excepción rehospedando imagen externa ({$context}): " . $e->getMessage() . " URL: {$url}");
+            return null;
+        }
     }
 
     private function resolveFromAttachment(Message $message, bool $isDarkVader): ?string
@@ -341,7 +413,7 @@ class PostImageResolver
                     
                     $ogUrl = html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5);
                     if ($this->isValidImageDomain($ogUrl)) {
-                        return $ogUrl;
+                        return $this->rehostExternalImage($ogUrl, 'og_image');
                     }
                 }
             }
@@ -524,15 +596,18 @@ class PostImageResolver
         }
 
         if ($imageUrl && $this->isValidImageDomain($imageUrl)) {
-            Log::info(sprintf(
-                "PostImageResolver RSS: ✅ Match '%s' → '%s' (score=%d, sim=%.1f%%) url=%s entidades=%s",
-                $cleanTitle, $best['itemTitle'], $best['score'], $best['similarity'],
-                $articleUrl, implode(', ', array_column($entities, 'term'))
-            ));
-            return [
-                'url'         => $imageUrl,
-                'article_url' => $articleUrl,
-            ];
+            $rehostedUrl = $this->rehostExternalImage($imageUrl, 'rss');
+            if ($rehostedUrl) {
+                Log::info(sprintf(
+                    "PostImageResolver RSS: ✅ Match '%s' → '%s' (score=%d, sim=%.1f%%) url=%s entidades=%s",
+                    $cleanTitle, $best['itemTitle'], $best['score'], $best['similarity'],
+                    $articleUrl, implode(', ', array_column($entities, 'term'))
+                ));
+                return [
+                    'url'         => $rehostedUrl,
+                    'article_url' => $articleUrl, // The calling function expects this for source_url
+                ];
+            }
         }
 
         return null;
