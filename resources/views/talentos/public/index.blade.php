@@ -117,7 +117,12 @@
                 @php
                     $patternIndex = $loop->index % 7;
                     $isWide = in_array($patternIndex, [0, 3]);
-                    $latestTrack = $talent->media ? $talent->media->firstWhere('type', 'mp3') : null;
+                    
+                    $tracks = $talent->media
+                        ? $talent->media->where('type', 'mp3')->filter(fn ($m) => ! empty($m->url))->take(4)->values()
+                        : collect();
+                    $totalTracks = $talent->media ? $talent->media->where('type', 'mp3')->count() : 0;
+                    $latestTrack = $tracks->first();
                     
                     $planKey = strtolower((string) ($talent->plan ?? 'free'));
                     $theme = $planThemes[$planKey] ?? $planThemes['free'];
@@ -169,7 +174,39 @@
                                 </p>
 
                                 {{-- Track Audio Preview --}}
-                                @if ($latestTrack && $latestTrack->url)
+                                @if ($tracks->count() > 1)
+                                    <div class="mt-3 p-3 rounded-[10px] bg-black/50 border border-white/10" data-playlist>
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="text-[9px] uppercase tracking-widest text-gray-500 font-mono">
+                                                Pistas · {{ $tracks->count() }}
+                                            </span>
+                                            @if ($totalTracks > $tracks->count())
+                                                <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}"
+                                                   class="text-[9px] uppercase tracking-widest text-gray-400 hover:text-white font-mono">
+                                                    +{{ $totalTracks - $tracks->count() }} más
+                                                </a>
+                                            @endif
+                                        </div>
+
+                                        <ul class="mt-2 space-y-0.5">
+                                            @foreach ($tracks as $i => $track)
+                                                <li>
+                                                    <button type="button" data-track data-src="{{ $track->url }}"
+                                                            class="w-full flex items-center gap-2 text-left px-2 py-1.5 rounded-[6px] transition-colors hover:bg-white/5 {{ $i === 0 ? 'bg-white/5 text-white' : '' }}">
+                                                        <span class="h-6 w-6 shrink-0 rounded-full border border-white/15 text-white/70 flex items-center justify-center text-[9px] font-mono">
+                                                            {{ $i + 1 }}
+                                                        </span>
+                                                        <span class="min-w-0 flex-1 truncate text-xs font-mono {{ $i === 0 ? '' : 'text-gray-300' }}">
+                                                            {{ $track->title ?: $track->filename }}
+                                                        </span>
+                                                    </button>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+
+                                        <audio src="{{ $latestTrack->url }}" controls controlsList="nodownload" class="mt-2 h-8 w-full text-xs"></audio>
+                                    </div>
+                                @elseif ($latestTrack && $latestTrack->url)
                                     <div class="mt-3 p-3 rounded-[10px] bg-black/50 border border-white/10 flex flex-col sm:flex-row sm:items-center gap-3">
                                         <div class="flex items-center gap-2 min-w-0 w-full sm:flex-1">
                                             <div class="h-7 w-7 rounded-full bg-[var(--lucille-accent)]/20 text-[var(--lucille-accent)] flex items-center justify-center shrink-0 animate-pulse">
@@ -263,4 +300,23 @@
         </div>
         </section>
     </div>
+
+    @push('scripts')
+    <script>
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-track]');
+        if (!btn) return;
+        const box = btn.closest('[data-playlist]');
+        if (!box) return;
+        const audio = box.querySelector('audio');
+        if (!audio) return;
+        
+        box.querySelectorAll('[data-track]').forEach(el => el.classList.remove('bg-white/5', 'text-white'));
+        btn.classList.add('bg-white/5', 'text-white');
+        
+        audio.src = btn.dataset.src;
+        audio.play().catch(() => {});
+    });
+    </script>
+    @endpush
 </x-layouts.site>
