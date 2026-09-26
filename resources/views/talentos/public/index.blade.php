@@ -149,9 +149,9 @@
                             
                             <div class="flex flex-wrap gap-1.5 md:w-36 justify-start">
                                 @if ($talent->is_featured)
-                                    <span class="border border-[#d4af37]/40 bg-[#d4af37]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.15em] text-[#d4af37] rounded-sm shadow-[0_0_10px_rgba(212,175,55,0.2)]">★ Destacado</span>
+                                    <span class="border border-[#d4af37]/40 bg-[#d4af37]/15 px-2.5 py-1 inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-[.12em] text-[#d4af37] rounded-sm shadow-[0_0_10px_rgba(212,175,55,0.2)]"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.95 6.36 6.95.86-5.1 4.78 1.32 6.87L12 18.1l-6.12 3.27 1.32-6.87-5.1-4.78 6.95-.86L12 2.5Z"/></svg> Destacado</span>
                                 @endif
-                                <span class="border {{ $theme['badge'] }} px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.18em] rounded-sm">
+                                <span class="border {{ $theme['badge'] }} px-2.5 py-1 text-[11px] font-bold uppercase tracking-[.12em] rounded-sm">
                                     {{ $theme['label'] }}
                                 </span>
                             </div>
@@ -166,10 +166,10 @@
                                             {{ $talent->band_name }}
                                         </a>
                                     </h2>
-                                    <span class="hidden sm:inline-block text-[10px] uppercase font-mono tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">Banda Verificada</span>
+                                    <span class="hidden sm:inline-flex items-center gap-1 text-[11px] uppercase font-mono tracking-[.12em] text-[#dcdcdc] bg-white/[0.04] border border-white/15 px-2.5 py-1 rounded-full"><svg class="h-3 w-3 text-[var(--lucille-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg> Banda Verificada</span>
                                 </div>
 
-                                <p class="mt-2 text-sm text-gray-300 leading-relaxed line-clamp-3 md:line-clamp-4 font-sans">
+                                <p class="mt-2 text-sm text-[#c5c5c5] leading-relaxed line-clamp-3 md:line-clamp-4 font-sans">
                                     {{ $talent->bio ?: 'Este artista forma parte de nuestra comunidad oficial de talentos.' }}
                                 </p>
 
@@ -177,12 +177,12 @@
                                 @if ($tracks->count() > 1)
                                     <div class="mt-3 p-3 rounded-[10px] bg-black/50 border border-white/10" data-playlist>
                                         <div class="flex items-center justify-between gap-2">
-                                            <span class="text-[9px] uppercase tracking-widest text-gray-500 font-mono">
+                                            <span class="text-[11px] uppercase tracking-[.12em] text-[#8b8b8b] font-mono">
                                                 Pistas · {{ $tracks->count() }}
                                             </span>
                                             @if ($totalTracks > $tracks->count())
                                                 <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}"
-                                                   class="text-[9px] uppercase tracking-widest text-gray-400 hover:text-white font-mono">
+                                                   class="text-[11px] uppercase tracking-[.12em] text-[#9a9a9a] hover:text-white font-mono">
                                                     +{{ $totalTracks - $tracks->count() }} más
                                                 </a>
                                             @endif
@@ -193,10 +193,10 @@
                                                 <li>
                                                     <button type="button" data-track data-src="{{ $track->url }}"
                                                             class="w-full flex items-center gap-2 text-left px-2 py-1.5 rounded-[6px] transition-colors hover:bg-white/5 {{ $i === 0 ? 'bg-white/5 text-white' : '' }}">
-                                                        <span class="h-6 w-6 shrink-0 rounded-full border border-white/15 text-white/70 flex items-center justify-center text-[9px] font-mono">
+                                                        <span class="h-6 w-6 shrink-0 rounded-full border border-white/15 text-white/70 flex items-center justify-center text-[10px] font-mono">
                                                             {{ $i + 1 }}
                                                         </span>
-                                                        <span class="min-w-0 flex-1 truncate text-xs font-mono {{ $i === 0 ? '' : 'text-gray-300' }}">
+                                                        <span class="min-w-0 flex-1 truncate text-xs font-mono {{ $i === 0 ? '' : 'text-[#c5c5c5]' }}">
                                                             {{ $track->title ?: $track->filename }}
                                                         </span>
                                                     </button>
@@ -213,7 +213,7 @@
                                                 <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
                                             </div>
                                             <div class="min-w-0">
-                                                <div class="text-[9px] uppercase tracking-widest text-gray-500 font-mono">Pista Destacada</div>
+                                                <div class="text-[11px] uppercase tracking-[.12em] text-[#8b8b8b] font-mono">Pista Destacada</div>
                                                 <div class="text-xs font-semibold text-white truncate font-mono">{{ $latestTrack->title ?: $latestTrack->filename }}</div>
                                             </div>
                                         </div>
@@ -226,13 +226,13 @@
                             </div>
 
                             {{-- Barra Inferior --}}
-                            <div class="mt-4 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 text-[10px] uppercase tracking-[.18em] text-gray-400 font-mono">
-                                <div class="flex gap-4">
-                                    <span>📁 {{ $talent->media_count }} archivos</span>
-                                    <span>🔥 {{ $talent->interacts }} interacciones</span>
+                            <div class="mt-5 pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 text-[11px] uppercase tracking-[.12em] text-[#8b8b8b] font-mono">
+                                <div class="flex items-center gap-5">
+                                    <span class="inline-flex items-center gap-1.5"><svg class="h-3.5 w-3.5 text-[#8b8b8b]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/></svg> {{ $talent->media_count }} archivos</span>
+                                    <span class="inline-flex items-center gap-1.5"><svg class="h-3.5 w-3.5 text-[#8b8b8b]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z"/></svg> {{ $talent->interacts }} interacciones</span>
                                 </div>
-                                <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="lucille-button-solid text-[10px] py-1.5 px-4 tracking-widest uppercase rounded-[6px] shrink-0">
-                                    Ver Perfil →
+                                <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="lucille-button-solid inline-flex items-center gap-1.5 text-[11px] py-2 px-4 tracking-[.12em] uppercase rounded-[6px] shrink-0">
+                                    Ver Perfil <svg class="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
                                 </a>
                             </div>
                         </div>
@@ -258,18 +258,18 @@
                                 <div class="flex flex-wrap items-center gap-2">
                                     <h2 class="font-display text-xl uppercase tracking-[.12em] text-white truncate {{ $theme['hoverText'] }} transition-colors">{{ $talent->band_name }}</h2>
                                     @if ($talent->is_featured)
-                                        <span class="border border-[#d4af37]/40 bg-[#d4af37]/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.15em] text-[#d4af37] rounded-sm shadow-[0_0_8px_rgba(212,175,55,0.2)]">★</span>
+                                        <span class="border border-[#d4af37]/40 bg-[#d4af37]/15 px-2.5 py-1 inline-flex text-[11px] font-bold uppercase tracking-[.12em] text-[#d4af37] rounded-sm shadow-[0_0_8px_rgba(212,175,55,0.2)]"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.95 6.36 6.95.86-5.1 4.78 1.32 6.87L12 18.1l-6.12 3.27 1.32-6.87-5.1-4.78 6.95-.86L12 2.5Z"/></svg></span>
                                     @endif
                                 </div>
                                 <div class="mt-2">
-                                    <span class="border {{ $theme['badge'] }} px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.18em] rounded-sm inline-block">
+                                    <span class="border {{ $theme['badge'] }} px-2.5 py-1 text-[11px] font-bold uppercase tracking-[.12em] rounded-sm inline-block">
                                         {{ $theme['label'] }}
                                     </span>
                                 </div>
-                                <p class="mt-3 line-clamp-3 text-sm text-gray-400 leading-relaxed font-sans">{{ $talent->bio ?: 'Este artista aún no ha escrito su biografía.' }}</p>
+                                <p class="mt-3 line-clamp-3 text-sm text-[#c5c5c5] leading-relaxed font-sans">{{ $talent->bio ?: 'Este artista aún no ha escrito su biografía.' }}</p>
                             </div>
                         </div>
-                        <div class="mt-5 pt-4 border-t border-white/5 flex items-center justify-between text-[10px] uppercase tracking-[.18em] text-gray-400 font-mono">
+                        <div class="mt-5 pt-4 border-t border-white/5 flex items-center justify-between text-[11px] uppercase tracking-[.12em] text-[#8b8b8b] font-mono">
                             <span>{{ $talent->media_count }} archivos</span>
                             <span>{{ $talent->interacts }} interacciones</span>
                         </div>
