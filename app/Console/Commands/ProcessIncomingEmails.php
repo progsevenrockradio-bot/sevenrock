@@ -213,10 +213,12 @@ class ProcessIncomingEmails extends Command
                 // Comprobar si es un correo especial
                 $isDarkVader = $isDarkVaderAgent;
                 $subjectLower = mb_strtolower($subject);
-                $isEfemerides = str_starts_with($subjectLower, 'hoy en el rock') || 
-                                str_contains($subjectLower, 'efeméride') || 
-                                str_contains($subjectLower, 'efemerides');
-                $isNoticiaRock = $isWhitelisted && !$isEfemerides;
+                $isEfemerides = $isDarkVaderAgent && (
+                    str_starts_with($subjectLower, 'hoy en el rock') || 
+                    str_contains($subjectLower, 'efeméride') || 
+                    str_contains($subjectLower, 'efemerides')
+                );
+                $isNoticiaRock = $isDarkVaderAgent && !$isEfemerides;
 
                 Log::info("ProcessIncomingEmails: Tipo de correo Dark Vader detectado.", [
                     'is_dark_vader'   => $isDarkVader,
