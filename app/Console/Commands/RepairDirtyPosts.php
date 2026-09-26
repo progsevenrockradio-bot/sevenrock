@@ -49,8 +49,18 @@ class RepairDirtyPosts extends Command
             $this->info("Reparando Post ID {$post->id}: {$post->title}...");
 
             $subject = $post->source_subject ?: $post->title;
-            // Para la IA, le damos el contenido crudo actual
-            $body = strip_tags($post->content);
+            
+            // Extraer el texto de los bloques de contenido
+            $body = '';
+            $blocks = is_array($post->content) ? $post->content : [];
+            foreach ($blocks as $block) {
+                if (isset($block['value'])) {
+                    $body .= strip_tags($block['value']) . "\n\n";
+                } elseif (isset($block['data']['text'])) {
+                    $body .= strip_tags($block['data']['text']) . "\n\n";
+                }
+            }
+            $body = trim($body);
 
             $this->line(" Consultando a la IA...");
             $parsed = $aiManager->parse($subject, $body);
