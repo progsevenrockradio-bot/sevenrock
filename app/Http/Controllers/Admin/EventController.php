@@ -25,7 +25,12 @@ class EventController extends Controller
 
     public function preview(): RedirectResponse
     {
-        $slug = Event::query()->orderBy('starts_at')->value('slug') ?: 'rockness-festival';
+        $slug = Event::query()->orderBy('starts_at')->value('slug');
+
+        if (! $slug) {
+            return redirect()->route('admin.events.index')
+                ->with('status', 'Todavía no hay eventos publicados: crea uno para poder previsualizarlo.');
+        }
 
         return redirect()->route('events.single', ['slug' => $slug]);
     }

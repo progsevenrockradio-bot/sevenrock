@@ -17,11 +17,9 @@
             ['label' => 'Proximos eventos', 'route' => 'events.upcoming'],
             ['label' => 'Eventos pasados', 'route' => 'events.past'],
             ['label' => 'Todos los eventos', 'route' => 'events.all'],
-            ['label' => 'Evento', 'url' => route('events.single', ['slug' => 'rockness-festival'])],
         ]],
         ['label' => 'Blog', 'route' => 'blog', 'children' => [
             ['label' => 'Ver Blog', 'route' => 'blog'],
-            ['label' => 'Entrada', 'url' => route('posts.single', ['year' => '2016', 'month' => '09', 'day' => '06', 'slug' => 'inspiration'])],
         ]],
         ['label' => 'Muro del Rock', 'route' => 'talents.explore', 'children' => [
             ['label' => 'Explorar Bandas', 'route' => 'talents.explore'],
