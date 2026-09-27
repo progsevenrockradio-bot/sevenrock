@@ -406,9 +406,9 @@
     </footer>
 
     <!-- Banner de Cookies Estilo Ampwall -->
-    <div id="cookie-consent-banner" class="fixed inset-x-3 bottom-3 z-[250] mx-auto max-w-3xl rounded-xl border border-white/[0.08] bg-[#0f141c]/95 px-5 py-4 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-md transition-all duration-500 translate-y-[150%] opacity-0 md:inset-x-6 md:px-6" style="display: none;">
-        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
-            <div class="space-y-2 md:max-w-[58%] text-left">
+    <div id="cookie-consent-banner" class="fixed inset-x-3 bottom-3 z-[250] mx-auto max-w-4xl rounded-xl border border-white/[0.08] bg-[#0f141c]/95 px-5 py-4 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-md transition-all duration-500 translate-y-[150%] opacity-0 md:inset-x-6 md:px-6" style="display: none;">
+        <div class="flex flex-col gap-3">
+            <div class="space-y-2 text-left">
                 <div class="flex items-center gap-3">
                     <svg class="h-4 w-4 shrink-0 text-[#9aa7b1]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3a9 9 0 1 0 9 9 3.4 3.4 0 0 1-4.2-3.3A3.4 3.4 0 0 1 12 3Z"/><circle cx="9.2" cy="10" r=".85" fill="currentColor" stroke="none"/><circle cx="13.2" cy="14" r=".85" fill="currentColor" stroke="none"/><circle cx="8.6" cy="15.2" r=".85" fill="currentColor" stroke="none"/></svg>
                     <h4 class="font-display text-sm uppercase tracking-[.12em] text-white md:text-base">
