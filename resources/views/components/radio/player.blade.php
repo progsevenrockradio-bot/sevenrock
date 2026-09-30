@@ -159,18 +159,28 @@
     >
     <audio x-ref="audio" data-radio-audio src="{{ $player['streams']['direct'] }}" preload="none" playsinline></audio>
 
-    <div class="radio-player-sr-widget" aria-hidden="true">
-        <span id="rbcloud_nowplaying15715">Cargando...</span>
-        <img
-            id="rbcloud_cover8795"
-            src="https://c30.radioboss.fm/w/artwork/569.png"
-            width="300"
-            height="300"
-            alt=""
-         loading="lazy">
-        <script src="https://c30.radioboss.fm/w/nowplaying.js?u=569&amp;wid=15715&amp;nl=1&amp;nnt=1"></script>
-        <script src="https://c30.radioboss.fm/w/cover.js?u=569&amp;wid=8795"></script>
-    </div>
+    @if (($player['active_server'] ?? 'radioboss') === 'radioboss')
+        {{-- RadioBOSS activo: se deja EXACTAMENTE como estaba --}}
+        <div class="radio-player-sr-widget" aria-hidden="true">
+            <span id="rbcloud_nowplaying15715">Cargando...</span>
+            <img
+                id="rbcloud_cover8795"
+                src="https://c30.radioboss.fm/w/artwork/569.png"
+                width="300"
+                height="300"
+                alt=""
+             loading="lazy">
+            <script src="https://c30.radioboss.fm/w/nowplaying.js?u=569&amp;wid=15715&amp;nl=1&amp;nnt=1"></script>
+            <script src="https://c30.radioboss.fm/w/cover.js?u=569&amp;wid=8795"></script>
+        </div>
+    @else
+        {{-- Otra emisora activa (EXTASSIS…): los mismos datos, pero de la emisora activa.
+             Se alimenta solo desde /api/player/status, igual que el resto del reproductor. --}}
+        <div class="radio-player-sr-widget" aria-hidden="true">
+            <span>{{ $player['active_name'] ?? 'Seven Rock Radio' }}</span>
+            <img src="{{ $fallbackCover }}" width="300" height="300" alt="" loading="lazy">
+        </div>
+    @endif
     @if ($mode === 'popup')
 
         <div class="radio-player-popup-shell">

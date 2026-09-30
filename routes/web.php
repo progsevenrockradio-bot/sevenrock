@@ -576,3 +576,9 @@ Route::get('/baja/{token}', function (\Illuminate\Http\Request $request, $token)
 })->name('marketing.unsubscribe')->middleware('signed');
 
 
+    Route::controller(\App\Http\Controllers\Admin\AdminAirplayController::class)->prefix('programacion')->name('airplay.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/avisos', 'notices')->name('notices');
+        Route::post('/avisos/enviar', 'sendNotices')->name('send-notices');
+        Route::post('/token/generate', 'generateToken')->name('generate-token');
+    });

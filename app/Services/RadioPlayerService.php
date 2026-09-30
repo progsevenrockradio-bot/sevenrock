@@ -18,6 +18,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
+use App\Support\Radio\StreamNowPlaying;
 
 class RadioPlayerService
 {
@@ -77,6 +78,10 @@ class RadioPlayerService
     {
         $defaults = config('player.defaults');
         $state = array_replace($this->currentState(), $this->remoteNowPlayingState());
+
+        // Emisora activa distinta de RadioBOSS: su "suena ahora" manda sobre lo anterior.
+        // Si la activa es RadioBOSS esto devuelve [] y NO cambia absolutamente nada.
+        $state = array_replace($state, StreamNowPlaying::state());
         $rawTitle = $this->firstFilledString([
             Arr::get($state, 'title'),
             Arr::get($state, 'casttitle'),
