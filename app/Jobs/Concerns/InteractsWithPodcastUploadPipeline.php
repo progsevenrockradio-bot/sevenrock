@@ -512,6 +512,76 @@ trait InteractsWithPodcastUploadPipeline
         );
     }
 
+    private function uploadToExtassis(string $folder, string $remotePath, string $absolutePath, string $localPath): void
+    {
+        $extassisService = app(\App\Services\ExtassisService::class);
+        if (! $extassisService->canSync()) {
+            return;
+        }
+
+        $master = null;
+        $radioProgram = null;
+        if (property_exists($this, 'radioProgramId') && $this->radioProgramId) {
+            $radioProgram = \App\Models\RadioProgram::with('masterProgram')->find($this->radioProgramId);
+            $master = $radioProgram?->masterProgram;
+        } elseif (property_exists($this, 'radioProgram') && $this->radioProgram) {
+            $radioProgram = $this->radioProgram;
+            $master = $radioProgram?->masterProgram;
+        }
+
+        if (! $master) {
+            Log::warning('EXTASSIS upload skipped: No se pudo resolver MasterProgram.');
+            return;
+        }
+
+        $diaTransmision = strtoupper(trim((string) $master->dia_transmision));
+        $extassisDirs = config('filesystems.disks.extassis.dirs', []);
+        $extassisFolder = $extassisDirs[$diaTransmision] ?? null;
+
+        if (! $extassisFolder) {
+            Log::warning('EXTASSIS upload skipped: Día de transmisión no mapeado', [
+                'dia' => $diaTransmision,
+            ]);
+            return;
+        }
+
+        $fileName = basename(str_replace('\\', '/', $remotePath));
+        if ($master->program_code !== null && trim((string) $master->program_code) !== '') {
+            $fileName = 'CODIGO_' . $fileName;
+        }
+        $extassisRemotePath = rtrim($extassisFolder, '/\\') . '/' . ltrim($fileName, '/\\');
+
+        try {
+            $extassisService->upload(
+                $extassisFolder,
+                $extassisRemotePath,
+                $absolutePath,
+                false
+            );
+            
+            if ($radioProgram) {
+                app(\App\Services\PodcastPipelineAuditService::class)->record($radioProgram, 'EXTASSIS_UPLOAD_COMPLETED', 'La subida a EXTASSIS finalizó correctamente.', [
+                    'folder' => $extassisFolder,
+                    'remote_path' => $extassisRemotePath,
+                ]);
+            }
+        } catch (Throwable $exception) {
+            Log::warning('EXTASSIS upload failed', [
+                'folder' => $extassisFolder,
+                'remote_path' => $extassisRemotePath,
+                'error' => $exception->getMessage(),
+            ]);
+            
+            if ($radioProgram) {
+                app(\App\Services\PodcastPipelineAuditService::class)->record($radioProgram, 'EXTASSIS_UPLOAD_FAILED', 'La subida a EXTASSIS falló, pero no interrumpe el flujo.', [
+                    'folder' => $extassisFolder,
+                    'remote_path' => $extassisRemotePath,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+    }
+
     /**
      * @return array{
      *     verified: bool,
@@ -606,7 +676,15 @@ trait InteractsWithPodcastUploadPipeline
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
             try {
                 $this->uploadToRadioboss($folder, $remotePath, $absolutePath, $localPath);
+                
+                $verification = $this->verifyRadiobossUpload($remotePath, $absolutePath, $localPath);
+                if (! ($verification['verified'] ?? false)) {
+                    throw new \RuntimeException($verification['message'] ?? 'Verificación de RadioBOSS fallida.');
+                }
+                
                 $this->radiobossError = null;
+                
+                $this->uploadToExtassis($folder, $remotePath, $absolutePath, $localPath);
 
                 return true;
             } catch (Throwable $exception) {

@@ -66,6 +66,30 @@ return [
             'report' => false,
         ],
 
+        'extassis' => [
+            'driver' => 'ftp',
+            'host' => env('EXTASSIS_FTP_HOST', ''),
+            'username' => env('EXTASSIS_FTP_USER', ''),
+            'password' => env('EXTASSIS_FTP_PASS', ''),
+            'port' => (int) env('EXTASSIS_FTP_PORT', 21),
+            'root' => env('EXTASSIS_FTP_ROOT', '/'),
+            'passive' => filter_var(env('EXTASSIS_FTP_PASSIVE', true), FILTER_VALIDATE_BOOL),
+            'ssl' => filter_var(env('EXTASSIS_FTP_SSL', false), FILTER_VALIDATE_BOOL),
+            'timeout' => 60,
+            'enabled' => filter_var(env('EXTASSIS_FTP_ENABLED', false), FILTER_VALIDATE_BOOL),
+            'dirs' => [
+                'LUNES' => env('EXTASSIS_DIR_LUNES', '006.-LUNES'),
+                'MARTES' => env('EXTASSIS_DIR_MARTES', '007.-MARTES'),
+                'MIERCOLES' => env('EXTASSIS_DIR_MIERCOLES', '008.-MIERCOLES'),
+                'JUEVES' => env('EXTASSIS_DIR_JUEVES', '009.-JUEVES'),
+                'VIERNES' => env('EXTASSIS_DIR_VIERNES', '010.-VIERNES'),
+                'SABADO' => env('EXTASSIS_DIR_SABADO', '011.-SABADO'),
+                'DOMINGO' => env('EXTASSIS_DIR_DOMINGO', '012.-DOMINGO'),
+            ],
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
