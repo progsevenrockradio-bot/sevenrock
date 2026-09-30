@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ModerationItem;
 use App\Services\ModerationService;
+use App\Support\ModerationSubmitterNotifier;
 use Illuminate\Http\Request;
 
 class ModerationController extends Controller
@@ -32,12 +33,20 @@ class ModerationController extends Controller
     public function approve(Request $request, ModerationItem $item)
     {
         $this->service->approve($item, auth()->id(), $request->input('note'));
+
+        // Avisa al remitente de que ha sido aprobado.
+        ModerationSubmitterNotifier::notify($item);
+
         return redirect()->back()->with('success', 'Aprobado correctamente.');
     }
 
     public function reject(Request $request, ModerationItem $item)
     {
         $this->service->reject($item, auth()->id(), $request->input('note'));
+
+        // Avisa al remitente de que no ha sido seleccionado.
+        ModerationSubmitterNotifier::notify($item);
+
         return redirect()->back()->with('success', 'Denegado correctamente.');
     }
 
@@ -51,6 +60,9 @@ class ModerationController extends Controller
         $wasPending = $item->status === 'pending';
         if ($wasPending) {
             $this->service->approve($item, null, 'Aprobado desde el correo');
+
+            // Avisa al remitente de que ha sido aprobado.
+            ModerationSubmitterNotifier::notify($item);
         }
 
         return view('moderation.result', [
@@ -69,6 +81,9 @@ class ModerationController extends Controller
         $wasPending = $item->status === 'pending';
         if ($wasPending) {
             $this->service->reject($item, null, 'Denegado desde el correo');
+
+            // Avisa al remitente de que no ha sido seleccionado.
+            ModerationSubmitterNotifier::notify($item);
         }
 
         return view('moderation.result', [
