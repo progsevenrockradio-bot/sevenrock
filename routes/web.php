@@ -43,6 +43,7 @@ use App\Http\Controllers\AffiliateAuthController;
 use App\Http\Controllers\CommunityWallController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
 use App\Http\Controllers\Admin\EmailTemplateController as AdminEmailTemplateController;
+use App\Http\Controllers\Admin\AdminAirplayController;
 use App\Http\Controllers\Admin\DirectEmailController as AdminDirectEmailController;
 use App\Http\Controllers\Admin\EmailLogController as AdminEmailLogController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -576,7 +577,11 @@ Route::get('/baja/{token}', function (\Illuminate\Http\Request $request, $token)
 })->name('marketing.unsubscribe')->middleware('signed');
 
 
-    Route::controller(\App\Http\Controllers\Admin\AdminAirplayController::class)->prefix('programacion')->name('airplay.')->group(function (): void {
+Route::controller(AdminAirplayController::class)
+    ->prefix('programacion')
+    ->name('airplay.')
+    ->middleware(['auth', 'admin'])
+    ->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/avisos', 'notices')->name('notices');
         Route::post('/avisos/enviar', 'sendNotices')->name('send-notices');

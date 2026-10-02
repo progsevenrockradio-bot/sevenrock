@@ -8,6 +8,7 @@ use App\Models\AirplaySchedule;
 use App\Models\AirplayWeek;
 use App\Models\MarketingContact;
 use App\Models\ThemeSetting;
+use App\Models\User;
 use App\Services\ArtistEmailMatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -169,5 +170,50 @@ class AirplayApiTest extends TestCase
             'artista'       => 'Iron Maiden',
             'email_artista' => 'ironmaiden@band.com',
         ]);
+    }
+
+    public function test_guest_is_redirected_from_programacion_to_login(): void
+    {
+        $response = $this->get(route('airplay.index'));
+        $response->assertRedirect(route('admin.login'));
+    }
+
+    public function test_admin_can_view_airplay_index_without_500_error(): void
+    {
+        $admin = User::create([
+            'name'     => 'Admin User',
+            'email'    => 'admin@sevenrock.test',
+            'password' => 'secret123',
+            'is_admin' => true,
+            'role'     => 'admin',
+        ]);
+
+        AirplayWeek::create([
+            'semana'       => '2026-W40',
+            'pistas_total' => 10,
+            'novedades'    => 2,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('airplay.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Programación Semanal (Airplay)');
+        $response->assertSee('2026-W40');
+    }
+
+    public function test_admin_can_view_airplay_notices_without_error(): void
+    {
+        $admin = User::create([
+            'name'     => 'Admin User 2',
+            'email'    => 'admin2@sevenrock.test',
+            'password' => 'secret123',
+            'is_admin' => true,
+            'role'     => 'admin',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('airplay.notices'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Historial de Avisos de Programación');
     }
 }
