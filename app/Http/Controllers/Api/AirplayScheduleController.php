@@ -8,15 +8,20 @@ use App\Http\Controllers\Controller;
 use App\Models\AirplaySchedule;
 use App\Models\AirplayWeek;
 use App\Models\Talent;
+use App\Services\ArtistEmailMatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AirplayScheduleController extends Controller
 {
-    public function store(Request ): JsonResponse
+    public function __construct(
+        protected ArtistEmailMatcher $matcher
+    ) {}
+
+    public function store(Request $request): JsonResponse
     {
-         = ->validate([
+        $validated = $request->validate([
             'semana'               => ['required', 'string', 'regex:/^\d{4}-W\d{2}$/i'],
             'generado_en'          => ['nullable', 'date'],
             'hueco_publicidad_min' => ['nullable', 'integer', 'min:0', 'max:60'],
@@ -43,74 +48,81 @@ class AirplayScheduleController extends Controller
             'bloques.*.sha1'       => ['nullable', 'string', 'max:40'],
         ]);
 
-          = strtoupper(['semana']);
-         = now();
+        $semana = strtoupper($validated['semana']);
+        $ahora = now();
 
-        DB::transaction(function () use (, , ): void {
-             = collect(['bloques'])->filter(fn() => !empty(['es_novedad']) || !empty(['es_primer_pase']))->count();
+        DB::transaction(function () use ($validated, $semana, $ahora): void {
+            $novedades = collect($validated['bloques'])->filter(fn($b) => !empty($b['es_novedad']) || !empty($b['es_primer_pase']))->count();
 
             AirplayWeek::updateOrCreate(
-                ['semana' => ],
+                ['semana' => $semana],
                 [
-                    'generado_en'          => ['generado_en'] ?? null,
-                    'recibido_en'          => ,
-                    'pistas_total'         => count(['bloques']),
-                    'novedades'            => ,
-                    'hueco_publicidad_min' => ['hueco_publicidad_min'] ?? 8,
+                    'generado_en'          => $validated['generado_en'] ?? null,
+                    'recibido_en'          => $ahora,
+                    'pistas_total'         => count($validated['bloques']),
+                    'novedades'            => $novedades,
+                    'hueco_publicidad_min' => $validated['hueco_publicidad_min'] ?? 8,
                 ]
             );
 
-            foreach (['bloques'] as ) {
-                 = null;
-                if (trim(['artista']) !== '') {
-                     = Talent::query()
-                        ->whereRaw('LOWER(band_name) = ?', [mb_strtolower(trim(['artista']))])
+            foreach ($validated['bloques'] as $bloque) {
+                $talentId = null;
+                if (trim($bloque['artista']) !== '') {
+                    $talent = Talent::query()
+                        ->whereRaw('LOWER(band_name) = ?', [mb_strtolower(trim($bloque['artista']))])
                         ->first();
-                     = ->id;
+                    $talentId = $talent?->id;
                 }
 
-                   = ['email_sello'] ?? ['contacto_email'] ?? null;
-                 = ['email_artista'] ?? null;
+                $emailSello = $bloque['email_sello'] ?? $bloque['contacto_email'] ?? null;
+                $emailArtista = $bloque['email_artista'] ?? null;
+
+                if (empty($emailArtista) || empty($emailSello)) {
+                    $matched = $this->matcher->matchArtist($bloque['artista'], $bloque['sello'] ?? null);
+                    if (empty($emailArtista) && !empty($matched['email_artista'])) {
+                        $emailArtista = $matched['email_artista'];
+                    }
+                    if (empty($emailSello) && !empty($matched['email_sello'])) {
+                        $emailSello = $matched['email_sello'];
+                    }
+                }
 
                 AirplaySchedule::updateOrCreate(
                     [
-                        'semana'   => ,
-                        'dia'      => ['dia'],
-                        'hora'     => ['hora'],
-                        'posicion' => ['posicion'],
+                        'semana'   => $semana,
+                        'dia'      => $bloque['dia'],
+                        'hora'     => $bloque['hora'],
+                        'posicion' => $bloque['posicion'],
                     ],
                     [
-                        'artista'          => ['artista'],
-                        'titulo'           => ['titulo'],
-                        'album'            => ['album'] ?? null,
-                        'genero'           => ['genero'] ?? null,
-                        'categoria'        => ['categoria'] ?? null,
-                        'tipo_item'        => ['tipo_item'] ?? 'musica',
-                        'duracion_seg'     => ['duracion_seg'] ?? null,
-                        'duracion_fmt'     => ['duracion_fmt'] ?? null,
-                        'es_novedad'       => (bool) (['es_novedad'] ?? false),
-                        'es_primer_pase'   => (bool) (['es_primer_pase'] ?? false),
-                        'sello'            => ['sello'] ?? null,
-                        'email_sello'      => ,
-                        'email_artista'    => ,
-                        'contacto_email'   => ,
-                        'spotify_track_id' => ['spotify_track_id'] ?? null,
-                        'isrc'             => ['isrc'] ?? null,
-                        'talent_id'        => ,
-                        'sha1'             => ['sha1'] ?? null,
+                        'artista'          => $bloque['artista'],
+                        'titulo'           => $bloque['titulo'],
+                        'album'            => $bloque['album'] ?? null,
+                        'genero'           => $bloque['genero'] ?? null,
+                        'categoria'        => $bloque['categoria'] ?? null,
+                        'tipo_item'        => $bloque['tipo_item'] ?? 'musica',
+                        'duracion_seg'     => $bloque['duracion_seg'] ?? null,
+                        'duracion_fmt'     => $bloque['duracion_fmt'] ?? null,
+                        'es_novedad'       => (bool) ($bloque['es_novedad'] ?? false),
+                        'es_primer_pase'   => (bool) ($bloque['es_primer_pase'] ?? false),
+                        'sello'            => $bloque['sello'] ?? null,
+                        'email_sello'      => $emailSello,
+                        'email_artista'    => $emailArtista,
+                        'contacto_email'   => $bloque['contacto_email'] ?? $emailSello,
+                        'spotify_track_id' => $bloque['spotify_track_id'] ?? null,
+                        'isrc'             => $bloque['isrc'] ?? null,
+                        'talent_id'        => $talentId,
+                        'sha1'             => $bloque['sha1'] ?? null,
                     ]
                 );
             }
         });
 
-         = AirplayWeek::where('semana', )->first();
-
         return response()->json([
-            'ok'        => true,
-            'mensaje'   => 'Programación recibida correctamente',
-            'semana'    => ,
-            'pistas'    => ->pistas_total ?? 0,
-            'novedades' => ->novedades ?? 0,
+            'ok'      => true,
+            'message' => 'Programación recibida correctamente.',
+            'semana'  => $semana,
+            'total'   => count($validated['bloques']),
         ]);
     }
 }

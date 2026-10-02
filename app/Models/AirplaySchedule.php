@@ -10,11 +10,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AirplaySchedule extends Model
 {
-    public  = false;
+    public $timestamps = false;
 
-    protected  = 'airplay_schedule';
+    protected $table = 'airplay_schedule';
 
-    protected  = [
+    protected $fillable = [
         'semana',
         'dia',
         'hora',
@@ -41,7 +41,7 @@ class AirplaySchedule extends Model
         'avisos_enviados',
     ];
 
-    protected  = [
+    protected $casts = [
         'dia'             => 'integer',
         'hora'            => 'integer',
         'posicion'        => 'integer',
@@ -55,22 +55,22 @@ class AirplaySchedule extends Model
 
     public function week(): BelongsTo
     {
-        return ->belongsTo(AirplayWeek::class, 'semana', 'semana');
+        return $this->belongsTo(AirplayWeek::class, 'semana', 'semana');
     }
 
     public function talent(): BelongsTo
     {
-        return ->belongsTo(Talent::class);
+        return $this->belongsTo(Talent::class);
     }
 
     public function notices(): HasMany
     {
-        return ->hasMany(AirplayNotice::class, 'airplay_schedule_id');
+        return $this->hasMany(AirplayNotice::class, 'airplay_schedule_id');
     }
 
     public function getDiaNombreAttribute(): string
     {
-         = [
+        $dias = [
             1 => 'Lunes',
             2 => 'Martes',
             3 => 'Miércoles',
@@ -80,11 +80,11 @@ class AirplaySchedule extends Model
             7 => 'Domingo',
         ];
 
-        return [->dia] ?? 'Día ' . ->dia;
+        return $dias[$this->dia] ?? 'Día ' . $this->dia;
     }
 
     public function getHoraFormateadaAttribute(): string
     {
-        return sprintf('%02d:00', ->hora);
+        return sprintf('%02d:00', $this->hora);
     }
 }

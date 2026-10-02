@@ -1,12 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AirplayScheduleController;
 use App\Http\Controllers\Api\BandInfoController;
 use App\Http\Controllers\Api\PlayerFavoriteController;
-use App\Http\Controllers\Api\ProgramInfoController;
 use App\Http\Controllers\Api\PlayerStatusController;
+use App\Http\Controllers\Api\ProgramInfoController;
 use App\Http\Controllers\Api\RadioWebhookController;
 use App\Http\Controllers\Api\TelegramBotController;
+use App\Http\Middleware\AirplayTokenMiddleware;
 
 Route::post('/telegram/webhook', [TelegramBotController::class, 'handle'])->name('api.telegram.webhook');
 
@@ -19,3 +21,7 @@ Route::post('/player/favorites/toggle', [PlayerFavoriteController::class, 'toggl
 Route::post('/player/favorites/import', [PlayerFavoriteController::class, 'import'])->middleware('throttle:30,1')->name('api.player.favorites.import');
 Route::post('/radio/metadata', [RadioWebhookController::class, 'handle'])->middleware('throttle:30,1')->name('api.radio.metadata');
 Route::post('/player/metadata_receiver.php', [RadioWebhookController::class, 'handle'])->middleware('throttle:30,1')->name('api.radio.metadata.receiver');
+
+Route::post('/airplay/schedule', [AirplayScheduleController::class, 'store'])
+    ->middleware(AirplayTokenMiddleware::class)
+    ->name('api.airplay.schedule');

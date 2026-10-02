@@ -16,22 +16,22 @@ class AirplayNoticeMail extends Mailable
     use Queueable, SerializesModels;
 
     public function __construct(
-        public AirplaySchedule ,
-        public string  //  productora | artista
+        public AirplaySchedule $schedule,
+        public string $tipoDestinatario // productora | artista
     ) {}
 
     public function envelope(): Envelope
     {
-         = ->schedule->es_primer_pase ? 'Primer pase / Estreno' : 'Programación semanal';
-           = sprintf(
+        $tipo = $this->schedule->es_primer_pase ? 'Primer pase / Estreno' : 'Programación semanal';
+        $subject = sprintf(
             '[%s] Emisión confirmada en Seven Rock Radio: %s - %s',
-            ,
-            ->schedule->artista,
-            ->schedule->titulo
+            $tipo,
+            $this->schedule->artista,
+            $this->schedule->titulo
         );
 
         return new Envelope(
-            subject: 
+            subject: $subject
         );
     }
 
@@ -40,11 +40,11 @@ class AirplayNoticeMail extends Mailable
         return new Content(
             view: 'emails.airplay_notice',
             with: [
-                'schedule'         => ->schedule,
-                'tipoDestinatario' => ->tipoDestinatario,
-                'diaNombre'        => ->schedule->dia_nombre,
-                'hora'             => ->schedule->hora_formateada,
-                'semana'           => ->schedule->semana,
+                'schedule'         => $this->schedule,
+                'tipoDestinatario' => $this->tipoDestinatario,
+                'diaNombre'        => $this->schedule->dia_nombre,
+                'hora'             => $this->schedule->hora_formateada,
+                'semana'           => $this->schedule->semana,
             ]
         );
     }

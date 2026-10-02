@@ -394,3 +394,6 @@ Schedule::command('videos:rotate-featured')
 Schedule::command('marketing:scrape-contacts --limit=500')
     ->weeklyOn(1, '04:30')
     ->withoutOverlapping();
+
+// Envio automatico de avisos de airplay
+Schedule::command('airplay:send-notices')->dailyAt('10:00')->timezone('America/Caracas');

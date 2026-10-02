@@ -14,9 +14,9 @@ use Throwable;
 
 class SendAirplayNoticesCommand extends Command
 {
-    protected $signature = 'airplay:send-notices {--semana= : Filtrar por semana especéfica (ej�2026-W40)} {--force : Reenviar aunque ya se hayan enviado}';
+    protected $signature = 'airplay:send-notices {--semana= : Filtrar por semana especifica (ej: 2026-W40)} {--force : Reenviar aunque ya se hayan enviado}';
 
-    protected $description = 'Envía notificaciones por email a sellos/productoras y artistas de la programación de la semana';
+    protected $description = 'Envia notificaciones por email a sellos/productoras y artistas de la programacion de la semana';
 
     public function handle(): int
     {
@@ -24,6 +24,7 @@ class SendAirplayNoticesCommand extends Command
         $force  = (bool) $this->option('force');
 
         $query = AirplaySchedule::query()
+            ->where('es_novedad', true)
             ->where(function ($q) {
                 $q->whereNotNull('email_sello')
                   ->orWhereNotNull('email_artista')
@@ -41,11 +42,11 @@ class SendAirplayNoticesCommand extends Command
         $schedules = $query->get();
 
         if ($schedules->isEmpty()) {
-            $this->info('No hay avisos pendientes de envÁo.');
+            $this->info('No hay avisos pendientes de envio.');
             return Command::SUCCESS;
         }
 
-        $this->info(sprintf('Procesando %d registros de programación...', $schedules->count()));
+        $this->info(sprintf('Procesando %d registros de programacion...', $schedules->count()));
         $enviadosCount = 0;
         $erroresCount  = 0;
 
@@ -114,7 +115,7 @@ class SendAirplayNoticesCommand extends Command
                         ]
                     );
 
-                    $this->error(sprintf('  [FAIl] Error enviando a %s: %s', $email, $e->getMessage()));
+                    $this->error(sprintf('  [FAIL] Error enviando a %s: %s', $email, $e->getMessage()));
                 }
             }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\MarketingMailAccount;
 use App\Models\NewRelease;
 use App\Models\Post;
 use App\Models\ThemeSetting;
@@ -74,66 +75,92 @@ class ProcessIncomingEmails extends Command
 
         Cache::forget('admin_alert_sent_ai_api_key_missing');
 
-        $imapHost = config('services.imap.host', 'imap.gmail.com');
-        $imapPort = (int) config('services.imap.port', 993);
-        $imapEncryption = config('services.imap.encryption', 'ssl');
-        $imapUsername = trim((string) $settings->imap_username) ?: config('services.imap.username') ?: $settings->notification_email;
-        $imapPassword = trim((string) $settings->imap_password) ?: config('services.imap.password');
+        $activeAccounts = MarketingMailAccount::query()->where('is_active', true)->get();
+        $accountsToProcess = [];
 
-        if (empty($imapPassword)) {
-            $this->error('La contraseña de IMAP no está configurada en los Ajustes del Tema (Contraseña de correo) ni en el archivo .env.');
-            throw new \Exception("IMAP password missing");
+        if ($activeAccounts->isNotEmpty()) {
+            foreach ($activeAccounts as $account) {
+                $accountsToProcess[] = [
+                    'email'       => $account->email,
+                    'host'        => $account->imap_host ?: config('services.imap.host', 'imap.gmail.com'),
+                    'port'        => (int) ($account->imap_port ?: config('services.imap.port', 993)),
+                    'encryption'  => $account->imap_encryption ?: config('services.imap.encryption', 'ssl'),
+                    'username'    => $account->email,
+                    'password'    => $account->imap_password,
+                    'is_fallback' => false,
+                ];
+            }
+        } else {
+            $imapHost = config('services.imap.host', 'imap.gmail.com');
+            $imapPort = (int) config('services.imap.port', 993);
+            $imapEncryption = config('services.imap.encryption', 'ssl');
+            $imapUsername = trim((string) $settings->imap_username) ?: config('services.imap.username') ?: $settings->notification_email;
+            $imapPassword = trim((string) $settings->imap_password) ?: config('services.imap.password');
+
+            if (!empty($imapPassword)) {
+                $accountsToProcess[] = [
+                    'email'       => $imapUsername,
+                    'host'        => $imapHost,
+                    'port'        => $imapPort,
+                    'encryption'  => $imapEncryption,
+                    'username'    => $imapUsername,
+                    'password'    => $imapPassword,
+                    'is_fallback' => true,
+                ];
+            } else {
+                $this->error('La contraseña de IMAP no está configurada en los Ajustes del Tema (Contraseña de correo) ni en el archivo .env, y no hay cuentas de Marketing activas.');
+                throw new \Exception("IMAP password missing");
+            }
         }
 
-        $this->info("Conectando a {$imapHost}:{$imapPort} para el usuario {$imapUsername}...");
+        $totalAccounts = count($accountsToProcess);
+        $this->info("Procesando {$totalAccounts} cuenta(s) de correo...");
 
-        try {
-            $cm = app(ClientManager::class);
-            $client = $cm->make([
-                'host'          => $imapHost,
-                'port'          => $imapPort,
-                'encryption'    => $imapEncryption,
-                'validate_cert' => config('services.imap.validate_cert', false),
-                'username'      => $imapUsername,
-                'password'      => $imapPassword,
-                'protocol'      => 'imap'
-            ]);
+        foreach ($accountsToProcess as $accountData) {
+            $accountEmail = $accountData['email'];
+            $messagesRead = 0;
+            $accountError = null;
 
-            $client->connect();
-        } catch (\Throwable $e) {
-            Log::error("ProcessIncomingEmails: Fallo de conexión IMAP: " . $e->getMessage());
-            $this->error("Error de conexión IMAP: " . $e->getMessage());
-            $this->sendAdminAlert(
-                'imap_connection_failed',
-                '⚠️ Error Crítico: Fallo de conexión IMAP en SevenRockRadio',
-                "El cron no pudo conectarse al servidor de correo.\n\nError: " . $e->getMessage(),
-                $settings
-            );
-            file_put_contents('scratch/test_output.txt', 'IMAP FAIL: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
-            throw new \Exception("IMAP Fail: " . $e->getMessage());
-        }
+            $this->info("Conectando a {$accountData['host']}:{$accountData['port']} para la cuenta {$accountEmail}...");
 
-        Cache::forget('admin_alert_sent_imap_connection_failed');
+            try {
+                if (empty($accountData['password'])) {
+                    throw new \Exception("Contraseña IMAP no configurada para {$accountEmail}");
+                }
 
-        try {
-            $folder = $client->getFolder('INBOX');
-            $messages = $folder->query()->unseen()->get();
+                $cm = app(ClientManager::class);
+                $client = $cm->make([
+                    'host'          => $accountData['host'],
+                    'port'          => $accountData['port'],
+                    'encryption'    => $accountData['encryption'],
+                    'validate_cert' => config('services.imap.validate_cert', false),
+                    'username'      => $accountData['username'],
+                    'password'      => $accountData['password'],
+                    'protocol'      => 'imap'
+                ]);
 
-            $this->info("Encontrados " . count($messages) . " correos no leídos.");
+                $client->connect();
+                Cache::forget('admin_alert_sent_imap_connection_failed');
 
-            // Contadores diarios para límites (máx 3 de cada tipo por día)
-            // Solo cuenta posts que NO son de Dark Vader, para no interferir con sus publicaciones
-            $releasesCreatedToday = NewRelease::whereDate('created_at', today())->count();
-            $postsCreatedToday = Post::whereDate('created_at', today())
-                ->where(function ($q) {
-                    $q->where('author_email', '!=', 'dark.vader.agent@gmail.com')
-                      ->orWhereNull('author_email');
-                })
-                ->count();
+                $folder = $client->getFolder('INBOX');
+                $messages = $folder->query()->unseen()->get();
+                $messagesRead = count($messages);
 
-            Log::info("ProcessIncomingEmails: Contadores del día — Posts normales: {$postsCreatedToday}, Lanzamientos: {$releasesCreatedToday}.");
+                $this->info("Cuenta {$accountEmail}: encontrados {$messagesRead} correos no leídos.");
 
-            foreach ($messages as $message) {
+                // Contadores diarios para límites (máx 3 de cada tipo por día)
+                // Solo cuenta posts que NO son de Dark Vader, para no interferir con sus publicaciones
+                $releasesCreatedToday = NewRelease::whereDate('created_at', today())->count();
+                $postsCreatedToday = Post::whereDate('created_at', today())
+                    ->where(function ($q) {
+                        $q->where('author_email', '!=', 'dark.vader.agent@gmail.com')
+                          ->orWhereNull('author_email');
+                    })
+                    ->count();
+
+                Log::info("ProcessIncomingEmails [{$accountEmail}]: Contadores del día — Posts normales: {$postsCreatedToday}, Lanzamientos: {$releasesCreatedToday}.");
+
+                foreach ($messages as $message) {
                 $messageId = (string) $message->getMessageId();
                 $subject = (string) $message->getSubject();
                 
@@ -874,10 +901,30 @@ class ProcessIncomingEmails extends Command
                 $message->setFlag('SEEN');
             }
 
-        } catch (\Throwable $e) {
-            Log::error("ProcessIncomingEmails: Excepción general en el procesamiento de correos: " . $e->getMessage() . "\n" . $e->getTraceAsString());
-            $this->error("Excepción: " . $e->getMessage());
-            throw new \Exception("Excepción general: " . $e->getMessage(), 0, $e);
+            } catch (\Throwable $e) {
+                $accountError = $e->getMessage();
+                Log::error("ProcessIncomingEmails: Fallo en cuenta {$accountEmail}: " . $accountError, [
+                    'account' => $accountEmail,
+                    'error'   => $accountError,
+                ]);
+                $this->error("Error en cuenta {$accountEmail}: {$accountError}");
+
+                if ($accountData['is_fallback']) {
+                    $this->sendAdminAlert(
+                        'imap_connection_failed',
+                        '⚠️ Error Crítico: Fallo de conexión IMAP en SevenRockRadio',
+                        "El cron no pudo conectarse al servidor de correo ({$accountEmail}).\n\nError: " . $e->getMessage(),
+                        $settings
+                    );
+                }
+            } finally {
+                Log::info(sprintf(
+                    'ProcessIncomingEmails: Cuenta [%s] - Mensajes leídos: %d, Errores: %s',
+                    $accountEmail,
+                    $messagesRead,
+                    $accountError ?? 'ninguno'
+                ));
+            }
         }
 
         $this->info("Proceso de revisión de correos completado.");

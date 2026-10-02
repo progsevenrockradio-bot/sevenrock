@@ -128,6 +128,11 @@ class ThemeSetting extends Model
         'moderation_require_contact',
         'moderation_require_contract',
         'moderation_require_event',
+        'airplay_api_token',
+        'airplay_notices_enabled',
+        'airplay_notice_hours',
+        'airplay_public_page_enabled',
+        'airplay_report_from_email',
     ];
 
     public static function defaults(): array
@@ -609,6 +614,21 @@ class ThemeSetting extends Model
         } catch (\Throwable) {
             return self::$currentSettings = new static(static::defaults());
         }
+    }
+
+    public static function get(string $key, mixed $default = null): mixed
+    {
+        $current = static::current();
+
+        return $current->{$key} ?? $default;
+    }
+
+    public static function set(string $key, mixed $value): void
+    {
+        $current = static::current();
+        $current->{$key} = $value;
+        $current->save();
+        self::$currentSettings = $current;
     }
 
     public function visual(): array
