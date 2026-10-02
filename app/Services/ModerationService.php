@@ -17,7 +17,7 @@ class ModerationService
      */
     public function needsModeration(string $type): bool
     {
-        $settings = \App\Models\ThemeSetting::current();
+        $settings = ThemeSetting::current();
         
         if (!$settings->moderation_enabled) {
             return false;
@@ -149,7 +149,7 @@ class ModerationService
                 'info'
             );
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('ModerationService: Fallo en auditoría', ['error' => $e->getMessage()]);
+            Log::error('ModerationService: Fallo en auditoría', ['error' => $e->getMessage()]);
         }
     }
 
@@ -179,7 +179,7 @@ class ModerationService
                 'warning'
             );
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('ModerationService: Fallo en auditoría', ['error' => $e->getMessage()]);
+            Log::error('ModerationService: Fallo en auditoría', ['error' => $e->getMessage()]);
         }
     }
 

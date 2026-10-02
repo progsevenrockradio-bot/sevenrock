@@ -119,6 +119,6 @@ class RehostExternalCovers extends Command
             [[$totalChecked, $totalOk, $totalRehosted, $totalFailed]]
         );
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 }

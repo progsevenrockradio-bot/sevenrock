@@ -29,8 +29,6 @@ class SendOutreachEmailsJob implements ShouldQueue
 
     public int $timeout = 120;
 
-    public ?string $queue = 'default';
-
     public function __construct(
         public int $campaignId,
         public string $recipientMode = 'contacts',
@@ -39,6 +37,7 @@ class SendOutreachEmailsJob implements ShouldQueue
         public ?string $statusFilter = null,
         public array $producerProgramIds = [],
     ) {
+        $this->onQueue('default');
     }
 
     public function handle(): void

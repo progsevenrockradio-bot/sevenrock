@@ -522,7 +522,7 @@ trait InteractsWithPodcastUploadPipeline
         $master = null;
         $radioProgram = null;
         if (property_exists($this, 'radioProgramId') && $this->radioProgramId) {
-            $radioProgram = \App\Models\RadioProgram::with('masterProgram')->find($this->radioProgramId);
+            $radioProgram = RadioProgram::with('masterProgram')->find($this->radioProgramId);
             $master = $radioProgram?->masterProgram;
         } elseif (property_exists($this, 'radioProgram') && $this->radioProgram) {
             $radioProgram = $this->radioProgram;

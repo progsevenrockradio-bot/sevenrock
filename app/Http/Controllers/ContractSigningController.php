@@ -64,9 +64,12 @@ class ContractSigningController extends Controller
             $logoPath = null;
             if (str_contains($theme->logo_url, 'assets/lucille/logo.png')) {
                 $logoPath = public_path('assets/lucille/logo.png');
-            } elseif (str_starts_with($theme->logo_url, asset(''))) {
-                $relative = str_replace(asset(''), '', $theme->logo_url);
-                $logoPath = public_path($relative);
+            } else {
+                $baseUrl = rtrim(url('/'), '/') . '/';
+                if (str_starts_with($theme->logo_url, $baseUrl)) {
+                    $relative = substr($theme->logo_url, strlen($baseUrl));
+                    $logoPath = public_path($relative);
+                }
             }
             
             if ($logoPath && file_exists($logoPath)) {
