@@ -164,6 +164,6 @@ class ContractSigningController extends Controller
             abort(404, 'El archivo PDF no existe físicamente.');
         }
 
-        return Storage::disk('local')->download($contract->pdf_path, str_replace(' ', '_', $contract->title) . '_firmado.pdf');
+        return Storage::download($contract->pdf_path, str_replace(' ', '_', $contract->title) . '_firmado.pdf');
     }
 }

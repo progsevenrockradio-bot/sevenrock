@@ -29,7 +29,8 @@ class SendOutreachEmailsJob implements ShouldQueue
 
     public int $timeout = 120;
 
-    public string $queue = 'default';
+    public ?string $queue = 'default';
+
     public function __construct(
         public int $campaignId,
         public string $recipientMode = 'contacts',
