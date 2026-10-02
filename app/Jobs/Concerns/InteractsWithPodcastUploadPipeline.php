@@ -410,7 +410,7 @@ trait InteractsWithPodcastUploadPipeline
                 return null;
             }
 
-            $mime = trim(strtolower((string) $response->header('Content-Type', '')));
+            $mime = trim(strtolower((string) ($response->header('Content-Type') ?? '')));
             if ($mime === '' || ! str_starts_with($mime, 'image/')) {
                 return null;
             }

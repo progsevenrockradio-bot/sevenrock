@@ -89,7 +89,7 @@ class AlbumController extends Controller
             'subject_type' => TalentAlbum::class,
             'subject_id' => $album->id,
             'title' => "Álbum: {$album->title}",
-            'summary' => "Lanzamiento: {$album->release_date}",
+            'summary' => 'Lanzamiento: ' . ($album->release_date ? $album->release_date->format('Y-m-d') : 'N/A'),
             'submitter_name' => $talent->band_name,
             'submitter_email' => $talent->email,
         ]);

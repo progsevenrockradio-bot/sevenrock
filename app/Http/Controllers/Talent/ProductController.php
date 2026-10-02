@@ -15,11 +15,17 @@ use Illuminate\View\View;
 
 class ProductController extends Controller
 {
-    public function index(): View
+    private function currentTalent(): Talent
     {
         $talent = Auth::guard('talent')->user();
+        abort_unless($talent instanceof Talent, 403);
 
-        abort_unless($talent, 403);
+        return $talent;
+    }
+
+    public function index(): View
+    {
+        $talent = $this->currentTalent();
 
         return view('talentos.store.index', [
             'talent' => $talent,
@@ -29,8 +35,7 @@ class ProductController extends Controller
 
     public function create(): View
     {
-        $talent = Auth::guard('talent')->user();
-        abort_unless($talent, 403);
+        $talent = $this->currentTalent();
 
         return view('talentos.store.create', [
             'talent' => $talent,
@@ -49,8 +54,7 @@ class ProductController extends Controller
 
     public function store(Request $request, BackblazeService $backblaze): RedirectResponse
     {
-        $talent = Auth::guard('talent')->user();
-        abort_unless($talent, 403);
+        $talent = $this->currentTalent();
 
         $validated = $this->validated($request);
         $validated['slug'] = $this->uniqueSlug($validated['slug'] ?: Str::slug($validated['title']));
@@ -67,7 +71,7 @@ class ProductController extends Controller
             'subject_type' => Product::class,
             'subject_id' => $product->id,
             'title' => "Producto: {$product->title}",
-            'summary' => "Precio: {$product->price}",
+            'summary' => "Precio: " . (string) $product->price,
             'submitter_name' => $talent->band_name,
             'submitter_email' => $talent->email,
         ]);
@@ -77,8 +81,7 @@ class ProductController extends Controller
 
     public function edit(string $id): View
     {
-        $talent = Auth::guard('talent')->user();
-        abort_unless($talent, 403);
+        $talent = $this->currentTalent();
 
         $product = Product::query()
             ->fromTalent($talent)
@@ -93,15 +96,14 @@ class ProductController extends Controller
 
     public function update(Request $request, string $id, BackblazeService $backblaze): RedirectResponse
     {
-        $talent = Auth::guard('talent')->user();
-        abort_unless($talent, 403);
+        $talent = $this->currentTalent();
 
         $product = Product::query()
             ->fromTalent($talent)
             ->whereKey((int) $id)
             ->firstOrFail();
 
-        $validated = $this->validated($request, $product->id);
+        $validated = $this->validated($request);
         $validated['slug'] = $this->uniqueSlug($validated['slug'] ?: Str::slug($validated['title']), $product->id);
         $validated['image'] = $this->uploadImage($request, $backblaze, $talent->id, $product->image);
         $validated['talent_id'] = $talent->id;
@@ -114,8 +116,7 @@ class ProductController extends Controller
 
     public function destroy(string $id, BackblazeService $backblaze): RedirectResponse
     {
-        $talent = Auth::guard('talent')->user();
-        abort_unless($talent, 403);
+        $talent = $this->currentTalent();
 
         $product = Product::query()
             ->fromTalent($talent)
