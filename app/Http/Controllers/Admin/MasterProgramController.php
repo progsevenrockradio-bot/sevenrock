@@ -305,7 +305,7 @@ final class MasterProgramController extends Controller
             $dia    = strtoupper(trim((string) ($row['dia_semana']  ?? '')));
             $hora   = trim((string) ($row['hora_inicio'] ?? ''));
 
-            if (! in_array($tipo, $tiposValidos, true) || ! in_array($dia, $diasValidos, true) || $hora === '') {
+            if (! in_array($tipo, $tiposValidos, true) || ! in_array($dia, $diasValidos, true) || $hora === '' || ! preg_match('/^\d{2}:\d{2}/', $hora)) {
                 continue;
             }
 
@@ -346,6 +346,26 @@ final class MasterProgramController extends Controller
             ->when($seenIds !== [], fn ($q) => $q->whereNotIn('id', $seenIds))
             ->when($seenIds === [], fn ($q) => $q)
             ->delete();
+
+        // Eliminar duplicados (mismo tipo + dia_semana + hora_inicio), conservando la de menor id
+        $allEmisiones = $masterProgram->emisiones()->orderBy('id')->get();
+        $grouped = $allEmisiones->groupBy(function ($e) {
+            $h = substr((string) $e->hora_inicio, 0, 5);
+            return sprintf('%s_%s_%s', $e->tipo, strtoupper((string) $e->dia_semana), $h);
+        });
+
+        $deleteIds = [];
+        foreach ($grouped as $group) {
+            if ($group->count() > 1) {
+                foreach ($group->slice(1) as $dup) {
+                    $deleteIds[] = $dup->id;
+                }
+            }
+        }
+
+        if ($deleteIds !== []) {
+            $masterProgram->emisiones()->whereIn('id', $deleteIds)->delete();
+        }
     }
 
     private function normalizeTime(string $value): ?string

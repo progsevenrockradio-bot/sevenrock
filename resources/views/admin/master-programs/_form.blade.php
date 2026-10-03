@@ -243,20 +243,18 @@
         {{-- ── BLOQUE EMISIONES ─────────────────────────────────────────────── --}}
         <section class="space-y-5"
             x-data="{
-                emisiones: {{ json_encode(
-                    $emisiones->map(fn($e) => [
-                        'id'                => $e->id,
-                        'tipo'              => $e->tipo,
-                        'etiqueta'          => (string) $e->etiqueta,
-                        'dia_semana'        => $e->dia_semana,
-                        'hora_inicio'       => substr((string) $e->hora_inicio, 0, 5),
-                        'duracion_minutos'  => $e->duracion_minutos,
-                        'enlace'            => (string) $e->enlace,
-                        'url_podcast'       => (string) $e->url_podcast,
-                        'notas'             => (string) $e->notas,
-                        'activo'            => (bool) $e->activo,
-                    ])->values()->toJson()
-                ) }},
+                emisiones: @json($emisiones->map(fn($e) => [
+                    'id' => $e->id,
+                    'tipo' => $e->tipo,
+                    'etiqueta' => (string) $e->etiqueta,
+                    'dia_semana' => $e->dia_semana,
+                    'hora_inicio' => substr((string) $e->hora_inicio, 0, 5),
+                    'duracion_minutos' => $e->duracion_minutos,
+                    'enlace' => (string) $e->enlace,
+                    'url_podcast' => (string) $e->url_podcast,
+                    'notas' => (string) $e->notas,
+                    'activo' => (bool) $e->activo,
+                ])->values()),
                 addEmision() {
                     this.emisiones.push({
                         id: 0, tipo: 'normal', etiqueta: '', dia_semana: 'LUNES',

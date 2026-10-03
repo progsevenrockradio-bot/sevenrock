@@ -138,18 +138,15 @@ class MasterProgram extends Model
             return;
         }
 
-        $existing = $this->emisiones()->where('tipo', 'normal')->first();
-
-        if ($existing === null) {
-            $this->emisiones()->create([
-                'tipo'             => 'normal',
-                'etiqueta'         => null,
+        $this->emisiones()->updateOrCreate(
+            ['tipo' => 'normal'],
+            [
                 'dia_semana'       => $dia,
                 'hora_inicio'      => $hora,
                 'duracion_minutos' => $this->duracion_minutos ?? 120,
                 'activo'           => true,
-            ]);
-        }
+            ]
+        );
     }
 
     public function invitations(): HasMany

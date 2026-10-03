@@ -143,4 +143,98 @@ class AdminMasterProgramCrudTest extends TestCase
             Carbon::setTestNow();
         }
     }
+
+    public function test_saving_master_program_form_twice_preserves_emisiones_count_and_changes(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $payload = [
+            'nombre' => 'Programa Resiliente',
+            'conductor' => 'DJ Test',
+            'dia_transmision' => 'MIERCOLES',
+            'hora_transmision' => '18:00',
+            'timezone' => 'America/Caracas',
+            'duracion_minutos' => 120,
+            'genero' => 'Metal',
+            'activo' => 1,
+            'emisiones' => [
+                [
+                    'id' => 0,
+                    'tipo' => 'normal',
+                    'etiqueta' => 'Transmisión Original',
+                    'dia_semana' => 'MIERCOLES',
+                    'hora_inicio' => '18:00',
+                    'duracion_minutos' => 120,
+                    'activo' => 1,
+                ],
+                [
+                    'id' => 0,
+                    'tipo' => 'retransmision',
+                    'etiqueta' => 'Retransmisión Fin de Semana',
+                    'dia_semana' => 'SABADO',
+                    'hora_inicio' => '22:00',
+                    'duracion_minutos' => 120,
+                    'url_podcast' => 'https://archive.org/details/metal-sat-v1',
+                    'activo' => 1,
+                ],
+            ],
+        ];
+
+        $this->actingAs($admin)
+            ->post(route('admin.master-programs.store'), $payload)
+            ->assertRedirect();
+
+        $program = MasterProgram::query()->where('nombre', 'Programa Resiliente')->first();
+        $this->assertNotNull($program);
+        $this->assertCount(2, $program->emisiones);
+
+        $retransmision = $program->emisiones->where('tipo', 'retransmision')->first();
+        $normal = $program->emisiones->where('tipo', 'normal')->first();
+
+        // 1ª actualización
+        $updatePayload = array_merge($payload, [
+            'emisiones' => [
+                [
+                    'id' => $normal->id,
+                    'tipo' => 'normal',
+                    'etiqueta' => 'Transmisión Original Modificada',
+                    'dia_semana' => 'MIERCOLES',
+                    'hora_inicio' => '18:00',
+                    'duracion_minutos' => 120,
+                    'activo' => 1,
+                ],
+                [
+                    'id' => $retransmision->id,
+                    'tipo' => 'retransmision',
+                    'etiqueta' => 'Retransmisión Fin de Semana Modificada',
+                    'dia_semana' => 'SABADO',
+                    'hora_inicio' => '22:00',
+                    'duracion_minutos' => 120,
+                    'url_podcast' => 'https://archive.org/details/metal-sat-v2',
+                    'activo' => 1,
+                ],
+            ],
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.master-programs.update', $program), $updatePayload)
+            ->assertRedirect();
+
+        $program->refresh();
+        $this->assertCount(2, $program->emisiones);
+
+        // 2ª actualización con los mismos datos
+        $this->actingAs($admin)
+            ->put(route('admin.master-programs.update', $program), $updatePayload)
+            ->assertRedirect();
+
+        $program->refresh();
+        $this->assertCount(2, $program->emisiones);
+
+        $retransmisionActualizada = $program->emisiones->where('tipo', 'retransmision')->first();
+        $this->assertSame('Retransmisión Fin de Semana Modificada', $retransmisionActualizada->etiqueta);
+        $this->assertSame('https://archive.org/details/metal-sat-v2', $retransmisionActualizada->url_podcast);
+    }
 }
