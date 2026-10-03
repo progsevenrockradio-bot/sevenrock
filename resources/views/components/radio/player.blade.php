@@ -397,7 +397,8 @@
 
                         <div x-show="activeTab === 'program'">
                             <h4 class="radio-player-popup-section-title">Programa</h4>
-                            <p class="radio-player-popup-section-text" x-text="programText()"></p>
+                            <p x-show="track.es_bloque_programa || program" class="radio-player-popup-section-text" x-text="programText()"></p>
+                            <p x-show="!track.es_bloque_programa && !program" class="radio-player-popup-section-text">No hay programa activo.</p>
                             <template x-if="nextProgram">
                                 <div class="radio-player-popup-card">
                                     <span class="radio-player-popup-card-label">Próximo programa</span>
@@ -1070,7 +1071,8 @@
                         </div>
                         <div x-show="activeTab === 'program'">
                             <h4>Programa</h4>
-                            <p x-text="programText()"></p>
+                            <p x-show="track.es_bloque_programa || program" x-text="programText()"></p>
+                            <p x-show="!track.es_bloque_programa && !program">No hay programa activo.</p>
                             <template x-if="nextProgram">
                                 <div class="radio-player-next">
                                     <span>Próximo programa</span>

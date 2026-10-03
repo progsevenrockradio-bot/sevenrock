@@ -100,6 +100,7 @@ export function registerRadioPlayer(Alpine) {
         dockMinimized: true,
         dockVisible: false,
         activeTab: 'lyrics',
+        userHasChosenTab: false,
         playing: false,
         loading: true,
         bandInfoLoading: false,
@@ -1361,6 +1362,13 @@ export function registerRadioPlayer(Alpine) {
                 es_bloque_programa: Boolean(track.es_bloque_programa ?? data.es_bloque_programa ?? (track.program_id || data.program_id || false)),
             };
 
+            if (this.track.es_bloque_programa && this.activeTab === 'lyrics' && !this.userHasChosenTab) {
+                this.activeTab = 'program';
+                if (!this.programInfo) {
+                    void this.openProgramWindow(this.track.program_id);
+                }
+            }
+
             if ((trackChanged || !this.favoriteSyncReady) && this.track.signature) {
                 void this.syncFavorites(this.track.signature || '', !this.favoriteSyncReady);
             }
@@ -1738,23 +1746,42 @@ export function registerRadioPlayer(Alpine) {
         },
 
         setTab(tab) {
+            this.userHasChosenTab = true;
             this.activeTab = tab;
             safeWrite('sr-player-tab', tab);
+            if (tab === 'program' && this.track.es_bloque_programa && !this.programInfo) {
+                void this.openProgramWindow(this.track.program_id);
+            }
         },
 
         programText() {
-            if (!this.program) {
-                return 'No hay programa activo.';
+            if (this.program) {
+                const parts = [
+                    this.program.name,
+                    this.program.host,
+                    this.program.schedule,
+                    this.program.description,
+                ].filter(Boolean);
+
+                if (parts.length > 0) {
+                    return parts.join(' · ');
+                }
             }
 
-            const parts = [
-                this.program.name,
-                this.program.host,
-                this.program.schedule,
-                this.program.description,
-            ].filter(Boolean);
+            if (this.track.es_bloque_programa) {
+                const parts = [
+                    this.track.program_name,
+                    this.track.program_host,
+                    this.track.program_schedule,
+                    this.track.program_description,
+                ].filter(Boolean);
 
-            return parts.join(' · ');
+                if (parts.length > 0) {
+                    return parts.join(' · ');
+                }
+            }
+
+            return 'No hay programa activo.';
         },
 
         isFavoriteCurrent() {

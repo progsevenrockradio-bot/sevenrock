@@ -171,8 +171,8 @@ class RadioPlayerService
         $resolvedProgramId = $isProgramBlock ? ($matchedTrackProgram?->id ?? $scheduleContext['program_id'] ?? null) : null;
         $resolvedProgramName = $isProgramBlock ? ($matchedTrackProgram?->name ?? $matchedTrackProgram?->titulo_programa ?? $scheduleContext['program_name'] ?? null) : null;
         $resolvedProgramDescription = $isProgramBlock ? ($matchedTrackProgram?->description ?? $matchedTrackProgram?->informacion_fija_programa ?? $scheduleContext['program_description'] ?? null) : null;
-        $resolvedProgramHost = $isProgramBlock ? ($matchedTrackProgram?->host ?? $matchedTrackProgram?->conductor ?? $currentProgram?->host ?? null) : null;
-        $resolvedProgramSchedule = $isProgramBlock ? ($matchedTrackProgram?->schedule ?? $currentProgram?->schedule ?? null) : null;
+        $resolvedProgramHost = $isProgramBlock ? ($matchedTrackProgram?->host ?? $matchedTrackProgram?->conductor ?? $currentProgram?->host ?? $scheduleContext['program_host'] ?? null) : null;
+        $resolvedProgramSchedule = $isProgramBlock ? ($matchedTrackProgram?->schedule ?? $currentProgram?->schedule ?? $scheduleContext['program_schedule'] ?? null) : null;
 
         $track = [
             'id' => $song?->id,
@@ -219,7 +219,15 @@ class RadioPlayerService
             'program_name' => $resolvedProgramName,
             'program_description' => $resolvedProgramDescription,
             'track' => $track,
-            'program' => $this->programPayload($currentProgram),
+            'program' => $this->programPayload($currentProgram) ?? ($isProgramBlock ? $this->syntheticProgramPayload(
+                $resolvedProgramId,
+                $resolvedProgramName,
+                $resolvedProgramDescription,
+                $resolvedProgramHost,
+                $resolvedProgramSchedule,
+                $cover,
+                $scheduleContext['master'] ?? null
+            ) : null),
             'next_program' => $this->programPayload($nextProgram),
             'queue' => $this->resolveQueue($song, $currentProgram),
             'notices' => $notices->map(fn (Notice $notice): array => [
@@ -458,6 +466,17 @@ class RadioPlayerService
                     $master->comentario_predeterminado,
                 ]),
                 'program' => $program,
+                'program_host' => $this->firstFilledString([
+                    $program?->host,
+                    $program?->conductor,
+                    $master->host,
+                    $master->conductor,
+                ]),
+                'program_schedule' => $this->firstFilledString([
+                    $program?->schedule,
+                    $master->schedule,
+                ]),
+                'master' => $master,
             ];
         }
 
@@ -488,6 +507,17 @@ class RadioPlayerService
                     $master->comentario_predeterminado,
                 ]),
                 'program' => $program,
+                'program_host' => $this->firstFilledString([
+                    $program?->host,
+                    $program?->conductor,
+                    $master->host,
+                    $master->conductor,
+                ]),
+                'program_schedule' => $this->firstFilledString([
+                    $program?->schedule,
+                    $master->schedule,
+                ]),
+                'master' => $master,
             ];
         }
 
@@ -734,6 +764,44 @@ class RadioPlayerService
             'schedule_time' => $program->schedule_time,
             'cover' => $program->cover_url,
             'social_links' => $program->social_links ?? [],
+        ];
+    }
+
+    private function syntheticProgramPayload(
+        ?int $id,
+        ?string $name,
+        ?string $description,
+        ?string $host,
+        ?string $schedule,
+        ?string $fallbackCover = null,
+        ?MasterProgram $master = null
+    ): array {
+        if (! $master && $id && $this->hasTable('master_programs')) {
+            $master = MasterProgram::query()->find($id);
+        }
+
+        $cover = null;
+        if ($master) {
+            $masterCover = $master->cover_url ?: $master->live_image_url ?: $master->caratula_url;
+            if (filled($masterCover)) {
+                $cover = $this->resolveCover($masterCover);
+            }
+        }
+
+        if (! filled($cover)) {
+            $cover = $fallbackCover ? $this->resolveCover($fallbackCover) : null;
+        }
+
+        return [
+            'id' => $id,
+            'slug' => \Illuminate\Support\Str::slug($name ?: 'programa'),
+            'name' => (string) ($name ?? ''),
+            'description' => (string) ($description ?? ''),
+            'host' => (string) ($host ?? ''),
+            'schedule' => (string) ($schedule ?? ''),
+            'schedule_time' => (string) ($schedule ?? ''),
+            'cover' => $cover,
+            'social_links' => [],
         ];
     }
 
