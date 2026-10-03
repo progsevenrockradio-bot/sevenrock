@@ -319,54 +319,52 @@ class RadioPlayerService
             }
         }
 
-        $title = trim((string) Arr::get($state, 'title', ''));
-        $artist = trim((string) Arr::get($state, 'artist', ''));
+        $rawTitle = trim((string) Arr::get($state, 'title', ''));
+        $rawArtist = trim((string) Arr::get($state, 'artist', ''));
 
-        if ($title !== '') {
-            $program = $programs->first(fn ($p) => mb_strtolower($p->name) === mb_strtolower($title) || mb_strtolower($p->titulo_programa ?? '') === mb_strtolower($title));
-            if ($program && $this->isProgramCurrentlyOnAir($program)) {
-                return $program;
+        $cleanTitle = $this->cleanMetadataForProgramMatch($rawTitle);
+        $cleanArtist = $this->cleanMetadataForProgramMatch($rawArtist);
+
+        // 1. Coincidencia por metadatos en colección de programas/episodios (sin exigir horario)
+        if ($cleanTitle !== '' || $cleanArtist !== '') {
+            foreach ($programs as $p) {
+                $pName = $this->cleanMetadataForProgramMatch((string) ($p->name ?: $p->titulo_programa ?: ''));
+                if ($pName !== '' && (($cleanTitle !== '' && str_contains($cleanTitle, $pName)) || ($cleanArtist !== '' && str_contains($cleanArtist, $pName)))) {
+                    return $p;
+                }
             }
         }
 
-        if ($artist !== '') {
-            $program = $programs->first(fn ($p) => mb_strtolower($p->name) === mb_strtolower($artist) || mb_strtolower($p->titulo_programa ?? '') === mb_strtolower($artist));
-            if ($program && $this->isProgramCurrentlyOnAir($program)) {
-                return $program;
-            }
-        }
-
-        // Fallback to MasterProgram matching if no episode matches
-        if ($this->hasTable('master_programs')) {
+        // 2. Coincidencia por metadatos en MasterProgram (sin exigir horario)
+        if ($this->hasTable('master_programs') && ($cleanTitle !== '' || $cleanArtist !== '')) {
             $masters = MasterProgram::query()->where('activo', true)->get();
             $matchedMaster = null;
 
-            $now = Carbon::now(config('app.timezone'));
-
             foreach ($masters as $m) {
-                $mName = mb_strtolower(trim((string) ($m->name ?: $m->nombre ?: '')));
-                $mHost = mb_strtolower(trim((string) ($m->host ?: $m->conductor ?: '')));
-                $cleanArtist = mb_strtolower(trim(preg_replace('/^\s*(conducido\s+por\s*:?\s*|conduce\s*:?\s*|host\s*:?\s*)/iu', '', $artist)));
-                $cleanTitle = mb_strtolower($title);
+                $mName = $this->cleanMetadataForProgramMatch((string) ($m->name ?: $m->nombre ?: ''));
+                $rawHost = preg_replace('/^\s*(conducido\s+por\s*:?\s*|conduce\s*:?\s*|host\s*:?\s*)/iu', '', (string) ($m->host ?: $m->conductor ?: ''));
+                $mHost = $this->cleanMetadataForProgramMatch($rawHost);
 
-                $matchName = ($mName !== '' && (str_contains($cleanTitle, $mName) || str_contains($cleanArtist, $mName) || str_contains($mName, $cleanTitle)));
-                $matchHost = ($mHost !== '' && (str_contains($cleanArtist, $mHost) || str_contains($cleanTitle, $mHost)));
+                $matchName = ($mName !== '' && (($cleanTitle !== '' && str_contains($cleanTitle, $mName)) || ($cleanArtist !== '' && str_contains($cleanArtist, $mName))));
+                $matchHost = ($mHost !== '' && strlen($mHost) >= 3 && (($cleanTitle !== '' && str_contains($cleanTitle, $mHost)) || ($cleanArtist !== '' && str_contains($cleanArtist, $mHost))));
 
-                if (($matchName || $matchHost) && $this->isMasterOnAir($m, $now)) {
+                if ($matchName || $matchHost) {
                     $matchedMaster = $m;
                     break;
                 }
             }
 
             if ($matchedMaster) {
-                $latestEpisode = RadioProgram::query()
-                    ->where('master_program_id', $matchedMaster->id)
-                    ->orderByDesc('fecha_emision')
-                    ->orderByDesc('id')
-                    ->first();
+                if ($this->hasTable('radio_programs')) {
+                    $latestEpisode = RadioProgram::query()
+                        ->where('master_program_id', $matchedMaster->id)
+                        ->orderByDesc('fecha_emision')
+                        ->orderByDesc('id')
+                        ->first();
 
-                if ($latestEpisode) {
-                    return Program::query()->find($latestEpisode->getKey());
+                    if ($latestEpisode) {
+                        return Program::query()->find($latestEpisode->getKey());
+                    }
                 }
 
                 $dummy = new Program();
@@ -385,6 +383,23 @@ class RadioPlayerService
         }
 
         return null;
+    }
+
+    private function cleanMetadataForProgramMatch(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return '';
+        }
+
+        // Quitar prefijos numéricos o de fecha al inicio como "06.12.- ", "01 - ", "12. "
+        $text = preg_replace('/^\s*(?:\d+[\.\-\/]\d+[\.\-\/]?\s*[\.\-]?\s*|\d+\s*[\.\-]\s*)+/iu', '', $text) ?? $text;
+
+        $ascii = \Illuminate\Support\Str::ascii($text);
+        $lower = mb_strtolower($ascii);
+        $clean = preg_replace('/[^a-z0-9]+/iu', ' ', $lower) ?? $lower;
+
+        return trim(preg_replace('/\s+/', ' ', $clean) ?? $clean);
     }
 
     /**
