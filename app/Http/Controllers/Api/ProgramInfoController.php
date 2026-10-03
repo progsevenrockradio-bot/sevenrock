@@ -145,6 +145,17 @@ class ProgramInfoController extends Controller
                     'episode_number' => $episode->numero_episodio ?? null,
                 ] : null,
                 'is_live' => true,
+                'emisiones' => $masterProgram
+                    ? $masterProgram->emisiones()->activas()->get()->map(fn ($em) => [
+                        'tipo'             => $em->tipo,
+                        'etiqueta'         => $em->etiqueta,
+                        'dia_semana'       => $em->dia_semana,
+                        'hora_inicio'      => $em->horaFormateada(),
+                        'duracion_minutos' => $em->duracion_minutos,
+                        'enlace'           => $em->enlace,
+                        'url_podcast'      => $em->url_podcast,
+                    ])->values()->toArray()
+                    : [],
             ],
         ]);
     }

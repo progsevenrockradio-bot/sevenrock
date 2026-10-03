@@ -73,6 +73,7 @@
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Programa</th>
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Código</th>
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Horario</th>
+                                        <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Emisiones</th>
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Estado</th>
                                         <th class="px-4 py-3 font-display uppercase tracking-[.18em]">Acciones</th>
                                     </tr>
@@ -106,6 +107,27 @@
                                                 <div>{{ $masterProgram->dia_transmision }}</div>
                                                 <div>{{ $masterProgram->hora_transmision ?: 'Sin hora' }}</div>
                                                 <div class="mt-1 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $masterProgram->timezone }}</div>
+                                            </td>
+                                            <td class="px-4 py-4">
+                                                @php $emisionesActivas = $masterProgram->emisiones()->activas()->get(); @endphp
+                                                @if ($emisionesActivas->isEmpty())
+                                                    <span class="text-xs text-[#9a9a9a]">—</span>
+                                                @else
+                                                    <div class="space-y-1">
+                                                        @foreach ($emisionesActivas as $em)
+                                                            <div class="flex items-center gap-2">
+                                                                @if ($em->tipo === 'en_vivo')
+                                                                    <span class="inline-block border border-red-700 bg-red-900/20 px-2 py-0.5 text-[10px] uppercase tracking-[.15em] text-red-400">EN VIVO</span>
+                                                                @elseif ($em->tipo === 'retransmision')
+                                                                    <span class="inline-block border border-[#555] px-2 py-0.5 text-[10px] uppercase tracking-[.15em] text-[#aaa]">Pod.</span>
+                                                                @else
+                                                                    <span class="inline-block border border-[#333] px-2 py-0.5 text-[10px] uppercase tracking-[.15em] text-[#9a9a9a]">Normal</span>
+                                                                @endif
+                                                                <span class="text-xs text-[#dcdcdc]">{{ substr(strtolower($em->dia_semana), 0, 3) }} {{ $em->horaFormateada() }}</span>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
                                             </td>
                                             <td class="px-4 py-4">
                                                 <span class="inline-flex items-center border border-[#2b2b2b] px-3 py-1 text-[11px] uppercase tracking-[.18em] {{ $masterProgram->activo ? 'text-[#dcdcdc]' : 'text-[#9a9a9a]' }}">

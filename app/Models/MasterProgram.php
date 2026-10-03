@@ -100,6 +100,58 @@ class MasterProgram extends Model
         return $this->hasMany(RadioProgram::class, 'master_program_id');
     }
 
+    /**
+     * Emisiones semanales del programa, ordenadas por día y hora.
+     * La tabla `master_program_emisiones` permite varios slots por programa
+     * (normal, retransmisión/podcast, en vivo).
+     */
+    public function emisiones(): HasMany
+    {
+        return $this->hasMany(MasterProgramEmision::class, 'master_program_id')
+            ->orderByRaw(
+                "CASE UPPER(dia_semana)
+                    WHEN 'LUNES'     THEN 1
+                    WHEN 'MARTES'    THEN 2
+                    WHEN 'MIERCOLES' THEN 3
+                    WHEN 'JUEVES'    THEN 4
+                    WHEN 'VIERNES'   THEN 5
+                    WHEN 'SABADO'    THEN 6
+                    WHEN 'DOMINGO'   THEN 7
+                    ELSE 99
+                END"
+            )
+            ->orderBy('hora_inicio');
+    }
+
+    /**
+     * Garantiza compatibilidad retroactiva: si el programa tiene
+     * `dia_transmision` y `hora_transmision` pero NO tiene ninguna emisión
+     * de tipo 'normal', la crea automáticamente.
+     * Se debe llamar tras cada guardado del programa desde el panel.
+     */
+    public function syncEmisionNormal(): void
+    {
+        $dia  = strtoupper(trim((string) $this->dia_transmision));
+        $hora = trim((string) $this->hora_transmision);
+
+        if ($dia === '' || $hora === '') {
+            return;
+        }
+
+        $existing = $this->emisiones()->where('tipo', 'normal')->first();
+
+        if ($existing === null) {
+            $this->emisiones()->create([
+                'tipo'             => 'normal',
+                'etiqueta'         => null,
+                'dia_semana'       => $dia,
+                'hora_inicio'      => $hora,
+                'duracion_minutos' => $this->duracion_minutos ?? 120,
+                'activo'           => true,
+            ]);
+        }
+    }
+
     public function invitations(): HasMany
     {
         return $this->hasMany(ProgramInvitation::class, 'master_program_id');

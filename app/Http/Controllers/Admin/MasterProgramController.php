@@ -150,17 +150,20 @@ final class MasterProgramController extends Controller
             ]);
 
         return view('admin.master-programs.create', [
-            'masterProgram' => $masterProgram,
+            'masterProgram'      => $masterProgram,
             'defaultNewsIdsText' => '',
-            'liveNewsIdsText' => '',
+            'liveNewsIdsText'    => '',
             'previewNewsIdsText' => '',
             'generateCodeAction' => null,
+            'emisiones'          => collect(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $masterProgram = MasterProgram::query()->create($this->validated($request));
+        $this->saveEmisiones($masterProgram, $request);
+        $masterProgram->syncEmisionNormal();
 
         return redirect()
             ->route('admin.master-programs.edit', $masterProgram)
@@ -170,17 +173,20 @@ final class MasterProgramController extends Controller
     public function edit(MasterProgram $masterProgram): View
     {
         return view('admin.master-programs.edit', [
-            'masterProgram' => $masterProgram,
+            'masterProgram'     => $masterProgram,
             'defaultNewsIdsText' => $this->idListToText($masterProgram->default_news_ids),
-            'liveNewsIdsText' => $this->idListToText($masterProgram->live_news_ids),
+            'liveNewsIdsText'    => $this->idListToText($masterProgram->live_news_ids),
             'previewNewsIdsText' => $this->idListToText($masterProgram->preview_news_ids),
             'generateCodeAction' => route('admin.programs.generate-code', $masterProgram),
+            'emisiones'          => $masterProgram->emisiones()->get(),
         ]);
     }
 
     public function update(Request $request, MasterProgram $masterProgram): RedirectResponse
     {
         $masterProgram->update($this->validated($request, $masterProgram->id));
+        $this->saveEmisiones($masterProgram, $request);
+        $masterProgram->syncEmisionNormal();
 
         return redirect()
             ->route('admin.master-programs.edit', $masterProgram)
@@ -261,6 +267,85 @@ final class MasterProgramController extends Controller
         unset($validated['default_news_ids_text'], $validated['live_news_ids_text'], $validated['preview_news_ids_text']);
 
         return $validated;
+    }
+
+    /**
+     * Guarda (crea / actualiza / elimina) las emisiones enviadas desde el formulario.
+     * Cada fila del repetidor viene en emisiones[N][campo].
+     * Las emisiones que tengan id se actualizan; las sin id se crean; las que
+     * no aparezcan en el POST se eliminan.
+     */
+    private function saveEmisiones(MasterProgram $masterProgram, Request $request): void
+    {
+        $tiposValidos = array_keys(\App\Models\MasterProgramEmision::TIPOS);
+        $diasValidos  = array_keys(\App\Models\MasterProgramEmision::DIAS);
+        $rows         = $request->input('emisiones', []);
+
+        if (! is_array($rows)) {
+            return;
+        }
+
+        $request->validate([
+            'emisiones.*.tipo'             => ['nullable', 'string', 'in:' . implode(',', $tiposValidos)],
+            'emisiones.*.dia_semana'       => ['nullable', 'string', 'in:' . implode(',', $diasValidos)],
+            'emisiones.*.hora_inicio'      => ['nullable', 'string', 'max:8'],
+            'emisiones.*.duracion_minutos' => ['nullable', 'integer', 'min:1', 'max:600'],
+            'emisiones.*.enlace'           => ['nullable', 'url', 'max:500'],
+            'emisiones.*.url_podcast'      => ['nullable', 'url', 'max:500'],
+        ]);
+
+        $seenIds = [];
+
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $tipo   = trim((string) ($row['tipo']       ?? 'normal'));
+            $dia    = strtoupper(trim((string) ($row['dia_semana']  ?? '')));
+            $hora   = trim((string) ($row['hora_inicio'] ?? ''));
+
+            if (! in_array($tipo, $tiposValidos, true) || ! in_array($dia, $diasValidos, true) || $hora === '') {
+                continue;
+            }
+
+            $enlace = trim((string) ($row['enlace']      ?? ''));
+            // en_vivo requiere enlace — si no lo tiene, lo ignoramos
+            if ($tipo === 'en_vivo' && $enlace === '') {
+                continue;
+            }
+
+            $data = [
+                'tipo'             => $tipo,
+                'etiqueta'         => trim((string) ($row['etiqueta']         ?? '')) ?: null,
+                'dia_semana'       => $dia,
+                'hora_inicio'      => $this->normalizeTime($hora) ?? $hora,
+                'duracion_minutos' => max(1, (int) ($row['duracion_minutos'] ?? 120)),
+                'enlace'           => $enlace ?: null,
+                'url_podcast'      => trim((string) ($row['url_podcast']      ?? '')) ?: null,
+                'notas'            => trim((string) ($row['notas']            ?? '')) ?: null,
+                'activo'           => isset($row['activo']) ? (bool) $row['activo'] : true,
+            ];
+
+            $rowId = (int) ($row['id'] ?? 0);
+
+            if ($rowId > 0) {
+                $emision = $masterProgram->emisiones()->find($rowId);
+                if ($emision) {
+                    $emision->update($data);
+                    $seenIds[] = $rowId;
+                }
+            } else {
+                $emision = $masterProgram->emisiones()->create($data);
+                $seenIds[] = $emision->id;
+            }
+        }
+
+        // Eliminar las emisiones que ya no están en el formulario
+        $masterProgram->emisiones()
+            ->when($seenIds !== [], fn ($q) => $q->whereNotIn('id', $seenIds))
+            ->when($seenIds === [], fn ($q) => $q)
+            ->delete();
     }
 
     private function normalizeTime(string $value): ?string

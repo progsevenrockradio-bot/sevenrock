@@ -240,6 +240,142 @@
             </div>
         </section>
 
+        {{-- ── BLOQUE EMISIONES ─────────────────────────────────────────────── --}}
+        <section class="space-y-5"
+            x-data="{
+                emisiones: {{ json_encode(
+                    $emisiones->map(fn($e) => [
+                        'id'                => $e->id,
+                        'tipo'              => $e->tipo,
+                        'etiqueta'          => (string) $e->etiqueta,
+                        'dia_semana'        => $e->dia_semana,
+                        'hora_inicio'       => substr((string) $e->hora_inicio, 0, 5),
+                        'duracion_minutos'  => $e->duracion_minutos,
+                        'enlace'            => (string) $e->enlace,
+                        'url_podcast'       => (string) $e->url_podcast,
+                        'notas'             => (string) $e->notas,
+                        'activo'            => (bool) $e->activo,
+                    ])->values()->toJson()
+                ) }},
+                addEmision() {
+                    this.emisiones.push({
+                        id: 0, tipo: 'normal', etiqueta: '', dia_semana: 'LUNES',
+                        hora_inicio: '', duracion_minutos: 120, enlace: '',
+                        url_podcast: '', notas: '', activo: true
+                    });
+                },
+                removeEmision(index) {
+                    this.emisiones.splice(index, 1);
+                }
+            }"
+        >
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Emisiones semanales</h2>
+                <button type="button" @click="addEmision()" class="lucille-button-solid text-sm">+ Añadir emisión</button>
+            </div>
+            <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.22)] p-4 text-sm text-[#b8b8b8]">
+                Define aquí todos los slots de este programa: su emisión normal, retransmisiones (podcast diferido) y emisiones en vivo con enlace de stream. La parrilla mostrará una entrada por cada emisión activa.
+            </div>
+
+            <template x-if="emisiones.length === 0">
+                <p class="text-sm text-[#9a9a9a]">Sin emisiones configuradas. Pulsa "+ Añadir emisión" para crear la primera.</p>
+            </template>
+
+            <template x-for="(em, index) in emisiones" :key="index">
+                <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.6)] p-5 space-y-4">
+                    {{-- Campos ocultos --}}
+                    <input type="hidden" :name="'emisiones[' + index + '][id]'" :value="em.id">
+
+                    <div class="grid gap-4 md:grid-cols-3">
+                        {{-- Tipo --}}
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Tipo</label>
+                            <select :name="'emisiones[' + index + '][tipo]'" x-model="em.tipo"
+                                class="lucille-product-field lucille-select-field w-full">
+                                <option value="normal">Normal</option>
+                                <option value="retransmision">Retransmisión / Podcast</option>
+                                <option value="en_vivo">En Vivo</option>
+                            </select>
+                        </div>
+
+                        {{-- Día --}}
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Día</label>
+                            <select :name="'emisiones[' + index + '][dia_semana]'" x-model="em.dia_semana"
+                                class="lucille-product-field lucille-select-field w-full">
+                                <option value="LUNES">Lunes</option>
+                                <option value="MARTES">Martes</option>
+                                <option value="MIERCOLES">Miércoles</option>
+                                <option value="JUEVES">Jueves</option>
+                                <option value="VIERNES">Viernes</option>
+                                <option value="SABADO">Sábado</option>
+                                <option value="DOMINGO">Domingo</option>
+                            </select>
+                        </div>
+
+                        {{-- Hora --}}
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Hora de inicio</label>
+                            <input type="time" step="1" :name="'emisiones[' + index + '][hora_inicio]'" x-model="em.hora_inicio"
+                                class="lucille-product-field w-full">
+                        </div>
+
+                        {{-- Duración --}}
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Duración (min)</label>
+                            <input type="number" min="1" max="600" :name="'emisiones[' + index + '][duracion_minutos]'" x-model.number="em.duracion_minutos"
+                                class="lucille-product-field w-full">
+                        </div>
+
+                        {{-- Etiqueta --}}
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Etiqueta en parrilla</label>
+                            <input type="text" :name="'emisiones[' + index + '][etiqueta]'" x-model="em.etiqueta"
+                                placeholder="Ej. Rock al Palo - Retransmisión"
+                                class="lucille-product-field w-full">
+                        </div>
+
+                        {{-- Enlace en vivo (solo visible si tipo = en_vivo) --}}
+                        <div x-show="em.tipo === 'en_vivo'">
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Enlace en vivo (URL)</label>
+                            <input type="url" :name="'emisiones[' + index + '][enlace]'" x-model="em.enlace"
+                                placeholder="https://stream.ejemplo.com/live"
+                                class="lucille-product-field w-full">
+                        </div>
+
+                        {{-- URL Podcast --}}
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">URL Podcast</label>
+                            <input type="url" :name="'emisiones[' + index + '][url_podcast]'" x-model="em.url_podcast"
+                                placeholder="https://archive.org/..."
+                                class="lucille-product-field w-full">
+                        </div>
+                    </div>
+
+                    {{-- Notas --}}
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Notas internas</label>
+                        <textarea rows="2" :name="'emisiones[' + index + '][notas]'" x-model="em.notas"
+                            class="lucille-product-field w-full"></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4">
+                        <label class="flex items-center gap-3 text-sm text-[#9a9a9a]">
+                            <input type="hidden" :name="'emisiones[' + index + '][activo]'" value="0">
+                            <input type="checkbox" :name="'emisiones[' + index + '][activo]'" value="1"
+                                x-model="em.activo" class="h-4 w-4">
+                            Emisión activa
+                        </label>
+                        <button type="button" @click="removeEmision(index)"
+                            class="text-xs uppercase tracking-[.15em] text-red-400 hover:text-red-300">
+                            Eliminar esta emisión
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </section>
+        {{-- ── / BLOQUE EMISIONES ───────────────────────────────────────────── --}}
+
         <div class="flex flex-wrap gap-3">
             <button type="submit" class="lucille-button-solid">{{ $buttonLabel }}</button>
             <a href="{{ route('admin.master-programs.index') }}" class="lucille-button">Cancelar</a>

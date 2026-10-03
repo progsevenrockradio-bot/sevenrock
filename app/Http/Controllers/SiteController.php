@@ -531,6 +531,7 @@ class SiteController extends Controller
                 try {
                     $masterPrograms = MasterProgram::query()
                         ->where('activo', true)
+                        ->with(['emisiones' => fn ($q) => $q->where('activo', true)])
                         ->orderBy('nombre')
                         ->get();
 
@@ -547,32 +548,61 @@ class SiteController extends Controller
 
                     $grouped = [];
                     foreach ($masterPrograms as $program) {
-                        $day = strtoupper(trim((string) $program->dia_transmision));
-                        if (! isset($grouped[$day])) {
-                            $grouped[$day] = [];
+                        $emisiones = $program->emisiones;
+
+                        if ($emisiones->isNotEmpty()) {
+                            // Una entrada por cada emisión activa
+                            foreach ($emisiones as $em) {
+                                $day = strtoupper(trim((string) $em->dia_semana));
+                                $grouped[$day][] = [
+                                    'id'                 => $program->id,
+                                    'title'              => $em->tipo !== 'normal' && filled($em->etiqueta) ? $em->etiqueta : $program->nombre,
+                                    'name'               => $program->nombre,
+                                    'cover'              => $program->cover_url,
+                                    'host'               => $program->host,
+                                    'conductor'          => $program->conductor,
+                                    'schedule'           => $day . ' · ' . substr((string) $em->hora_inicio, 0, 5),
+                                    'description'        => $program->description,
+                                    'genre'              => $program->genero,
+                                    'hora'               => substr((string) $em->hora_inicio, 0, 5),
+                                    'archive_identifier' => $program->archive_identifier,
+                                    'slug'               => $program->publicSlug(),
+                                    'tipo_emision'       => $em->tipo,
+                                    'enlace_en_vivo'     => $em->enlace,
+                                    'url_podcast'        => $em->url_podcast ?: ($program->archive_identifier ? 'https://archive.org/details/' . $program->archive_identifier : null),
+                                ];
+                            }
+                        } else {
+                            // Retrocompatibilidad: programa sin emisiones configuradas
+                            $day = strtoupper(trim((string) $program->dia_transmision));
+                            if ($day !== '') {
+                                $grouped[$day][] = [
+                                    'id'                 => $program->id,
+                                    'title'              => $program->nombre,
+                                    'name'               => $program->nombre,
+                                    'cover'              => $program->cover_url,
+                                    'host'               => $program->host,
+                                    'conductor'          => $program->conductor,
+                                    'schedule'           => $program->schedule,
+                                    'description'        => $program->description,
+                                    'genre'              => $program->genero,
+                                    'hora'               => $program->hora_transmision,
+                                    'archive_identifier' => $program->archive_identifier,
+                                    'slug'               => $program->publicSlug(),
+                                    'tipo_emision'       => 'normal',
+                                    'enlace_en_vivo'     => null,
+                                    'url_podcast'        => $program->archive_identifier ? 'https://archive.org/details/' . $program->archive_identifier : null,
+                                ];
+                            }
                         }
-                        $grouped[$day][] = [
-                            'id' => $program->id,
-                            'title' => $program->nombre,
-                            'name' => $program->nombre,
-                            'cover' => $program->cover_url,
-                            'host' => $program->host,
-                            'conductor' => $program->conductor,
-                            'schedule' => $program->schedule,
-                            'description' => $program->description,
-                            'genre' => $program->genero,
-                            'hora' => $program->hora_transmision,
-                            'archive_identifier' => $program->archive_identifier,
-                            'slug' => $program->publicSlug(),
-                        ];
                     }
 
                     foreach ($dayOrder as $day) {
                         if (! empty($grouped[$day])) {
                             usort($grouped[$day], fn ($a, $b) => ($a['hora'] ?? '99:99') <=> ($b['hora'] ?? '99:99'));
                             $programsByDay[] = [
-                                'day' => $day,
-                                'label' => $dayLabels[$day] ?? $day,
+                                'day'      => $day,
+                                'label'    => $dayLabels[$day] ?? $day,
                                 'programs' => $grouped[$day],
                             ];
                         }
