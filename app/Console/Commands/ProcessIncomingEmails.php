@@ -354,11 +354,12 @@ class ProcessIncomingEmails extends Command
                             'artist_name' => null
                         ]);
 
+                        $cleanItemSave = $this->limpiarContenidoDeCorreo($cleanItem);
                         Post::create([
                             'title'          => $efTitle,
                             'slug'           => $slug,
-                            'content'        => $cleanItem,
-                            'excerpt'        => Str::limit($cleanItem, 160),
+                            'content'        => $cleanItemSave,
+                            'excerpt'        => Str::limit(strip_tags($cleanItemSave), 160),
                             'status'         => $status,
                             'is_published'   => $settings->email_auto_publish,
                             'published_at'   => now(),
@@ -433,8 +434,8 @@ class ProcessIncomingEmails extends Command
                             $slug = $baseSlug . '-' . $suffix++;
                         }
 
-                        // Usar cuerpo HTML directamente como contenido
-                        $contentToSave = $body ?: strip_tags($body);
+                        // Usar cuerpo HTML directamente como contenido (limpiado; $body sigue intacto para PostImageResolver)
+                        $contentToSave = $this->limpiarContenidoDeCorreo($body);
 
                         $resolverInfo = app(\App\Services\PostImageResolver::class)->resolveForPost([
                             'message' => $message,
@@ -493,12 +494,13 @@ class ProcessIncomingEmails extends Command
                     $isFallbackEnabled = $settings->ai_fallback_enabled ?? true;
                     if ($isFallbackEnabled && !$isDarkVaderAgent) {
                         $this->warn("[FALLBACK] Aplicando fallback determinista para el correo: {$subject}");
+                        $fallbackContent = $this->limpiarContenidoDeCorreo($body);
                         $parsed = [
                             'type' => 'post',
                             'importance' => 3,
                             'title' => TextNormalizer::normalizeTitle($subject) ?: $subject,
-                            'excerpt' => Str::limit(strip_tags($body), 160),
-                            'content' => strip_tags($body),
+                            'excerpt' => Str::limit(strip_tags($fallbackContent), 160),
+                            'content' => $fallbackContent,
                             'categories' => ['Noticias Rock'],
                             'fallback_used' => true
                         ];
@@ -703,7 +705,7 @@ class ProcessIncomingEmails extends Command
                         $post = Post::create([
                             'title'        => $title,
                             'slug'         => $slug,
-                            'content'      => $parsed['content'] ?? '',
+                            'content'      => $this->limpiarContenidoDeCorreo($parsed['content'] ?? ''),
                             'excerpt'      => $parsed['excerpt'] ?? '',
                             'status'       => $status,
                             'is_published' => $settings->email_auto_publish,
@@ -862,7 +864,7 @@ class ProcessIncomingEmails extends Command
                                 'ticket_url' => $ev['ticket_url'] ?? null,
                                 'ticket_label' => !empty($ev['ticket_url']) ? 'Tickets' : 'Details',
                                 'categories' => ['Conciertos'],
-                                'content' => \App\Support\TextList::toArray($parsed['content'] ?? ''),
+                                'content' => \App\Support\TextList::toArray($this->limpiarContenidoDeCorreo($parsed['content'] ?? '')),
                                 'poster' => $posterUrl,
                                 'is_cancelled' => false,
                                 'status' => 'pending',
@@ -1050,5 +1052,46 @@ class ProcessIncomingEmails extends Command
                 'name' => $name,
             ]
         );
+    }
+
+    /**
+     * Limpia el contenido que viene de un correo antes de guardarlo en el post.
+     * - Decodifica entidades HTML (&quot; &amp; &aacute; etc.).
+     * - Elimina las líneas de servicio del resolvedor de imágenes (FUENTE:, Creditos:, etc.).
+     * - Colapsa etiquetas <p> vacías y saltos de línea múltiples.
+     * - Si el texto no contiene HTML, envuelve párrafos separados por línea en blanco en <p>.</p>
+     *
+     * IMPORTANTE: pasar SIEMPRE $body original (sin modificar) a PostImageResolver;
+     *             pasar el resultado de este método al campo 'content' del modelo.
+     */
+    private function limpiarContenidoDeCorreo(string $texto): string
+    {
+        $s = html_entity_decode($texto, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Quitar líneas de servicio del resolvedor de imágenes
+        $s = preg_replace('/^\s*(?:<p[^>]*>)?\s*(FUENTE|Source|Creditos|Cr\u{00e9}ditos)\s*:.*$/mi', '', $s);
+
+        // Colapsar etiquetas <p> vacías
+        $s = preg_replace('/<p[^>]*>\s*<\/p>/i', '', $s);
+
+        // Reducir saltos de línea excesivos
+        $s = preg_replace('/\n{3,}/', "\n\n", $s);
+
+        $s = trim($s);
+
+        // Si el texto no contiene HTML, envolver párrafos en <p>
+        if ($s !== '' && !preg_match('/<[a-zA-Z]/', $s)) {
+            $parrafos = preg_split('/\n{2,}/', $s) ?: [$s];
+            $wrapped = [];
+            foreach ($parrafos as $p) {
+                $p = trim($p);
+                if ($p !== '') {
+                    $wrapped[] = '<p>' . nl2br(htmlspecialchars($p, ENT_QUOTES | ENT_HTML5, 'UTF-8', false)) . '</p>';
+                }
+            }
+            $s = implode("\n", $wrapped);
+        }
+
+        return $s;
     }
 }
