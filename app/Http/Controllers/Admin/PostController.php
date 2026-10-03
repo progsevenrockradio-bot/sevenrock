@@ -212,7 +212,12 @@ class PostController extends Controller
             'author_email' => ['nullable', 'email', 'max:255'],
             'notification_sender' => ['nullable', 'email', 'max:255'],
             'timezone' => ['nullable', 'string', 'timezone:all'],
+            'en_memoria' => ['nullable', 'boolean'],
+            'en_memoria_nombre' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $validated['en_memoria'] = $request->boolean('en_memoria');
+        $validated['en_memoria_nombre'] = trim((string) ($validated['en_memoria_nombre'] ?? '')) ?: null;
 
         $validated['author'] = trim((string) ($validated['author'] ?? '')) !== ''
             ? trim((string) $validated['author'])

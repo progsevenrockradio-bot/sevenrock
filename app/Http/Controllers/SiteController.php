@@ -1107,6 +1107,8 @@ class SiteController extends Controller
                     'quote' => $post->quote ?: '',
                     'likes_count' => $this->postLikesCount($post->id),
                     'liked' => $this->hasPostLiked($post->id),
+                    'en_memoria' => (bool) $post->en_memoria,
+                    'en_memoria_nombre' => $post->en_memoria_nombre,
                 ],
                 'prevPost' => $this->safeValue(fn () => Post::query()->published()
                     ->where(function ($q) use ($post) {
@@ -1172,11 +1174,16 @@ class SiteController extends Controller
                     return [];
                 }
 
+                $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+                $isSqlite = $driver === 'sqlite';
+                $yrSql = $isSqlite ? "strftime('%Y', published_at)" : 'YEAR(published_at)';
+                $moSql = $isSqlite ? "strftime('%m', published_at)" : 'MONTH(published_at)';
+
                 return Post::query()
                     ->published()
                     ->whereNotNull('published_at')
-                    ->selectRaw('YEAR(published_at) as yr, MONTH(published_at) as mo')
-                    ->groupByRaw('YEAR(published_at), MONTH(published_at)')
+                    ->selectRaw("{$yrSql} as yr, {$moSql} as mo")
+                    ->groupByRaw("{$yrSql}, {$moSql}")
                     ->orderByDesc('yr')
                     ->orderByDesc('mo')
                     ->get()

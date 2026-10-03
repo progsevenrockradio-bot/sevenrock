@@ -34,6 +34,10 @@
                             <span class="absolute inset-0 bg-[rgba(7,16,33,.4)]"></span>
                         @endif
 
+                        @if (data_get($post, 'en_memoria'))
+                            <x-luto :nombre="data_get($post, 'en_memoria_nombre')" />
+                        @endif
+
                         <div class="absolute inset-x-0 bottom-0 p-7">
                             <h2 class="font-display text-2xl font-light uppercase text-[#f9f9f9] transition duration-300 group-hover:text-lucille-accent">{{ $title }}</h2>
                             <p class="mt-2 text-sm italic text-[#cbcbcb]">{{ $date }} · {{ $category }}</p>

@@ -50,6 +50,9 @@
                                                 decoding="async"
                                             >
                                         </a>
+                                        @if (data_get($post, 'en_memoria'))
+                                            <x-luto :nombre="data_get($post, 'en_memoria_nombre')" />
+                                        @endif
                                     </div>
                                 @endif
 
@@ -143,7 +146,7 @@
                             {{-- Standard Post Card --}}
                             <article class="blog-card-premium group">
                                 @if ($image)
-                                    <div class="mb-5 overflow-hidden rounded-xl border border-white/5 aspect-video shrink-0 bg-[#0c0c0c]">
+                                    <div class="relative mb-5 overflow-hidden rounded-xl border border-white/5 aspect-video shrink-0 bg-[#0c0c0c]">
                                         <a href="{{ $url }}" class="block h-full">
                                             <img
                                                 src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}"
@@ -155,6 +158,9 @@
                                                 decoding="async"
                                             >
                                         </a>
+                                        @if (data_get($post, 'en_memoria'))
+                                            <x-luto :nombre="data_get($post, 'en_memoria_nombre')" />
+                                        @endif
                                     </div>
                                 @endif
 

@@ -28,7 +28,14 @@
             <tbody class="divide-y divide-[#2b2b2b] text-[#9a9a9a]">
                 @forelse ($posts as $post)
                     <tr class="hover:bg-[rgba(255,255,255,.02)]">
-                        <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">{{ $post->title }}</td>
+                        <td class="px-5 py-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc]">
+                            {{ $post->title }}
+                            @if ($post->en_memoria)
+                                <span class="ml-2 inline-flex items-center gap-1 rounded bg-error/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[.12em] text-error border border-error/30">
+                                    🖤 En memoria{{ $post->en_memoria_nombre ? ' ('.$post->en_memoria_nombre.')' : '' }}
+                                </span>
+                            @endif
+                        </td>
                         <td class="px-5 py-4">{{ $post->published_at?->format('d M Y') }}</td>
                         <td class="px-5 py-4">{{ implode(', ', $post->categoryNames()) }}</td>
                         <td class="px-5 py-4">

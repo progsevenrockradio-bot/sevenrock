@@ -104,8 +104,11 @@
             <div class="flex flex-col lg:flex-row">
                 <main class="lucille-blog-standard-main">
                     <article>
-                        <div class="embedded-wall-socket">
+                        <div class="relative embedded-wall-socket">
                             <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ $post['title'] }}" width="1200" height="630" class="mb-0 w-full" loading="eager" decoding="async">
+                            @if (data_get($post, 'en_memoria'))
+                                <x-luto :nombre="data_get($post, 'en_memoria_nombre')" />
+                            @endif
                         </div>
 
                         <div class="lucille-single-post-body mt-0 space-y-5">

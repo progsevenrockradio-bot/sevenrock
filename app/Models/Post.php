@@ -67,6 +67,8 @@ class Post extends Model
         'author_email',
         'notification_sender',
         'timezone',
+        'en_memoria',
+        'en_memoria_nombre',
     ];
 
     protected $appends = [
@@ -81,6 +83,7 @@ class Post extends Model
             'published_at' => 'datetime',
             'is_published' => 'bool',
             'timezone' => 'string',
+            'en_memoria' => 'boolean',
         ];
     }
 

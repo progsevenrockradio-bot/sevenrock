@@ -303,6 +303,24 @@
             </div>
         </div>
 
+        <!-- Caja: En memoria -->
+        <div class="sidebar-card">
+            <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-2 mb-4">🖤 En Memoria</h3>
+            <p class="mb-4 text-xs text-[#9a9a9a]">Marca este post si es en homenaje a un artista fallecido. Mostrará el lazo rojo en las portadas y ficha.</p>
+            
+            <div class="space-y-4">
+                <label class="flex items-center gap-3 text-sm text-[#9a9a9a]">
+                    <input type="checkbox" name="en_memoria" value="1" @checked(old('en_memoria', $post->en_memoria)) class="h-4 w-4">
+                    En memoria
+                </label>
+
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Nombre (opcional)</label>
+                    <input type="text" name="en_memoria_nombre" value="{{ old('en_memoria_nombre', $post->en_memoria_nombre) }}" class="lucille-product-field w-full" placeholder="Ej. Phil Campbell">
+                </div>
+            </div>
+        </div>
+
         <!-- Caja 3: Imagen Destacada -->
         <div class="sidebar-card">
             <h3 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc] border-b border-[#2b2b2b] pb-2 mb-4">📸 Imagen Destacada</h3>

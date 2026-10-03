@@ -34,6 +34,9 @@
                             <div>
                                 <div class="relative aspect-[4/3] overflow-hidden border border-[#2b2b2b] bg-[#111]">
                                     <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}" alt="{{ $post->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
+                                    @if ($post->en_memoria)
+                                        <x-luto :nombre="$post->en_memoria_nombre" />
+                                    @endif
                                 </div>
                                 <h4 class="mt-4 font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 group-hover:text-[#c32720] transition-colors relative z-20">
                                     {{ $post->title }}
