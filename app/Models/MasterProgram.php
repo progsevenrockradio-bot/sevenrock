@@ -164,6 +164,9 @@ class MasterProgram extends Model
         return $this->hasMany(OutreachCampaign::class, 'program_code', 'program_code');
     }
 
+    /**
+     * @return Collection<int, static>
+     */
     public static function adminListing(): Collection
     {
         $query = static::query();

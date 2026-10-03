@@ -548,6 +548,7 @@ class SiteController extends Controller
 
                     $grouped = [];
                     foreach ($masterPrograms as $program) {
+                        /** @var \App\Models\MasterProgram $program */
                         $emisiones = $program->emisiones;
 
                         if ($emisiones->isNotEmpty()) {

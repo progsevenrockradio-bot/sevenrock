@@ -1069,7 +1069,7 @@ class ProcessIncomingEmails extends Command
         $s = html_entity_decode($texto, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         // Quitar líneas de servicio del resolvedor de imágenes
-        $s = preg_replace('/^\s*(?:<p[^>]*>)?\s*(FUENTE|Source|Creditos|Cr\u{00e9}ditos)\s*:.*$/mi', '', $s);
+        $s = preg_replace('/^\s*(?:<p[^>]*>)?\s*(FUENTE|Source|Creditos|Créditos)\s*:.*$/miu', '', $s);
 
         // Colapsar etiquetas <p> vacías
         $s = preg_replace('/<p[^>]*>\s*<\/p>/i', '', $s);
