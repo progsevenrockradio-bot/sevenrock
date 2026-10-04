@@ -308,8 +308,31 @@
                 </div>
                 <div class="md:col-span-1">
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Cadena de Fallback IA</label>
-                    <input type="text" name="ai_provider_chain" value="{{ old('ai_provider_chain', $settings->ai_provider_chain ?? 'gemini,openrouter') }}" class="lucille-product-field w-full text-xs font-mono">
+                    <select name="ai_provider_chain" class="lucille-product-field w-full text-xs font-mono">
+                        <option value="gemini,openrouter" {{ (old('ai_provider_chain', $settings->ai_provider_chain ?? 'gemini,openrouter') == 'gemini,openrouter') ? 'selected' : '' }}>Gemini y, si falla, OpenRouter</option>
+                        <option value="openrouter,gemini" {{ (old('ai_provider_chain', $settings->ai_provider_chain ?? '') == 'openrouter,gemini') ? 'selected' : '' }}>OpenRouter y, si falla, Gemini</option>
+                        <option value="gemini" {{ (old('ai_provider_chain', $settings->ai_provider_chain ?? '') == 'gemini') ? 'selected' : '' }}>Solo Gemini</option>
+                        <option value="openrouter" {{ (old('ai_provider_chain', $settings->ai_provider_chain ?? '') == 'openrouter') ? 'selected' : '' }}>Solo OpenRouter</option>
+                    </select>
                     @error('ai_provider_chain')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Modelo Gemini</label>
+                    <input type="text" name="ai_gemini_model" value="{{ old('ai_gemini_model', $settings->ai_gemini_model ?? '') }}" class="lucille-product-field w-full text-xs font-mono" placeholder="gemini-flash-latest">
+                    <p class="mt-2 text-[10px] text-[#9a9a9a] leading-tight">Ejemplos: gemini-flash-latest, gemini-2.5-flash, gemini-2.0-flash-lite. Deja el valor por defecto si no estás seguro.</p>
+                    @error('ai_gemini_model')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Modelo OpenRouter</label>
+                    <input type="text" name="ai_openrouter_model" value="{{ old('ai_openrouter_model', $settings->ai_openrouter_model ?? '') }}" class="lucille-product-field w-full text-xs font-mono" placeholder="openrouter/free">
+                    <p class="mt-2 text-[10px] text-[#9a9a9a] leading-tight">Escribe <code>openrouter/free</code> para que use automáticamente el mejor modelo gratuito disponible, o un ID concreto. Para ver los gratis actuales: https://openrouter.ai/models?max_price=0</p>
+                    @error('ai_openrouter_model')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+                </div>
+                <div class="md:col-span-3 mt-1 p-3 bg-[rgba(0,0,0,.15)] border border-[#2b2b2b] rounded text-xs text-[#9a9a9a]">
+                    <strong class="text-[#dcdcdc]">Estado Efectivo Actual:</strong><br>
+                    <span class="inline-block mt-1">- Cadena: <code class="text-white">{{ implode(', ', app(\App\Services\AiParserManager::class)->resolveChain()) }}</code></span><br>
+                    <span class="inline-block mt-1">- Gemini: <code class="text-white">{{ app(\App\Services\GeminiContentParser::class)->resolveModel() }}</code></span><br>
+                    <span class="inline-block mt-1">- OpenRouter: <code class="text-white">{{ app(\App\Services\OpenRouterContentParser::class)->resolveModel() }}</code></span>
                 </div>
                 <div>
                     <label class="mb-2 flex items-center gap-2 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">

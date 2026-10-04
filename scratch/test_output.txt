@@ -83,3 +83,7 @@ Sender: grandsoundsofficial@mailchimpapp.com, Whitelist Setting: mailchimpapp.co
 Sender: dark.vader.agent@gmail.com, Whitelist Setting: mailchimpapp.com
 Sender: dark.vader.agent@gmail.com, Whitelist Setting: mailchimpapp.com
 Sender: promo@label.com, Whitelist Setting: promo@label.com
+Sender: grandsoundsofficial@mailchimpapp.com, Whitelist Setting: mailchimpapp.com
+Sender: dark.vader.agent@gmail.com, Whitelist Setting: mailchimpapp.com
+Sender: dark.vader.agent@gmail.com, Whitelist Setting: mailchimpapp.com
+Sender: promo@label.com, Whitelist Setting: promo@label.com

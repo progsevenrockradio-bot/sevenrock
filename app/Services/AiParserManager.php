@@ -13,12 +13,32 @@ class AiParserManager
     public ?string $lastError = null;
     public ?string $lastProvider = null;
 
+    public function resolveChain(): array
+    {
+        $settings = ThemeSetting::current();
+        $dbChainStr = $settings->ai_provider_chain ?? '';
+        $configChain = config('services.ai.provider_chain', ['gemini', 'openrouter']);
+        
+        $chain = $dbChainStr ? explode(',', $dbChainStr) : $configChain;
+        
+        if ($chain !== $configChain) {
+            Log::info("AiParserManager: Cadena efectiva (" . implode(',', $chain) . ") difiere de la config (" . implode(',', $configChain) . ")");
+        }
+        
+        $fallbackEnabled = (bool) ($settings->ai_fallback_enabled ?? true);
+        if (!$fallbackEnabled && count($chain) > 1) {
+            $chain = [$chain[0]];
+        }
+        
+        return $chain;
+    }
+
     /**
      * @return bool
      */
     public function hasAnyProvider(): bool
     {
-        $chain = config('services.ai.provider_chain', ['gemini', 'openrouter']);
+        $chain = $this->resolveChain();
         
         foreach ($chain as $provider) {
             $key = $this->getApiKey($provider);
@@ -49,7 +69,7 @@ class AiParserManager
     {
         $this->lastError = null;
         $this->lastProvider = null;
-        $chain = config('services.ai.provider_chain', ['gemini', 'openrouter']);
+        $chain = $this->resolveChain();
         
         $errors = [];
 

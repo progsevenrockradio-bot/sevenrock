@@ -139,7 +139,9 @@ class ThemeSettingsController extends Controller
             'gemini_api_key' => ['nullable', 'string', 'max:255'],
             'openrouter_api_key' => ['nullable', 'string', 'max:255'],
             'ai_fallback_enabled' => ['nullable', 'boolean'],
-            'ai_provider_chain' => ['nullable', 'string', 'max:100', 'in:gemini,openrouter,openrouter,gemini'],
+            'ai_provider_chain' => ['nullable', 'string', 'max:100', 'in:gemini,openrouter,openrouter,gemini,gemini,openrouter'],
+            'ai_gemini_model' => ['nullable', 'string', 'max:80'],
+            'ai_openrouter_model' => ['nullable', 'string', 'max:80'],
             'archive_access_key' => ['nullable', 'string', 'max:255'],
             'archive_secret_key' => ['nullable', 'string', 'max:255'],
             'email_default_cover' => ['nullable', 'image', 'max:4096'],
@@ -211,6 +213,8 @@ class ThemeSettingsController extends Controller
             'openrouter_api_key',
             'ai_fallback_enabled',
             'ai_provider_chain',
+            'ai_gemini_model',
+            'ai_openrouter_model',
             'archive_access_key',
             'archive_secret_key',
             'email_default_cover',
@@ -286,6 +290,8 @@ class ThemeSettingsController extends Controller
         
         $settings->ai_fallback_enabled = (bool) ($validated['ai_fallback_enabled'] ?? false);
         $settings->ai_provider_chain = $validated['ai_provider_chain'] ?? 'gemini,openrouter';
+        $settings->ai_gemini_model = trim((string) ($validated['ai_gemini_model'] ?? '')) ?: null;
+        $settings->ai_openrouter_model = trim((string) ($validated['ai_openrouter_model'] ?? '')) ?: null;
         $settings->archive_access_key = trim((string) ($validated['archive_access_key'] ?? '')) ?: null;
         if ($request->filled('archive_secret_key')) {
             $settings->archive_secret_key = trim((string) $validated['archive_secret_key']);

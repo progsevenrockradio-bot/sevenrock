@@ -19,6 +19,16 @@ class GeminiContentParser implements ContentParserInterface
     public ?string $lastError = null;
 
     /**
+     * Resuelve el modelo a usar consultando primero BD, luego config y luego el por defecto.
+     */
+    public function resolveModel(): string
+    {
+        $settings = \App\Models\ThemeSetting::current();
+        return trim((string) ($settings->ai_gemini_model ?? '')) 
+            ?: config('services.gemini.model', 'gemini-flash-latest');
+    }
+
+    /**
      * Process email content using Google Gemini API to clean, translate, and structure it.
      *
      * @param string $subject
@@ -31,7 +41,7 @@ class GeminiContentParser implements ContentParserInterface
         $this->lastError = null;
         $prompt = AiPrompts::getParsePrompt($subject, $body);
 
-        $model = config('services.gemini.model', 'gemini-flash-latest');
+        $model = $this->resolveModel();
 
         // Primer intento con el modelo configurado
         $result = $this->callApi($model, $prompt, $apiKey);

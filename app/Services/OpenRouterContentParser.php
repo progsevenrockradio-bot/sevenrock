@@ -18,6 +18,16 @@ class OpenRouterContentParser implements ContentParserInterface
      */
     public ?string $lastError = null;
 
+    /**
+     * Resuelve el modelo a usar consultando primero BD, luego config y luego el por defecto.
+     */
+    public function resolveModel(): string
+    {
+        $settings = \App\Models\ThemeSetting::current();
+        return trim((string) ($settings->ai_openrouter_model ?? '')) 
+            ?: config('services.openrouter.model', 'openrouter/free');
+    }
+
     public function parse(string $subject, string $body, string $apiKey): ?array
     {
         $this->lastError = null;
@@ -91,9 +101,9 @@ class OpenRouterContentParser implements ContentParserInterface
         ]);
     }
 
-    protected function callApi(string $prompt, string $apiKey, array $jsonSchema = null): ?array
+    protected function callApi(string $prompt, string $apiKey, ?array $jsonSchema = null): ?array
     {
-        $model = config('services.openrouter.model', 'google/gemini-2.5-flash');
+        $model = $this->resolveModel();
         $baseUrl = config('services.openrouter.base_url', 'https://openrouter.ai/api/v1');
 
         try {
