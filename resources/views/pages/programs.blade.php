@@ -183,10 +183,16 @@
                                         </div>
                                         {{-- Info --}}
                                         <div class="min-w-0 flex-1 text-center sm:text-left">
-                                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                <h4 class="font-display text-sm uppercase tracking-[.06em] text-[#dcdcdc] group-hover:text-lucille-accent transition-colors leading-tight truncate">
-                                                    {{ $progName }}
-                                                </h4>
+                                            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                                                <div class="flex flex-col gap-1">
+                                                    @if(isset($program['tipo_emision']) && in_array($program['tipo_emision'], ['en_vivo', 'retransmision']))
+                                                        <x-emision-badge :tipo="$program['tipo_emision']" :enlace="$program['enlace_en_vivo'] ?? null" />
+                                                    @endif
+                                                    <h4 class="font-display text-sm uppercase tracking-[.06em] text-[#dcdcdc] group-hover:text-lucille-accent transition-colors leading-tight truncate">
+                                                        {{ $progName }}
+                                                    </h4>
+                                                </div>
+
                                                 @if ($displayTime)
                                                     <div class="flex flex-col items-center sm:items-end gap-1 mt-1 sm:mt-0 shrink-0">
                                                         <span class="inline-block self-center sm:self-start shrink-0 text-[10px] font-mono tracking-[.08em] text-[#888] bg-[#161616] px-2 py-0.5 rounded border border-[#242424]">

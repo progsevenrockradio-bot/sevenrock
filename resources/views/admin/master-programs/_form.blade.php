@@ -242,19 +242,25 @@
 
         {{-- ── BLOQUE EMISIONES ─────────────────────────────────────────────── --}}
         <section class="space-y-5"
+            @php
+                $emisionesArray = $emisiones->map(function($e) {
+                    return [
+                        'id' => $e->id,
+                        'tipo' => $e->tipo,
+                        'etiqueta' => (string) $e->etiqueta,
+                        'dia_semana' => $e->dia_semana,
+                        'hora_inicio' => substr((string) $e->hora_inicio, 0, 5),
+                        'duracion_minutos' => $e->duracion_minutos,
+                        'enlace' => (string) $e->enlace,
+                        'url_podcast' => (string) $e->url_podcast,
+                        'notas' => (string) $e->notas,
+                        'activo' => (bool) $e->activo,
+                    ];
+                })->values()->all();
+                $emisionesJson = json_encode($emisionesArray, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+            @endphp
             x-data="{
-                emisiones: @json($emisiones->map(fn($e) => [
-                    'id' => $e->id,
-                    'tipo' => $e->tipo,
-                    'etiqueta' => (string) $e->etiqueta,
-                    'dia_semana' => $e->dia_semana,
-                    'hora_inicio' => substr((string) $e->hora_inicio, 0, 5),
-                    'duracion_minutos' => $e->duracion_minutos,
-                    'enlace' => (string) $e->enlace,
-                    'url_podcast' => (string) $e->url_podcast,
-                    'notas' => (string) $e->notas,
-                    'activo' => (bool) $e->activo,
-                ])->values()),
+                emisiones: {{ $emisionesJson }},
                 addEmision() {
                     this.emisiones.push({
                         id: 0, tipo: 'normal', etiqueta: '', dia_semana: 'LUNES',

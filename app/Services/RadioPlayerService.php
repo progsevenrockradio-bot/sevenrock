@@ -559,17 +559,41 @@ class RadioPlayerService
             return $localNow->betweenIncluded($start, $end);
         }
 
-        if (strtoupper(trim((string) $master->dia_transmision)) !== $this->currentDayKey($localNow)) {
-            return false;
+        $currentDay = $this->currentDayKey($localNow);
+
+        $isLegacyActive = false;
+        if (strtoupper(trim((string) $master->dia_transmision)) === $currentDay) {
+            $isLegacyActive = $this->isWindowActive(
+                $localNow,
+                (string) $master->hora_transmision,
+                '',
+                (int) $master->duracion_minutos,
+                $this->programScheduleService->nextProgramStartFor($master, $localNow)
+            );
         }
 
-        return $this->isWindowActive(
-            $localNow,
-            (string) $master->hora_transmision,
-            '',
-            (int) $master->duracion_minutos,
-            $this->programScheduleService->nextProgramStartFor($master, $localNow)
-        );
+        if ($isLegacyActive) {
+            return true;
+        }
+
+        $emisiones = $master->emisiones()->where('activo', true)->get();
+        foreach ($emisiones as $emision) {
+            if (strtoupper(trim((string) $emision->dia_semana)) !== $currentDay) {
+                continue;
+            }
+
+            if ($this->isWindowActive(
+                $localNow,
+                (string) $emision->hora_inicio,
+                '',
+                (int) $emision->duracion_minutos,
+                $this->programScheduleService->nextProgramStartFor($master, $localNow)
+            )) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isEpisodeOnAir(RadioProgram $episode, MasterProgram $master, Carbon $now): bool

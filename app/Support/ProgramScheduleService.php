@@ -330,6 +330,31 @@ class ProgramScheduleService
             }
         }
 
+        $emisiones = $program->emisiones()->where('activo', true)->get();
+        if ($emisiones->isNotEmpty()) {
+            foreach ($emisiones as $emision) {
+                $dayNumber = $this->dayNumber((string) $emision->dia_semana);
+                if ($dayNumber === null) continue;
+                $hm = $this->parseScheduleTime((string) $emision->hora_inicio);
+                if (! $hm) continue;
+                
+                [$hour, $minute] = $hm;
+                $daysSinceSchedule = ((int) $now->dayOfWeekIso - $dayNumber + 7) % 7;
+                $start = $now->copy()->startOfDay()->subDays($daysSinceSchedule)->setTime($hour, $minute, 0);
+                $duration = max(15, (int) ($emision->duracion_minutos ?? 120));
+                $end = $start->copy()->addMinutes($duration);
+
+                if ($end->lessThanOrEqualTo($start)) {
+                    $end = $end->copy()->addDay();
+                }
+
+                if ($now->between($start, $end)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         $dayNumber = $this->dayNumber((string) $program->dia_transmision);
         if ($dayNumber === null) {
             return false;
@@ -375,6 +400,29 @@ class ProgramScheduleService
             if ($liveStart->greaterThan($now)) {
                 return $liveStart;
             }
+        }
+
+        $emisiones = $program->emisiones()->where('activo', true)->get();
+        if ($emisiones->isNotEmpty()) {
+            $nextStarts = [];
+            foreach ($emisiones as $emision) {
+                $day = $this->dayNumber((string) $emision->dia_semana);
+                $time = $this->parseScheduleTime((string) $emision->hora_inicio);
+                if ($day !== null && $time) {
+                    [$hour, $minute] = $time;
+                    $daysAhead = ($day - (int) $now->dayOfWeekIso + 7) % 7;
+                    $startCandidate = $now->copy()->startOfDay()->addDays($daysAhead)->setTime($hour, $minute, 0);
+                    if ($daysAhead === 0 && $startCandidate->lessThanOrEqualTo($now)) {
+                        $startCandidate->addWeek();
+                    }
+                    $nextStarts[] = $startCandidate;
+                }
+            }
+            if (!empty($nextStarts)) {
+                usort($nextStarts, fn($a, $b) => $a->timestamp <=> $b->timestamp);
+                return $nextStarts[0];
+            }
+            return null;
         }
 
         $day = $this->dayNumber((string) $program->dia_transmision);
@@ -455,6 +503,24 @@ class ProgramScheduleService
 
     private function programPayload(MasterProgram $program, ThemeSetting $theme, string $badge): array
     {
+        $badgeLabel = $badge;
+        $tipo = 'normal';
+        $enlace = null;
+
+        $now = now($this->programTimezone($program));
+        $emisiones = $program->emisiones()->where('activo', true)->get();
+        if ($emisiones->isNotEmpty()) {
+            foreach ($emisiones as $em) {
+                // Find next emission matching or currently active
+                $day = $this->dayNumber((string) $em->dia_semana);
+                if ($day !== null) {
+                    $tipo = $em->tipo;
+                    $enlace = $em->enlace;
+                    break;
+                }
+            }
+        }
+
         return [
             'label' => 'Próximo programa',
             'subtitle' => 'Avance editorial del siguiente bloque en parrilla',
@@ -467,7 +533,9 @@ class ProgramScheduleService
             'timezone' => $program->timezone ?: 'America/Caracas',
             'summary' => $this->summaryFor($program),
             'image' => $this->imageForProgram($program, $theme),
-            'badge' => $badge,
+            'badge' => $badgeLabel,
+            'tipo_emision' => $tipo,
+            'enlace_en_vivo' => $enlace,
             'button' => [
                 'label' => 'Ver programación',
                 'url' => route('programs'),

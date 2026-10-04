@@ -99,7 +99,32 @@
             </div>
 
             <div class="mt-4 max-w-[620px]">
-                <span class="home-badge" x-text="activeProgram.badge || 'On deck'"></span>
+                <div class="flex items-center gap-3">
+                    <span class="home-badge" x-text="activeProgram.badge || 'On deck'"></span>
+                    <template x-if="activeProgram.tipo_emision === 'en_vivo'">
+                        <div class="pointer-events-auto z-10 flex flex-wrap items-center gap-1.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] drop-shadow-[0_0_10px_rgba(0,0,0,0.7)]">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
+                            </span>
+                            <span class="text-[10px] font-bold uppercase tracking-[0.14em] text-error leading-none">
+                                En vivo
+                            </span>
+                            <template x-if="activeProgram.enlace_en_vivo">
+                                <a :href="activeProgram.enlace_en_vivo" target="_blank" class="pointer-events-auto bg-error/20 text-error hover:bg-error hover:text-white transition-colors px-1.5 py-0.5 rounded text-[9px] font-bold tracking-[0.1em] uppercase ml-1 border border-error/50">
+                                    Link
+                                </a>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="activeProgram.tipo_emision === 'retransmision'">
+                        <div class="pointer-events-none z-10 flex flex-wrap items-center gap-1.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] drop-shadow-[0_0_10px_rgba(0,0,0,0.7)]">
+                            <span class="text-[10px] font-bold uppercase tracking-[0.14em] text-primary leading-none">
+                                Retransmisión
+                            </span>
+                        </div>
+                    </template>
+                </div>
 
                 <div class="mt-3">
                     <p class="text-[11px] uppercase tracking-[.28em] text-[#bfbfbf]" x-text="activeProgram.subtitle || ''"></p>
@@ -152,8 +177,13 @@
                     </div>
 
                     <div class="min-w-0 flex-1">
-                        <div class="text-[10px] uppercase tracking-[.22em] text-[#7b7b7b]">
-                            {{ $slot['time'] }}
+                        <div class="flex items-center gap-2">
+                            <div class="text-[10px] uppercase tracking-[.22em] text-[#7b7b7b]">
+                                {{ $slot['time'] ?? ($slot['schedule'] ?? '') }}
+                            </div>
+                            @if(isset($slot['tipo_emision']) && in_array($slot['tipo_emision'], ['en_vivo', 'retransmision']))
+                                <x-emision-badge :tipo="$slot['tipo_emision']" :enlace="$slot['enlace_en_vivo'] ?? null" class="mb-0" />
+                            @endif
                         </div>
                         <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-[#dcdcdc] md:text-[15px]">
                             {!! $slot['title_html'] !!}
@@ -179,7 +209,26 @@
         <div class="relative w-full border border-[#2b2b2b] bg-[#111] p-6 shadow-[0_24px_80px_rgba(0,0,0,.65)] max-h-[90vh] overflow-y-auto custom-scrollbar" style="width:min(560px, calc(100vw - 32px)); max-width:none;">
             <div class="flex items-start justify-between gap-4">
                 <div>
-                    <div class="home-badge" x-text="activeProgram.badge || 'On deck'"></div>
+                    <div class="flex items-center gap-3">
+                        <div class="home-badge" x-text="activeProgram.badge || 'On deck'"></div>
+                        <template x-if="activeProgram.tipo_emision === 'en_vivo'">
+                            <div class="pointer-events-auto z-10 flex flex-wrap items-center gap-1.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] drop-shadow-[0_0_10px_rgba(0,0,0,0.7)]">
+                                <span class="relative flex h-2 w-2">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
+                                </span>
+                                <span class="text-[10px] font-bold uppercase tracking-[0.14em] text-error leading-none">En vivo</span>
+                                <template x-if="activeProgram.enlace_en_vivo">
+                                    <a :href="activeProgram.enlace_en_vivo" target="_blank" class="pointer-events-auto bg-error/20 text-error hover:bg-error hover:text-white transition-colors px-1.5 py-0.5 rounded text-[9px] font-bold tracking-[0.1em] uppercase ml-1 border border-error/50">Link</a>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="activeProgram.tipo_emision === 'retransmision'">
+                            <div class="pointer-events-none z-10 flex flex-wrap items-center gap-1.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] drop-shadow-[0_0_10px_rgba(0,0,0,0.7)]">
+                                <span class="text-[10px] font-bold uppercase tracking-[0.14em] text-primary leading-none">Retransmisión</span>
+                            </div>
+                        </template>
+                    </div>
                     <h4 class="mt-3 font-display text-[22px] uppercase leading-none tracking-[.12em]" x-html="activeProgram.title_html || formatearTituloJS(activeProgram.title || '')"></h4>
                     <p class="mt-2 text-xs uppercase tracking-[.24em] text-[#bfbfbf]" x-text="activeProgram.schedule || ''"></p>
                     <p class="mt-1 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeProgram.host || ''"></p>
