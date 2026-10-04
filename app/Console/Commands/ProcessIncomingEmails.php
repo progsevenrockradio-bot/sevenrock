@@ -389,96 +389,9 @@ class ProcessIncomingEmails extends Command
                     continue;
                 }
 
-                // Noticias Rock: publicar directamente sin Gemini
-                if ($isNoticiaRock) {
-                    $this->info("[DARK VADER] Procesando Noticia Rock directamente (sin Gemini)...");
-
-                    // Limpiar el asunto: quitar prefijos
-                    $cleanTitle = TextNormalizer::normalizeTitle($subject);
-                    $cleanTitle = $cleanTitle ?: $subject;
-
-                    $status = $settings->email_auto_publish ? 'published' : 'draft';
-
-                    $normalizedTitle = TextNormalizer::normalizeTitle($cleanTitle);
-                    $normalizedSlug = TextNormalizer::normalizeSlug($cleanTitle);
-                    $originalSubjectNormalized = TextNormalizer::normalizeSlug($subject);
-                    $threshold = (float) ($settings->post_duplicate_similarity_threshold ?? 0.82);
-
-                    $recentPosts = Post::where('created_at', '>=', now()->subHours(48))->get();
-                    $isDuplicate = false;
-                    $similarPostId = null;
-
-                    foreach ($recentPosts as $recent) {
-                        $recentSubjectNorm = TextNormalizer::normalizeSlug($recent->source_subject ?? '');
-                        if ($recentSubjectNorm !== '' && $recentSubjectNorm === $originalSubjectNormalized) {
-                            $isDuplicate = true;
-                            $similarPostId = $recent->id;
-                            break;
-                        }
-
-                        $recentNormSlug = TextNormalizer::normalizeSlug($recent->title);
-                        if ($recentNormSlug === $normalizedSlug || TextNormalizer::similarity($recentNormSlug, $normalizedSlug) >= $threshold) {
-                            $isDuplicate = true;
-                            $similarPostId = $recent->id;
-                            break;
-                        }
-                    }
-
-                    if ($isDuplicate) {
-                        $this->info("Ignorando Noticia Rock duplicada (similar a post ID: {$similarPostId})");
-                        Log::info("ProcessIncomingEmails: Noticia Rock duplicada ignorada.", ['title' => $cleanTitle, 'subject' => $subject, 'similar_to_post_id' => $similarPostId]);
-                    } else {
-                        $baseSlug = Str::slug($cleanTitle);
-                        $slug = $baseSlug; $suffix = 1;
-                        while (DB::table('posts')->where('slug', $slug)->exists()) {
-                            $slug = $baseSlug . '-' . $suffix++;
-                        }
-
-                        // Usar cuerpo HTML directamente como contenido (limpiado; $body sigue intacto para PostImageResolver)
-                        $contentToSave = $this->limpiarContenidoDeCorreo($body);
-
-                        $resolverInfo = app(\App\Services\PostImageResolver::class)->resolveForPost([
-                            'message' => $message,
-                            'body' => $body,
-                            'subject' => $subject,
-                            'clean_title' => $cleanTitle,
-                            'is_dark_vader' => $isDarkVaderAgent,
-                            'artist_name' => null
-                        ]);
-
-                        Log::info("ProcessIncomingEmails: Creando Noticia Rock (sin Gemini).", [
-                            'title'  => $cleanTitle, 'slug' => $slug,
-                            'status' => $status, 'cover_url' => $resolverInfo['url'],
-                        ]);
-
-                        $post = Post::create([
-                            'title'          => $cleanTitle,
-                            'slug'           => $slug,
-                            'content'        => $contentToSave,
-                            'excerpt'        => Str::limit(strip_tags($contentToSave), 160),
-                            'status'         => $status,
-                            'is_published'   => $settings->email_auto_publish,
-                            'published_at'   => now(),
-                            'featured_image' => $resolverInfo['url'],
-                            'source_url'     => $resolverInfo['article_url'],
-                            'source_name'    => $resolverInfo['credit'],
-                            'image_source'   => $resolverInfo['source'],
-                            'author_email'   => $senderEmail,
-                            'categories'     => ['Noticias Rock'],
-                            'source_subject' => $subject,
-                        ]);
-                        $this->syncTaxonomies($post, ['Noticias Rock'], $this->extractHashtags($cleanTitle . ' ' . strip_tags($contentToSave)));
-                        $this->info("[OK] Noticia Rock creada en estado [{$status}]: ID {$post->id} — {$cleanTitle}");
-                    }
-
-                    DB::table('processed_emails')->insert([
-                        'message_id' => $messageId, 'subject' => $subject,
-                        'status' => 'processed', 'created_at' => now(), 'updated_at' => now(),
-                    ]);
-                    $message->setFlag('SEEN');
-                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
-                    continue;
-                }
+                // Noticias Rock: ya no se publica directamente sin Gemini.
+                // Se pasará a la IA para redactar/extraer datos, pero forzaremos
+                // su clasificación determinista más abajo.
 
                 // Llamar a la IA para redactar y clasificar
                 $this->info("Consultando a la IA para redactar y clasificar...");
@@ -534,8 +447,19 @@ class ProcessIncomingEmails extends Command
                     }
                 }
 
+                // Clasificación determinista ANTES de usar la respuesta de la IA
+                if ($isDarkVaderAgent) {
+                    if ($isEfemerides) {
+                        $parsed['type'] = 'efemerides';
+                    } else {
+                        // NUNCA "release", siempre "noticia" (post normal)
+                        $parsed['type'] = 'post';
+                        $parsed['categories'] = ['Noticias Rock'];
+                    }
+                }
+
                 $aiType = $parsed['type'];
-                $type = $isNoticiaRock ? 'post' : $aiType;
+                $type = $aiType;
                 $title = $parsed['title'] ?? 'Sin título';
                 $importance = isset($parsed['importance']) ? (int) $parsed['importance'] : 1;
                 $isFallback = $parsed['fallback_used'] ?? false;
@@ -593,14 +517,26 @@ class ProcessIncomingEmails extends Command
                 }
 
                 if ($type === 'post') {
-                    // Validar límite (ignorarlo para Noticias Rock de Dark Vader)
+                    // Validar límite (ignorarlo para Noticias Rock de Dark Vader o usar límite propio alto)
                     $postsLimit = (int) ($settings->email_daily_posts_limit ?? 3);
-                    if (! $isNoticiaRock && $postsCreatedToday >= $postsLimit) {
-                        $this->warn("Límite diario de posts alcanzado ({$postsLimit}/{$postsLimit}). El correo quedará pendiente para mañana.");
-                        if ($tempMp3Path && file_exists($tempMp3Path)) {
-                            @unlink($tempMp3Path);
+                    $newsLimit = (int) ($settings->email_daily_news_limit ?? 9999);
+                    
+                    if ($isNoticiaRock) {
+                        if ($postsCreatedToday >= $newsLimit) {
+                            $this->warn("Límite diario de noticias alcanzado ({$newsLimit}/{$newsLimit}). El correo quedará pendiente para mañana.");
+                            if ($tempMp3Path && file_exists($tempMp3Path)) {
+                                @unlink($tempMp3Path);
+                            }
+                            continue; // No marcamos como leído para reintentarlo
                         }
-                        continue; // No marcamos como leído (SEEN) para procesarlo otro día
+                    } else {
+                        if ($postsCreatedToday >= $postsLimit) {
+                            $this->warn("Límite diario de posts alcanzado ({$postsLimit}/{$postsLimit}). El correo quedará pendiente para mañana.");
+                            if ($tempMp3Path && file_exists($tempMp3Path)) {
+                                @unlink($tempMp3Path);
+                            }
+                            continue; // No marcamos como leído (SEEN) para procesarlo otro día
+                        }
                     }
 
                     $normalizedTitle = TextNormalizer::normalizeTitle($title);
