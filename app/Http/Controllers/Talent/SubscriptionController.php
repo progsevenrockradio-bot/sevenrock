@@ -89,33 +89,36 @@ class SubscriptionController extends Controller
     private function activateFreePlan(Talent $talent): void
     {
         $subscription = $talent->subscriptions()->latest()->first();
+        $freeDuration = Talent::FREE_DURATION_DAYS;
         if (! $subscription) {
             $talent->subscriptions()->create([
-                'plan' => 'free',
-                'amount' => 0,
-                'currency' => 'EUR',
+                'plan'             => 'free',
+                'amount'           => 0,
+                'currency'         => 'EUR',
                 'payment_provider' => 'manual',
-                'payment_id' => null,
-                'start_date' => today(),
-                'end_date' => today()->addMonth(),
-                'status' => 'active',
+                'payment_id'       => null,
+                'start_date'       => today(),
+                'end_date'         => today()->addDays($freeDuration),
+                'status'           => 'active',
             ]);
         } else {
             $subscription->update([
-                'plan' => 'free',
-                'amount' => 0,
-                'currency' => 'EUR',
+                'plan'             => 'free',
+                'amount'           => 0,
+                'currency'         => 'EUR',
                 'payment_provider' => 'manual',
-                'status' => 'active',
-                'start_date' => today(),
-                'end_date' => today()->addMonth(),
+                'status'           => 'active',
+                'start_date'       => today(),
+                'end_date'         => today()->addDays($freeDuration),
             ]);
         }
 
         $talent->update([
-            'plan' => 'free',
+            'plan'                => 'free',
             'subscription_status' => 'active',
-            'payment_provider' => 'manual',
+            'is_hidden'           => false,
+            'expires_grace_at'    => null,
+            'payment_provider'    => 'manual',
         ]);
     }
 

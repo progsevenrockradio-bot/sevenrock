@@ -14,14 +14,14 @@ return new class extends Migration
 
         Schema::create('talents', function (Blueprint $table): void {
             $table->id();
-            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->string('band_name')->unique();
             $table->string('email')->unique();
             $table->string('password');
             $table->text('bio')->nullable();
             $table->string('logo')->nullable();
             $table->enum('plan', ['free', 'basic', 'pro', 'premium'])->default('free');
-            $table->enum('subscription_status', ['active', 'inactive', 'cancelled'])->default('inactive');
+            $table->string('subscription_status', 32)->default('inactive');
             $table->string('payment_customer_id')->nullable();
             $table->string('payment_provider')->nullable();
             $table->integer('interacts')->default(0);

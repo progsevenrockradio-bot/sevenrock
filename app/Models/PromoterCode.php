@@ -77,14 +77,14 @@ class PromoterCode extends Model
         $this->update(['is_archived' => true]);
 
         return self::create([
-            'code' => self::generateUniqueCode(),
-            'owner_name' => $this->owner_name,
-            'owner_email' => $this->owner_email,
-            'owner_type' => $this->owner_type,
-            'max_bands' => self::DEFAULT_MAX_BANDS,
+            'code'               => self::generateUniqueCode(),
+            'owner_name'         => $this->owner_name,
+            'owner_email'        => $this->owner_email,
+            'owner_type'         => $this->owner_type ?: 'conductor',
+            'max_bands'          => self::DEFAULT_MAX_BANDS,
             'assigned_talent_id' => $this->assigned_talent_id,
-            'is_archived' => false,
-            'notes' => 'Renovado a partir del código archivado ' . $this->code,
+            'is_archived'        => false,
+            'notes'              => 'Renovado a partir del código archivado ' . $this->code,
         ]);
     }
 

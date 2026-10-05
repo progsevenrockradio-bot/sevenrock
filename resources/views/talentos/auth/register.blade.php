@@ -21,7 +21,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('talents.register.store') }}" method="POST" class="mt-8 space-y-6">
+                <form action="{{ route('talents.register.store') }}" method="POST" enctype="multipart/form-data" class="mt-8 space-y-6">
                     @csrf
                     
                     {{-- Honeypot Spam Protection --}}
@@ -59,6 +59,52 @@
                         <div>
                             <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Confirmar password</label>
                             <input type="password" name="password_confirmation" class="lucille-product-field w-full rounded-[8px]">
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">País de origen</label>
+                            <input type="text" name="country" value="{{ old('country') }}" placeholder="Ej. Venezuela, España, México..." class="lucille-product-field w-full rounded-[8px] @error('country') border-red-500/50 @enderror">
+                            @error('country')
+                                <span class="mt-1.5 block text-[10px] text-red-400 uppercase tracking-wider font-mono">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Teléfono / WhatsApp</label>
+                            <input type="text" name="contact_phone" value="{{ old('contact_phone') }}" placeholder="+1 234 567 890" class="lucille-product-field w-full rounded-[8px] @error('contact_phone') border-red-500/50 @enderror">
+                            @error('contact_phone')
+                                <span class="mt-1.5 block text-[10px] text-red-400 uppercase tracking-wider font-mono">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+
+                    {{-- Código de referido --}}
+                    <div>
+                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Código de referido (Opcional)</label>
+                        <input type="text" name="referral_code" value="{{ old('referral_code', request()->query('ref')) }}" placeholder="Ej. ROCK2026" class="lucille-product-field w-full md:w-1/2 rounded-[8px] @error('referral_code') border-red-500/50 @enderror">
+                        <p class="mt-1 text-[11px] text-[#7b7b7b]">Si vienes recomendado por otra banda o promotor, recibirás 60 días de vigencia en lugar de 45 días.</p>
+                        @error('referral_code')
+                            <span class="mt-1.5 block text-[10px] text-red-400 uppercase tracking-wider font-mono">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    {{-- Capturas de Redes Sociales (Para aprobación) --}}
+                    <div class="border border-white/5 bg-white/[0.01] rounded-[12px] p-5">
+                        <div class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc] mb-1">Verificación en Redes Sociales</div>
+                        <p class="text-xs text-[#7b7b7b] mb-4">Adjunta una captura de tu página de Facebook y/o perfil de Instagram de la banda para que el equipo pueda revisar y aprobar tu cuenta rápidamente.</p>
+                        <div class="grid gap-5 md:grid-cols-2">
+                            <div>
+                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Captura de Facebook</label>
+                                <input type="file" name="facebook_screenshot" accept="image/*" class="lucille-product-field w-full rounded-[8px] text-xs file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:bg-[#081a24] file:text-white">
+                                @error('facebook_screenshot')
+                                    <span class="mt-1.5 block text-[10px] text-red-400 uppercase tracking-wider font-mono">{{ $message }}</span>
+                                @enderror
+                            </div>
+                            <div>
+                                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Captura de Instagram</label>
+                                <input type="file" name="instagram_screenshot" accept="image/*" class="lucille-product-field w-full rounded-[8px] text-xs file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:bg-[#081a24] file:text-white">
+                                @error('instagram_screenshot')
+                                    <span class="mt-1.5 block text-[10px] text-red-400 uppercase tracking-wider font-mono">{{ $message }}</span>
+                                @enderror
+                            </div>
                         </div>
                     </div>
 

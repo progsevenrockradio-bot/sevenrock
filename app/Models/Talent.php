@@ -108,6 +108,11 @@ class Talent extends Authenticatable
         return (int) $this->referralsGiven()->whereIn('status', ['active', 'paid'])->count();
     }
 
+    public function pendingReferralsCount(): int
+    {
+        return (int) $this->referralsGiven()->where('status', 'pending')->count();
+    }
+
     public function paidReferralsCount(): int
     {
         return (int) $this->referralsGiven()->where('status', 'paid')->count();

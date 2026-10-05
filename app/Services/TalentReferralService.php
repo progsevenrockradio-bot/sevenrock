@@ -213,7 +213,12 @@ final class TalentReferralService
 
         if ($sub) {
             $newEndDate = ($sub->end_date ?? today())->copy()->addDays($days);
-            $sub->update(['end_date' => $newEndDate]);
+            $updateData = ['end_date' => $newEndDate];
+            if ($rewardKey === 'tier1' || $sub->plan === 'free') {
+                $updateData['plan'] = 'basic';
+                $referrer->update(['plan' => 'basic']);
+            }
+            $sub->update($updateData);
         } else {
             // Sin suscripción activa: crear una de regalo
             $referrer->subscriptions()->create([

@@ -57,6 +57,13 @@ Route::controller(\App\Http\Controllers\Admin\ModerationController::class)->pref
         ->missing(function () { abort(403, 'El enlace ha caducado o el ítem no existe.'); });
 });
 
+Route::controller(AdminTalentAdminController::class)->prefix('talents')->name('admin.talents.')->middleware('signed')->group(function (): void {
+    Route::get('/{talent}/approve-email', 'approveFromEmail')->name('approve-email')
+        ->missing(function () { abort(403, 'El enlace ha caducado o el talento no existe.'); });
+    Route::get('/{talent}/reject-email', 'rejectFromEmail')->name('reject-email')
+        ->missing(function () { abort(403, 'El enlace ha caducado o el talento no existe.'); });
+});
+
 Route::get('/', [SiteController::class, 'home'])->name('home');
 Route::get('/events', [SiteController::class, 'events'])->name('events');
 Route::redirect('/eventos', '/events');
@@ -364,6 +371,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::post('/{talent}/suspend', [AdminTalentAdminController::class, 'suspend'])->name('suspend');
         Route::post('/{talent}/activate', [AdminTalentAdminController::class, 'activate'])->name('activate');
         Route::post('/{talent}/approve', [AdminTalentAdminController::class, 'approve'])->name('approve');
+        Route::post('/{talent}/reject', [AdminTalentAdminController::class, 'reject'])->name('reject');
     });
 
     Route::controller(AdminOutreachController::class)->prefix('outreach')->name('outreach.')->group(function (): void {

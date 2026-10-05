@@ -126,7 +126,7 @@ class ExpireTalentsCommand extends Command
                     }
                 }
 
-                $media->delete();
+                $media->forceDelete();
             }
 
             // Eliminar álbumes asociados si existen
@@ -138,7 +138,7 @@ class ExpireTalentsCommand extends Command
                         //
                     }
                 }
-                $album->delete();
+                $album->forceDelete();
             }
 
             // La ficha de la banda se conserva con el material vacío y status = expired

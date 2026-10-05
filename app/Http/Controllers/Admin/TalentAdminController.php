@@ -138,8 +138,11 @@ class TalentAdminController extends Controller
     public function approve(Talent $talent, TalentReferralService $referralService): RedirectResponse
     {
         $plan = $talent->plan ?: 'free';
+        $durationDays = ($talent->referred_by_code && $plan === 'free')
+            ? (Talent::FREE_DURATION_DAYS + Talent::REFERRAL_BONUS_DAYS)
+            : Talent::FREE_DURATION_DAYS;
         $endDate = $plan === 'free'
-            ? today()->addDays(Talent::FREE_DURATION_DAYS)
+            ? today()->addDays($durationDays)
             : today()->addMonth();
 
         $subscription = $talent->subscriptions()->latest()->first();
@@ -167,6 +170,7 @@ class TalentAdminController extends Controller
         $talent->update([
             'subscription_status' => 'active',
             'is_hidden'           => false,
+            'expires_grace_at'    => null,
         ]);
 
         // Activar referido y evaluar premios del referidor
@@ -182,6 +186,116 @@ class TalentAdminController extends Controller
         }
 
         return back()->with('status', "Talento '{$talent->band_name}' aprobado y notificado.");
+    }
+
+    public function reject(Talent $talent, ?Request $request = null): RedirectResponse
+    {
+        $talent->update([
+            'subscription_status' => 'cancelled',
+            'is_hidden'           => true,
+            'rejection_reason'    => $request?->input('rejection_reason'),
+        ]);
+
+        $talent->subscriptions()->latest()->first()?->update([
+            'status'   => 'cancelled',
+            'end_date' => today(),
+        ]);
+
+        return back()->with('status', "Talento '{$talent->band_name}' rechazado.");
+    }
+
+    public function approveFromEmail(Request $request, Talent $talent, TalentReferralService $referralService): View
+    {
+        if (! $request->hasValidSignature()) {
+            abort(403, 'El enlace ha caducado o no es válido.');
+        }
+
+        $wasPending = in_array($talent->subscription_status, ['pending', 'inactive'], true);
+
+        if ($wasPending) {
+            $plan = $talent->plan ?: 'free';
+            $durationDays = ($talent->referred_by_code && $plan === 'free')
+                ? (Talent::FREE_DURATION_DAYS + Talent::REFERRAL_BONUS_DAYS)
+                : Talent::FREE_DURATION_DAYS;
+            $endDate = $plan === 'free'
+                ? today()->addDays($durationDays)
+                : today()->addMonth();
+
+            $subscription = $talent->subscriptions()->latest()->first();
+
+            if ($subscription) {
+                $subscription->update([
+                    'plan'       => $plan,
+                    'start_date' => today(),
+                    'end_date'   => $endDate,
+                    'status'     => 'active',
+                ]);
+            } else {
+                $talent->subscriptions()->create([
+                    'plan'             => $plan,
+                    'amount'           => (float) config("payment.plans.{$plan}.amount", 0),
+                    'currency'         => (string) config("payment.plans.{$plan}.currency", 'EUR'),
+                    'payment_provider' => 'manual',
+                    'payment_id'       => null,
+                    'start_date'       => today(),
+                    'end_date'         => $endDate,
+                    'status'           => 'active',
+                ]);
+            }
+
+            $talent->update([
+                'subscription_status' => 'active',
+                'is_hidden'           => false,
+                'expires_grace_at'    => null,
+            ]);
+
+            // Activar referido y evaluar premios del referidor
+            $referralService->activateReferral($talent);
+
+            // Enviar email de aprobación al talento
+            if (filled($talent->email)) {
+                try {
+                    Mail::to($talent->email)->send(new TalentApprovedMail($talent->fresh()));
+                } catch (Throwable $e) {
+                    Log::error("TalentAdminController@approveFromEmail: error enviando email a {$talent->email}: " . $e->getMessage());
+                }
+            }
+        }
+
+        return view('admin.talents.email_action_result', [
+            'talent'     => $talent->fresh(),
+            'action'     => 'Banda aprobada',
+            'message'    => "La banda '{$talent->band_name}' ha sido aprobada con éxito.",
+            'wasPending' => $wasPending,
+        ]);
+    }
+
+    public function rejectFromEmail(Request $request, Talent $talent): View
+    {
+        if (! $request->hasValidSignature()) {
+            abort(403, 'El enlace ha caducado o no es válido.');
+        }
+
+        $wasPending = in_array($talent->subscription_status, ['pending', 'inactive'], true);
+
+        if ($wasPending) {
+            $talent->update([
+                'subscription_status' => 'cancelled',
+                'is_hidden'           => true,
+            ]);
+
+            $talent->subscriptions()->latest()->first()?->update([
+                'status'   => 'cancelled',
+                'end_date' => today(),
+            ]);
+        }
+
+        return view('admin.talents.email_action_result', [
+            'talent'     => $talent->fresh(),
+            'action'     => 'Banda rechazada',
+            'message'    => "La solicitud de la banda '{$talent->band_name}' ha sido rechazada.",
+            'wasPending' => $wasPending,
+        ]);
     }
 
     public function media(Request $request): View
