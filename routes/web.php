@@ -363,6 +363,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::put('/{talent}', [AdminTalentAdminController::class, 'update'])->name('update');
         Route::post('/{talent}/suspend', [AdminTalentAdminController::class, 'suspend'])->name('suspend');
         Route::post('/{talent}/activate', [AdminTalentAdminController::class, 'activate'])->name('activate');
+        Route::post('/{talent}/approve', [AdminTalentAdminController::class, 'approve'])->name('approve');
     });
 
     Route::controller(AdminOutreachController::class)->prefix('outreach')->name('outreach.')->group(function (): void {

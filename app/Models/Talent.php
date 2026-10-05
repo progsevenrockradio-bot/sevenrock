@@ -18,6 +18,10 @@ class Talent extends Authenticatable
     use Notifiable;
     use SoftDeletes;
 
+    public const FREE_DURATION_DAYS = 45;
+    public const GRACE_DAYS = 15;
+    public const REFERRAL_BONUS_DAYS = 15;
+
     protected $table = 'talents';
 
     protected $fillable = [
@@ -42,6 +46,15 @@ class Talent extends Authenticatable
         'payment_provider',
         'interacts',
         'is_featured',
+        'is_hidden',
+        'expires_grace_at',
+        'referral_code',
+        'referred_by_code',
+        'facebook_screenshot',
+        'instagram_screenshot',
+        'country',
+        'contact_phone',
+        'rejection_reason',
     ];
 
     protected $hidden = [
@@ -54,12 +67,20 @@ class Talent extends Authenticatable
         return [
             'interacts' => 'integer',
             'is_featured' => 'boolean',
+            'is_hidden' => 'boolean',
+            'expires_grace_at' => 'datetime',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'social_links' => 'array',
             'payment_links' => 'array',
             'notification_preferences' => 'array',
         ];
+    }
+
+    public function scopePubliclyVisible(Builder $query): Builder
+    {
+        return $query->where('is_hidden', false)
+            ->where('subscription_status', 'active');
     }
 
     public function scopeByPlan(Builder $query, string $plan): Builder
@@ -70,6 +91,82 @@ class Talent extends Authenticatable
     public function scopeFeatured(Builder $query): Builder
     {
         return $query->where('is_featured', true);
+    }
+
+    public function referralsGiven(): HasMany
+    {
+        return $this->hasMany(TalentReferral::class, 'referrer_talent_id');
+    }
+
+    public function referralReceived(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(TalentReferral::class, 'referred_talent_id');
+    }
+
+    public function activeReferralsCount(): int
+    {
+        return (int) $this->referralsGiven()->whereIn('status', ['active', 'paid'])->count();
+    }
+
+    public function paidReferralsCount(): int
+    {
+        return (int) $this->referralsGiven()->where('status', 'paid')->count();
+    }
+
+    /**
+     * Devuelve el estado de referidos y cuánto falta para el siguiente premio.
+     * @return array{active_count: int, paid_count: int, next_milestone: int, needed: int, reward_label: string}
+     */
+    public function nextRewardInfo(): array
+    {
+        $active = $this->activeReferralsCount();
+
+        if ($active < TalentReferral::REWARD_TIER_1_BANDS) {
+            $next = TalentReferral::REWARD_TIER_1_BANDS;
+            $needed = $next - $active;
+            $label = '1 mes gratis del plan Básico';
+        } elseif ($active < TalentReferral::REWARD_TIER_2_BANDS) {
+            $next = TalentReferral::REWARD_TIER_2_BANDS;
+            $needed = $next - $active;
+            $label = '2 meses gratis del plan Básico';
+        } else {
+            $next = $active + 6; // Siguiente ciclo
+            $needed = 0;
+            $label = '¡Has alcanzado los hitos principales de referidos!';
+        }
+
+        return [
+            'active_count' => $active,
+            'paid_count' => $this->paidReferralsCount(),
+            'next_milestone' => $next,
+            'needed' => max(0, $needed),
+            'reward_label' => $label,
+        ];
+    }
+
+    public static function generateUniqueReferralCode(int $length = 8): string
+    {
+        $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        do {
+            $code = '';
+            for ($i = 0; $i < $length; $i++) {
+                $code .= $chars[random_int(0, strlen($chars) - 1)];
+            }
+        } while (self::where('referral_code', $code)->exists() || PromoterCode::where('code', $code)->exists());
+
+        return $code;
+    }
+
+    public function ensureReferralCode(): string
+    {
+        if (filled($this->referral_code)) {
+            return (string) $this->referral_code;
+        }
+
+        $code = self::generateUniqueReferralCode();
+        $this->update(['referral_code' => $code]);
+
+        return $code;
     }
 
     public function user(): BelongsTo

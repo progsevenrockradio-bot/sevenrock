@@ -397,3 +397,16 @@ Schedule::command('marketing:scrape-contacts --limit=500')
 
 // Envio automatico de avisos de airplay
 Schedule::command('airplay:send-notices')->dailyAt('10:00')->timezone('America/Caracas');
+
+// Gestión de vencimientos de talentos (ocultar a los 45d, purgar material a los 45+15d)
+Schedule::command('talents:expire')
+    ->dailyAt('02:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/talents-expire.log'));
+
+// Aviso pre-vencimiento (7 días antes del end_date)
+Schedule::command('talents:send-expiry-warnings --days=7')
+    ->dailyAt('09:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/talents-expiry-warnings.log'));

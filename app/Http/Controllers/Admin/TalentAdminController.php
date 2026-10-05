@@ -6,14 +6,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\ContentApprovedMail;
+use App\Mail\TalentApprovedMail;
 use App\Models\Talent;
 use App\Models\TalentMedia;
 use App\Models\TalentSubscription;
 use App\Services\BackblazeService;
+use App\Services\TalentReferralService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
+use Throwable;
 use Illuminate\View\View;
 
 class TalentAdminController extends Controller
@@ -125,6 +129,61 @@ class TalentAdminController extends Controller
         return back()->with('status', 'Talento activado.');
     }
 
+    /**
+     * Aprueba un talento registrado:
+     *  - Si es FREE: crea/actualiza la suscripción con start=hoy, end=hoy+45 días.
+     *  - Activa el referido (si vino con código) y evalúa hitos del referidor.
+     *  - Envía email de aprobación a la banda.
+     */
+    public function approve(Talent $talent, TalentReferralService $referralService): RedirectResponse
+    {
+        $plan = $talent->plan ?: 'free';
+        $endDate = $plan === 'free'
+            ? today()->addDays(Talent::FREE_DURATION_DAYS)
+            : today()->addMonth();
+
+        $subscription = $talent->subscriptions()->latest()->first();
+
+        if ($subscription) {
+            $subscription->update([
+                'plan'       => $plan,
+                'start_date' => today(),
+                'end_date'   => $endDate,
+                'status'     => 'active',
+            ]);
+        } else {
+            $talent->subscriptions()->create([
+                'plan'             => $plan,
+                'amount'           => (float) config("payment.plans.{$plan}.amount", 0),
+                'currency'         => (string) config("payment.plans.{$plan}.currency", 'EUR'),
+                'payment_provider' => 'manual',
+                'payment_id'       => null,
+                'start_date'       => today(),
+                'end_date'         => $endDate,
+                'status'           => 'active',
+            ]);
+        }
+
+        $talent->update([
+            'subscription_status' => 'active',
+            'is_hidden'           => false,
+        ]);
+
+        // Activar referido y evaluar premios del referidor
+        $referralService->activateReferral($talent);
+
+        // Enviar email de aprobación
+        if (filled($talent->email)) {
+            try {
+                Mail::to($talent->email)->send(new TalentApprovedMail($talent->fresh()));
+            } catch (Throwable $e) {
+                Log::error("TalentAdminController@approve: error enviando email a {$talent->email}: " . $e->getMessage());
+            }
+        }
+
+        return back()->with('status', "Talento '{$talent->band_name}' aprobado y notificado.");
+    }
+
     public function media(Request $request): View
     {
         $query = TalentMedia::query()->with('talent')->latest();
@@ -172,12 +231,20 @@ class TalentAdminController extends Controller
     private function syncSubscription(Talent $talent, string $plan, string $status): void
     {
         $subscription = $talent->subscriptions()->latest()->first();
+
+        // Para free: la vigencia es 45 días (regla contractual)
+        $endDate = match (true) {
+            $status !== 'active' => today(),
+            $plan === 'free'     => today()->addDays(Talent::FREE_DURATION_DAYS),
+            default              => today()->addMonth(),
+        };
+
         $payload = [
-            'plan' => $plan,
-            'amount' => (float) config("payment.plans.$plan.amount", 0),
+            'plan'     => $plan,
+            'amount'   => (float) config("payment.plans.$plan.amount", 0),
             'currency' => (string) config("payment.plans.$plan.currency", 'EUR'),
-            'status' => $status === 'active' ? 'active' : ($status === 'cancelled' ? 'cancelled' : 'pending'),
-            'end_date' => $status === 'active' ? today()->addMonth() : today(),
+            'status'   => $status === 'active' ? 'active' : ($status === 'cancelled' ? 'cancelled' : 'pending'),
+            'end_date' => $endDate,
         ];
 
         if ($subscription) {
@@ -187,8 +254,8 @@ class TalentAdminController extends Controller
 
         $talent->subscriptions()->create($payload + [
             'payment_provider' => $talent->payment_provider ?: 'manual',
-            'payment_id' => null,
-            'start_date' => today(),
+            'payment_id'       => null,
+            'start_date'       => today(),
         ]);
     }
 }

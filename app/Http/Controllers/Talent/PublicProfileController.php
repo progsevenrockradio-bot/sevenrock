@@ -19,7 +19,7 @@ class PublicProfileController extends Controller
     public function index(Request $request): View
     {
         $query = Talent::query()
-            ->where('subscription_status', 'active')
+            ->publiclyVisible()
             ->withCount('media')
             ->with(['media' => function ($q): void {
                 $q->where('type', 'mp3')->latest();
@@ -51,8 +51,11 @@ class PublicProfileController extends Controller
         $normalizedName = str_replace('-', ' ', $decoded);
         
         $talent = Talent::query()
-            ->where('band_name', $decoded)
-            ->orWhere('band_name', $normalizedName)
+            ->publiclyVisible()
+            ->where(function ($q) use ($decoded, $normalizedName): void {
+                $q->where('band_name', $decoded)
+                  ->orWhere('band_name', $normalizedName);
+            })
             ->first();
 
         if (! $talent) {
@@ -96,7 +99,7 @@ class PublicProfileController extends Controller
         if (! empty($matchedGenres)) {
             $relatedByStyle = Talent::query()
                 ->whereNotIn('id', $excludeIds)
-                ->where('subscription_status', 'active')
+                ->publiclyVisible()
                 ->where(function ($q) use ($matchedGenres): void {
                     foreach ($matchedGenres as $genre) {
                         $q->orWhere('bio', 'like', '%' . $genre . '%')
