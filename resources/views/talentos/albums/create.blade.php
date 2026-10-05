@@ -1,11 +1,11 @@
 <x-layouts.talent :title="'Talentos - Nuevo Álbum'" :talent="$talent">
     <section class="space-y-6">
-        <div class="flex items-center justify-between">
-            <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Nuevo Álbum</h1>
-            <a href="{{ route('talents.albums.index') }}" class="lucille-button text-sm">← Volver</a>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h1 class="font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Nuevo Álbum</h1>
+            <a href="{{ route('talents.albums.index') }}" class="lucille-button text-sm w-full sm:w-auto text-center shrink-0">← Volver</a>
         </div>
 
-        <div class="border border-white/10 bg-[#10161b] p-8">
+        <div class="border border-white/10 bg-[#10161b] p-4 sm:p-8">
             <form method="POST" action="{{ route('talents.albums.store') }}" enctype="multipart/form-data" class="space-y-6">
                 @csrf
 
@@ -73,9 +73,9 @@
                     <label for="is_published" class="text-sm text-[#c7d0d8]">Publicar inmediatamente</label>
                 </div>
 
-                <div class="flex gap-3 pt-4">
-                    <button type="submit" class="lucille-button-solid">Crear Álbum</button>
-                    <a href="{{ route('talents.albums.index') }}" class="lucille-button">Cancelar</a>
+                <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                    <button type="submit" class="lucille-button-solid w-full sm:w-auto text-center">Crear Álbum</button>
+                    <a href="{{ route('talents.albums.index') }}" class="lucille-button w-full sm:w-auto text-center">Cancelar</a>
                 </div>
             </form>
         </div>

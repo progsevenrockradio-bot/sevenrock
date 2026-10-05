@@ -1,12 +1,12 @@
 <x-layouts.site :title="'Talentos - Registro'">
     @php $planDefinitions = \App\Support\TalentPlan::definitions(); @endphp
 
-    <section class="mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
-        <div class="grid gap-8 lg:grid-cols-[1fr_360px]" x-data="{ selectedPlan: '{{ request()->query('plan', old('plan', 'free')) }}' }">
+    <section class="mx-auto max-w-[1180px] px-4 sm:px-5 py-8 sm:py-16 mt-[100px] sm:mt-[150px]">
+        <div class="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]" x-data="{ selectedPlan: '{{ request()->query('plan', old('plan', 'free')) }}' }">
             
             {{-- Formulario Principal --}}
-            <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-8 shadow-xl">
-                <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Registro de Talentos</h1>
+            <div class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-4 sm:p-8 shadow-xl">
+                <h1 class="font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Registro de Talentos</h1>
                 <p class="mt-3 max-w-3xl text-sm text-[#7b7b7b]">Crea tu perfil, elige un plan y empieza a publicar tu contenido en el Muro del Rock.</p>
 
                 {{-- Alert de errores de validación generales --}}
@@ -30,7 +30,7 @@
                     </div>
 
                     {{-- Form Fields Grid --}}
-                    <div class="grid gap-5 md:grid-cols-2">
+                    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                         <div>
                             <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre de banda</label>
                             <input name="band_name" value="{{ old('band_name', old('name')) }}" class="lucille-product-field w-full rounded-[8px] @if($errors->has('band_name') || $errors->has('name')) border-red-500/50 @endif" placeholder="Ej. Los Prisioneros">
@@ -90,7 +90,7 @@
                     <div class="border border-white/5 bg-white/[0.01] rounded-[12px] p-5">
                         <div class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc] mb-1">Verificación en Redes Sociales</div>
                         <p class="text-xs text-[#7b7b7b] mb-4">Adjunta una captura de tu página de Facebook y/o perfil de Instagram de la banda para que el equipo pueda revisar y aprobar tu cuenta rápidamente.</p>
-                        <div class="grid gap-5 md:grid-cols-2">
+                        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                             <div>
                                 <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Captura de Facebook</label>
                                 <input type="file" name="facebook_screenshot" accept="image/*" class="lucille-product-field w-full rounded-[8px] text-xs file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:bg-[#081a24] file:text-white">
@@ -111,7 +111,7 @@
                     {{-- Plan Selector Cards --}}
                     <div>
                         <div class="mb-3 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Selecciona tu Plan</div>
-                        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                             @foreach ($planDefinitions as $key => $plan)
                                 <label 
                                     class="relative border p-5 rounded-[12px] cursor-pointer transition-all duration-300 flex flex-col justify-between group"
@@ -140,15 +140,15 @@
                     </div>
 
                     {{-- Form Actions --}}
-                    <div class="flex flex-wrap gap-4 pt-2">
-                        <button type="submit" class="lucille-button-solid rounded-[8px] px-8 py-3">Crear cuenta</button>
-                        <a href="{{ route('talents.login') }}" class="lucille-button rounded-[8px] px-6 py-3">Ya tengo acceso</a>
+                    <div class="flex flex-col sm:flex-row gap-4 pt-2">
+                        <button type="submit" class="lucille-button-solid rounded-[8px] px-8 py-3 w-full sm:w-auto text-center">Crear cuenta</button>
+                        <a href="{{ route('talents.login') }}" class="lucille-button rounded-[8px] px-6 py-3 w-full sm:w-auto text-center">Ya tengo acceso</a>
                     </div>
                 </form>
             </div>
 
             {{-- Columna Lateral de Comparativa --}}
-            <aside class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 shadow-xl h-fit">
+            <aside class="border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-4 sm:p-6 shadow-xl h-fit">
                 <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc] border-b border-white/5 pb-3">Comparativa</h2>
                 <div class="mt-4 space-y-4 text-sm text-[#7b7b7b]">
                     @foreach ($planDefinitions as $key => $plan)

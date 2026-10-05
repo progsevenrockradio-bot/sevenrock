@@ -6,12 +6,12 @@
             </div>
         @endif
 
-        <div class="border border-white/10 bg-[#10161b] p-8">
+        <div class="border border-white/10 bg-[#10161b] p-4 sm:p-8">
             <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Preferencias</div>
-            <h1 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-white">Notificaciones por email</h1>
+            <h1 class="mt-2 font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-white">Notificaciones por email</h1>
         </div>
 
-        <form method="POST" action="{{ route('talents.notifications.update') }}" class="border border-white/10 bg-[#10161b] p-8 space-y-5">
+        <form method="POST" action="{{ route('talents.notifications.update') }}" class="border border-white/10 bg-[#10161b] p-4 sm:p-8 space-y-5">
             @csrf
             @method('PUT')
 
@@ -30,9 +30,9 @@
                 <span>Recibir recordatorios de pago</span>
             </label>
 
-            <div class="flex flex-wrap gap-3">
-                <button type="submit" class="lucille-button-solid">Guardar cambios</button>
-                <a href="{{ route('talents.dashboard') }}" class="lucille-button">Volver</a>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button type="submit" class="lucille-button-solid w-full sm:w-auto text-center">Guardar cambios</button>
+                <a href="{{ route('talents.dashboard') }}" class="lucille-button w-full sm:w-auto text-center">Volver</a>
             </div>
         </form>
     </section>

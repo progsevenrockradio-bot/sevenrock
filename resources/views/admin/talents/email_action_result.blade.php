@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $action }} - Seven Rock Radio</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: #151515;
@@ -14,17 +17,22 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding: 16px;
         }
         .card {
             background-color: #101012;
-            padding: 40px 30px;
+            padding: 24px 20px;
             border-radius: 12px;
             max-width: 520px;
             width: 100%;
             text-align: center;
             box-shadow: 0 28px 72px rgba(0,0,0,.58);
             border: 1px solid #1a1a1a;
+        }
+        @media (min-width: 640px) {
+            .card {
+                padding: 40px 30px;
+            }
         }
         .badge {
             display: inline-block;

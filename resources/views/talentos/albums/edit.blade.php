@@ -1,26 +1,26 @@
 <x-layouts.talent :title="'Talentos - Editar Álbum'" :talent="$talent">
     <section class="space-y-6">
-        <div class="flex items-center justify-between">
-            <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Editar: {{ $album->title }}</h1>
-            <a href="{{ route('talents.albums.index') }}" class="lucille-button text-sm">← Volver</a>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h1 class="font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Editar: {{ $album->title }}</h1>
+            <a href="{{ route('talents.albums.index') }}" class="lucille-button text-sm w-full sm:w-auto text-center shrink-0">← Volver</a>
         </div>
 
-        <div class="border border-white/10 bg-[#10161b] p-8">
+        <div class="border border-white/10 bg-[#10161b] p-4 sm:p-8">
             <form method="POST" action="{{ route('talents.albums.update', $album->id) }}" enctype="multipart/form-data" class="space-y-6">
                 @csrf
                 @method('POST')
 
-                <div class="flex flex-wrap gap-8">
+                <div class="flex flex-col sm:flex-row gap-8">
                     @if ($album->coverUrl())
-                        <div class="w-40">
-                            <img src="{{ $album->coverUrl() }}" alt="{{ $album->title }}" class="w-full" loading="lazy">
+                        <div class="w-full sm:w-40 shrink-0">
+                            <img src="{{ $album->coverUrl() }}" alt="{{ $album->title }}" class="w-full max-w-[160px] sm:max-w-none h-auto" loading="lazy">
                             <label class="mt-2 flex items-center gap-2 text-xs text-[#7b7b7b]">
                                 <input type="checkbox" name="remove_cover" value="1">
                                 Eliminar portada
                             </label>
                         </div>
                     @endif
-                    <div class="flex-1 space-y-6">
+                    <div class="flex-1 w-full space-y-6">
                         <div>
                             <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Título del álbum *</label>
                             <input type="text" name="title" value="{{ old('title', $album->title) }}" required
@@ -84,9 +84,9 @@
                     <label for="is_published" class="text-sm text-[#c7d0d8]">Publicado</label>
                 </div>
 
-                <div class="flex gap-3 pt-4">
-                    <button type="submit" class="lucille-button-solid">Guardar Cambios</button>
-                    <a href="{{ route('talents.albums.index') }}" class="lucille-button">Cancelar</a>
+                <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                    <button type="submit" class="lucille-button-solid w-full sm:w-auto text-center">Guardar Cambios</button>
+                    <a href="{{ route('talents.albums.index') }}" class="lucille-button w-full sm:w-auto text-center">Cancelar</a>
                 </div>
             </form>
         </div>

@@ -39,25 +39,25 @@
 </head>
 <body class="min-h-screen bg-[#0b0f12] text-[#d8d8d8] antialiased">
     <header class="border-b border-white/10 bg-[#10161b]">
-        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4">
-            <a href="{{ route('talents.dashboard') }}" class="font-display text-sm uppercase tracking-[.18em] text-white">Talentos</a>
-            <nav class="flex flex-wrap items-center gap-2 text-sm">
-                <a href="{{ route('talents.dashboard') }}" class="lucille-button">Panel</a>
-                <a href="{{ route('talents.subscriptions.plans') }}" class="lucille-button">Suscripción</a>
-                <a href="{{ route('talents.profile') }}" class="lucille-button">Mi Perfil</a>
-                <a href="{{ route('talents.notifications.edit') }}" class="lucille-button">Notificaciones</a>
-                <a href="{{ route('talents.media.index') }}" class="lucille-button">Mi Música</a>
-                <a href="{{ route('talents.store.index') }}" class="lucille-button">Mi Tienda</a>
-                <a href="{{ route('talents.albums.index') }}" class="lucille-button">Mis Álbumes</a>
-                <form method="POST" action="{{ route('talents.logout') }}">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <a href="{{ route('talents.dashboard') }}" class="font-display text-sm uppercase tracking-[.18em] text-white shrink-0">Talentos</a>
+            <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 sm:flex-wrap text-sm w-full sm:w-auto">
+                <a href="{{ route('talents.dashboard') }}" class="lucille-button shrink-0">Panel</a>
+                <a href="{{ route('talents.subscriptions.plans') }}" class="lucille-button shrink-0">Suscripción</a>
+                <a href="{{ route('talents.profile') }}" class="lucille-button shrink-0">Mi Perfil</a>
+                <a href="{{ route('talents.notifications.edit') }}" class="lucille-button shrink-0">Notificaciones</a>
+                <a href="{{ route('talents.media.index') }}" class="lucille-button shrink-0">Mi Música</a>
+                <a href="{{ route('talents.store.index') }}" class="lucille-button shrink-0">Mi Tienda</a>
+                <a href="{{ route('talents.albums.index') }}" class="lucille-button shrink-0">Mis Álbumes</a>
+                <form method="POST" action="{{ route('talents.logout') }}" class="shrink-0">
                     @csrf
-                    <button type="submit" class="lucille-button-solid">Cerrar sesión</button>
+                    <button type="submit" class="lucille-button-solid shrink-0">Cerrar sesión</button>
                 </form>
             </nav>
         </div>
     </header>
 
-    <div class="mx-auto grid max-w-7xl gap-6 px-5 py-6 lg:grid-cols-[280px_1fr]">
+    <div class="mx-auto grid max-w-7xl gap-6 px-4 py-4 sm:px-5 sm:py-6 lg:grid-cols-[280px_1fr]">
         <aside class="border border-white/10 bg-[#10161b] p-5">
             <div class="font-display text-xs uppercase tracking-[.18em] text-[#8f9aa3]">Plan actual</div>
             <div class="mt-2 text-2xl font-semibold text-white">{{ ucfirst((string) ($talent?->plan ?? 'free')) }}</div>

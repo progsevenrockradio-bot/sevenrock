@@ -6,14 +6,14 @@
             </div>
         @endif
 
-        <div class="flex flex-wrap items-center justify-between gap-3 border border-white/10 bg-[#10161b] p-6">
-            <div>
+        <div class="flex flex-col sm:flex-row sm:flex-wrap items-center justify-between gap-3 border border-white/10 bg-[#10161b] p-4 sm:p-6">
+            <div class="w-full sm:w-auto text-center sm:text-left">
                 <div class="font-display text-xs uppercase tracking-[.18em] text-[#8f9aa3]">Mi escaparate</div>
-                <h1 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-white">Productos de {{ $talent->band_name }}</h1>
+                <h1 class="mt-2 font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-white">Productos de {{ $talent->band_name }}</h1>
                 <p class="mt-2 text-sm text-[#9aa7b1]">Gestiona aquí los productos que se muestran en tu perfil público.</p>
             </div>
 
-            <a href="{{ route('talents.store.create') }}" class="lucille-button-solid">Nuevo producto</a>
+            <a href="{{ route('talents.store.create') }}" class="lucille-button-solid w-full sm:w-auto text-center shrink-0">Nuevo producto</a>
         </div>
 
         <div class="rounded border border-white/10 bg-[rgba(255,255,255,.03)] px-4 py-3 text-sm text-[#c9c9c9]">
@@ -21,7 +21,49 @@
             Seven Rock Radio no procesa pagos ni gestiona transacciones. Las ventas se realizan directamente entre el comprador y la banda a través de su enlace de pago externo.
         </div>
 
-        <div class="overflow-x-auto border border-white/10 bg-[#10161b]">
+        <!-- Vista Móvil (Tarjetas) -->
+        <div class="space-y-4 sm:hidden">
+            @forelse ($products as $product)
+                <div class="border border-white/10 bg-[#10161b] p-4 flex flex-col gap-3">
+                    <div class="flex items-center gap-3 border-b border-white/10 pb-3">
+                        <img src="{{ $product->image_url }}" alt="{{ $product->title }}" loading="lazy" class="h-14 w-14 border border-white/10 object-cover shrink-0">
+                        <div>
+                            <div class="font-semibold text-white">{{ $product->title }}</div>
+                            <div class="text-xs text-[#8b8b8b]">{{ $product->external_payment_label ?: 'Comprar' }}</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-[#8b8b8b]">Precio:</span>
+                        <span class="text-white font-semibold">€{{ number_format((float) $product->price, 2) }}</span>
+                    </div>
+                    <div class="flex flex-col text-sm">
+                        <span class="text-[#8b8b8b]">Enlace:</span>
+                        <a href="{{ $product->external_payment_url }}" target="_blank" rel="nofollow noopener" class="text-[#dcdcdc] transition hover:text-lucille-accent break-all">
+                            {{ $product->external_payment_url }}
+                        </a>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-[#8b8b8b]">Stock:</span>
+                        <span class="text-white">{{ $product->stock ?? 'N/D' }}</span>
+                    </div>
+                    <div class="pt-3 flex flex-col gap-2 border-t border-white/10">
+                        <a href="{{ route('talents.store.edit', $product->id) }}" class="lucille-button w-full text-center">Editar</a>
+                        <form method="POST" action="{{ route('talents.store.destroy', $product->id) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="lucille-button-solid w-full text-center" data-confirm="¿Eliminar este producto?" data-confirm-title="Eliminar producto" data-confirm-action="Eliminar" data-confirm-tone="danger">Eliminar</button>
+                        </form>
+                    </div>
+                </div>
+            @empty
+                <div class="border border-white/10 bg-[#10161b] p-8 text-center text-[#8b8b8b] text-sm">
+                    Todavía no has creado productos.
+                </div>
+            @endforelse
+        </div>
+
+        <!-- Vista Escritorio (Tabla) -->
+        <div class="hidden sm:block overflow-x-auto border border-white/10 bg-[#10161b]">
             <table class="min-w-full divide-y divide-white/10 text-left text-sm">
                 <thead class="bg-black/20 text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
                     <tr>
@@ -45,8 +87,8 @@
                                 </div>
                             </td>
                             <td class="px-4 py-4">€{{ number_format((float) $product->price, 2) }}</td>
-                            <td class="px-4 py-4">
-                                <a href="{{ $product->external_payment_url }}" target="_blank" rel="nofollow noopener" class="text-[#dcdcdc] transition hover:text-lucille-accent">
+                            <td class="px-4 py-4 max-w-[200px]">
+                                <a href="{{ $product->external_payment_url }}" target="_blank" rel="nofollow noopener" class="text-[#dcdcdc] transition hover:text-lucille-accent break-words line-clamp-2">
                                     {{ $product->external_payment_url }}
                                 </a>
                             </td>

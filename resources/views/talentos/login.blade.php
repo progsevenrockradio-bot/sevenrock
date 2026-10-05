@@ -1,5 +1,5 @@
 <x-layouts.site :title="'Talentos - Login'">
-    <section class="mx-auto max-w-3xl px-5 pt-10" style="margin-top: 180px;">
+    <section class="mx-auto max-w-3xl px-4 sm:px-5 py-6 sm:py-10 mt-[100px] sm:mt-[180px]">
         @if (session('status'))
             <div class="mb-6 border border-[#1e4d2b] bg-[rgba(16,64,30,.2)] px-4 py-3 text-sm text-[#b8e6c3]">
                 {{ session('status') }}
@@ -20,8 +20,8 @@
             </div>
         @endif
 
-        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-            <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Acceso Talentos</h1>
+        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-4 sm:p-8">
+            <h1 class="font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Acceso Talentos</h1>
             <p class="mt-3 text-sm text-[#7b7b7b]">Entra al panel para gestionar tu perfil y tu catálogo.</p>
 
             <form action="{{ route('talents.login.store') }}" method="POST" class="mt-8 space-y-5" novalidate>
@@ -61,17 +61,17 @@
                     <input type="checkbox" name="remember" value="1" class="h-4 w-4 border border-[#3a3a3a] bg-transparent accent-[#c32720]">
                     Recordar sesión
                 </label>
-                <div class="flex flex-wrap gap-3 items-center">
-                    <button type="submit" class="lucille-button-solid">Entrar</button>
+                <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+                    <button type="submit" class="lucille-button-solid w-full sm:w-auto text-center">Entrar</button>
                     {{-- P0-3: Aviso contextual de que el registro aún no está disponible --}}
                     <span
-                        class="lucille-button cursor-not-allowed opacity-60 relative group"
+                        class="lucille-button cursor-not-allowed opacity-60 relative group w-full sm:w-auto text-center"
                         title="El registro de talentos estará disponible muy pronto"
                         tabindex="0"
                         aria-label="Crear cuenta - Próximamente disponible"
                     >
                         Crear cuenta
-                        <span class="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-[#111] border border-[#2b2b2b] px-2.5 py-1 text-[10px] uppercase tracking-[.1em] text-[#aaa] opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200">
+                        <span class="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-[#111] border border-[#2b2b2b] px-2.5 py-1 text-[10px] uppercase tracking-[.1em] text-[#aaa] opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 z-10">
                             🔒 Próximamente
                         </span>
                     </span>

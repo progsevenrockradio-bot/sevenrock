@@ -12,17 +12,17 @@
             </div>
         @endif
 
-        <div class="flex items-center justify-between">
-            <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Mis Álbumes</h1>
-            <a href="{{ route('talents.albums.create') }}" class="lucille-button-solid text-sm">+ Nuevo Álbum</a>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h1 class="font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Mis Álbumes</h1>
+            <a href="{{ route('talents.albums.create') }}" class="lucille-button-solid text-sm w-full sm:w-auto text-center shrink-0">+ Nuevo Álbum</a>
         </div>
 
         @if ($albums->isEmpty())
-            <div class="border border-white/10 bg-[#10161b] p-8 text-center text-sm text-[#7b7b7b]">
+            <div class="border border-white/10 bg-[#10161b] p-4 sm:p-8 text-center text-sm text-[#7b7b7b]">
                 No tienes álbumes todavía. <a href="{{ route('talents.albums.create') }}" class="text-white underline">Crea tu primer álbum</a>.
             </div>
         @else
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($albums as $album)
                     <div class="group relative border border-white/10 bg-[#10161b] transition hover:border-white/30">
                         <div class="aspect-square overflow-hidden bg-[#1d1d1d]">

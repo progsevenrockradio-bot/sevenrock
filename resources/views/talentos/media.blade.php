@@ -6,9 +6,9 @@
             </div>
         @endif
 
-        <div class="grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
-            <div class="border border-white/10 bg-[#10161b] p-8">
-                <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Media</h1>
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-[.9fr_1.1fr]">
+            <div class="border border-white/10 bg-[#10161b] p-4 sm:p-8">
+                <h1 class="font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Media</h1>
                 <p class="mt-2 text-sm text-[#7b7b7b]">Sube fotos, MP3, documentos o videos al almacenamiento de Cloudflare.</p>
                 <div class="mt-6 border border-white/5 bg-white/[0.02] p-5 rounded-[8px] text-xs space-y-3 text-[#7b7b7b] font-sans">
                     <div class="font-display uppercase tracking-wider text-[#dcdcdc] font-semibold text-xs border-b border-white/5 pb-2 mb-1">
@@ -103,34 +103,34 @@
                         <input type="checkbox" name="is_exclusive" id="is_exclusive" value="1" @checked(old('is_exclusive')) class="h-4 w-4 rounded border-[#2b2b2b] bg-[#151515] text-[#c32720] focus:ring-[#c32720] cursor-pointer">
                         <label for="is_exclusive" class="text-xs uppercase tracking-[.18em] text-[#dcdcdc] cursor-pointer">¿Exclusivo para Afiliados?</label>
                     </div>
-                    <button type="submit" class="lucille-button-solid">Subir archivo</button>
+                    <button type="submit" class="lucille-button-solid w-full">Subir archivo</button>
                 </form>
             </div>
 
-            <div class="border border-white/10 bg-[#10161b] p-8">
-                <div class="flex items-center justify-between">
+            <div class="border border-white/10 bg-[#10161b] p-4 sm:p-8">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Biblioteca</h2>
-                    <a href="{{ route('talents.dashboard') }}" class="lucille-button">Panel</a>
+                    <a href="{{ route('talents.dashboard') }}" class="lucille-button w-full sm:w-auto text-center shrink-0">Panel</a>
                 </div>
-                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
                     @forelse ($media as $item)
                         <div class="border border-[#2b2b2b] bg-[#151515] p-4">
-                            <div class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">{{ $item->title ?: $item->filename }}</div>
-                            <div class="mt-1 text-xs uppercase tracking-[.12em] text-[#7b7b7b]">
+                            <div class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc] break-words">{{ $item->title ?: $item->filename }}</div>
+                            <div class="mt-1 text-[10px] sm:text-xs uppercase tracking-[.12em] text-[#7b7b7b]">
                                 {{ $item->type }} · {{ number_format($item->size / 1024, 1) }} KB
                                 @if ($item->is_exclusive)
                                     · <span class="text-[var(--lucille-accent)] font-semibold">Exclusivo</span>
                                 @endif
                             </div>
                             @if ($item->description)
-                                <p class="mt-3 text-sm text-[#7b7b7b]">{{ $item->description }}</p>
+                                <p class="mt-3 text-sm text-[#7b7b7b] break-words">{{ $item->description }}</p>
                             @endif
-                            <div class="mt-4 flex flex-wrap gap-2">
-                                <a href="{{ $item->url }}" target="_blank" rel="noreferrer" class="lucille-button">Abrir</a>
-                                <form action="{{ route('talents.media.destroy', ['id' => $item->id]) }}" method="POST">
+                            <div class="mt-4 flex flex-col sm:flex-row gap-2">
+                                <a href="{{ $item->url }}" target="_blank" rel="noreferrer" class="lucille-button w-full sm:w-auto text-center">Abrir</a>
+                                <form action="{{ route('talents.media.destroy', ['id' => $item->id]) }}" method="POST" class="w-full sm:w-auto">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="lucille-button-solid">Eliminar</button>
+                                    <button type="submit" class="lucille-button-solid w-full">Eliminar</button>
                                 </form>
                             </div>
                         </div>

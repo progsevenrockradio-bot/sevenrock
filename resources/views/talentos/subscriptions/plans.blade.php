@@ -6,21 +6,21 @@
             </div>
         @endif
 
-        <div class="border border-white/10 bg-[#10161b] p-8">
+        <div class="border border-white/10 bg-[#10161b] p-4 sm:p-8">
             <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Suscripciones</div>
-            <h1 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-white">Elige tu plan</h1>
+            <h1 class="mt-2 font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-white">Elige tu plan</h1>
             <p class="mt-3 max-w-3xl text-sm text-[#8b8b8b]">
                 Selecciona el plan que mejor se ajusta a tu banda y elige la pasarela que prefieras para completar la suscripción.
             </p>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
             @foreach ($plans as $key => $plan)
                 @php
                     $isCurrent = $currentPlan === $key;
                 @endphp
 
-                <article class="border {{ $isCurrent ? 'border-white' : 'border-white/10' }} bg-[#10161b] p-6">
+                <article class="border {{ $isCurrent ? 'border-white' : 'border-white/10' }} bg-[#10161b] p-4 sm:p-6">
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">{{ $plan['label'] }}</div>
