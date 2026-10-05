@@ -408,15 +408,51 @@ class ProcessIncomingEmails extends Command
                     if ($isFallbackEnabled && !$isDarkVaderAgent) {
                         $this->warn("[FALLBACK] Aplicando fallback determinista para el correo: {$subject}");
                         $fallbackContent = $this->limpiarContenidoDeCorreo($body);
-                        $parsed = [
-                            'type' => 'post',
-                            'importance' => 3,
-                            'title' => TextNormalizer::normalizeTitle($subject) ?: $subject,
-                            'excerpt' => Str::limit(strip_tags($fallbackContent), 160),
-                            'content' => $fallbackContent,
-                            'categories' => ['Noticias Rock'],
-                            'fallback_used' => true
-                        ];
+
+                        $subjectLower = mb_strtolower($subject);
+                        $isRelease = str_contains($subjectLower, 'out now')
+                            || str_contains($subjectLower, 'new single')
+                            || str_contains($subjectLower, 'single')
+                            || str_contains($subjectLower, 'album')
+                            || str_contains($subjectLower, 'álbum')
+                            || str_contains($subjectLower, 'ep')
+                            || str_contains($subjectLower, 'presents')
+                            || str_contains($subjectLower, 'unveil')
+                            || str_contains($subjectLower, 'premiere')
+                            || str_contains($subjectLower, 'videoclip')
+                            || str_contains($subjectLower, 'music video')
+                            || str_contains($subjectLower, 'nuevo tema')
+                            || str_contains($subjectLower, 'nuevo disco')
+                            || str_contains($subjectLower, 'lanzamiento');
+
+                        if ($isRelease) {
+                            $artistName = 'Artista';
+                            $titleName = TextNormalizer::normalizeTitle($subject) ?: $subject;
+                            if (preg_match('/^([^\'\":\-–]+)[\s\'\":\-–]+(.*)$/u', $subject, $m)) {
+                                $artistName = trim($m[1]);
+                                $titleName = trim($m[2], " '\"-–:");
+                            }
+
+                            $parsed = [
+                                'type' => 'release',
+                                'importance' => 3,
+                                'title' => $titleName ?: $subject,
+                                'artist_name' => $artistName ?: 'Artista',
+                                'excerpt' => Str::limit(strip_tags($fallbackContent), 160),
+                                'content' => $fallbackContent,
+                                'fallback_used' => true,
+                            ];
+                        } else {
+                            $parsed = [
+                                'type' => 'post',
+                                'importance' => 2,
+                                'title' => TextNormalizer::normalizeTitle($subject) ?: $subject,
+                                'excerpt' => Str::limit(strip_tags($fallbackContent), 160),
+                                'content' => $fallbackContent,
+                                'categories' => ['General'],
+                                'fallback_used' => true,
+                            ];
+                        }
                         
                         $this->sendAdminAlert(
                             'ai_deterministic_fallback', 
@@ -599,10 +635,12 @@ class ProcessIncomingEmails extends Command
                         } elseif ($isNoticiaRock) {
                             $categories = ['Noticias Rock'];
                         } else {
-                            $categories = $parsed['categories'] ?? [];
+                            $rawCategories = $parsed['categories'] ?? [];
+                            // 'Noticias Rock' y 'Hoy en el Rock' son exclusivas para Dark Vader / editorial oficial
+                            $categories = array_values(array_filter($rawCategories, fn($c) => !in_array($c, ['Noticias Rock', 'Hoy en el Rock'])));
                             if (empty($categories)) {
-                                $categories = ['Noticias Rock'];
-                                Log::warning("ProcessIncomingEmails: Correo procesado como post sin categoría devuelta por la IA. Se asignó 'Noticias Rock' por defecto.", ['message_id' => $messageId]);
+                                $categories = ['General'];
+                                Log::warning("ProcessIncomingEmails: Correo externo procesado como post sin categoría propia. Se asignó 'General'.", ['message_id' => $messageId]);
                             }
                         }
 
@@ -699,8 +737,8 @@ class ProcessIncomingEmails extends Command
                             Log::warning("ProcessIncomingEmails: Fallback de imagen aplicado para NewRelease (PostImageResolver devolvió vacío).", ['message_id' => $messageId]);
                         }
 
-                        // Crear Lanzamiento
-                        $isActive = (bool) $settings->email_auto_publish;
+                        // Crear Lanzamiento (si es fallback nunca se auto-publica)
+                        $isActive = (bool) $settings->email_auto_publish && !$isFallback;
                         $release = NewRelease::create([
                             'title' => $title,
                             'slug' => Str::slug($title . '-' . $artistName),
@@ -1002,16 +1040,26 @@ class ProcessIncomingEmails extends Command
      */
     private function limpiarContenidoDeCorreo(string $texto): string
     {
-        $s = html_entity_decode($texto, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // 1. Eliminar etiquetas <style>...</style> y su contenido completo
+        $s = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $texto) ?? $texto;
 
-        // Quitar líneas de servicio del resolvedor de imágenes
-        $s = preg_replace('/^\s*(?:<p[^>]*>)?\s*(FUENTE|Source|Creditos|Créditos)\s*:.*$/miu', '', $s);
+        // 2. Eliminar etiquetas <script>...</script> y su contenido completo
+        $s = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $s) ?? $s;
 
-        // Colapsar etiquetas <p> vacías
-        $s = preg_replace('/<p[^>]*>\s*<\/p>/i', '', $s);
+        // 3. Eliminar comentarios HTML
+        $s = preg_replace('/<!--.*?-->/s', '', $s) ?? $s;
 
-        // Reducir saltos de línea excesivos
-        $s = preg_replace('/\n{3,}/', "\n\n", $s);
+        // 4. Decodificar entidades HTML
+        $s = html_entity_decode($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // 5. Quitar líneas de servicio del resolvedor de imágenes
+        $s = preg_replace('/^\s*(?:<p[^>]*>)?\s*(FUENTE|Source|Creditos|Créditos)\s*:.*$/miu', '', $s) ?? $s;
+
+        // 6. Colapsar etiquetas <p> vacías
+        $s = preg_replace('/<p[^>]*>\s*<\/p>/i', '', $s) ?? $s;
+
+        // 7. Reducir saltos de línea excesivos
+        $s = preg_replace('/\n{3,}/', "\n\n", $s) ?? $s;
 
         $s = trim($s);
 

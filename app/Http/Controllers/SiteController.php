@@ -135,6 +135,13 @@ class SiteController extends Controller
             fn () => Post::query()
                 ->published()
                 ->whereJsonContains('categories', 'Noticias Rock')
+                ->where(function ($q) {
+                    $q->where('author_email', 'dark.vader.agent@gmail.com')
+                      ->orWhereNull('author_email');
+                })
+                ->where('content', 'not like', '%html,body,table%')
+                ->where('excerpt', 'not like', '%html,body,table%')
+                ->where('excerpt', 'not like', '%mso-table-lspace%')
                 ->orderByDesc('published_at')
                 ->take(4)
                 ->get(),
@@ -145,6 +152,13 @@ class SiteController extends Controller
             fn () => Post::query()
                 ->published()
                 ->whereJsonContains('categories', 'Hoy en el Rock')
+                ->where(function ($q) {
+                    $q->where('author_email', 'dark.vader.agent@gmail.com')
+                      ->orWhereNull('author_email');
+                })
+                ->where('content', 'not like', '%html,body,table%')
+                ->where('excerpt', 'not like', '%html,body,table%')
+                ->where('excerpt', 'not like', '%mso-table-lspace%')
                 ->orderByDesc('published_at')
                 ->take(4)
                 ->get(),
