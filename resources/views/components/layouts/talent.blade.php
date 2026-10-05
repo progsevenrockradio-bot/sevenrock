@@ -53,12 +53,12 @@
             <div class="relative w-full sm:w-auto">
                 <nav class="talent-nav flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 sm:flex-wrap text-sm w-full sm:w-auto">
                     <a href="{{ route('talents.dashboard') }}" class="lucille-button shrink-0 {{ $esActivo('talents.dashboard') ? 'is-active' : '' }}">Panel</a>
-                    <a href="{{ route('talents.subscriptions.plans') }}" class="lucille-button shrink-0 {{ $esActivo('talents.subscriptions.plans') ? 'is-active' : '' }}">Suscripción</a>
-                    <a href="{{ route('talents.profile') }}" class="lucille-button shrink-0 {{ $esActivo('talents.profile') ? 'is-active' : '' }}">Mi Perfil</a>
-                    <a href="{{ route('talents.notifications.edit') }}" class="lucille-button shrink-0 {{ $esActivo('talents.notifications.edit') ? 'is-active' : '' }}">Notificaciones</a>
-                    <a href="{{ route('talents.media.index') }}" class="lucille-button shrink-0 {{ $esActivo('talents.media.index') ? 'is-active' : '' }}">Mi Música</a>
-                    <a href="{{ route('talents.store.index') }}" class="lucille-button shrink-0 {{ $esActivo('talents.store.index') ? 'is-active' : '' }}">Mi Tienda</a>
-                    <a href="{{ route('talents.albums.index') }}" class="lucille-button shrink-0 {{ $esActivo('talents.albums.index') ? 'is-active' : '' }}">Mis Álbumes</a>
+                    <a href="{{ route('talents.subscriptions.plans') }}" class="lucille-button shrink-0 {{ $esActivo('talents.subscriptions.*') ? 'is-active' : '' }}">Suscripción</a>
+                    <a href="{{ route('talents.profile') }}" class="lucille-button shrink-0 {{ $esActivo('talents.profile*') ? 'is-active' : '' }}">Mi Perfil</a>
+                    <a href="{{ route('talents.notifications.edit') }}" class="lucille-button shrink-0 {{ $esActivo('talents.notifications.*') ? 'is-active' : '' }}">Notificaciones</a>
+                    <a href="{{ route('talents.media.index') }}" class="lucille-button shrink-0 {{ $esActivo('talents.media.*') ? 'is-active' : '' }}">Mi Música</a>
+                    <a href="{{ route('talents.store.index') }}" class="lucille-button shrink-0 {{ $esActivo('talents.store.*') ? 'is-active' : '' }}">Mi Tienda</a>
+                    <a href="{{ route('talents.albums.index') }}" class="lucille-button shrink-0 {{ $esActivo('talents.albums.*') ? 'is-active' : '' }}">Mis Álbumes</a>
                     <form method="POST" action="{{ route('talents.logout') }}" class="shrink-0">
                         @csrf
                         <button type="submit" class="lucille-button-solid shrink-0">Cerrar sesión</button>

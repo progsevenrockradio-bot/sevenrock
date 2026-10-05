@@ -374,6 +374,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::post('/{talent}/reject', [AdminTalentAdminController::class, 'reject'])->name('reject');
     });
 
+    Route::controller(\App\Http\Controllers\Admin\PromoterCodeController::class)->prefix('talents/promoters')->name('talents.promoters.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::post('/{promoter}/expand', 'expand')->name('expand');
+        Route::post('/{promoter}/renew', 'renew')->name('renew');
+        Route::post('/{promoter}/send-email', 'sendEmail')->name('send-email');
+    });
+
+
     Route::controller(AdminOutreachController::class)->prefix('outreach')->name('outreach.')->group(function (): void {
         Route::get('/', 'index')->name('index');
 

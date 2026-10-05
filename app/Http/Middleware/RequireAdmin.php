@@ -15,7 +15,7 @@ class RequireAdmin
             return redirect()->route('admin.login');
         }
 
-        if (! Auth::user()?->hasAdminAccess()) {
+        if (! method_exists(Auth::user(), 'hasAdminAccess') || ! Auth::user()->hasAdminAccess()) {
             abort(403);
         }
 

@@ -13,8 +13,11 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class Talent extends Authenticatable
 {
+    use HasFactory;
     use Notifiable;
     use SoftDeletes;
 
