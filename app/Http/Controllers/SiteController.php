@@ -1082,7 +1082,7 @@ class SiteController extends Controller
         }
 
         if ($post) {
-            $recentPosts = $this->safeValue(fn () => Post::query()->published()->latest('published_at')->limit(5)->get()->toArray(), collect());
+            $recentPosts = $this->safeValue(fn () => Post::query()->published()->whereDoesntHave('taxonomies', fn ($q) => $q->where('name', 'Hoy en el Rock'))->latest('published_at')->limit(5)->get()->toArray(), collect());
             return view('pages.single-post', [
                 'blogCategories' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_CATEGORY, ['Design', 'Discussion', 'Music', 'Singles', 'Typography', 'Uncategorized']),
                 'blogTags' => $this->blogTaxonomyTerms(PostTaxonomy::TYPE_TAG, ['articles', 'concerts', 'live', 'music', 'news', 'on stage']),
@@ -1111,6 +1111,7 @@ class SiteController extends Controller
                     'en_memoria_nombre' => $post->en_memoria_nombre,
                 ],
                 'prevPost' => $this->safeValue(fn () => Post::query()->published()
+                    ->whereDoesntHave('taxonomies', fn ($q) => $q->where('name', 'Hoy en el Rock'))
                     ->where(function ($q) use ($post) {
                         $q->where('published_at', '<', $post->published_at)
                           ->orWhere(function ($q) use ($post) {
@@ -1122,6 +1123,7 @@ class SiteController extends Controller
                     ->orderByDesc('id')
                     ->first(['title', 'slug', 'published_at']), null),
                 'nextPost' => $this->safeValue(fn () => Post::query()->published()
+                    ->whereDoesntHave('taxonomies', fn ($q) => $q->where('name', 'Hoy en el Rock'))
                     ->where(function ($q) use ($post) {
                         $q->where('published_at', '>', $post->published_at)
                           ->orWhere(function ($q) use ($post) {
@@ -1571,7 +1573,11 @@ class SiteController extends Controller
                 "site.posts.recent.v{$version}",
                 now()->addMinutes(10),
                 function () {
-                    $query = Post::query()->published()->latest('published_at')->limit(5);
+                    $query = Post::query()
+                        ->published()
+                        ->whereDoesntHave('taxonomies', fn ($q) => $q->where('name', 'Hoy en el Rock'))
+                        ->latest('published_at')
+                        ->limit(5);
 
                     if (Schema::hasTable('post_reactions')) {
                         $query->withCount([
