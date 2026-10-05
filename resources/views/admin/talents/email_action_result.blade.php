@@ -78,6 +78,8 @@
             margin-bottom: 25px;
             text-align: left;
             font-size: 0.95rem;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         .status-box div {
             margin-bottom: 6px;
@@ -86,7 +88,7 @@
             margin-bottom: 0;
         }
         .btn {
-            display: inline-block;
+            display: block;
             background-color: #081a24;
             color: #dcdcdc;
             text-decoration: none;
@@ -95,6 +97,11 @@
             font-weight: bold;
             border: 1px solid #1a1a1a;
             transition: all 0.2s ease;
+        }
+        @media (min-width: 640px) {
+            .btn {
+                display: inline-block;
+            }
         }
         .btn:hover {
             background-color: #c32720;

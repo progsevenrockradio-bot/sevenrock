@@ -6,9 +6,9 @@
             </div>
         @endif
 
-        <div class="border border-white/10 bg-[#10161b] p-6">
+        <div class="border border-white/10 bg-[#10161b] p-4 sm:p-6">
             <div class="font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Moderación</div>
-            <h1 class="mt-2 font-display text-3xl uppercase tracking-[.12em] text-white">Contenido subido por talentos</h1>
+            <h1 class="mt-2 font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-white">Contenido subido por talentos</h1>
         </div>
 
         <form method="GET" action="{{ route('admin.talents.media') }}" class="grid gap-3 md:grid-cols-[1.2fr_1fr_auto]">
@@ -19,10 +19,30 @@
                     <option value="{{ $key }}" @selected(($filters['type'] ?? '') === $key)>{{ $label }}</option>
                 @endforeach
             </select>
-            <button type="submit" class="lucille-button-solid">Filtrar</button>
+            <button type="submit" class="lucille-button-solid w-full md:w-auto text-center">Filtrar</button>
         </form>
 
-        <div class="overflow-x-auto border border-white/10 bg-[#10161b]">
+        <!-- Vista Móvil (Tarjetas) -->
+        <div class="space-y-3 sm:hidden">
+            @foreach ($media as $item)
+                <div class="border border-white/10 bg-[#10161b] p-4 text-sm text-[#d8d8d8]">
+                    <div class="font-semibold text-white break-words">{{ $item->title ?: $item->filename }}</div>
+                    <div class="mt-2 text-xs text-[#8b8b8b]">Talento: <span class="text-white">{{ $item->talent?->band_name ?? 'N/D' }}</span></div>
+                    <div class="mt-1 text-xs text-[#8b8b8b]">Tipo: <span class="text-white">{{ ucfirst($item->type) }}</span></div>
+                    <div class="mt-1 text-xs text-[#8b8b8b]">Fecha: <span class="text-white">{{ $item->created_at?->format('d/m/Y H:i') ?? 'N/D' }}</span></div>
+                    <div class="mt-4">
+                        <form method="POST" action="{{ route('admin.talents.media.destroy', $item) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="lucille-button-solid w-full text-center" data-confirm="¿Eliminar este archivo del talento?" data-confirm-title="Eliminar contenido" data-confirm-action="Eliminar" data-confirm-tone="danger">Eliminar</button>
+                        </form>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <!-- Vista Escritorio (Tabla) -->
+        <div class="hidden sm:block overflow-x-auto border border-white/10 bg-[#10161b]">
             <table class="min-w-full divide-y divide-white/10 text-left text-sm">
                 <thead class="bg-black/20 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
                     <tr>
@@ -38,7 +58,7 @@
                         <tr class="text-[#d8d8d8]">
                             <td class="px-4 py-4">{{ $item->talent?->band_name ?? 'N/D' }}</td>
                             <td class="px-4 py-4">{{ ucfirst($item->type) }}</td>
-                            <td class="px-4 py-4">{{ $item->title ?: $item->filename }}</td>
+                            <td class="px-4 py-4 max-w-[200px] truncate" title="{{ $item->title ?: $item->filename }}">{{ $item->title ?: $item->filename }}</td>
                             <td class="px-4 py-4">{{ $item->created_at?->format('d/m/Y H:i') ?? 'N/D' }}</td>
                             <td class="px-4 py-4">
                                 <form method="POST" action="{{ route('admin.talents.media.destroy', $item) }}" class="inline">

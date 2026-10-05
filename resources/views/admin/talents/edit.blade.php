@@ -15,7 +15,7 @@
             @csrf
             @method('PUT')
 
-            <div class="space-y-5 border border-white/10 bg-[#10161b] p-6">
+            <div class="space-y-5 border border-white/10 bg-[#10161b] p-4 sm:p-6">
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Nombre</label>
                     <input name="band_name" value="{{ old('band_name', $talent->band_name) }}" class="lucille-product-field w-full">
@@ -24,7 +24,7 @@
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Bio</label>
                     <textarea name="bio" rows="8" class="lucille-product-field w-full">{{ old('bio', $talent->bio) }}</textarea>
                 </div>
-                <div class="grid gap-4 md:grid-cols-2">
+                <div class="grid gap-4 grid-cols-1 md:grid-cols-2">
                     <div>
                         <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Plan</label>
                         <select name="plan" class="lucille-product-field w-full">
@@ -46,9 +46,9 @@
                     <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $talent->is_featured))>
                     <span>Marcar como destacado</span>
                 </label>
-                <div class="flex flex-wrap gap-3">
-                    <button type="submit" class="lucille-button-solid">Guardar</button>
-                    <a href="{{ route('admin.talents.index') }}" class="lucille-button">Volver</a>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button type="submit" class="lucille-button-solid w-full sm:w-auto text-center">Guardar</button>
+                    <a href="{{ route('admin.talents.index') }}" class="lucille-button w-full sm:w-auto text-center">Volver</a>
                 </div>
             </div>
 
