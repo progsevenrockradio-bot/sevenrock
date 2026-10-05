@@ -45,12 +45,6 @@ return new class extends Migration
             if (! Schema::hasColumn('talents', 'rejection_reason')) {
                 $table->text('rejection_reason')->nullable();
             }
-            if (Schema::hasColumn('talents', 'subscription_status')) {
-                $table->string('subscription_status', 32)->default('inactive')->change();
-            }
-            if (Schema::hasColumn('talents', 'user_id')) {
-                $table->unsignedBigInteger('user_id')->nullable()->change();
-            }
         });
     }
 

@@ -583,4 +583,25 @@ class TalentSystemFeatureTest extends TestCase
         $this->assertFalse((bool) $talent->is_hidden);
         Mail::assertSent(TalentApprovedMail::class);
     }
+
+    /**
+     * 13. Se puede crear un talento con status 'pending' y user_id nulo.
+     */
+    public function test_can_create_talent_with_pending_status_and_null_user_id(): void
+    {
+        $talent = Talent::create([
+            'band_name'           => 'Banda Nueva Null',
+            'email'               => 'bandanull@test.com',
+            'password'            => Hash::make('Secret123!'),
+            'subscription_status' => 'pending',
+            'plan'                => 'free',
+            'user_id'             => null,
+        ]);
+
+        $this->assertDatabaseHas('talents', [
+            'id' => $talent->id,
+            'subscription_status' => 'pending',
+            'user_id' => null,
+        ]);
+    }
 }
