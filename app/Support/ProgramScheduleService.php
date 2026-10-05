@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Schema;
 
 class ProgramScheduleService
 {
+    public const MARGIN_BEFORE_MINUTES = 2;
+    public const MARGIN_AFTER_MINUTES = 2;
+
     private const DAY_ORDER = [
         'LUNES' => 1,
         'MARTES' => 2,
@@ -289,7 +292,7 @@ class ProgramScheduleService
             ->values();
     }
 
-    private function programIsLiveNow(MasterProgram $program, ?Carbon $now = null): bool
+    public function programIsLiveNow(MasterProgram $program, ?Carbon $now = null): bool
     {
         $now ??= now($this->programTimezone($program));
         $timezone = $this->programTimezone($program);
@@ -313,11 +316,27 @@ class ProgramScheduleService
                 $endTime = trim((string) ($episode->hora_fin ?: ''));
                 if ($endTime !== '') {
                     $end = $this->parseScheduleTimeToCarbon($now, $endTime);
-                } elseif ((int) ($episode->duration_seconds ?? 0) > 0) {
-                    $end = $start->copy()->addSeconds((int) $episode->duration_seconds);
                 } else {
-                    $duration = max(15, (int) ($program->duracion_minutos ?? 120));
-                    $end = $start->copy()->addMinutes($duration);
+                    $dayKey = match ($now->dayOfWeekIso) {
+                        1 => 'LUNES', 2 => 'MARTES', 3 => 'MIERCOLES', 4 => 'JUEVES',
+                        5 => 'VIERNES', 6 => 'SABADO', 7 => 'DOMINGO',
+                    };
+                    $emision = $program->emisiones()
+                        ->where('activo', true)
+                        ->where('dia_semana', $dayKey)
+                        ->first();
+
+                    $segundos = $emision?->duracion_segundos ?? ((int) ($episode->duration_seconds ?? 0) > 0 ? (int) $episode->duration_seconds : null);
+
+                    if ($segundos && $segundos > 0) {
+                        $scheduledStart = $start->copy();
+                        $start = $start->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
+                        $duracion = (int) ceil($segundos / 60) + self::MARGIN_AFTER_MINUTES;
+                        $end = $scheduledStart->copy()->addMinutes($duracion);
+                    } else {
+                        $duration = max(15, (int) ($program->duracion_minutos ?? 120));
+                        $end = $start->copy()->addMinutes($duration);
+                    }
                 }
 
                 if ($end instanceof Carbon) {
@@ -340,9 +359,17 @@ class ProgramScheduleService
                 
                 [$hour, $minute] = $hm;
                 $daysSinceSchedule = ((int) $now->dayOfWeekIso - $dayNumber + 7) % 7;
-                $start = $now->copy()->startOfDay()->subDays($daysSinceSchedule)->setTime($hour, $minute, 0);
-                $duration = max(15, (int) ($emision->duracion_minutos ?? 120));
-                $end = $start->copy()->addMinutes($duration);
+                $scheduledStart = $now->copy()->startOfDay()->subDays($daysSinceSchedule)->setTime($hour, $minute, 0);
+
+                if (!empty($emision->duracion_segundos) && $emision->duracion_segundos > 0) {
+                    $start = $scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
+                    $duracion = (int) ceil($emision->duracion_segundos / 60) + self::MARGIN_AFTER_MINUTES;
+                    $end = $scheduledStart->copy()->addMinutes($duracion);
+                } else {
+                    $start = $scheduledStart;
+                    $duration = max(15, (int) ($emision->duracion_minutos ?? $program->duracion_minutos ?? 120));
+                    $end = $start->copy()->addMinutes($duration);
+                }
 
                 if ($end->lessThanOrEqualTo($start)) {
                     $end = $end->copy()->addDay();

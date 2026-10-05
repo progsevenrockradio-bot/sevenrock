@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Notice;
 use App\Models\PlayHistory;
 use App\Models\MasterProgram;
+use App\Models\MasterProgramEmision;
 use App\Models\Program;
 use App\Models\RadioProgram;
 use App\Models\Song;
@@ -22,6 +23,9 @@ use App\Support\Radio\StreamNowPlaying;
 
 class RadioPlayerService
 {
+    public const MARGIN_BEFORE_MINUTES = 2;
+    public const MARGIN_AFTER_MINUTES = 2;
+
     private const STATUS_CACHE_KEY = 'radio-player-status:v6';
 
     public function __construct(
@@ -582,11 +586,9 @@ class RadioPlayerService
                 continue;
             }
 
-            if ($this->isWindowActive(
+            if ($this->isEmisionWindowActive(
                 $localNow,
-                (string) $emision->hora_inicio,
-                '',
-                (int) $emision->duracion_minutos,
+                $emision,
                 $this->programScheduleService->nextProgramStartFor($master, $localNow)
             )) {
                 return true;
@@ -634,6 +636,31 @@ class RadioPlayerService
         return $localNow->betweenIncluded($start, $end);
     }
 
+    public function isEmisionWindowActive(\Carbon\CarbonInterface $moment, MasterProgramEmision $emision, ?\Carbon\CarbonInterface $cutoff = null): bool
+    {
+        $moment = Carbon::instance($moment);
+        $scheduledStart = $this->parseTimeToCarbon($moment, (string) $emision->hora_inicio);
+        if ($scheduledStart === null) {
+            return false;
+        }
+
+        if (!empty($emision->duracion_segundos) && $emision->duracion_segundos > 0) {
+            $start = $scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
+            $duracion = (int) ceil($emision->duracion_segundos / 60) + self::MARGIN_AFTER_MINUTES;
+            $end = $scheduledStart->copy()->addMinutes($duracion);
+        } else {
+            $start = $scheduledStart;
+            $durationMinutes = max(15, (int) ($emision->duracion_minutos ?? 120));
+            $end = $start->copy()->addMinutes($durationMinutes);
+        }
+
+        if ($cutoff instanceof Carbon && $cutoff->greaterThan($start) && $cutoff->lessThan($end)) {
+            $end = $cutoff->copy();
+        }
+
+        return $moment->betweenIncluded($start, $end);
+    }
+
     private function isWindowActive(Carbon $moment, string $startTime, string $endTime, int $durationMinutes, ?Carbon $cutoff = null): bool
     {
         $start = $this->parseTimeToCarbon($moment, $startTime);
@@ -676,14 +703,25 @@ class RadioPlayerService
             return null;
         }
 
+        $currentDay = $this->currentDayKey($reference);
+        $emision = $master->emisiones()
+            ->where('activo', true)
+            ->where('dia_semana', $currentDay)
+            ->first();
+
+        $duracionRealSegundos = $emision?->duracion_segundos ?? ((int) ($episode->duration_seconds ?? 0) > 0 ? (int) $episode->duration_seconds : null);
+
         $endTime = trim((string) ($episode->hora_fin ?: ''));
         if ($endTime !== '') {
             $end = $this->parseTimeToCarbon($baseDate, $endTime);
             if ($end instanceof Carbon && $end->lessThan($start)) {
                 $end = $end->copy()->addDay();
             }
-        } elseif ((int) ($episode->duration_seconds ?? 0) > 0) {
-            $end = $start->copy()->addSeconds((int) $episode->duration_seconds);
+        } elseif ($duracionRealSegundos && $duracionRealSegundos > 0) {
+            $scheduledStart = $start->copy();
+            $start = $start->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
+            $duracionMinutos = (int) ceil($duracionRealSegundos / 60) + self::MARGIN_AFTER_MINUTES;
+            $end = $scheduledStart->copy()->addMinutes($duracionMinutos);
         } elseif ((int) ($master->duracion_minutos ?? 0) > 0) {
             $end = $start->copy()->addMinutes((int) $master->duracion_minutos);
         } else {

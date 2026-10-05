@@ -123,6 +123,14 @@ class ProcessMp3Job implements ShouldQueue
                         'duration_seconds' => $durationSeconds,
                     ])->saveQuietly();
                 });
+
+                if ($master) {
+                    \App\Models\MasterProgramEmision::syncRealDurationForMaster(
+                        $master,
+                        $radioProgram->fecha_emision ? $radioProgram->fecha_emision->toDateString() : null,
+                        $durationSeconds
+                    );
+                }
             }
 
             app(PodcastPipelineAuditService::class)->record($radioProgram, 'PROCESSING_COMPLETED', 'El MP3 quedó listo para distribución.', [

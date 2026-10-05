@@ -244,6 +244,7 @@
         <section class="space-y-5"
             @php
                 $emisionesArray = $emisiones->map(function($e) {
+                    $seg = $e->duracion_segundos;
                     return [
                         'id' => $e->id,
                         'tipo' => $e->tipo,
@@ -251,6 +252,9 @@
                         'dia_semana' => $e->dia_semana,
                         'hora_inicio' => substr((string) $e->hora_inicio, 0, 5),
                         'duracion_minutos' => $e->duracion_minutos,
+                        'duracion_segundos' => $seg,
+                        'duracion_real_min' => $seg !== null ? intdiv($seg, 60) : '',
+                        'duracion_real_sec' => $seg !== null ? ($seg % 60) : '',
                         'enlace' => (string) $e->enlace,
                         'url_podcast' => (string) $e->url_podcast,
                         'notas' => (string) $e->notas,
@@ -264,7 +268,8 @@
                 addEmision() {
                     this.emisiones.push({
                         id: 0, tipo: 'normal', etiqueta: '', dia_semana: 'LUNES',
-                        hora_inicio: '', duracion_minutos: 120, enlace: '',
+                        hora_inicio: '', duracion_minutos: 120, duracion_segundos: null,
+                        duracion_real_min: '', duracion_real_sec: '', enlace: '',
                         url_podcast: '', notas: '', activo: true
                     });
                 },
@@ -329,6 +334,27 @@
                             <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Duración (min)</label>
                             <input type="number" min="1" max="600" :name="'emisiones[' + index + '][duracion_minutos]'" x-model.number="em.duracion_minutos"
                                 class="lucille-product-field w-full">
+                        </div>
+
+                        {{-- Duración real del archivo (minutos y segundos) --}}
+                        <div>
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Duración real archivo (min y seg)</label>
+                            <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-1 flex-1">
+                                    <input type="number" min="0" max="600" placeholder="Min"
+                                        :name="'emisiones[' + index + '][duracion_real_min]'"
+                                        x-model="em.duracion_real_min"
+                                        class="lucille-product-field w-full text-center">
+                                    <span class="text-xs text-[#9a9a9a]">m</span>
+                                </div>
+                                <div class="flex items-center gap-1 flex-1">
+                                    <input type="number" min="0" max="59" placeholder="Seg"
+                                        :name="'emisiones[' + index + '][duracion_real_sec]'"
+                                        x-model="em.duracion_real_sec"
+                                        class="lucille-product-field w-full text-center">
+                                    <span class="text-xs text-[#9a9a9a]">s</span>
+                                </div>
+                            </div>
                         </div>
 
                         {{-- Etiqueta --}}

@@ -286,12 +286,15 @@ final class MasterProgramController extends Controller
         }
 
         $request->validate([
-            'emisiones.*.tipo'             => ['nullable', 'string', 'in:' . implode(',', $tiposValidos)],
-            'emisiones.*.dia_semana'       => ['nullable', 'string', 'in:' . implode(',', $diasValidos)],
-            'emisiones.*.hora_inicio'      => ['nullable', 'string', 'max:8'],
-            'emisiones.*.duracion_minutos' => ['nullable', 'integer', 'min:1', 'max:600'],
-            'emisiones.*.enlace'           => ['nullable', 'url', 'max:500'],
-            'emisiones.*.url_podcast'      => ['nullable', 'url', 'max:500'],
+            'emisiones.*.tipo'              => ['nullable', 'string', 'in:' . implode(',', $tiposValidos)],
+            'emisiones.*.dia_semana'        => ['nullable', 'string', 'in:' . implode(',', $diasValidos)],
+            'emisiones.*.hora_inicio'       => ['nullable', 'string', 'max:8'],
+            'emisiones.*.duracion_minutos'  => ['nullable', 'integer', 'min:1', 'max:600'],
+            'emisiones.*.duracion_segundos' => ['nullable', 'integer', 'min:0'],
+            'emisiones.*.duracion_real_min' => ['nullable', 'integer', 'min:0', 'max:600'],
+            'emisiones.*.duracion_real_sec' => ['nullable', 'integer', 'min:0', 'max:59'],
+            'emisiones.*.enlace'            => ['nullable', 'url', 'max:500'],
+            'emisiones.*.url_podcast'       => ['nullable', 'url', 'max:500'],
         ]);
 
         $seenIds = [];
@@ -315,16 +318,30 @@ final class MasterProgramController extends Controller
                 continue;
             }
 
+            $duracionSegundos = null;
+            if (isset($row['duracion_segundos']) && $row['duracion_segundos'] !== '' && is_numeric($row['duracion_segundos'])) {
+                $duracionSegundos = max(0, (int) $row['duracion_segundos']);
+            } elseif (
+                (isset($row['duracion_real_min']) && $row['duracion_real_min'] !== '') ||
+                (isset($row['duracion_real_sec']) && $row['duracion_real_sec'] !== '')
+            ) {
+                $min = (int) ($row['duracion_real_min'] ?? 0);
+                $sec = (int) ($row['duracion_real_sec'] ?? 0);
+                $totalSec = ($min * 60) + $sec;
+                $duracionSegundos = $totalSec > 0 ? $totalSec : null;
+            }
+
             $data = [
-                'tipo'             => $tipo,
-                'etiqueta'         => trim((string) ($row['etiqueta']         ?? '')) ?: null,
-                'dia_semana'       => $dia,
-                'hora_inicio'      => $this->normalizeTime($hora) ?? $hora,
-                'duracion_minutos' => max(1, (int) ($row['duracion_minutos'] ?? 120)),
-                'enlace'           => $enlace ?: null,
-                'url_podcast'      => trim((string) ($row['url_podcast']      ?? '')) ?: null,
-                'notas'            => trim((string) ($row['notas']            ?? '')) ?: null,
-                'activo'           => isset($row['activo']) ? (bool) $row['activo'] : true,
+                'tipo'              => $tipo,
+                'etiqueta'          => trim((string) ($row['etiqueta']         ?? '')) ?: null,
+                'dia_semana'        => $dia,
+                'hora_inicio'       => $this->normalizeTime($hora) ?? $hora,
+                'duracion_minutos'  => max(1, (int) ($row['duracion_minutos'] ?? 120)),
+                'duracion_segundos' => $duracionSegundos,
+                'enlace'            => $enlace ?: null,
+                'url_podcast'       => trim((string) ($row['url_podcast']      ?? '')) ?: null,
+                'notas'             => trim((string) ($row['notas']            ?? '')) ?: null,
+                'activo'            => isset($row['activo']) ? (bool) $row['activo'] : true,
             ];
 
             $rowId = (int) ($row['id'] ?? 0);

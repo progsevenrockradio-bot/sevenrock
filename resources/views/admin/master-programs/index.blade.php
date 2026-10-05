@@ -124,6 +124,9 @@
                                                                     <span class="inline-block border border-[#333] px-2 py-0.5 text-[10px] uppercase tracking-[.15em] text-[#9a9a9a]">Normal</span>
                                                                 @endif
                                                                 <span class="text-xs text-[#dcdcdc]">{{ substr(strtolower($em->dia_semana), 0, 3) }} {{ $em->horaFormateada() }}</span>
+                                                                @if ($em->duracionRealFormateada())
+                                                                    <span class="text-[11px] text-[#e2b340]" title="Duración real del archivo">⏱ {{ $em->duracionRealFormateada() }}</span>
+                                                                @endif
                                                             </div>
                                                         @endforeach
                                                     </div>

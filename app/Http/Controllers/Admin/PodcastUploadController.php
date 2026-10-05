@@ -10,6 +10,7 @@ use App\Jobs\ProcessMp3Job;
 use App\Jobs\UploadArchiveOrgJob;
 use App\Jobs\UploadRadiobossJob;
 use App\Models\MasterProgram;
+use App\Models\MasterProgramEmision;
 use App\Models\RadioProgram;
 use App\Models\ThemeSetting;
 use App\Services\PodcastPipelineAuditService;
@@ -237,22 +238,27 @@ final class PodcastUploadController extends Controller
         }
 
         $durationSeconds = 0;
+        $realFileDurationSeconds = null;
         if (! $isR2 && $request->hasFile('archivo_mp3')) {
             try {
-                $className = '\\getID3';
-                if (class_exists($className)) {
+                $className = class_exists('\\getID3') ? '\\getID3' : (class_exists('\\JamesHeinrich\\GetID3\\GetID3') ? '\\JamesHeinrich\\GetID3\\GetID3' : null);
+                if ($className) {
                     /** @var mixed $getID3 */
                     $getID3 = new $className();
                     $fileInfo = $getID3->analyze($request->file('archivo_mp3')->getRealPath());
-                if (isset($fileInfo['playtime_seconds'])) {
-                    $baseSeconds = (int) ceil((float) $fileInfo['playtime_seconds']);
-                    // Se suman 5 minutos (300 segundos) adicionales según solicitud del usuario.
-                    $durationSeconds = $baseSeconds + 300;
-                }
+                    if (isset($fileInfo['playtime_seconds']) && is_numeric($fileInfo['playtime_seconds'])) {
+                        $realFileDurationSeconds = (int) round((float) $fileInfo['playtime_seconds']);
+                        // Se suman 5 minutos (300 segundos) adicionales según solicitud del usuario para radio_programs.
+                        $durationSeconds = $realFileDurationSeconds + 300;
+                    }
                 }
             } catch (Throwable) {
                 // Ignore duration read failures
             }
+        }
+
+        if ($realFileDurationSeconds !== null && $realFileDurationSeconds > 0) {
+            MasterProgramEmision::syncRealDurationForMaster($master, (string) ($data['fecha_emision'] ?? ''), $realFileDurationSeconds);
         }
 
         $imagePath = $this->resolveEpisodeImageValue($request, $master, $data);
