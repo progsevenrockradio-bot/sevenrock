@@ -24,6 +24,7 @@
     $storageLimit = (int) ($limits['storage_mb'] ?? 0);
     $storageUsed = (float) ($usage['storage_used_mb'] ?? 0);
     $logoUrl = \App\Models\ThemeSetting::current()?->logo_url ?? asset('assets/lucille/logo.png');
+    $esActivo = fn (string $ruta) => request()->routeIs($ruta);
 @endphp
 
 <!DOCTYPE html>
@@ -36,24 +37,35 @@
     <link rel="icon" type="image/png" href="{{ $logoUrl }}">
     <link rel="apple-touch-icon" href="{{ $logoUrl }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        .is-active {
+            border-color: #ffffff;
+            color: #ffffff;
+            background: rgba(255, 255, 255, .10);
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body class="min-h-screen bg-[#0b0f12] text-[#d8d8d8] antialiased">
     <header class="border-b border-white/10 bg-[#10161b]">
         <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <a href="{{ route('talents.dashboard') }}" class="font-display text-sm uppercase tracking-[.18em] text-white shrink-0">Talentos</a>
-            <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 sm:flex-wrap text-sm w-full sm:w-auto">
-                <a href="{{ route('talents.dashboard') }}" class="lucille-button shrink-0">Panel</a>
-                <a href="{{ route('talents.subscriptions.plans') }}" class="lucille-button shrink-0">Suscripción</a>
-                <a href="{{ route('talents.profile') }}" class="lucille-button shrink-0">Mi Perfil</a>
-                <a href="{{ route('talents.notifications.edit') }}" class="lucille-button shrink-0">Notificaciones</a>
-                <a href="{{ route('talents.media.index') }}" class="lucille-button shrink-0">Mi Música</a>
-                <a href="{{ route('talents.store.index') }}" class="lucille-button shrink-0">Mi Tienda</a>
-                <a href="{{ route('talents.albums.index') }}" class="lucille-button shrink-0">Mis Álbumes</a>
-                <form method="POST" action="{{ route('talents.logout') }}" class="shrink-0">
-                    @csrf
-                    <button type="submit" class="lucille-button-solid shrink-0">Cerrar sesión</button>
-                </form>
-            </nav>
+            <div class="relative w-full sm:w-auto">
+                <nav class="talent-nav flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 sm:flex-wrap text-sm w-full sm:w-auto">
+                    <a href="{{ route('talents.dashboard') }}" class="lucille-button shrink-0 {{ $esActivo('talents.dashboard') ? 'is-active' : '' }}">Panel</a>
+                    <a href="{{ route('talents.subscriptions.plans') }}" class="lucille-button shrink-0 {{ $esActivo('talents.subscriptions.plans') ? 'is-active' : '' }}">Suscripción</a>
+                    <a href="{{ route('talents.profile') }}" class="lucille-button shrink-0 {{ $esActivo('talents.profile') ? 'is-active' : '' }}">Mi Perfil</a>
+                    <a href="{{ route('talents.notifications.edit') }}" class="lucille-button shrink-0 {{ $esActivo('talents.notifications.edit') ? 'is-active' : '' }}">Notificaciones</a>
+                    <a href="{{ route('talents.media.index') }}" class="lucille-button shrink-0 {{ $esActivo('talents.media.index') ? 'is-active' : '' }}">Mi Música</a>
+                    <a href="{{ route('talents.store.index') }}" class="lucille-button shrink-0 {{ $esActivo('talents.store.index') ? 'is-active' : '' }}">Mi Tienda</a>
+                    <a href="{{ route('talents.albums.index') }}" class="lucille-button shrink-0 {{ $esActivo('talents.albums.index') ? 'is-active' : '' }}">Mis Álbumes</a>
+                    <form method="POST" action="{{ route('talents.logout') }}" class="shrink-0">
+                        @csrf
+                        <button type="submit" class="lucille-button-solid shrink-0">Cerrar sesión</button>
+                    </form>
+                </nav>
+                <div class="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-[#10161b] to-transparent sm:hidden"></div>
+            </div>
         </div>
     </header>
 
@@ -105,5 +117,14 @@
             {{ $slot }}
         </main>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var activo = document.querySelector('.talent-nav .is-active');
+            if (activo) {
+                activo.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'instant' });
+            }
+        });
+    </script>
 </body>
 </html>
