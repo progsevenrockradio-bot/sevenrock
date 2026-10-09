@@ -69,6 +69,8 @@ class Post extends Model
         'timezone',
         'en_memoria',
         'en_memoria_nombre',
+        'image_fetch_error',
+        'source_subject',
     ];
 
     protected $appends = [
@@ -111,20 +113,11 @@ class Post extends Model
         $this->attributes['content'] = json_encode($blocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[]';
     }
 
-    public function getFeaturedImageAttribute(?string $value): string
+    public function getFeaturedImageAttribute(?string $value): ?string
     {
         $path = $value ?: ($this->featured_image_path ?: null);
         
-        if ($path) {
-            return $path;
-        }
-
-        $defaultCover = \App\Models\ThemeSetting::current()?->email_default_cover_path;
-        if ($defaultCover) {
-            return \App\Support\PublicMediaUrl::normalizePublicUrl($defaultCover) ?: asset('assets/lucille/album3.jpg');
-        }
-
-        return asset('assets/lucille/album3.jpg');
+        return $path ?: null;
     }
 
     public function setFeaturedImageAttribute(?string $value): void
@@ -233,15 +226,19 @@ class Post extends Model
         }
     }
 
-    public function getFeaturedImageUrlAttribute(): string
+    public function getFeaturedImageUrlAttribute(): ?string
     {
-        $path = (string) ($this->featured_image ?? $this->featured_image_path ?? '');
+        $path = (string) ($this->attributes['featured_image'] ?? $this->featured_image_path ?? '');
+
+        if ($path === '') {
+            return null;
+        }
 
         if ($resolved = PublicMediaUrl::normalizePublicUrl($path)) {
             return $resolved;
         }
 
-        return $path !== '' ? asset($path) : '';
+        return asset($path);
     }
 
     public function taxonomies(): BelongsToMany

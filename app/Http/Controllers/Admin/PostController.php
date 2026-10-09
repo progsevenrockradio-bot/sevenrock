@@ -145,6 +145,17 @@ class PostController extends Controller
         return redirect()->route('admin.posts.index')->with('status', 'Post deleted.');
     }
 
+    public function retryImage(Post $post, \App\Services\PostImageResolver $resolver): RedirectResponse
+    {
+        $result = $resolver->retryPostImage($post);
+
+        if ($result['success']) {
+            return back()->with('status', $result['message']);
+        }
+
+        return back()->withErrors(['image_retry' => $result['message']]);
+    }
+
     public function uploadMedia(Request $request): JsonResponse
     {
         $validated = $request->validate([

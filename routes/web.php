@@ -209,6 +209,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/{post}/edit', 'edit')->name('edit');
         Route::put('/{post}', 'update')->name('update');
         Route::delete('/{post}', 'destroy')->name('destroy');
+        Route::match(['POST', 'PUT'], '/{post}/retry-image', 'retryImage')->name('retry-image');
     });
 
     Route::controller(\App\Http\Controllers\Admin\ModerationController::class)->prefix('moderation')->name('moderation.')->group(function (): void {

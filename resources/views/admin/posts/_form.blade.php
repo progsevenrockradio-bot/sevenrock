@@ -331,6 +331,21 @@
                 </div>
             @endif
 
+            @if ($post->image_fetch_error)
+                <div class="mb-4 border border-[#c32720]/50 bg-[#c32720]/15 p-3 text-xs text-[#fca5a5]">
+                    <div class="font-bold flex items-center gap-1 mb-1">
+                        ⚠️ Fallo al obtener imagen automática:
+                    </div>
+                    <div class="mb-2 text-[#e5e7eb]">{{ $post->image_fetch_error }}</div>
+                    @if ($post->source_url)
+                        <div class="text-[11px] text-[#9a9a9a] mb-2 truncate">Fuente: <a href="{{ $post->source_url }}" target="_blank" rel="noopener noreferrer" class="underline hover:text-[#dcdcdc]">{{ $post->source_url }}</a></div>
+                        <button type="submit" formaction="{{ route('admin.posts.retry-image', $post) }}" formmethod="POST" class="lucille-button text-xs py-1 px-3">
+                            🔄 Reintentar descarga de imagen
+                        </button>
+                    @endif
+                </div>
+            @endif
+
             <div class="space-y-4">
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['featured_image_path_label'] }}</label>

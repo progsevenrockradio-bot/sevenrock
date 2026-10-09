@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 use Webklex\PHPIMAP\Message;
+use Mockery;
 
 class PostImageResolverTest extends TestCase
 {
@@ -30,15 +31,28 @@ class PostImageResolverTest extends TestCase
         $property->setAccessible(true);
         $property->setValue(null);
 
-        Storage::fake('public');
+        Storage::fake('r2');
+        config(['filesystems.default' => 'r2']);
+        config(['filesystems.disks.r2.url' => 'https://media.sevenrockradio.com']);
+
+        $mockFileUpload = Mockery::mock(\App\Services\FileUploadService::class);
+        $mockFileUpload->shouldReceive('uploadRaw')->andReturnUsing(function ($content, $path, $disk = 'r2') {
+            Storage::disk('r2')->put($path, $content);
+            return ['url' => "https://media.sevenrockradio.com/{$path}"];
+        });
+        $this->app->instance(\App\Services\FileUploadService::class, $mockFileUpload);
     }
 
-    public function test_resolves_from_source_url_og_image()
+    public function test_resolves_from_source_url_og_image_and_rehosts()
     {
+        $validImage = base64_decode('iVBORw0KGgoAAAANSUhEUgAAASwAAAEsAQMAAABDsxw2AAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAACNJREFUaN7twTEBAAAAwiD7p7bGDmAAAAAAAAAAAAAAAAAAAF4MIAABbW9mOAAAAABJRU5ErkJggg==');
+        $validImage .= str_repeat("\0", 8192);
+
         Http::fake([
             'https://example.com/article' => Http::response(
                 '<html><head><meta property="og:image" content="https://example.com/og-image.jpg"></head><body></body></html>'
             ),
+            'https://example.com/og-image.jpg' => Http::response($validImage, 200, ['Content-Type' => 'image/png']),
         ]);
 
         $resolver = app(PostImageResolver::class);
@@ -54,17 +68,22 @@ class PostImageResolverTest extends TestCase
             'artist_name' => null
         ]);
 
-        $this->assertEquals('https://example.com/og-image.jpg', $result['url']);
+        $this->assertNotNull($result['url']);
+        $this->assertStringStartsWith('https://media.sevenrockradio.com/posts/covers/', $result['url']);
         $this->assertEquals('source_url', $result['source']);
         $this->assertEquals('https://example.com/article', $result['article_url']);
     }
 
-    public function test_resolves_from_rss_feed()
+    public function test_resolves_from_rss_feed_and_rehosts()
     {
+        $validImage = base64_decode('iVBORw0KGgoAAAANSUhEUgAAASwAAAEsAQMAAABDsxw2AAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAACNJREFUaN7twTEBAAAAwiD7p7bGDmAAAAAAAAAAAAAAAAAAAF4MIAABbW9mOAAAAABJRU5ErkJggg==');
+        $validImage .= str_repeat("\0", 8192);
+
         Http::fake([
             'https://example.com/feed' => Http::response(
                 '<?xml version="1.0"?><rss><channel><item><title>Test Article Title</title><link>https://example.com/test-article</link><description>&lt;img src="https://example.com/rss-image.jpg"&gt;</description></item></channel></rss>'
             ),
+            'https://example.com/rss-image.jpg' => Http::response($validImage, 200, ['Content-Type' => 'image/png']),
         ]);
 
         $resolver = app(PostImageResolver::class);
@@ -80,10 +99,10 @@ class PostImageResolverTest extends TestCase
             'artist_name' => null
         ]);
 
-        $this->assertEquals('https://example.com/rss-image.jpg', $result['url']);
+        $this->assertNotNull($result['url']);
+        $this->assertStringStartsWith('https://media.sevenrockradio.com/posts/covers/', $result['url']);
         $this->assertEquals('rss', $result['source']);
         $this->assertEquals('example.com', $result['credit']);
-        $this->assertEquals('https://example.com/test-article', $result['article_url']);
     }
 
     public function test_resolves_from_artist_catalog()
@@ -104,14 +123,14 @@ class PostImageResolverTest extends TestCase
             'subject' => 'Test',
             'clean_title' => 'Test',
             'is_dark_vader' => false,
-            'artist_name' => 'Test Band' // Testing normalization
+            'artist_name' => 'Test Band'
         ]);
 
         $this->assertStringContainsString('catalog/artists/test-band.jpg', $result['url']);
         $this->assertEquals('artist_catalog', $result['source']);
     }
 
-    public function test_resolves_to_default_if_nothing_found()
+    public function test_resolves_to_null_if_nothing_found_never_generic_fake()
     {
         $resolver = app(PostImageResolver::class);
         $message = $this->createMock(Message::class);
@@ -119,114 +138,87 @@ class PostImageResolverTest extends TestCase
 
         $result = $resolver->resolveForPost([
             'message' => $message,
-            'body' => 'Some text',
+            'body' => 'Some text without source',
             'subject' => 'Test',
             'clean_title' => 'Test',
             'is_dark_vader' => false,
             'artist_name' => null
         ]);
 
-        $this->assertStringContainsString('default-test.jpg', $result['url']);
-        $this->assertEquals('default', $result['source']);
+        $this->assertNull($result['url']);
     }
-    public function test_post_featured_image_fallback()
+
+    public function test_post_without_image_returns_null_not_generic_theme_album()
     {
         $post = new \App\Models\Post();
         $post->featured_image_path = null;
         $post->featured_image = null;
 
-        $resolved = $post->featured_image;
-
-        $this->assertNotNull($resolved);
-        $this->assertIsString($resolved);
-        $this->assertTrue(str_contains($resolved, 'default-test.jpg') || str_contains($resolved, 'album3.jpg'));
+        $this->assertNull($post->featured_image);
+        $this->assertNull($post->featured_image_url);
     }
 
-    public function test_attachment_accepts_25kb_valid_cover_and_discards_tracking_pixel()
+    public function test_attachment_accepts_valid_cover_and_discards_tracking_pixel()
     {
-        // 1. JPEG 600x600 y 25 KB
         $validJpg = imagecreatetruecolor(600, 600);
         ob_start(); imagejpeg($validJpg); $validJpgContent = str_pad(ob_get_clean(), 25000, '0'); imagedestroy($validJpg);
         
-        // 2. PNG 1x1 de 1 KB (tracking)
         $pixelPng = imagecreatetruecolor(1, 1);
         ob_start(); imagepng($pixelPng); $pixelContent = str_pad(ob_get_clean(), 1024, '0'); imagedestroy($pixelPng);
 
-        $att1 = $this->createMock(\Webklex\PHPIMAP\Attachment::class);
-        $att1->method('getName')->willReturn('cover.jpg');
-        $att1->method('getContent')->willReturn($validJpgContent);
+        $att1 = Mockery::mock(\Webklex\PHPIMAP\Attachment::class);
+        $att1->shouldReceive('getName')->andReturn('cover.jpg');
+        $att1->shouldReceive('getContent')->andReturn($validJpgContent);
 
-        $att2 = $this->createMock(\Webklex\PHPIMAP\Attachment::class);
-        $att2->method('getName')->willReturn('pixel.png');
-        $att2->method('getContent')->willReturn($pixelContent);
+        $att2 = Mockery::mock(\Webklex\PHPIMAP\Attachment::class);
+        $att2->shouldReceive('getName')->andReturn('pixel.png');
+        $att2->shouldReceive('getContent')->andReturn($pixelContent);
 
-        $message = $this->createMock(\Webklex\PHPIMAP\Message::class);
-        $message->method('getAttachments')->willReturn(\Webklex\PHPIMAP\Support\AttachmentCollection::make([$att2, $att1]));
+        $message = Mockery::mock(\Webklex\PHPIMAP\Message::class);
+        $message->shouldReceive('getAttachments')->andReturn(new \Webklex\PHPIMAP\Support\AttachmentCollection([$att2, $att1]));
 
         $result = app(\App\Services\PostImageResolver::class)->resolveForPost([
             'message' => $message,
             'body' => '',
-            'sender' => 'test@test.com',
-            'isDarkVader' => false,
+            'subject' => 'Test',
+            'clean_title' => 'Test',
+            'is_dark_vader' => false,
         ]);
 
-        $this->assertNotNull($result);
-        $this->assertStringContainsString('.jpg', $result);
+        $this->assertNotNull($result['url']);
+        $this->assertStringContainsString('.jpg', $result['url']);
+        $this->assertEquals('attachment', $result['source']);
     }
 
     public function test_attachment_prefers_square_over_heavy()
     {
-        // 3. PNG 400x400 y 8 KB (mas cuadrada)
         $squarePng = imagecreatetruecolor(400, 400);
         ob_start(); imagepng($squarePng); $squareContent = str_pad(ob_get_clean(), 8000, '0'); imagedestroy($squarePng);
 
-        // 4. JPEG 600x400 y 30 KB (mas pesada pero no cuadrada)
         $rectJpg = imagecreatetruecolor(600, 400);
         ob_start(); imagejpeg($rectJpg); $rectContent = str_pad(ob_get_clean(), 30000, '0'); imagedestroy($rectJpg);
 
-        $att1 = $this->createMock(\Webklex\PHPIMAP\Attachment::class);
-        $att1->method('getName')->willReturn('square.png');
-        $att1->method('getContent')->willReturn($squareContent);
+        $att1 = Mockery::mock(\Webklex\PHPIMAP\Attachment::class);
+        $att1->shouldReceive('getName')->andReturn('square.png');
+        $att1->shouldReceive('getContent')->andReturn($squareContent);
 
-        $att2 = $this->createMock(\Webklex\PHPIMAP\Attachment::class);
-        $att2->method('getName')->willReturn('rect.jpg');
-        $att2->method('getContent')->willReturn($rectContent);
+        $att2 = Mockery::mock(\Webklex\PHPIMAP\Attachment::class);
+        $att2->shouldReceive('getName')->andReturn('rect.jpg');
+        $att2->shouldReceive('getContent')->andReturn($rectContent);
 
-        $message = $this->createMock(\Webklex\PHPIMAP\Message::class);
-        $message->method('getAttachments')->willReturn(\Webklex\PHPIMAP\Support\AttachmentCollection::make([$att2, $att1]));
-
-        $result = app(\App\Services\PostImageResolver::class)->resolveForPost([
-            'message' => $message,
-            'body' => '',
-            'sender' => 'test@test.com',
-            'isDarkVader' => false,
-        ]);
-
-        $this->assertNotNull($result);
-        $this->assertStringContainsString('.png', $result);
-    }
-
-    public function test_attachment_accepts_heavy_legacy_cover()
-    {
-        // 4. JPEG 1200x1200 y 300 KB
-        $heavyJpg = imagecreatetruecolor(1200, 1200);
-        ob_start(); imagejpeg($heavyJpg); $heavyContent = str_pad(ob_get_clean(), 300000, '0'); imagedestroy($heavyJpg);
-
-        $att = $this->createMock(\Webklex\PHPIMAP\Attachment::class);
-        $att->method('getName')->willReturn('heavy.jpg');
-        $att->method('getContent')->willReturn($heavyContent);
-
-        $message = $this->createMock(\Webklex\PHPIMAP\Message::class);
-        $message->method('getAttachments')->willReturn(\Webklex\PHPIMAP\Support\AttachmentCollection::make([$att]));
+        $message = Mockery::mock(\Webklex\PHPIMAP\Message::class);
+        $message->shouldReceive('getAttachments')->andReturn(new \Webklex\PHPIMAP\Support\AttachmentCollection([$att2, $att1]));
 
         $result = app(\App\Services\PostImageResolver::class)->resolveForPost([
             'message' => $message,
             'body' => '',
-            'sender' => 'test@test.com',
-            'isDarkVader' => false,
+            'subject' => 'Test',
+            'clean_title' => 'Test',
+            'is_dark_vader' => false,
         ]);
 
-        $this->assertNotNull($result);
-        $this->assertStringContainsString('.jpg', $result);
+        $this->assertNotNull($result['url']);
+        $this->assertStringContainsString('.png', $result['url']);
+        $this->assertEquals('attachment', $result['source']);
     }
 }

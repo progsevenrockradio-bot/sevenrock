@@ -35,6 +35,21 @@
                                     🖤 En memoria{{ $post->en_memoria_nombre ? ' ('.$post->en_memoria_nombre.')' : '' }}
                                 </span>
                             @endif
+                            @if ($post->image_fetch_error)
+                                <div class="mt-1 flex items-center gap-2">
+                                    <span class="inline-flex items-center gap-1 rounded border border-[#c32720]/40 bg-[#c32720]/15 px-2 py-0.5 text-[11px] text-[#fca5a5]" title="{{ $post->image_fetch_error }}">
+                                        ⚠️ Fallo imagen: {{ Str::limit($post->image_fetch_error, 45) }}
+                                    </span>
+                                    @if ($post->source_url)
+                                        <form action="{{ route('admin.posts.retry-image', $post) }}" method="POST" class="inline">
+                                            @csrf
+                                            <button type="submit" class="text-[11px] underline text-[#c32720] hover:text-[#f87171] font-semibold" title="Reintentar descarga de imagen">
+                                                🔄 Reintentar
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
+                            @endif
                         </td>
                         <td class="px-5 py-4">{{ $post->published_at?->format('d M Y') }}</td>
                         <td class="px-5 py-4">{{ implode(', ', $post->categoryNames()) }}</td>

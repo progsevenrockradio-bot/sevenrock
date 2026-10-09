@@ -345,15 +345,6 @@ class ProcessIncomingEmails extends Command
                             $slug = $baseSlug . '-' . $suffix++;
                         }
 
-                        $resolverInfo = app(\App\Services\PostImageResolver::class)->resolveForPost([
-                            'message' => $message,
-                            'body' => $body,
-                            'subject' => $subject,
-                            'clean_title' => $efTitle,
-                            'is_dark_vader' => $isDarkVaderAgent,
-                            'artist_name' => null
-                        ]);
-
                         $cleanItemSave = $this->limpiarContenidoDeCorreo($cleanItem);
                         Post::create([
                             'title'          => $efTitle,
@@ -363,10 +354,10 @@ class ProcessIncomingEmails extends Command
                             'status'         => $status,
                             'is_published'   => $settings->email_auto_publish,
                             'published_at'   => now(),
-                            'featured_image' => $resolverInfo['url'],
-                            'source_url'     => $resolverInfo['article_url'],
-                            'source_name'    => $resolverInfo['credit'],
-                            'image_source'   => $resolverInfo['source'],
+                            'featured_image' => null, // Efemérides van al cintillo, no llevan imagen
+                            'source_url'     => null,
+                            'source_name'    => null,
+                            'image_source'   => null,
                             'categories'     => ['Hoy en el Rock'],
                             'author_email'   => $senderEmail,
                         ]);
@@ -389,109 +380,249 @@ class ProcessIncomingEmails extends Command
                     continue;
                 }
 
-                // Noticias Rock: ya no se publica directamente sin Gemini.
-                // Se pasará a la IA para redactar/extraer datos, pero forzaremos
-                // su clasificación determinista más abajo.
+                // ── PROCESAMIENTO DIRECTO PARA NOTICIAS ROCK (sin IA, sin coste) ─────
+                if ($isNoticiaRock) {
+                    // El correo del agente ya trae la noticia estructurada. Pasar esto por la IA
+                    // hace depender la publicación de tener saldo y encarece cada noticia.
+                    $this->info("[DARK VADER] Procesando Noticia Rock directamente (sin IA)...");
 
-                // Llamar a la IA para redactar y clasificar
-                $this->info("Consultando a la IA para redactar y clasificar...");
+                    $newsLimit = (int) ($settings->email_daily_news_limit ?? 9999);
+                    if ($postsCreatedToday >= $newsLimit) {
+                        $this->warn("Límite diario de noticias alcanzado ({$newsLimit}/{$newsLimit}). El correo quedará pendiente para mañana.");
+                        if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                        continue;
+                    }
+
+                    // 1. Extraer título normalizado (limpiando prefijos tipo Noticia: o Noticias:)
+                    $noticiaTitle = TextNormalizer::normalizeTitle($subject);
+                    $noticiaTitle = preg_replace('/^noticias?:\s*/iu', '', $noticiaTitle);
+                    $noticiaTitle = trim($noticiaTitle);
+
+                    // 2. Extraer FUENTE antes de limpiar el cuerpo
+                    $sourceUrl = app(\App\Services\PostImageResolver::class)->extractSourceUrl($body);
+
+                    // 3. Limpiar contenido del cuerpo
+                    $cleanContent = $this->limpiarContenidoDeCorreo($body);
+
+                    // 4. Validar cuerpo no vacío
+                    $isBodyEmpty = trim(strip_tags($cleanContent)) === '';
+                    $status = ($settings->email_auto_publish && !$isBodyEmpty) ? 'published' : 'draft';
+
+                    if ($isBodyEmpty) {
+                        $this->warn("[DARK VADER] El cuerpo de la noticia quedó vacío tras limpiarlo. Se creará como borrador.");
+                        $this->sendAdminAlert(
+                            'dark_vader_empty_body',
+                            '⚠️ Noticia de Dark Vader con cuerpo vacío',
+                            "El correo '{$subject}' de Dark Vader quedó con el cuerpo vacío tras limpiarlo. Se guardó como borrador (draft) para revisión manual.",
+                            $settings
+                        );
+                    }
+
+                    // 5. Deduplicación
+                    $normalizedSlug = TextNormalizer::normalizeSlug($noticiaTitle);
+                    $originalSubjectNormalized = TextNormalizer::normalizeSlug($subject);
+                    $windowHours = (int) config('services.dedupe.window_hours', 48);
+                    $minShared = (int) config('services.dedupe.entity_min_shared', 2);
+                    $recentPosts = Post::where('created_at', '>=', now()->subHours($windowHours))->get();
+                    $isDuplicate = false;
+                    $similarPostId = null;
+
+                    foreach ($recentPosts as $recent) {
+                        $recentSubjectNorm = TextNormalizer::normalizeSlug($recent->source_subject ?? '');
+                        if ($recentSubjectNorm !== '' && $recentSubjectNorm === $originalSubjectNormalized) {
+                            $isDuplicate = true;
+                            $similarPostId = $recent->id;
+                            break;
+                        }
+
+                        $recentNormSlug = TextNormalizer::normalizeSlug($recent->title);
+                        if ($recentNormSlug === $normalizedSlug) {
+                            $isDuplicate = true;
+                            $similarPostId = $recent->id;
+                            break;
+                        }
+
+                        $shared = \App\Support\EntityMatcher::sharedEntities($recent->title, $noticiaTitle);
+                        if (count($shared) >= $minShared) {
+                            $isDuplicate = true;
+                            $similarPostId = $recent->id;
+                            break;
+                        }
+                    }
+
+                    if ($isDuplicate) {
+                        $this->info("[DARK VADER] Ignorando noticia duplicada (similar a post ID: {$similarPostId})");
+                        Log::info("ProcessIncomingEmails: Noticia Dark Vader duplicada ignorada.", [
+                            'title' => $noticiaTitle,
+                            'subject' => $subject,
+                            'similar_to_post_id' => $similarPostId,
+                        ]);
+                    } else {
+                        // 6. Generar slug único
+                        $baseSlug = Str::slug($noticiaTitle);
+                        $slug = $baseSlug;
+                        $suffix = 1;
+                        while (DB::table('posts')->where('slug', $slug)->exists()) {
+                            $slug = $baseSlug . '-' . $suffix++;
+                        }
+
+                        // 7. Resolver imagen usando la línea FUENTE:
+                        $resolverInfo = app(\App\Services\PostImageResolver::class)->resolveForPost([
+                            'message'       => $message,
+                            'body'          => $body,
+                            'source_url'    => $sourceUrl,
+                            'subject'       => $subject,
+                            'clean_title'   => $noticiaTitle,
+                            'is_dark_vader' => true,
+                            'artist_name'   => null,
+                        ]);
+
+                        $featuredImageUrl = $resolverInfo['url'] ?? null;
+                        $imageFetchError = $resolverInfo['error_reason'] ?? null;
+
+                        $post = Post::create([
+                            'title'              => $noticiaTitle,
+                            'slug'               => $slug,
+                            'content'            => $cleanContent,
+                            'excerpt'            => Str::limit(strip_tags($cleanContent), 160),
+                            'status'             => $status,
+                            'is_published'       => ($status === 'published'),
+                            'published_at'       => now(),
+                            'featured_image'     => $featuredImageUrl,
+                            'source_url'         => $sourceUrl ?: ($resolverInfo['article_url'] ?? null),
+                            'source_name'        => $resolverInfo['credit'] ?? null,
+                            'image_source'       => $resolverInfo['source'] ?? null,
+                            'image_fetch_error'  => $imageFetchError,
+                            'categories'         => ['Noticias Rock'],
+                            'author_email'       => $senderEmail,
+                            'source_subject'     => $subject,
+                        ]);
+
+                        $this->syncTaxonomies($post, ['Noticias Rock'], $this->extractHashtags($noticiaTitle . ' ' . $cleanContent));
+
+                        $this->info("[DARK VADER] Noticia publicada directamente (sin IA) — id {$post->id} — título {$noticiaTitle}");
+                        Log::info("[DARK VADER] Noticia publicada directamente (sin IA) — id {$post->id} — título {$noticiaTitle}", [
+                            'post_id' => $post->id,
+                            'title'   => $noticiaTitle,
+                            'status'  => $status,
+                            'image'   => $featuredImageUrl,
+                        ]);
+                    }
+
+                    DB::table('processed_emails')->insert([
+                        'message_id' => $messageId,
+                        'subject'    => $subject,
+                        'status'     => 'processed',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    $message->setFlag('SEEN');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) {
+                        @unlink($tempMp3Path);
+                    }
+                    continue;
+                }
+
+                // ── FILTRO PREVIO DETERMINISTA ANTES DE LA IA (para correo externo) ─────
+                $relevanceFilter = app(\App\Support\EmailRelevanceFilter::class);
+                $filterResult = $relevanceFilter->shouldProcess($senderEmail, $subject, $body, $settings);
+
+                if (! $filterResult['pass']) {
+                    $this->info("[FILTRO DETERMINISTA] Correo externo omitido por falta de relevancia: {$subject} (motivo: {$filterResult['reason']})");
+                    Log::info("ProcessIncomingEmails: Correo externo omitido por pre-filtro de relevancia.", [
+                        'message_id' => $messageId,
+                        'subject'    => $subject,
+                        'sender'     => $senderEmail,
+                        'reason'     => $filterResult['reason'],
+                    ]);
+
+                    app(\App\Services\AiUsageTracker::class)->incrementFiltered();
+
+                    DB::table('processed_emails')->insert([
+                        'message_id' => $messageId,
+                        'subject'    => $subject,
+                        'status'     => 'skipped_no_relevance',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    $message->setFlag('SEEN');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) {
+                        @unlink($tempMp3Path);
+                    }
+                    continue;
+                }
+
+                // ── TOPE DIARIO DE LLAMADAS A LA IA ─────
+                $usageTracker = app(\App\Services\AiUsageTracker::class);
+                if ($usageTracker->isDailyLimitReached($settings)) {
+                    $maxCalls = (int) ($settings->ai_daily_max_calls ?? 30);
+                    $this->warn("[TOPE IA] Límite diario de llamadas alcanzado ({$maxCalls}). Creando borrador sin IA.");
+                    Log::warning("ProcessIncomingEmails: Límite diario de llamadas a la IA alcanzado ({$maxCalls}).", [
+                        'message_id' => $messageId,
+                        'subject'    => $subject,
+                    ]);
+
+                    $this->sendAdminAlert(
+                        'ai_daily_limit_reached_' . date('Y-m-d'),
+                        '⚠️ Límite diario de IA alcanzado (30 llamadas)',
+                        "Se ha alcanzado el tope diario de llamadas a la IA ({$maxCalls}). Los correos entrantes se procesarán como borradores (draft) deterministas sin gastar saldo.",
+                        $settings
+                    );
+
+                    $this->createDraftFallbackPost($message, $body, $subject, $senderEmail, $messageId, $settings, "Tope diario de IA alcanzado ({$maxCalls})");
+                    $message->setFlag('SEEN');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    continue;
+                }
+
+                // ── LLAMAR A LA IA PARA CLASIFICAR Y REDACTAR CORREO EXTERNO ─────
+                $this->info("Consultando a la IA para redactar y clasificar correo externo...");
                 $parserManager = app(\App\Services\AiParserManager::class);
                 $parsed = $parserManager->parse($subject, $body);
 
                 if (! $parsed || ! isset($parsed['type'])) {
-                    $this->error("La IA no pudo clasificar o procesar este correo.");
-                    if ($parserManager->lastError) {
-                        $this->error("  -> Detalle del error: " . $parserManager->lastError);
-                    }
-                    
-                    $isFallbackEnabled = $settings->ai_fallback_enabled ?? true;
-                    if ($isFallbackEnabled && !$isDarkVaderAgent) {
-                        $this->warn("[FALLBACK] Aplicando fallback determinista para el correo: {$subject}");
-                        $fallbackContent = $this->limpiarContenidoDeCorreo($body);
+                    $lastError = $parserManager->lastError ?? 'Fallo desconocido de IA';
 
-                        $subjectLower = mb_strtolower($subject);
-                        $isRelease = str_contains($subjectLower, 'out now')
-                            || str_contains($subjectLower, 'new single')
-                            || str_contains($subjectLower, 'single')
-                            || str_contains($subjectLower, 'album')
-                            || str_contains($subjectLower, 'álbum')
-                            || str_contains($subjectLower, 'ep')
-                            || str_contains($subjectLower, 'presents')
-                            || str_contains($subjectLower, 'unveil')
-                            || str_contains($subjectLower, 'premiere')
-                            || str_contains($subjectLower, 'videoclip')
-                            || str_contains($subjectLower, 'music video')
-                            || str_contains($subjectLower, 'nuevo tema')
-                            || str_contains($subjectLower, 'nuevo disco')
-                            || str_contains($subjectLower, 'lanzamiento');
-
-                        if ($isRelease) {
-                            $artistName = 'Artista';
-                            $titleName = TextNormalizer::normalizeTitle($subject) ?: $subject;
-                            if (preg_match('/^([^\'\":\-–]+)[\s\'\":\-–]+(.*)$/u', $subject, $m)) {
-                                $artistName = trim($m[1]);
-                                $titleName = trim($m[2], " '\"-–:");
-                            }
-
-                            $parsed = [
-                                'type' => 'release',
-                                'importance' => 3,
-                                'title' => $titleName ?: $subject,
-                                'artist_name' => $artistName ?: 'Artista',
-                                'excerpt' => Str::limit(strip_tags($fallbackContent), 160),
-                                'content' => $fallbackContent,
-                                'fallback_used' => true,
-                            ];
-                        } else {
-                            $parsed = [
-                                'type' => 'post',
-                                'importance' => 2,
-                                'title' => TextNormalizer::normalizeTitle($subject) ?: $subject,
-                                'excerpt' => Str::limit(strip_tags($fallbackContent), 160),
-                                'content' => $fallbackContent,
-                                'categories' => ['General'],
-                                'fallback_used' => true,
-                            ];
-                        }
-                        
-                        $this->sendAdminAlert(
-                            'ai_deterministic_fallback', 
-                            '⚠️ Fallback de IA activado', 
-                            "Todos los proveedores de IA fallaron al procesar el correo '{$subject}'. Se ha creado un borrador usando el fallback determinista. Error: " . $parserManager->lastError, 
-                            $settings
-                        );
-                    } else {
-                        Log::error("ProcessIncomingEmails: Fallo de la IA.", [
+                    // Reintentar si es un error recuperable (429, 500, 503, timeout)
+                    if ($parserManager->isRecoverableError($lastError)) {
+                        $this->warn("[IA 429/TEMPORAL] Error recuperable detectado ({$lastError}). Despachando Job con reintentos a 5 y 15 min.");
+                        Log::warning("ProcessIncomingEmails: Error recuperable detectado. Despachando Job con backoff.", [
                             'message_id' => $messageId,
                             'subject'    => $subject,
-                            'sender'     => $senderEmail,
-                            'error'      => $parserManager->lastError,
+                            'error'      => $lastError,
                         ]);
+
+                        \App\Jobs\ProcessExternalEmailWithAiJob::dispatch([
+                            'message_id' => $messageId,
+                            'sender'     => $senderEmail,
+                            'subject'    => $subject,
+                            'body'       => $body,
+                            'temp_mp3'   => $tempMp3Path,
+                            'temp_name'  => $tempMp3Name,
+                            'account'    => $accountEmail,
+                        ]);
+
                         DB::table('processed_emails')->insert([
                             'message_id' => $messageId,
-                            'subject' => $subject,
-                            'status' => 'failed',
-                            'attempts' => 1,
-                            'last_error' => Str::limit($parserManager->lastError ?? '', 490),
+                            'subject'    => $subject,
+                            'status'     => 'pending_retry',
+                            'last_error' => Str::limit($lastError, 490),
                             'created_at' => now(),
                             'updated_at' => now(),
                         ]);
-                        if ($tempMp3Path && file_exists($tempMp3Path)) {
-                            @unlink($tempMp3Path);
-                        }
+
+                        $message->setFlag('SEEN');
                         continue;
                     }
-                }
 
-                // Clasificación determinista ANTES de usar la respuesta de la IA
-                if ($isDarkVaderAgent) {
-                    if ($isEfemerides) {
-                        $parsed['type'] = 'efemerides';
-                    } else {
-                        // NUNCA "release", siempre "noticia" (post normal)
-                        $parsed['type'] = 'post';
-                        $parsed['categories'] = ['Noticias Rock'];
-                    }
+                    // Errores no recuperables (401, 400, etc.) -> fallback determinista a draft
+                    $this->error("La IA falló con error no recuperable: {$lastError}. Aplicando fallback determinista a draft.");
+                    $this->createDraftFallbackPost($message, $body, $subject, $senderEmail, $messageId, $settings, $lastError);
+                    $message->setFlag('SEEN');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    continue;
                 }
 
                 $aiType = $parsed['type'];
@@ -658,43 +789,42 @@ class ProcessIncomingEmails extends Command
                             'body' => $body,
                             'subject' => $subject,
                             'clean_title' => $title,
-                            'is_dark_vader' => $isDarkVaderAgent,
+                            'is_dark_vader' => false,
                             'artist_name' => $parsed['artist_name'] ?? null
                         ]);
 
-                        if (empty($resolverInfo['url'])) {
-                            $resolverInfo['url'] = $settings->email_default_cover_path;
-                            Log::warning("ProcessIncomingEmails: Fallback de imagen aplicado para Post (PostImageResolver devolvió vacío).", ['message_id' => $messageId]);
-                        }
+                        $featuredImageUrl = $resolverInfo['url'] ?? null;
+                        $imageFetchError = $resolverInfo['error_reason'] ?? null;
 
                         Log::info("ProcessIncomingEmails: Creando post.", [
                             'title'       => $title,
                             'slug'        => $slug,
                             'status'      => $status,
                             'categories'  => $categories,
-                            'cover_url'   => $resolverInfo['url'],
+                            'cover_url'   => $featuredImageUrl,
                             'is_published' => $settings->email_auto_publish,
                         ]);
 
                         $post = Post::create([
-                            'title'        => $title,
-                            'slug'         => $slug,
-                            'content'      => $this->limpiarContenidoDeCorreo($parsed['content'] ?? ''),
-                            'excerpt'      => $parsed['excerpt'] ?? '',
-                            'status'       => $status,
-                            'is_published' => $settings->email_auto_publish,
-                            'published_at' => now(),
-                            'featured_image' => $resolverInfo['url'],
-                            'source_url'     => $resolverInfo['article_url'],
-                            'source_name'    => $resolverInfo['credit'],
-                            'image_source'   => $resolverInfo['source'],
-                            'facebook_url'   => $parsed['facebook_url'] ?? null,
-                            'youtube_url'    => $parsed['youtube_url'] ?? null,
-                            'instagram_url'  => $parsed['instagram_url'] ?? null,
-                            'twitter_url'    => $parsed['twitter_url'] ?? null,
-                            'author_email'   => $senderEmail,
-                            'categories'     => $categories,
-                            'source_subject' => $subject,
+                            'title'             => $title,
+                            'slug'              => $slug,
+                            'content'           => $this->limpiarContenidoDeCorreo($parsed['content'] ?? ''),
+                            'excerpt'           => $parsed['excerpt'] ?? '',
+                            'status'            => $status,
+                            'is_published'      => $settings->email_auto_publish,
+                            'published_at'      => now(),
+                            'featured_image'    => $featuredImageUrl,
+                            'source_url'        => $resolverInfo['article_url'] ?? null,
+                            'source_name'       => $resolverInfo['credit'] ?? null,
+                            'image_source'      => $resolverInfo['source'] ?? null,
+                            'image_fetch_error' => $imageFetchError,
+                            'facebook_url'      => $parsed['facebook_url'] ?? null,
+                            'youtube_url'       => $parsed['youtube_url'] ?? null,
+                            'instagram_url'     => $parsed['instagram_url'] ?? null,
+                            'twitter_url'       => $parsed['twitter_url'] ?? null,
+                            'author_email'      => $senderEmail,
+                            'categories'        => $categories,
+                            'source_subject'    => $subject,
                         ]);
                         $this->syncTaxonomies($post, $categories);
                         if (! $isNoticiaRock) $postsCreatedToday++;
@@ -919,7 +1049,7 @@ class ProcessIncomingEmails extends Command
         $cacheKey = "admin_alert_sent_{$errorKey}";
         if (!Cache::has($cacheKey)) {
             try {
-                $recipient = $settings->notification_email ?: config('mail.from.address');
+                $recipient = $settings->notification_email ?: 'prog.sevenrockradio@gmail.com';
                 if ($recipient) {
                     Mail::raw($message, function($msg) use ($recipient, $subject) {
                         $msg->to($recipient)->subject($subject);
@@ -1029,6 +1159,74 @@ class ProcessIncomingEmails extends Command
     }
 
     /**
+     * Crea un post de respaldo en estado 'draft' de forma determinista (sin usar IA).
+     */
+    protected function createDraftFallbackPost(
+        $message,
+        string $body,
+        string $subject,
+        string $senderEmail,
+        string $messageId,
+        $settings,
+        string $reason
+    ): void {
+        $cleanContent = $this->limpiarContenidoDeCorreo($body);
+        $title = TextNormalizer::normalizeTitle($subject) ?: $subject;
+
+        $baseSlug = Str::slug($title);
+        $slug = $baseSlug;
+        $suffix = 1;
+        while (DB::table('posts')->where('slug', $slug)->exists()) {
+            $slug = $baseSlug . '-' . $suffix++;
+        }
+
+        $resolverInfo = app(\App\Services\PostImageResolver::class)->resolveForPost([
+            'message'       => $message,
+            'body'          => $body,
+            'subject'       => $subject,
+            'clean_title'   => $title,
+            'is_dark_vader' => false,
+            'artist_name'   => null,
+        ]);
+
+        $post = Post::create([
+            'title'             => $title,
+            'slug'              => $slug,
+            'content'           => $cleanContent,
+            'excerpt'           => Str::limit(strip_tags($cleanContent), 160),
+            'status'            => 'draft', // SIEMPRE borrador en fallback
+            'is_published'      => false,
+            'published_at'      => now(),
+            'featured_image'    => $resolverInfo['url'] ?? null,
+            'source_url'        => $resolverInfo['article_url'] ?? null,
+            'source_name'       => $resolverInfo['credit'] ?? null,
+            'image_source'      => $resolverInfo['source'] ?? null,
+            'image_fetch_error' => $resolverInfo['error_reason'] ?? null,
+            'categories'        => ['General'],
+            'author_email'      => $senderEmail,
+            'source_subject'    => $subject,
+        ]);
+
+        $this->syncTaxonomies($post, ['General'], $this->extractHashtags($title . ' ' . $cleanContent));
+
+        DB::table('processed_emails')->insert([
+            'message_id' => $messageId,
+            'subject'    => $subject,
+            'status'     => 'processed_fallback',
+            'last_error' => Str::limit($reason, 490),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->info("[FALLBACK DETERMINISTA] Post creado como borrador (draft) ID {$post->id}: {$title} (motivo: {$reason})");
+        Log::info("ProcessIncomingEmails: Fallback determinista aplicado a borrador.", [
+            'post_id' => $post->id,
+            'title'   => $title,
+            'reason'  => $reason,
+        ]);
+    }
+
+    /**
      * Limpia el contenido que viene de un correo antes de guardarlo en el post.
      * - Decodifica entidades HTML (&quot; &amp; &aacute; etc.).
      * - Elimina las líneas de servicio del resolvedor de imágenes (FUENTE:, Creditos:, etc.).
@@ -1053,7 +1251,7 @@ class ProcessIncomingEmails extends Command
         $s = html_entity_decode($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         // 5. Quitar líneas de servicio del resolvedor de imágenes
-        $s = preg_replace('/^\s*(?:<p[^>]*>)?\s*(FUENTE|Source|Creditos|Créditos)\s*:.*$/miu', '', $s) ?? $s;
+        $s = preg_replace('/(?:<p[^>]*>)?\s*(?:FUENTE|Source|Creditos|Créditos)\s*:.*?(?:<\/p>|$)/iu', '', $s) ?? $s;
 
         // 6. Colapsar etiquetas <p> vacías
         $s = preg_replace('/<p[^>]*>\s*<\/p>/i', '', $s) ?? $s;

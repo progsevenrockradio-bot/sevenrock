@@ -237,6 +237,23 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Toggle 4: Pre-filtro determinista antes de la IA -->
+            <div class="flex items-center justify-between p-4 border border-[#2b2b2b] bg-[rgba(0,0,0,.15)] rounded-lg md:col-span-2">
+                <div class="pr-4">
+                    <label class="block text-xs uppercase tracking-[.18em] text-[#dcdcdc] font-bold">🛡️ Pre-filtro Determinista (Cero Gasto en Spam / Newsletters / Facturas)</label>
+                    <span class="text-[10px] text-[#9a9a9a] block mt-1">Descarta correos externos no musicales antes de llamar a la IA, evitando consumo innecesario de saldo.</span>
+                </div>
+                <div x-data="{ enabled: {{ old('ai_prefilter_enabled', $settings->ai_prefilter_enabled ?? true) ? 'true' : 'false' }} }" class="flex items-center shrink-0">
+                    <input type="hidden" name="ai_prefilter_enabled" :value="enabled ? '1' : '0'">
+                    <button type="button" @click="enabled = !enabled" 
+                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                        :class="enabled ? 'bg-[#1e4d2b]' : 'bg-[#2b2b2b]'">
+                        <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                            :class="enabled ? 'translate-x-5' : 'translate-x-0'"></span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="grid gap-5 md:grid-cols-2">
@@ -292,6 +309,30 @@
                 <input type="number" name="email_daily_releases_limit" value="{{ old('email_daily_releases_limit', $settings->email_daily_releases_limit ?? 3) }}" class="lucille-product-field w-full text-xs" min="1" max="100">
                 <p class="mt-2 text-[10px] text-[#9a9a9a]">Número máximo de lanzamientos musicales creados automáticamente por día.</p>
                 @error('email_daily_releases_limit')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
+            <!-- Tope diario de llamadas a la IA -->
+            <div>
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Tope Diario de Llamadas a la IA</label>
+                <input type="number" name="ai_daily_max_calls" value="{{ old('ai_daily_max_calls', $settings->ai_daily_max_calls ?? 30) }}" class="lucille-product-field w-full text-xs" min="1" max="500">
+                <p class="mt-2 text-[10px] text-[#9a9a9a]">Máximo de llamadas diarias a la IA para correos externos (por defecto 30). Al alcanzarse, los correos pasan a borrador sin coste.</p>
+                @error('ai_daily_max_calls')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
+            <!-- Palabras clave del Pre-filtro Determinista -->
+            <div class="md:col-span-2">
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Palabras Clave de Señales Musicales (Pre-filtro Determinista)</label>
+                <textarea name="ai_prefilter_keywords" rows="2" class="lucille-product-field w-full text-xs" placeholder="single, álbum, album, nuevo disco, nuevo tema, EP, out now, release, estrena, premiere, gira, tour, concierto, festival, videoclip, music video, anuncia, fallece, muere, muerto, adiós, se separa, regresa">{{ old('ai_prefilter_keywords', $settings->ai_prefilter_keywords) }}</textarea>
+                <p class="mt-2 text-[10px] text-[#9a9a9a]">Señales en asunto o cuerpo necesarias para justificar consultar a la IA. Separadas por comas. Si está vacío, se usa la lista por defecto.</p>
+                @error('ai_prefilter_keywords')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
+            </div>
+
+            <!-- Dominios de Sellos y Promoción -->
+            <div class="md:col-span-2">
+                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Dominios de Sellos y Promoción Musical (Pre-filtro)</label>
+                <textarea name="ai_prefilter_promo_domains" rows="2" class="lucille-product-field w-full text-xs" placeholder="metalblade.com, nuclearblast.de, centurymedia.com, napalmrecords.com, earache.com, insideoutmusic.com, season-of-mist.com, prostheticrecords.com, relapse.com, afm-records.de, atomicfire-records.com, frontiers.it">{{ old('ai_prefilter_promo_domains', $settings->ai_prefilter_promo_domains) }}</textarea>
+                <p class="mt-2 text-[10px] text-[#9a9a9a]">Dominios de agencias y discográficas cuyos correos siempre superan el filtro previo determinista.</p>
+                @error('ai_prefilter_promo_domains')<p class="mt-2 text-xs text-[#ff9e9e]">{{ $message }}</p>@enderror
             </div>
 
             <!-- API Keys -->

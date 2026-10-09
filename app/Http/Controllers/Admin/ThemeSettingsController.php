@@ -142,6 +142,10 @@ class ThemeSettingsController extends Controller
             'ai_provider_chain' => ['nullable', 'string', 'max:100', 'in:gemini,openrouter,openrouter,gemini,gemini,openrouter'],
             'ai_gemini_model' => ['nullable', 'string', 'max:80'],
             'ai_openrouter_model' => ['nullable', 'string', 'max:80'],
+            'ai_daily_max_calls' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'ai_prefilter_enabled' => ['nullable', 'boolean'],
+            'ai_prefilter_keywords' => ['nullable', 'string'],
+            'ai_prefilter_promo_domains' => ['nullable', 'string'],
             'archive_access_key' => ['nullable', 'string', 'max:255'],
             'archive_secret_key' => ['nullable', 'string', 'max:255'],
             'email_default_cover' => ['nullable', 'image', 'max:4096'],
@@ -215,6 +219,10 @@ class ThemeSettingsController extends Controller
             'ai_provider_chain',
             'ai_gemini_model',
             'ai_openrouter_model',
+            'ai_daily_max_calls',
+            'ai_prefilter_enabled',
+            'ai_prefilter_keywords',
+            'ai_prefilter_promo_domains',
             'archive_access_key',
             'archive_secret_key',
             'email_default_cover',
@@ -292,6 +300,14 @@ class ThemeSettingsController extends Controller
         $settings->ai_provider_chain = $validated['ai_provider_chain'] ?? 'gemini,openrouter';
         $settings->ai_gemini_model = trim((string) ($validated['ai_gemini_model'] ?? '')) ?: null;
         $settings->ai_openrouter_model = trim((string) ($validated['ai_openrouter_model'] ?? '')) ?: null;
+        $settings->ai_daily_max_calls = isset($validated['ai_daily_max_calls']) ? (int) $validated['ai_daily_max_calls'] : 30;
+        $settings->ai_prefilter_enabled = $request->boolean('ai_prefilter_enabled');
+        if (array_key_exists('ai_prefilter_keywords', $validated)) {
+            $settings->ai_prefilter_keywords = trim((string) ($validated['ai_prefilter_keywords'] ?? '')) ?: null;
+        }
+        if (array_key_exists('ai_prefilter_promo_domains', $validated)) {
+            $settings->ai_prefilter_promo_domains = trim((string) ($validated['ai_prefilter_promo_domains'] ?? '')) ?: null;
+        }
         $settings->archive_access_key = trim((string) ($validated['archive_access_key'] ?? '')) ?: null;
         if ($request->filled('archive_secret_key')) {
             $settings->archive_secret_key = trim((string) $validated['archive_secret_key']);

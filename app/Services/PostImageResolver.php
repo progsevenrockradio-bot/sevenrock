@@ -18,36 +18,33 @@ class PostImageResolver
      * Resuelve la imagen para un post a partir del correo.
      * 
      * Contexto esperado:
-     * - 'message': \Webklex\PHPIMAP\Message
+     * - 'message': \Webklex\PHPIMAP\Message|null
      * - 'body': string HTML o texto
+     * - 'source_url': string|null
      * - 'subject': string
      * - 'clean_title': string titular limpio final
      * - 'is_dark_vader': bool
      * - 'artist_name': string|null
      *
-     * @return array{url: string, source: string, credit: ?string, article_url: ?string}
+     * @return array{url: ?string, source: ?string, credit: ?string, article_url: ?string, error_reason: ?string}
      */
     public function resolveForPost(array $context): array
     {
-        /** @var Message $message */
-        $message = $context['message'];
-        $body = $context['body'];
-        $cleanTitle = $context['clean_title'];
+        /** @var Message|null $message */
+        $message = $context['message'] ?? null;
+        $body = $context['body'] ?? '';
+        $cleanTitle = $context['clean_title'] ?? '';
         $isDarkVader = $context['is_dark_vader'] ?? false;
         $artistName = $context['artist_name'] ?? null;
         
         $settings = ThemeSetting::current();
         
-        $configuredCover = (string) ($settings->email_default_cover_path ?: 'assets/lucille/album3.jpg');
-        $defaultUrl = str_starts_with($configuredCover, 'http')
-            ? $configuredCover
-            : rtrim(config('app.url'), '/') . '/' . ltrim($configuredCover, '/');
-
         $result = [
-            'url' => $defaultUrl,
-            'source' => 'default',
+            'url' => null,
+            'source' => null,
             'credit' => null,
             'article_url' => null,
+            'error_reason' => null,
         ];
 
         // Extraer créditos del cuerpo
@@ -56,27 +53,35 @@ class PostImageResolver
             $result['credit'] = $credit;
         }
 
-        // a) Attachment
-        $attachmentUrl = $this->resolveFromAttachment($message, $isDarkVader);
-        if ($attachmentUrl) {
-            $result['url'] = $attachmentUrl;
-            $result['source'] = 'attachment';
-            return $result;
-        }
-
-        // b) Source URL (FUENTE: <url>)
-        $articleUrlFromSource = $this->extractSourceUrl($body);
+        // 1. Si viene URL de FUENTE (o se detecta en el cuerpo), es la prioridad absoluta para Noticias
+        $articleUrlFromSource = $context['source_url'] ?? $this->extractSourceUrl($body);
         if ($articleUrlFromSource) {
             $result['article_url'] = $articleUrlFromSource;
-            $ogImage = $this->resolveFromOgImage($articleUrlFromSource);
-            if ($ogImage) {
-                $result['url'] = $ogImage;
+            $ogDetails = $this->resolveFromOgImageWithDetails($articleUrlFromSource);
+            if ($ogDetails['url']) {
+                $result['url'] = $ogDetails['url'];
+                $result['source'] = 'source_url';
+                $result['error_reason'] = null;
+                return $result;
+            } else {
+                // Si la URL de fuente no tiene imagen o falló, se documenta el motivo y NO se inventa una falsa
+                $result['error_reason'] = $ogDetails['error_reason'] ?? 'Sin imagen utilizable en la fuente';
                 $result['source'] = 'source_url';
                 return $result;
             }
         }
 
-        // c) RSS
+        // 2. Adjuntos (para comunicados con fotos adjuntas)
+        if ($message) {
+            $attachmentUrl = $this->resolveFromAttachment($message, $isDarkVader);
+            if ($attachmentUrl) {
+                $result['url'] = $attachmentUrl;
+                $result['source'] = 'attachment';
+                return $result;
+            }
+        }
+
+        // 3. RSS
         if ($credit) {
             $rssImageInfo = $this->resolveFromRss($credit, $cleanTitle, $settings, $artistName);
             if ($rssImageInfo && $rssImageInfo['url']) {
@@ -87,7 +92,7 @@ class PostImageResolver
             }
         }
 
-        // d) Imagenes incrustadas en el cuerpo HTML (boletines de discograficas sin adjuntos)
+        // 4. Imagenes incrustadas en el cuerpo HTML
         $bodyImageUrl = $this->resolveFromHtmlBody($body, $isDarkVader);
         if ($bodyImageUrl) {
             $result['url'] = $bodyImageUrl;
@@ -95,7 +100,7 @@ class PostImageResolver
             return $result;
         }
 
-        // e) Artist Catalog
+        // 5. Catálogo de artistas
         if ($artistName) {
             $artistUrl = $this->resolveFromArtistCatalog($artistName);
             if ($artistUrl) {
@@ -105,6 +110,7 @@ class PostImageResolver
             }
         }
 
+        // Si no hay imagen disponible, devolvemos null (NUNCA la genérica del tema)
         return $result;
     }
 
@@ -210,22 +216,49 @@ class PostImageResolver
         return null;
     }
 
+    public ?string $lastDownloadError = null;
+
     private function rehostExternalImage(string $url, string $context = 'news'): ?string
     {
+        $this->lastDownloadError = null;
+
         if (str_starts_with($url, 'https://media.sevenrockradio.com')) {
             return $url;
         }
 
         try {
-            $response = Http::withHeaders(['User-Agent' => 'SevenRockBot/1.0 (+https://sevenrockradio.com/bot)'])
-                ->timeout(40)
-                ->withOptions(['allow_redirects' => true])
-                ->get($url);
+            $headers = [
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 (compatible; SevenRockBot/1.0; +https://sevenrockradio.com/bot)',
+            'Accept' => 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        ];
 
-            if (!$response->successful()) {
-                Log::debug("PostImageResolver: Error al descargar imagen externa ({$context}) [HTTP {$response->status()}]: {$url}");
-                return null;
+        $response = null;
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            try {
+                $response = Http::withHeaders($headers)
+                    ->timeout(25)
+                    ->withOptions(['allow_redirects' => true])
+                    ->get($url);
+
+                if ($response->successful()) {
+                    break;
+                }
+            } catch (\Throwable $e) {
+                if ($attempt === 2) {
+                    $this->lastDownloadError = 'Error de conexión al descargar imagen: ' . Str::limit($e->getMessage(), 50);
+                    Log::debug("PostImageResolver: Excepción descargando imagen ({$context}): " . $e->getMessage() . " URL: {$url}");
+                    return null;
+                }
             }
+            usleep(300000);
+        }
+
+        if (!$response || !$response->successful()) {
+            $status = $response ? $response->status() : 'sin respuesta';
+            $this->lastDownloadError = "Descarga de imagen rechazada (HTTP {$status})";
+            Log::debug("PostImageResolver: Error al descargar imagen externa ({$context}) [HTTP {$status}]: {$url}");
+            return null;
+        }
 
             $content = $response->body();
             if (strlen($content) < 8192) {
@@ -393,37 +426,152 @@ class PostImageResolver
         return null;
     }
 
-    private function extractSourceUrl(string $body): ?string
+    /**
+     * Extrae de forma limpia la URL de la línea FUENTE o Source del cuerpo.
+     */
+    public function extractSourceUrl(string $body): ?string
     {
-        // Buscar FUENTE: https://...
-        if (preg_match('/(?:FUENTE|Source):\s*(https?:\/\/[^\s<]+)/i', strip_tags($body), $matches)) {
-            return trim($matches[1]);
+        if (preg_match('/(?:FUENTE|Source):\s*(https?:\/\/[^\s<"\'\)]+)/i', strip_tags($body), $matches)) {
+            $url = trim($matches[1]);
+            $url = rtrim($url, ".,;:)\"'>");
+            $url = html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            return filter_var($url, FILTER_VALIDATE_URL) ? $url : null;
         }
         return null;
     }
 
-    private function resolveFromOgImage(string $url): ?string
+    /**
+     * Resuelve og:image de una URL con reintentos y reporte detallado del motivo de fallo.
+     *
+     * @param string $url
+     * @return array{url: ?string, error_reason: ?string}
+     */
+    public function resolveFromOgImageWithDetails(string $url): array
     {
-        try {
-            $response = Http::timeout(10)
-                ->withUserAgent('SevenRockBot/1.0 (+https://sevenrockradio.com/bot)')
-                ->get($url);
-                
-            if ($response->successful()) {
-                $html = $response->body();
-                if (preg_match('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']/i', $html, $matches) || 
-                    preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']/i', $html, $matches)) {
-                    
-                    $ogUrl = html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5);
-                    if ($this->isValidImageDomain($ogUrl)) {
-                        return $this->rehostExternalImage($ogUrl, 'og_image');
-                    }
+        $headers = [
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 (compatible; SevenRockBot/1.0; +https://sevenrockradio.com/bot)',
+            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language' => 'es-ES,es;q=0.9,en;q=0.8',
+        ];
+
+        // 1. Intentar descargar el HTML de la fuente (con 1 reintento si falla la conexión)
+        $html = null;
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            try {
+                $response = Http::timeout(12)
+                    ->withHeaders($headers)
+                    ->get($url);
+
+                if ($response->successful()) {
+                    $html = $response->body();
+                    break;
+                }
+
+                if ($attempt === 2) {
+                    return [
+                        'url' => null,
+                        'error_reason' => "URL fuente no responde (HTTP {$response->status()})",
+                    ];
+                }
+            } catch (\Throwable $e) {
+                if ($attempt === 2) {
+                    return [
+                        'url' => null,
+                        'error_reason' => "URL caída: " . Str::limit($e->getMessage(), 60),
+                    ];
                 }
             }
-        } catch (\Throwable $e) {
-            Log::warning("PostImageResolver: Error al extraer og:image de {$url}: " . $e->getMessage());
+            usleep(400000); // 400ms antes del reintento
         }
-        return null;
+
+        if (! $html) {
+            return [
+                'url' => null,
+                'error_reason' => 'No se pudo obtener respuesta de la URL fuente',
+            ];
+        }
+
+        // 2. Extraer og:image o twitter:image del HTML
+        $ogUrl = null;
+        if (preg_match('/<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']/i', $html, $matches) || 
+            preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']/i', $html, $matches) ||
+            preg_match('/<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']/i', $html, $matches) ||
+            preg_match('/<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']/i', $html, $matches)) {
+            $ogUrl = html_entity_decode(trim($matches[1]), ENT_QUOTES | ENT_HTML5);
+        }
+
+        if (! $ogUrl) {
+            return [
+                'url' => null,
+                'error_reason' => 'Sin etiqueta og:image en el artículo original',
+            ];
+        }
+
+        if (! $this->isValidImageDomain($ogUrl)) {
+            return [
+                'url' => null,
+                'error_reason' => 'Dominio de imagen no válido o de tracking',
+            ];
+        }
+
+        // 3. Descargar y rehospedar en Cloudflare R2
+        $rehosted = $this->rehostExternalImage($ogUrl, 'og_image');
+        if ($rehosted) {
+            return [
+                'url' => $rehosted,
+                'error_reason' => null,
+            ];
+        }
+
+        return [
+            'url' => null,
+            'error_reason' => 'Descarga rechazada o formato no soportado al rehospedar en R2',
+        ];
+    }
+
+    private function resolveFromOgImage(string $url): ?string
+    {
+        $details = $this->resolveFromOgImageWithDetails($url);
+        return $details['url'];
+    }
+
+    /**
+     * Reintenta resolver la imagen de un post existente a partir de su source_url.
+     *
+     * @param \App\Models\Post $post
+     * @return array{success: bool, message: string}
+     */
+    public function retryPostImage(\App\Models\Post $post): array
+    {
+        $sourceUrl = $post->source_url;
+        if (! $sourceUrl) {
+            return [
+                'success' => false,
+                'message' => 'El post no tiene una URL de fuente (source_url) registrada.',
+            ];
+        }
+
+        $details = $this->resolveFromOgImageWithDetails($sourceUrl);
+
+        if ($details['url']) {
+            $post->featured_image = $details['url'];
+            $post->image_source = 'source_url';
+            $post->image_fetch_error = null;
+            $post->save();
+
+            return [
+                'success' => true,
+                'message' => 'Imagen descargada, rehospedada en R2 y asignada con éxito al post.',
+            ];
+        }
+
+        $post->image_fetch_error = $details['error_reason'] ?? 'Fallo al reintentar la imagen';
+        $post->save();
+
+        return [
+            'success' => false,
+            'message' => 'No se pudo resolver la imagen: ' . $post->image_fetch_error,
+        ];
     }
 
     private function extractCredit(string $body): ?string

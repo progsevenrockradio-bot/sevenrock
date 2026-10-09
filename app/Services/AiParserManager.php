@@ -92,6 +92,9 @@ class AiParserManager
             $callArgs = $args;
             $callArgs[] = $apiKey;
 
+            // Incrementar contador de llamadas antes de realizar la petición HTTP
+            app(\App\Services\AiUsageTracker::class)->incrementCall($provider);
+
             $result = call_user_func_array([$parser, $method], $callArgs);
 
             if ($result !== null) {
@@ -106,6 +109,45 @@ class AiParserManager
 
         $this->lastError = implode(' | ', $errors);
         return null;
+    }
+
+    /**
+     * Determina si un error retornado por la IA es recuperable con reintentos (429, 500, 503, timeouts).
+     */
+    public function isRecoverableError(?string $error): bool
+    {
+        if (empty($error)) {
+            return false;
+        }
+
+        $errorLower = strtolower($error);
+
+        // 429 Too Many Requests / Quota limit
+        if (str_contains($errorLower, '429') || 
+            str_contains($errorLower, 'too many requests') || 
+            str_contains($errorLower, 'resource_exhausted')) {
+            return true;
+        }
+
+        // Errores transitorios de servidor (500, 502, 503, 504)
+        if (str_contains($errorLower, '500') || 
+            str_contains($errorLower, '502') || 
+            str_contains($errorLower, '503') || 
+            str_contains($errorLower, '504') ||
+            str_contains($errorLower, 'service unavailable') ||
+            str_contains($errorLower, 'bad gateway')) {
+            return true;
+        }
+
+        // Timeouts y caídas de red transitorias
+        if (str_contains($errorLower, 'timeout') || 
+            str_contains($errorLower, 'timed out') || 
+            str_contains($errorLower, 'curl error 28') ||
+            str_contains($errorLower, 'connection reset')) {
+            return true;
+        }
+
+        return false;
     }
 
     protected function getApiKey(string $provider): ?string

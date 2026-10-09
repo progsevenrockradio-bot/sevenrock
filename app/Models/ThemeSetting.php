@@ -42,6 +42,8 @@ class ThemeSetting extends Model
         'moderation_require_contact' => 'bool',
         'moderation_require_contract' => 'bool',
         'moderation_require_event' => 'bool',
+        'ai_daily_max_calls' => 'integer',
+        'ai_prefilter_enabled' => 'bool',
     ];
 
     protected $fillable = [
@@ -135,6 +137,10 @@ class ThemeSetting extends Model
         'airplay_notice_hours',
         'airplay_public_page_enabled',
         'airplay_report_from_email',
+        'ai_daily_max_calls',
+        'ai_prefilter_enabled',
+        'ai_prefilter_keywords',
+        'ai_prefilter_promo_domains',
     ];
 
     public static function defaults(): array
@@ -154,6 +160,10 @@ class ThemeSetting extends Model
             'archive_secret_key' => null,
             'ai_gemini_model' => 'gemini-flash-latest',
             'ai_openrouter_model' => 'openrouter/free',
+            'ai_daily_max_calls' => 30,
+            'ai_prefilter_enabled' => true,
+            'ai_prefilter_keywords' => 'single, álbum, album, nuevo disco, nuevo tema, EP, out now, release, estrena, premiere, gira, tour, concierto, festival, videoclip, music video, anuncia, fallece, muere, muerto, adiós, se separa, regresa',
+            'ai_prefilter_promo_domains' => 'metalblade.com, nuclearblast.com, centurymedia.com, napalmrecords.com, insideoutmusic.com, afm-records.de, earache.com, season-of-mist.com, mascotlabelgroup.com, frontiers.it, relapse.com, rocksolidadvertising.com, metaldevastationpr.com, grandsounds.net, ashermedia.com, hauruck.org, haulix.com, brevo.com, mailchimp.com',
             'brand_mark' => 'Seven Rock Radio',
             'brand_mark_font' => 'Rock Salt',
             'brand_display_mode' => 'mark',
