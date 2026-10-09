@@ -50,8 +50,8 @@ class ProcessIncomingEmails extends Command
         }
         
         if ($this->option('retry-failed')) {
-            DB::table('processed_emails')->where('status', 'failed')->delete();
-            $this->info('Correos en estado "failed" marcados para reintento.');
+            DB::table('processed_emails')->whereIn('status', ['failed', 'pending_retry'])->delete();
+            $this->info('Correos en estado "failed" o "pending_retry" marcados para reintento.');
         }
 
         $settings = ThemeSetting::current();
@@ -168,8 +168,10 @@ class ProcessIncomingEmails extends Command
                 Log::info("ProcessIncomingEmails [{$accountEmail}]: Contadores del día — Posts normales: {$postsCreatedToday}, Lanzamientos: {$releasesCreatedToday}.");
 
                 foreach ($messages as $message) {
-                $messageId = (string) $message->getMessageId();
-                $subject = (string) $message->getSubject();
+                    $messageId = (string) $message->getMessageId();
+                    $subject = (string) $message->getSubject();
+
+                    try {
                 
                 // Sanitizar caracteres UTF-8 malformados que causan errores en base de datos y json_encode
                 $subject = mb_convert_encoding($subject, 'UTF-8', 'UTF-8');
@@ -190,7 +192,6 @@ class ProcessIncomingEmails extends Command
                 $isDarkVaderAgent = strtolower((string) $senderEmail) === 'dark.vader.agent@gmail.com';
 
                 $isWhitelisted = $isDarkVaderAgent; // Dark Vader siempre está en whitelist implícita
-                file_put_contents('scratch/test_output.txt', "Sender: {$senderEmail}, Whitelist Setting: " . ($settings->email_whitelist_senders ?? 'NULL') . "\n", FILE_APPEND);
                 if (! $isWhitelisted && $senderEmail && $settings->email_whitelist_senders) {
                     $whitelist = array_values(array_filter(array_map('trim', explode(',', $settings->email_whitelist_senders))));
                     foreach ($whitelist as $allowed) {
@@ -303,10 +304,7 @@ class ProcessIncomingEmails extends Command
 
                     if (empty($items)) {
                         $this->warn("Efemérides: cuerpo vacío tras parsear. Saltando.");
-                        DB::table('processed_emails')->insert([
-                            'message_id' => $messageId, 'subject' => $subject,
-                            'status' => 'failed', 'created_at' => now(), 'updated_at' => now(),
-                        ]);
+                        $this->recordProcessedEmail($messageId, $subject, 'failed');
                         if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
                         continue;
                     }
@@ -378,10 +376,7 @@ class ProcessIncomingEmails extends Command
                     }
 
                     $this->info("Efemérides procesadas: {$efemCreadas} de " . count($items) . " evento(s).");
-                    DB::table('processed_emails')->insert([
-                        'message_id' => $messageId, 'subject' => $subject,
-                        'status' => 'processed', 'created_at' => now(), 'updated_at' => now(),
-                    ]);
+                    $this->recordProcessedEmail($messageId, $subject, 'processed');
                     $message->setFlag('SEEN');
                     if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
                     continue;
@@ -515,14 +510,8 @@ class ProcessIncomingEmails extends Command
                             'image'   => $featuredImageUrl,
                         ]);
                     }
-
-                    DB::table('processed_emails')->insert([
-                        'message_id' => $messageId,
-                        'subject'    => $subject,
-                        'status'     => 'processed',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+ 
+                    $this->recordProcessedEmail($messageId, $subject, 'processed');
 
                     $message->setFlag('SEEN');
                     if ($tempMp3Path && file_exists($tempMp3Path)) {
@@ -546,13 +535,7 @@ class ProcessIncomingEmails extends Command
 
                     app(\App\Services\AiUsageTracker::class)->incrementFiltered();
 
-                    DB::table('processed_emails')->insert([
-                        'message_id' => $messageId,
-                        'subject'    => $subject,
-                        'status'     => 'skipped_no_relevance',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                    $this->recordProcessedEmail($messageId, $subject, 'skipped_no_relevance');
 
                     $message->setFlag('SEEN');
                     if ($tempMp3Path && file_exists($tempMp3Path)) {
@@ -611,14 +594,7 @@ class ProcessIncomingEmails extends Command
                             'account'    => $accountEmail,
                         ]);
 
-                        DB::table('processed_emails')->insert([
-                            'message_id' => $messageId,
-                            'subject'    => $subject,
-                            'status'     => 'pending_retry',
-                            'last_error' => Str::limit($lastError, 490),
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
+                        $this->recordProcessedEmail($messageId, $subject, 'pending_retry', $lastError);
 
                         $message->setFlag('SEEN');
                         continue;
@@ -651,13 +627,7 @@ class ProcessIncomingEmails extends Command
                 // 1. Filtrar si es descarte/spam
                 if ($type === 'discard') {
                     $this->info("Correo descartado por la IA (spam/publicidad/promo): {$subject}");
-                    DB::table('processed_emails')->insert([
-                        'message_id' => $messageId,
-                        'subject' => $subject,
-                        'status' => 'discarded',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                    $this->recordProcessedEmail($messageId, $subject, 'discarded');
                     if ($tempMp3Path && file_exists($tempMp3Path)) {
                         @unlink($tempMp3Path);
                     }
@@ -676,13 +646,7 @@ class ProcessIncomingEmails extends Command
                         'importance'    => $importance,
                         'min_importance' => $minImportance,
                     ]);
-                    DB::table('processed_emails')->insert([
-                        'message_id' => $messageId,
-                        'subject' => $subject,
-                        'status' => 'skipped',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                    $this->recordProcessedEmail($messageId, $subject, 'skipped');
                     if ($tempMp3Path && file_exists($tempMp3Path)) {
                         @unlink($tempMp3Path);
                     }
@@ -1002,17 +966,21 @@ class ProcessIncomingEmails extends Command
                 }
 
                 // Registrar correo como procesado
-                DB::table('processed_emails')->insert([
-                    'message_id' => $messageId,
-                    'subject' => $subject,
-                    'status' => 'processed',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                $this->recordProcessedEmail($messageId, $subject, 'processed');
 
                 // Marcar como leído en la bandeja
                 $message->setFlag('SEEN');
+            } catch (\Throwable $msgEx) {
+                $this->error("Error al procesar correo '{$subject}': " . $msgEx->getMessage());
+                Log::error("ProcessIncomingEmails: Error al procesar correo {$messageId}: " . $msgEx->getMessage(), [
+                    'exception' => $msgEx,
+                    'subject'   => $subject,
+                ]);
+                if (isset($tempMp3Path) && $tempMp3Path && file_exists($tempMp3Path)) {
+                    @unlink($tempMp3Path);
+                }
             }
+        }
 
             } catch (\Throwable $e) {
                 $accountError = $e->getMessage();
@@ -1216,14 +1184,7 @@ class ProcessIncomingEmails extends Command
 
         $this->syncTaxonomies($post, ['General'], $this->extractHashtags($title . ' ' . $cleanContent));
 
-        DB::table('processed_emails')->insert([
-            'message_id' => $messageId,
-            'subject'    => $subject,
-            'status'     => 'processed_fallback',
-            'last_error' => Str::limit($reason, 490),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $this->recordProcessedEmail($messageId, $subject, 'processed_fallback', $reason);
 
         $this->info("[FALLBACK DETERMINISTA] Post creado como borrador (draft) ID {$post->id}: {$title} (motivo: {$reason})");
         Log::info("ProcessIncomingEmails: Fallback determinista aplicado a borrador.", [
@@ -1282,5 +1243,33 @@ class ProcessIncomingEmails extends Command
         }
 
         return $s;
+    }
+
+    /**
+     * Registra o actualiza el estado de un correo en processed_emails sin violar la restricción unique de message_id.
+     */
+    private function recordProcessedEmail(string $messageId, string $subject, string $status, ?string $lastError = null): void
+    {
+        try {
+            $data = [
+                'subject'    => $subject,
+                'status'     => $status,
+                'updated_at' => now(),
+            ];
+            if ($lastError !== null) {
+                $data['last_error'] = Str::limit($lastError, 490);
+            }
+
+            $exists = DB::table('processed_emails')->where('message_id', $messageId)->exists();
+            if ($exists) {
+                DB::table('processed_emails')->where('message_id', $messageId)->update($data);
+            } else {
+                $data['message_id'] = $messageId;
+                $data['created_at'] = now();
+                DB::table('processed_emails')->insert($data);
+            }
+        } catch (\Throwable $e) {
+            Log::warning("No se pudo registrar processed_emails para {$messageId}: " . $e->getMessage());
+        }
     }
 }
