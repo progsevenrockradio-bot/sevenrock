@@ -27,7 +27,7 @@ class ProcessIncomingEmails extends Command
      *
      * @var string
      */
-    protected $signature = 'emails:process {--reset : Vaciar el registro de correos procesados antes de iniciar} {--retry-failed : Reintentar los correos que fallaron en el procesamiento}';
+    protected $signature = 'emails:process {--reset : Vaciar el registro de correos procesados antes de iniciar} {--retry-failed : Reintentar los correos que fallaron en el procesamiento} {--days= : Revisar correos de los últimos X días (incluye leídos)}';
 
     /**
      * The console command description.
@@ -143,10 +143,17 @@ class ProcessIncomingEmails extends Command
                 Cache::forget('admin_alert_sent_imap_connection_failed');
 
                 $folder = $client->getFolder('INBOX');
-                $messages = $folder->query()->unseen()->get();
+                $daysOption = $this->option('days');
+                if ($daysOption) {
+                    $days = max(1, (int) $daysOption);
+                    $this->info("Buscando correos de los últimos {$days} días (incluye leídos)...");
+                    $messages = $folder->query()->since(now()->subDays($days))->get();
+                } else {
+                    $messages = $folder->query()->unseen()->get();
+                }
                 $messagesRead = count($messages);
 
-                $this->info("Cuenta {$accountEmail}: encontrados {$messagesRead} correos no leídos.");
+                $this->info("Cuenta {$accountEmail}: encontrados {$messagesRead} correos.");
 
                 // Contadores diarios para límites (máx 3 de cada tipo por día)
                 // Solo cuenta posts que NO son de Dark Vader, para no interferir con sus publicaciones
@@ -168,8 +175,8 @@ class ProcessIncomingEmails extends Command
                 $subject = mb_convert_encoding($subject, 'UTF-8', 'UTF-8');
                 $subject = iconv('UTF-8', 'UTF-8//IGNORE', $subject) ?: $subject;
 
-                // Evitar procesar correos duplicados
-                if (DB::table('processed_emails')->where('message_id', $messageId)->exists()) {
+                // Evitar procesar correos duplicados (a menos que hayan fallado previamente)
+                if (DB::table('processed_emails')->where('message_id', $messageId)->where('status', '!=', 'failed')->exists()) {
                     $this->info("Ignorando correo ya procesado: {$subject}");
                     $message->setFlag('SEEN');
                     continue;

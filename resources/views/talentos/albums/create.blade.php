@@ -40,7 +40,7 @@
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Canciones (JSON)</label>
                     <p class="mb-2 text-xs text-[#7b7b7b]">Cada canción puede incluir "preview_url" para habilitar preview de 30s.</p>
                     <p class="mb-2 text-xs text-[#5a5a5a]">Ej: [{"title":"Canción","duration":"3:45","preview_url":"https://..."}]</p>
-                    <textarea name="tracks_json" rows="8" class="lucille-product-field w-full font-mono text-xs">{{ old('tracks_json', json_encode($album->tracks ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) }}</textarea>
+                    <textarea name="tracks_json" rows="8" class="lucille-product-field w-full font-mono text-xs">{{ old('tracks_json', '') }}</textarea>
                     @error('tracks_json') <p class="mt-1 text-xs text-red-400">{{ $message }}</p> @enderror
 
                     @php $talentMp3s = $talent ? $talent->media()->where('type', 'mp3')->latest()->get() : collect(); @endphp

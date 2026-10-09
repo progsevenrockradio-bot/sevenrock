@@ -108,4 +108,9 @@ return [
         'archive_bucket' => env('EMAIL_ARCHIVE_BUCKET'),
     ],
 
+    'dedupe' => [
+        'window_hours' => (int) env('DEDUPE_WINDOW_HOURS', 48),
+        'entity_min_shared' => (int) env('DEDUPE_ENTITY_MIN_SHARED', 2),
+    ],
+
 ];

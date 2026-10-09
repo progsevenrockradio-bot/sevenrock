@@ -499,6 +499,7 @@ class SiteController extends Controller
 
     public function videoSingle(string $slug): View
     {
+        /** @var Video|null $video */
         $video = $this->safeValue(fn () => Video::query()->where('slug', $slug)->first(), null);
 
         if ($video) {
@@ -562,7 +563,7 @@ class SiteController extends Controller
 
                     $grouped = [];
                     foreach ($masterPrograms as $program) {
-                        /** @var \App\Models\MasterProgram $program */
+                        /** @var MasterProgram $program */
                         $emisiones = $program->emisiones;
 
                         if ($emisiones->isNotEmpty()) {
@@ -1083,6 +1084,7 @@ class SiteController extends Controller
 
     public function singlePost(string $year, string $month, string $day, string $slug): View
     {
+        /** @var Post|null $post */
         $post = $this->safeValue(function () use ($slug, $year, $month, $day) {
             return Post::query()
                 ->published()
@@ -1092,6 +1094,7 @@ class SiteController extends Controller
         }, null);
 
         if (! $post) {
+            /** @var Post|null $post */
             $post = $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->first(), null);
         }
 
@@ -1190,7 +1193,7 @@ class SiteController extends Controller
                     return [];
                 }
 
-                $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+                $driver = DB::connection()->getDriverName();
                 $isSqlite = $driver === 'sqlite';
                 $yrSql = $isSqlite ? "strftime('%Y', published_at)" : 'YEAR(published_at)';
                 $moSql = $isSqlite ? "strftime('%m', published_at)" : 'MONTH(published_at)';
@@ -1841,9 +1844,9 @@ class SiteController extends Controller
 
     /**
      * @template T
-     * @param callable():T $callback
-     * @param T $fallback
-     * @return T
+     * @param (callable(): T)|callable $callback
+     * @param mixed $fallback
+     * @return T|mixed
      */
     private function safeValue(callable $callback, mixed $fallback): mixed
     {
@@ -2251,6 +2254,7 @@ class SiteController extends Controller
 
     private function productBySlug(string $slug): array
     {
+        /** @var Product|null $product */
         $product = $this->safeValue(fn () => Product::query()->published()->where('slug', $slug)->first(), null);
 
         if ($product) {
@@ -2268,6 +2272,7 @@ class SiteController extends Controller
 
     private function relatedProducts(string $currentSlug): array
     {
+        /** @var Product|null $currentProduct */
         $currentProduct = $this->safeValue(fn () => Product::query()->published()->where('slug', $currentSlug)->first(), null);
 
         if ($currentProduct) {

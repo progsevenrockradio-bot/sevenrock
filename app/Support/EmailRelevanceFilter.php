@@ -93,6 +93,17 @@ class EmailRelevanceFilter
         'password reset',
         'restablecer contraseña',
         'confirm your email',
+        'informe de rendimiento',
+        'reporte de rendimiento',
+        'resumen del mes',
+        'resumen mensual',
+        'business profile',
+        'metricool',
+        'newsletter',
+        'boletín mensual',
+        'analytics report',
+        'monthly digest',
+        'monthly report',
     ];
 
     /**

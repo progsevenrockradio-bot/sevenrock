@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Talent;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\Talent;
 use App\Services\BackblazeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class ProductController extends Controller
 {
     private function currentTalent(): Talent
     {
+        /** @var Talent|null $talent */
         $talent = Auth::guard('talent')->user();
         abort_unless($talent instanceof Talent, 403);
 

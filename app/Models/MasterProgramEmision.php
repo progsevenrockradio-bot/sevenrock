@@ -133,6 +133,7 @@ class MasterProgramEmision extends Model
         }
 
         $query = $master->emisiones();
+        /** @var self|null $emision */
         $emision = null;
         if ($diaKey) {
             $emision = (clone $query)->where('dia_semana', $diaKey)->first();

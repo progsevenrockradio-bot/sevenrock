@@ -19,6 +19,7 @@ use App\Services\TalentReferralService;
 use App\Http\Controllers\Admin\TalentAdminController;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -320,7 +321,7 @@ class TalentSystemFeatureTest extends TestCase
         $activeSub = $referrer->activeSubscription();
         $this->assertNotNull($activeSub);
         $this->assertEquals('basic', $activeSub->plan);
-        $this->assertTrue($activeSub->end_date->isSameDay($initialEndDate->copy()->addDays(30)));
+        $this->assertTrue(Carbon::parse($activeSub->end_date)->isSameDay($initialEndDate->copy()->addDays(30)));
 
         // Hito tier1 aplicado exactamente 1 vez
         $this->assertEquals(1, TalentReferral::where('referrer_talent_id', $referrer->id)->where('reward_applied', 'tier1')->count());
@@ -337,7 +338,7 @@ class TalentSystemFeatureTest extends TestCase
         $service->activateReferral($refTalent13);
 
         $this->assertEquals(1, TalentReferral::where('referrer_talent_id', $referrer->id)->where('reward_applied', 'tier1')->count());
-        $this->assertTrue($activeSub->fresh()->end_date->isSameDay($initialEndDate->copy()->addDays(30)));
+        $this->assertTrue(Carbon::parse($activeSub->fresh()->end_date)->isSameDay($initialEndDate->copy()->addDays(30)));
     }
 
     /**
@@ -387,7 +388,7 @@ class TalentSystemFeatureTest extends TestCase
         $this->assertTrue(TalentReferral::where('referrer_talent_id', $referrer->id)->where('reward_applied', 'tier2')->exists());
         $activeSub = $referrer->activeSubscription();
         // Recibió tier1 (+30d) al 12 y tier2 (+60d) al 18 = +90d total
-        $this->assertTrue($activeSub->end_date->isSameDay($initialEndDate->copy()->addDays(30 + 60)));
+        $this->assertTrue(Carbon::parse($activeSub->end_date)->isSameDay($initialEndDate->copy()->addDays(30 + 60)));
     }
 
     /**
@@ -437,7 +438,7 @@ class TalentSystemFeatureTest extends TestCase
 
         // La suscripción debe tener +90 días sumados
         $activeSub = $referrer->activeSubscription();
-        $this->assertTrue($activeSub->end_date->isSameDay($initialEndDate->copy()->addDays(90)));
+        $this->assertTrue(Carbon::parse($activeSub->end_date)->isSameDay($initialEndDate->copy()->addDays(90)));
     }
 
     /**

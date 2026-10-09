@@ -347,6 +347,7 @@ final class MasterProgramController extends Controller
             $rowId = (int) ($row['id'] ?? 0);
 
             if ($rowId > 0) {
+                /** @var \App\Models\MasterProgramEmision|null $emision */
                 $emision = $masterProgram->emisiones()->find($rowId);
                 if ($emision) {
                     $emision->update($data);

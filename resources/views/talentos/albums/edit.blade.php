@@ -1,3 +1,4 @@
+@php /** @var \App\Models\TalentAlbum $album */ @endphp
 <x-layouts.talent :title="'Talentos - Editar Álbum'" :talent="$talent">
     <section class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

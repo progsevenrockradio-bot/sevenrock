@@ -37,8 +37,9 @@ class SubscriptionController extends Controller
             'gateway' => ['required', 'in:stripe,paypal,mercadopago'],
         ]);
 
+        /** @var Talent|null $talent */
         $talent = Auth::guard('talent')->user();
-        if (! $talent) {
+        if (! $talent instanceof Talent) {
             return redirect()->route('talents.login');
         }
 
@@ -88,6 +89,7 @@ class SubscriptionController extends Controller
 
     private function activateFreePlan(Talent $talent): void
     {
+        /** @var \App\Models\TalentSubscription|null $subscription */
         $subscription = $talent->subscriptions()->latest()->first();
         $freeDuration = Talent::FREE_DURATION_DAYS;
         if (! $subscription) {
@@ -124,6 +126,7 @@ class SubscriptionController extends Controller
 
     private function syncPendingSubscription(Talent $talent, string $plan, string $gateway, string $paymentId): void
     {
+        /** @var \App\Models\TalentSubscription|null $subscription */
         $subscription = $talent->subscriptions()->latest()->first();
 
         if (! $subscription) {

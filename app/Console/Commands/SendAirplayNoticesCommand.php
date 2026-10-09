@@ -43,7 +43,7 @@ class SendAirplayNoticesCommand extends Command
 
         if ($schedules->isEmpty()) {
             $this->info('No hay avisos pendientes de envio.');
-            return Command::SUCCESS;
+            return self::SUCCESS;
         }
 
         $this->info(sprintf('Procesando %d registros de programacion...', $schedules->count()));
@@ -129,6 +129,6 @@ class SendAirplayNoticesCommand extends Command
 
         $this->info(sprintf('Proceso finalizado. Enviados: %d, Errores: %d', $enviadosCount, $erroresCount));
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 }
