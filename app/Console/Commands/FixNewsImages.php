@@ -74,7 +74,19 @@ class FixNewsImages extends Command
 
             if (!$isDryRun) {
                 if (!$post->source_url) {
-                    $this->error("  -> No se puede arreglar: source_url está vacío.");
+                    if (str_starts_with($reason, 'Hotlink detectado') && !empty($post->featured_image)) {
+                        $this->info("  -> source_url vacío, pero intentando rehospedar el hotlink: {$post->featured_image}");
+                        $rehosted = $resolver->rehostExternalImage($post->featured_image, 'manual_fix');
+                        if ($rehosted) {
+                            $post->featured_image = $rehosted;
+                            $post->save();
+                            $this->info("  -> ÉXITO: Imagen rehospedada directamente. (Nueva img: {$rehosted})");
+                        } else {
+                            $this->error("  -> ERROR: No se pudo rehospedar el hotlink. " . ($resolver->lastDownloadError ?? ''));
+                        }
+                    } else {
+                        $this->error("  -> No se puede arreglar: source_url está vacío y no hay imagen rescatable.");
+                    }
                     continue;
                 }
 

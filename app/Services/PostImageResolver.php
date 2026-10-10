@@ -221,7 +221,7 @@ class PostImageResolver
 
     public ?string $lastDownloadError = null;
 
-    private function rehostExternalImage(string $url, string $context = 'news'): ?string
+    public function rehostExternalImage(string $url, string $context = 'news'): ?string
     {
         $this->lastDownloadError = null;
 
@@ -240,7 +240,7 @@ class PostImageResolver
             try {
                 $response = Http::withHeaders($headers)
                     ->timeout(25)
-                    ->withOptions(['allow_redirects' => true])
+                    ->withOptions(['allow_redirects' => true, 'verify' => false])
                     ->get($url);
 
                 if ($response->successful()) {
