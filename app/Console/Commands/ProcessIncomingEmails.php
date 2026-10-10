@@ -1135,14 +1135,17 @@ class ProcessIncomingEmails extends Command
 
     /**
      * Crea un post de respaldo en estado 'draft' de forma determinista (sin usar IA).
+     *
+     * @param mixed $message
+     * @param mixed $settings
      */
     protected function createDraftFallbackPost(
-        $message,
+        mixed $message,
         string $body,
         string $subject,
         string $senderEmail,
         string $messageId,
-        $settings,
+        mixed $settings,
         string $reason
     ): void {
         $cleanContent = $this->limpiarContenidoDeCorreo($body);

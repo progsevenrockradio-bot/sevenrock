@@ -140,6 +140,7 @@ return [
             'prefix'                  => env('BACKBLAZE_PREFIX'),
             'endpoint'                => env('BACKBLAZE_ENDPOINT'),
             'use_path_style_endpoint' => true,
+            'custom_url_resolves'     => env('BACKBLAZE_CUSTOM_URL_RESOLVES', null),
             'throw'                   => false,
         ],
         // ────────────────────────────────────────────────────────────────────

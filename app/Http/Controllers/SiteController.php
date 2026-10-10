@@ -330,7 +330,8 @@ class SiteController extends Controller
         ]];
 
         foreach ($validUpcoming as $up) {
-            $upImg   = str_starts_with($up['image'], 'http') ? $up['image'] : asset($up['image']);
+            $upPath  = (string) ($up['image'] ?? '');
+            $upImg   = str_starts_with($upPath, 'http') ? $upPath : asset($upPath);
             $cards[] = [
                 'image'    => $upImg,
                 'title'    => $up['title'] ?? '',

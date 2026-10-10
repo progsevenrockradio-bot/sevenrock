@@ -3,7 +3,7 @@ $c = ftp_connect('c30.radioboss.fm');
 ftp_login($c, 'Usuario', 'R@DIOBOZZ_2026*-User');
 ftp_pasv($c, true);
 
-function scan_ftp($ftp, $dir, $level = 0) {
+function scan_ftp(mixed $ftp, string $dir, int $level = 0): void {
     if ($level > 3) return; // limit depth
     $contents = ftp_nlist($ftp, $dir);
     if (is_array($contents)) {
