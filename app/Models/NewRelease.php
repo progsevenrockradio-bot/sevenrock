@@ -125,12 +125,9 @@ class NewRelease extends Model
             return PublicMediaUrl::normalizePublicUrl($this->cover_image);
         }
 
-        $settings = ThemeSetting::current();
-        if ($settings && $settings->email_default_cover_path) {
-            return PublicMediaUrl::normalizePublicUrl($settings->email_default_cover_path);
-        }
-
-        return asset('assets/lucille/album3.jpg');
+        // Diseño neutro y sobrio para lanzamientos sin portada (evita las barras del tema)
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800"><rect width="100%" height="100%" fill="#101012"/><text x="50%" y="50%" font-family="system-ui, sans-serif" font-size="24" fill="#444" text-anchor="middle" dominant-baseline="middle">AUDIO</text></svg>';
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 
     public function getAudioUrlAttribute(): string

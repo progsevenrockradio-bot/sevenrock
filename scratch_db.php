@@ -1,0 +1,1 @@
+<?php require "C:/laragon/www/SevenRockRadio/vendor/autoload.php"; $app = require_once "C:/laragon/www/SevenRockRadio/bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); print_r(Schema::getColumnListing("track_submissions"));

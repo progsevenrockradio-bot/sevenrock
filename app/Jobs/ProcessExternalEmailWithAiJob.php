@@ -101,6 +101,8 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
         $title = $parsed['title'] ?? TextNormalizer::normalizeTitle($subject);
         $content = $parsed['content'] ?? '';
         $excerpt = $parsed['excerpt'] ?? Str::limit(strip_tags($content), 160);
+        $excerpt = \App\Support\ExcerptCleaner::clean($excerpt);
+        
         $status = $settings->email_auto_publish ? 'published' : 'draft';
 
         if ($type === 'discard') {
@@ -258,7 +260,7 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 'title'             => $title,
                 'slug'              => $slug,
                 'content'           => $cleanContent,
-                'excerpt'           => Str::limit(strip_tags($cleanContent), 160),
+                'excerpt'           => \App\Support\ExcerptCleaner::clean($cleanContent),
                 'status'            => 'draft', // SIEMPRE borrador en fallback
                 'is_published'      => false,
                 'published_at'      => now(),

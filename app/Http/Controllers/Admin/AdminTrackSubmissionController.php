@@ -203,6 +203,8 @@ class AdminTrackSubmissionController extends Controller
                 'author_email' => $submission->contact_email,
             ]);
 
+            \App\Jobs\ExtractReleaseCoverJob::dispatch($newRelease, $submission->file_path);
+
             $submission->update(['published_to_hub' => true]);
 
             try {
@@ -304,6 +306,8 @@ class AdminTrackSubmissionController extends Controller
                 'show_in_feed' => $showInFeed,
                 'author_email' => $submission->contact_email,
             ]);
+
+            \App\Jobs\ExtractReleaseCoverJob::dispatch($newRelease, $submission->file_path);
 
             $submission->update(['published_to_hub' => true]);
             $publishedCount++;
