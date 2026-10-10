@@ -146,9 +146,9 @@ class PostImageResolver
             }
 
             try {
-                $response = Http::withHeaders(['User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'])
+                $response = Http::withHeaders(\App\Support\HttpBrowser::defaultHeaders())
                     ->timeout(30)
-                    ->withOptions(['allow_redirects' => ['max' => 5]])
+                    ->withOptions(array_merge(\App\Support\HttpBrowser::defaultOptions(), ['allow_redirects' => ['max' => 5]]))
                     ->get($url);
             } catch (\Throwable $e) {
                 Log::debug("PostImageResolver HTML: fallo al descargar {$url}: " . $e->getMessage());
@@ -230,17 +230,14 @@ class PostImageResolver
         }
 
         try {
-            $headers = [
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept' => 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-        ];
+            $headers = \App\Support\HttpBrowser::defaultHeaders();
 
         $response = null;
         for ($attempt = 1; $attempt <= 2; $attempt++) {
             try {
                 $response = Http::withHeaders($headers)
                     ->timeout(25)
-                    ->withOptions(['allow_redirects' => true, 'verify' => false])
+                    ->withOptions(\App\Support\HttpBrowser::defaultOptions())
                     ->get($url);
 
                 if ($response->successful()) {
@@ -451,17 +448,14 @@ class PostImageResolver
      */
     public function resolveFromOgImageWithDetails(string $url): array
     {
-        $headers = [
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language' => 'es-ES,es;q=0.9,en;q=0.8',
-        ];
+        $headers = \App\Support\HttpBrowser::defaultHeaders();
 
         // 1. Intentar descargar el HTML de la fuente (con 1 reintento si falla la conexión)
         $html = null;
         for ($attempt = 1; $attempt <= 2; $attempt++) {
             try {
                 $response = Http::timeout(12)
+                    ->withOptions(\App\Support\HttpBrowser::defaultOptions())
                     ->withHeaders($headers)
                     ->get($url);
 
@@ -623,7 +617,8 @@ class PostImageResolver
         $xmlContent = Cache::remember($cacheKey, 15 * 60, function () use ($feedUrl) {
             try {
                 $response = Http::timeout(15)
-                    ->withUserAgent('SevenRockBot/1.0 (+https://sevenrockradio.com/bot)')
+                    ->withOptions(\App\Support\HttpBrowser::defaultOptions())
+                    ->withHeaders(\App\Support\HttpBrowser::defaultHeaders())
                     ->get($feedUrl);
 
                 if ($response->successful()) {

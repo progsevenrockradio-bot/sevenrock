@@ -10,7 +10,7 @@
     $shareTitle = trim((string) ($post['title'] ?? ''));
     $shareTitleEncoded = urlencode($shareTitle);
     $shareUrlEncoded = urlencode($shareUrl);
-    $shareImage = trim((string) ($post['image'] ?? ''));
+    $shareImage = trim((string) ($post['featured_image_url'] ?? $post['image'] ?? ''));
     $shareImage = $shareImage !== '' ? (str_starts_with($shareImage, 'http') ? $shareImage : asset($shareImage)) : '';
     $twitterShareUrl = 'https://twitter.com/intent/tweet?text=' . $shareTitleEncoded . '&url=' . $shareUrlEncoded;
     $facebookShareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' . $shareUrlEncoded;

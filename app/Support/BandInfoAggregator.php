@@ -174,11 +174,11 @@ class BandInfoAggregator
 
         try {
             $headers = [
-                'User-Agent' => 'SevenRockRadio/1.0',
+                'User-Agent' => \App\Support\HttpBrowser::BROWSER_UA,
                 'Authorization' => "Discogs token={$token}",
             ];
 
-            $search = ExternalHttp::client()->withHeaders($headers)
+            $search = ExternalHttp::client()->withOptions(\App\Support\HttpBrowser::defaultOptions())->withHeaders($headers)
                 ->retry(1, 100)
                 ->connectTimeout(4)
                 ->timeout(6)
@@ -193,7 +193,7 @@ class BandInfoAggregator
             }
 
             $artistId = (string) data_get($search->json(), 'results.0.id');
-            $details = ExternalHttp::client()->withHeaders($headers)
+            $details = ExternalHttp::client()->withOptions(\App\Support\HttpBrowser::defaultOptions())->withHeaders($headers)
                 ->retry(1, 100)
                 ->connectTimeout(4)
                 ->timeout(6)
@@ -248,7 +248,7 @@ class BandInfoAggregator
             $title = '';
 
             foreach ($searchTerms as $searchTerm) {
-                $search = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.com)'])->retry(1, 100)
+                $search = ExternalHttp::client()->withOptions(\App\Support\HttpBrowser::defaultOptions())->withHeaders(['User-Agent' => \App\Support\HttpBrowser::BROWSER_UA])->retry(1, 100)
                     ->connectTimeout(4)
                     ->timeout(6)
                     ->get("{$baseUrl}/w/api.php", [
@@ -266,7 +266,7 @@ class BandInfoAggregator
             }
 
             if ($title === '') {
-                $query = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.com)'])->retry(1, 100)
+                $query = ExternalHttp::client()->withOptions(\App\Support\HttpBrowser::defaultOptions())->withHeaders(['User-Agent' => \App\Support\HttpBrowser::BROWSER_UA])->retry(1, 100)
                     ->connectTimeout(4)
                     ->timeout(6)
                     ->get("{$baseUrl}/w/api.php", [
@@ -284,7 +284,7 @@ class BandInfoAggregator
                 return null;
             }
 
-            $summary = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.com)'])->retry(1, 100)
+            $summary = ExternalHttp::client()->withOptions(\App\Support\HttpBrowser::defaultOptions())->withHeaders(['User-Agent' => \App\Support\HttpBrowser::BROWSER_UA])->retry(1, 100)
                 ->connectTimeout(4)
                 ->timeout(6)
                 ->get("{$baseUrl}/api/rest_v1/page/summary/" . rawurlencode($title));
@@ -328,7 +328,7 @@ class BandInfoAggregator
         }
 
         try {
-            $response = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (https://sevenrockradio.com)'])->retry(1, 100)
+            $response = ExternalHttp::client()->withOptions(\App\Support\HttpBrowser::defaultOptions())->withHeaders(['User-Agent' => \App\Support\HttpBrowser::BROWSER_UA])->retry(1, 100)
                 ->connectTimeout(4)
                 ->timeout(6)
                 ->get('https://ws.audioscrobbler.com/2.0/', [
@@ -366,7 +366,7 @@ class BandInfoAggregator
     private function fetchMusicBrainzProfile(string $artist): ?array
     {
         try {
-            $search = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (metadata)'])
+            $search = ExternalHttp::client()->withOptions(\App\Support\HttpBrowser::defaultOptions())->withHeaders(['User-Agent' => \App\Support\HttpBrowser::BROWSER_UA])
                 ->retry(1, 100)
                 ->connectTimeout(4)
                 ->timeout(6)
@@ -381,7 +381,7 @@ class BandInfoAggregator
             }
 
             $id = (string) data_get($search->json(), 'artists.0.id');
-            $details = ExternalHttp::client()->withHeaders(['User-Agent' => 'SevenRockRadio/1.0 (metadata)'])
+            $details = ExternalHttp::client()->withOptions(\App\Support\HttpBrowser::defaultOptions())->withHeaders(['User-Agent' => \App\Support\HttpBrowser::BROWSER_UA])
                 ->retry(1, 100)
                 ->connectTimeout(4)
                 ->timeout(6)

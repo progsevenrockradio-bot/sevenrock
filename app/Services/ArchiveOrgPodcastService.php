@@ -585,6 +585,7 @@ final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
             'x-archive-interactive-priority' => '1',
             // Evita la negociación "100-continue" de Guzzle en archivos grandes.
             'Expect' => '',
+            /* Excepción: Archive.org requiere un user-agent descriptivo y no bloquea bots declarados */
             'User-Agent' => config('app.name', 'Laravel') . ' ArchiveOrgPodcastService',
         ];
 

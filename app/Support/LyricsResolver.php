@@ -128,7 +128,8 @@ class LyricsResolver
             $response = ExternalHttp::client()->retry(1, 100)
                 ->connectTimeout(1)
                 ->timeout(3)
-                ->withHeaders(['User-Agent' => 'SevenRockRadio/1.0'])
+                ->withHeaders(\App\Support\HttpBrowser::defaultHeaders())
+                ->withOptions(\App\Support\HttpBrowser::defaultOptions())
                 ->get('https://lrclib.net/api/get', [
                     'artist_name' => $artist,
                     'track_name' => $title,
