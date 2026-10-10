@@ -104,9 +104,12 @@ class PostImageResolver
         if ($artistName) {
             $artistUrl = $this->resolveFromArtistCatalog($artistName);
             if ($artistUrl) {
-                $result['url'] = $artistUrl;
-                $result['source'] = 'artist_catalog';
-                return $result;
+                $rehosted = $this->rehostExternalImage($artistUrl, 'artist_catalog');
+                if ($rehosted) {
+                    $result['url'] = $rehosted;
+                    $result['source'] = 'artist_catalog';
+                    return $result;
+                }
             }
         }
 
@@ -126,7 +129,7 @@ class PostImageResolver
 
         $minSize = $isDarkVader ? 3072 : 5120;
         $skipHosts = ['googleusercontent', 'googleapis', 'paypal.com', 'canva.com', 'mailchimp',
-                      'list-manage', 'ct.sendgrid.net', 'sp1-brevo.net'];
+                      'list-manage', 'ct.sendgrid.net', 'sp1-brevo.net', 'sevenrockradio.com'];
         $candidates = [];
 
         foreach (array_unique($matches[1]) as $url) {
