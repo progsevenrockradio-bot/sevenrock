@@ -294,6 +294,7 @@
                 <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.6)] p-5 space-y-4">
                     {{-- Campos ocultos --}}
                     <input type="hidden" :name="'emisiones[' + index + '][id]'" :value="em.id">
+                    <input type="hidden" :name="'emisiones[' + index + '][duracion_segundos]'" x-model="em.duracion_segundos">
 
                     <div class="grid gap-4 md:grid-cols-3">
                         {{-- Tipo --}}
@@ -338,7 +339,15 @@
 
                         {{-- Duración real del archivo (minutos y segundos) --}}
                         <div>
-                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Duración real archivo (min y seg)</label>
+                            <div class="mb-2 flex items-center justify-between">
+                                <label class="block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Duración real (min y seg)</label>
+                                <template x-if="em.duracion_segundos">
+                                    <label class="flex items-center gap-1.5 text-[11px] text-[#9a9a9a] cursor-pointer hover:text-red-400">
+                                        <input type="checkbox" :name="'emisiones[' + index + '][borrar_duracion_real]'" value="1" class="h-3 w-3 accent-red-600">
+                                        Borrar ⏱
+                                    </label>
+                                </template>
+                            </div>
                             <div class="flex items-center gap-2">
                                 <div class="flex items-center gap-1 flex-1">
                                     <input type="number" min="0" max="600" placeholder="Min"

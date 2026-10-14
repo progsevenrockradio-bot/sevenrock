@@ -516,6 +516,17 @@
                             <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg></span><span class="hidden sm:inline">Info</span>
                         </button>
 
+                        {{-- Program Button Trigger --}}
+                        <template x-if="hasProgramAvailable()">
+                            <button type="button"
+                                class="flex h-8 px-2.5 items-center gap-1.5 rounded border border-[#242424] bg-transparent text-[#aaa] hover:text-white hover:border-[#444] transition-colors text-[10px] uppercase tracking-[.06em] font-display"
+                                :class="{ 'border-[#c32720] text-white bg-[#c32720]/10': programWindowOpen }"
+                                @click="toggleProgramWindow()" aria-label="Información del programa" title="Ver programa">
+                                <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg></span>
+                                <span class="hidden sm:inline">Programa</span>
+                            </button>
+                        </template>
+
                         {{-- Favorite --}}
                         <button type="button"
                             class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#aaa] transition-colors hover:text-white hover:border-[#444]"
@@ -593,6 +604,17 @@
                                 @click="toggleInfoWindow($event)" aria-label="Letras e info de banda">
                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                             </button>
+
+                            {{-- Program --}}
+                            <template x-if="hasProgramAvailable()">
+                                <button type="button"
+                                    class="flex h-8 px-2 items-center gap-1 rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white text-[10px] uppercase tracking-[.06em] font-display"
+                                    :class="{ 'border-[#c32720] text-white bg-[#c32720]/10': programWindowOpen }"
+                                    @click="toggleProgramWindow()" aria-label="Programa" title="Ver programa">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
+                                    <span>Prog</span>
+                                </button>
+                            </template>
 
                             {{-- Favorite --}}
                             <button type="button"

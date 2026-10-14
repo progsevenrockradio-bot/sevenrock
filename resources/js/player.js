@@ -193,6 +193,7 @@ export function registerRadioPlayer(Alpine) {
             this.dockMinimized = true;
             this.dockVisible = false;
             this.activeTab = safeRead('sr-player-tab', 'lyrics');
+            this.userHasChosenTab = Boolean(safeRead('sr-player-tab', null));
             this.isMobile = window.innerWidth < 640;
             this.toast.visible = false;
             this.toast.message = '';
@@ -752,7 +753,9 @@ export function registerRadioPlayer(Alpine) {
                 return;
             }
 
-            const esBloqueDePrograma = Boolean(this.track.es_bloque_programa);
+            // Solo abrir el programa si es_bloque_programa y NO hay canción real en el stream;
+            // con canción real, siempre abrir la banda/letra.
+            const esBloqueDePrograma = Boolean(this.track.es_bloque_programa) && !this.hasRealSong();
 
             if (esBloqueDePrograma) {
                 if (this.programWindowOpen) {
@@ -772,6 +775,48 @@ export function registerRadioPlayer(Alpine) {
 
             this.closeProgramWindow();
             this.openBandWindow();
+        },
+
+        toggleProgramWindow() {
+            if (!this.interactionReady) {
+                return;
+            }
+            if (this.programWindowOpen) {
+                this.closeProgramWindow();
+                return;
+            }
+
+            this.closeBandWindow();
+            const progId = this.program?.id || this.track?.program_id || this.nextProgram?.id || null;
+            void this.openProgramWindow(progId);
+        },
+
+        hasProgramAvailable() {
+            return Boolean(
+                (this.program && (this.program.id || this.program.name)) ||
+                (this.nextProgram && (this.nextProgram.id || this.nextProgram.name)) ||
+                (this.track && (this.track.program_id || this.track.program_name))
+            );
+        },
+
+        hasRealSong() {
+            const title = (this.track?.title || '').trim();
+            const artist = (this.track?.artist || '').trim();
+            const defaultTitle = (this.defaultTitle || '').trim();
+            if (!title || !artist) {
+                return false;
+            }
+            if (defaultTitle && title.toLowerCase() === defaultTitle.toLowerCase()) {
+                return false;
+            }
+            const lower = title.toLowerCase();
+            if (lower === 'transmisión oficial' || lower === 'transmision oficial' || lower === 'seven rock radio') {
+                return false;
+            }
+            if (artist.toLowerCase() === (this.defaultArtist || '').trim().toLowerCase() || artist.toLowerCase() === 'en vivo') {
+                return false;
+            }
+            return true;
         },
 
         async openBandWindow() {
@@ -1362,7 +1407,8 @@ export function registerRadioPlayer(Alpine) {
                 es_bloque_programa: Boolean(track.es_bloque_programa ?? data.es_bloque_programa ?? (track.program_id || data.program_id || false)),
             };
 
-            if (this.track.es_bloque_programa && this.activeTab === 'lyrics' && !this.userHasChosenTab) {
+            // Auto-cambio de pestaña a programa: solo si es_bloque_programa y no hay canción real en el stream
+            if (this.track.es_bloque_programa && !this.hasRealSong() && this.activeTab === 'lyrics' && !this.userHasChosenTab) {
                 this.activeTab = 'program';
                 if (!this.programInfo) {
                     void this.openProgramWindow(this.track.program_id);
@@ -1749,7 +1795,7 @@ export function registerRadioPlayer(Alpine) {
             this.userHasChosenTab = true;
             this.activeTab = tab;
             safeWrite('sr-player-tab', tab);
-            if (tab === 'program' && this.track.es_bloque_programa && !this.programInfo) {
+            if (tab === 'program' && this.track.es_bloque_programa && !this.hasRealSong() && !this.programInfo) {
                 void this.openProgramWindow(this.track.program_id);
             }
         },
