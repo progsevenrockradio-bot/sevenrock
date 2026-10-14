@@ -9,6 +9,7 @@ use App\Models\MasterProgram;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -150,17 +151,20 @@ final class MasterProgramController extends Controller
             ]);
 
         return view('admin.master-programs.create', [
-            'masterProgram' => $masterProgram,
+            'masterProgram'      => $masterProgram,
             'defaultNewsIdsText' => '',
-            'liveNewsIdsText' => '',
+            'liveNewsIdsText'    => '',
             'previewNewsIdsText' => '',
             'generateCodeAction' => null,
+            'emisiones'          => collect(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $masterProgram = MasterProgram::query()->create($this->validated($request));
+        $this->saveEmisiones($masterProgram, $request);
+        $masterProgram->syncEmisionNormal();
 
         return redirect()
             ->route('admin.master-programs.edit', $masterProgram)
@@ -170,17 +174,20 @@ final class MasterProgramController extends Controller
     public function edit(MasterProgram $masterProgram): View
     {
         return view('admin.master-programs.edit', [
-            'masterProgram' => $masterProgram,
+            'masterProgram'      => $masterProgram,
             'defaultNewsIdsText' => $this->idListToText($masterProgram->default_news_ids),
-            'liveNewsIdsText' => $this->idListToText($masterProgram->live_news_ids),
+            'liveNewsIdsText'    => $this->idListToText($masterProgram->live_news_ids),
             'previewNewsIdsText' => $this->idListToText($masterProgram->preview_news_ids),
             'generateCodeAction' => route('admin.programs.generate-code', $masterProgram),
+            'emisiones'          => $masterProgram->emisiones()->get(),
         ]);
     }
 
     public function update(Request $request, MasterProgram $masterProgram): RedirectResponse
     {
         $masterProgram->update($this->validated($request, $masterProgram->id));
+        $this->saveEmisiones($masterProgram, $request);
+        $masterProgram->syncEmisionNormal();
 
         return redirect()
             ->route('admin.master-programs.edit', $masterProgram)
@@ -235,7 +242,7 @@ final class MasterProgramController extends Controller
             'email_copia_notificacion' => ['nullable', 'email', 'max:255'],
         ]);
 
-        $validated['hora_transmision'] = $this->normalizeTime((string) ($validated['hora_transmision'] ?? ''));
+        $validated['hora_transmision'] = $this->normalizeTime((string) ($validated['hora_transmision'] ?? ''), $ignoreId);
         $validated['program_code'] = $this->normalizeProgramCode((string) ($validated['program_code'] ?? '')) ?: null;
         $validated['code_prefix'] = $this->normalizeProgramCode((string) ($validated['code_prefix'] ?? '')) ?: null;
         $validated['live_starts_at'] = $this->normalizeDateTime((string) ($validated['live_starts_at'] ?? ''));
@@ -263,7 +270,143 @@ final class MasterProgramController extends Controller
         return $validated;
     }
 
-    private function normalizeTime(string $value): ?string
+    /**
+     * Guarda (crea / actualiza / elimina) las emisiones enviadas desde el formulario.
+     * Cada fila del repetidor viene en emisiones[N][campo].
+     * Las emisiones que tengan id se actualizan; las sin id se crean; las que
+     * no aparezcan en el POST se eliminan.
+     *
+     * FIX: si la fila no trae duracion_segundos y los campos «duración real»
+     * vienen vacíos, se conserva el valor que ya tiene la emisión en vez de
+     * sobrescribirlo con null.
+     */
+    private function saveEmisiones(MasterProgram $masterProgram, Request $request): void
+    {
+        $tiposValidos = array_keys(\App\Models\MasterProgramEmision::TIPOS);
+        $diasValidos  = array_keys(\App\Models\MasterProgramEmision::DIAS);
+        $rows         = $request->input('emisiones', []);
+
+        if (! is_array($rows)) {
+            return;
+        }
+
+        $request->validate([
+            'emisiones.*.tipo'              => ['nullable', 'string', 'in:' . implode(',', $tiposValidos)],
+            'emisiones.*.dia_semana'        => ['nullable', 'string', 'in:' . implode(',', $diasValidos)],
+            'emisiones.*.hora_inicio'       => ['nullable', 'string', 'max:8'],
+            'emisiones.*.duracion_minutos'  => ['nullable', 'integer', 'min:1', 'max:600'],
+            'emisiones.*.duracion_segundos' => ['nullable', 'integer', 'min:0'],
+            'emisiones.*.duracion_real_min' => ['nullable', 'integer', 'min:0', 'max:600'],
+            'emisiones.*.duracion_real_sec' => ['nullable', 'integer', 'min:0', 'max:59'],
+            'emisiones.*.borrar_duracion_real' => ['nullable'],
+            'emisiones.*.enlace'            => ['nullable', 'url', 'max:500'],
+            'emisiones.*.url_podcast'       => ['nullable', 'url', 'max:500'],
+        ]);
+
+        $seenIds = [];
+
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $tipo   = trim((string) ($row['tipo']       ?? 'normal'));
+            $dia    = strtoupper(trim((string) ($row['dia_semana']  ?? '')));
+            $hora   = trim((string) ($row['hora_inicio'] ?? ''));
+
+            if (! in_array($tipo, $tiposValidos, true) || ! in_array($dia, $diasValidos, true) || $hora === '' || ! preg_match('/^\d{2}:\d{2}/', $hora)) {
+                continue;
+            }
+
+            $enlace = trim((string) ($row['enlace']      ?? ''));
+            // en_vivo requiere enlace — si no lo tiene, lo ignoramos
+            if ($tipo === 'en_vivo' && $enlace === '') {
+                continue;
+            }
+
+            // ── Resolver duracion_segundos sin pisar el valor existente ──
+            $rowId = (int) ($row['id'] ?? 0);
+            /** @var \App\Models\MasterProgramEmision|null $emision */
+            $emision = $rowId > 0 ? $masterProgram->emisiones()->find($rowId) : null;
+
+            $borrarDuracion = ! empty($row['borrar_duracion_real']);
+
+            if ($borrarDuracion) {
+                $duracionSegundos = null;
+            } else {
+                $duracionSegundos = null;
+                $hasDuracionExplicit = false;
+
+                if (
+                    (isset($row['duracion_real_min']) && $row['duracion_real_min'] !== '') ||
+                    (isset($row['duracion_real_sec']) && $row['duracion_real_sec'] !== '')
+                ) {
+                    $min = (int) ($row['duracion_real_min'] ?? 0);
+                    $sec = (int) ($row['duracion_real_sec'] ?? 0);
+                    $totalSec = ($min * 60) + $sec;
+                    $duracionSegundos = $totalSec > 0 ? $totalSec : null;
+                    $hasDuracionExplicit = true;
+                } elseif (isset($row['duracion_segundos']) && $row['duracion_segundos'] !== '' && is_numeric($row['duracion_segundos'])) {
+                    $duracionSegundos = max(0, (int) $row['duracion_segundos']);
+                    $hasDuracionExplicit = true;
+                }
+
+                // Si no se envió nada explícito y los campos vienen vacíos, conservar el valor que ya tenía la emisión
+                if (! $hasDuracionExplicit && $emision) {
+                    $duracionSegundos = $emision->duracion_segundos;
+                }
+            }
+
+            $data = [
+                'tipo'              => $tipo,
+                'etiqueta'          => trim((string) ($row['etiqueta']         ?? '')) ?: null,
+                'dia_semana'        => $dia,
+                'hora_inicio'       => $this->normalizeTime($hora, $masterProgram->id) ?? $hora,
+                'duracion_minutos'  => max(1, (int) ($row['duracion_minutos'] ?? 120)),
+                'duracion_segundos' => $duracionSegundos,
+                'enlace'            => $enlace ?: null,
+                'url_podcast'       => trim((string) ($row['url_podcast']      ?? '')) ?: null,
+                'notas'             => trim((string) ($row['notas']            ?? '')) ?: null,
+                'activo'            => isset($row['activo']) ? (bool) $row['activo'] : true,
+            ];
+
+            if ($emision) {
+                $emision->update($data);
+                $seenIds[] = $rowId;
+            } else {
+                $emision = $masterProgram->emisiones()->create($data);
+                $seenIds[] = $emision->id;
+            }
+        }
+
+        // Eliminar las emisiones que ya no están en el formulario
+        $masterProgram->emisiones()
+            ->when($seenIds !== [], fn ($q) => $q->whereNotIn('id', $seenIds))
+            ->when($seenIds === [], fn ($q) => $q)
+            ->delete();
+
+        // Eliminar duplicados (mismo tipo + dia_semana + hora_inicio), conservando la de menor id
+        $allEmisiones = $masterProgram->emisiones()->orderBy('id')->get();
+        $grouped = $allEmisiones->groupBy(function ($e) {
+            $h = substr((string) $e->hora_inicio, 0, 5);
+            return sprintf('%s_%s_%s', $e->tipo, strtoupper((string) $e->dia_semana), $h);
+        });
+
+        $deleteIds = [];
+        foreach ($grouped as $group) {
+            if ($group->count() > 1) {
+                foreach ($group->slice(1) as $dup) {
+                    $deleteIds[] = $dup->id;
+                }
+            }
+        }
+
+        if ($deleteIds !== []) {
+            $masterProgram->emisiones()->whereIn('id', $deleteIds)->delete();
+        }
+    }
+
+    private function normalizeTime(string $value, ?int $programId = null): ?string
     {
         $value = trim($value);
         if ($value === '') {
@@ -275,6 +418,11 @@ final class MasterProgramController extends Controller
         try {
             return Carbon::createFromFormat('H:i', $candidate)->format('H:i:s');
         } catch (\Throwable) {
+            Log::warning('[MasterProgram] normalizeTime: valor no válido como H:i', [
+                'value'      => $value,
+                'program_id' => $programId,
+            ]);
+
             return $candidate . ':00';
         }
     }

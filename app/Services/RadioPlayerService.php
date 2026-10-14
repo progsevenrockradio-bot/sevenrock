@@ -136,12 +136,24 @@ class RadioPlayerService
             ? Notice::query()->active()->orderBy('sort_order')->get()
             : collect();
 
-        $cover = $this->resolveCover(
-            $song?->cover_image
-                ?? Arr::get($state, 'cover')
-                ?? $currentProgram?->cover_image
-                ?? $defaults['cover']
-        );
+        // «Canción real» = título del stream no vacío, distinto del genérico de
+        // fallback, y con artista no vacío.  Cuando hay canción real el programa
+        // no debe robar carátula, clic ni pestaña.
+        $defaultTitle = $defaults['title'] ?? '';
+        $hasRealSong = $rawTitle !== '' && $rawTitle !== $defaultTitle && $rawArtist !== '';
+
+        $cover = $hasRealSong
+            ? $this->resolveCover(
+                $song?->cover_image
+                    ?? Arr::get($state, 'cover')
+                    ?? $defaults['cover']
+            )
+            : $this->resolveCover(
+                $song?->cover_image
+                    ?? Arr::get($state, 'cover')
+                    ?? $currentProgram?->cover_image
+                    ?? $defaults['cover']
+            );
         $trackSignature = $this->trackSignature($trackTitle, $trackArtist, $cover);
         $trackChanged = $stateSignature !== $trackSignature;
 
@@ -162,7 +174,9 @@ class RadioPlayerService
             $elapsed = 0;
         }
 
-        $isProgramBlock = (bool) ($matchedTrackProgram !== null || !empty($scheduleContext['es_bloque_programa']));
+        // Si hay canción real en el stream, el programa no gana isProgramBlock
+        // (salvo que la canción esté asociada a ese programa vía matchedTrackProgram).
+        $isProgramBlock = (bool) ($matchedTrackProgram !== null || (!$hasRealSong && !empty($scheduleContext['es_bloque_programa'])));
         $resolvedProgramId = $isProgramBlock ? ($matchedTrackProgram?->id ?? $scheduleContext['program_id'] ?? null) : null;
         $resolvedProgramName = $isProgramBlock ? ($matchedTrackProgram?->name ?? $matchedTrackProgram?->titulo_programa ?? $scheduleContext['program_name'] ?? null) : null;
         $resolvedProgramDescription = $isProgramBlock ? ($matchedTrackProgram?->description ?? $matchedTrackProgram?->informacion_fija_programa ?? $scheduleContext['program_description'] ?? null) : null;
