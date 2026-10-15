@@ -97,8 +97,12 @@ class Program extends Model
             return $legacy;
         }
 
-        $master = $this->masterProgram;
-        return $master ? $master->nombre : '';
+        try {
+            $master = $this->masterProgram;
+            return $master ? $master->nombre : '';
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     public function getDescriptionAttribute(mixed $value): ?string
@@ -118,8 +122,12 @@ class Program extends Model
             return $legacy;
         }
 
-        $master = $this->masterProgram;
-        return $master ? $master->description : null;
+        try {
+            $master = $this->masterProgram;
+            return $master ? $master->description : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function getHostAttribute(mixed $value): ?string
@@ -134,8 +142,12 @@ class Program extends Model
             return $legacy;
         }
 
-        $master = $this->masterProgram;
-        return $master ? $master->host : null;
+        try {
+            $master = $this->masterProgram;
+            return $master ? $master->host : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function getScheduleAttribute(mixed $value): ?string
@@ -160,8 +172,12 @@ class Program extends Model
             return trim($day . ' ' . implode(' - ', $parts));
         }
 
-        $master = $this->masterProgram;
-        return $master ? $master->schedule : null;
+        try {
+            $master = $this->masterProgram;
+            return $master ? $master->schedule : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function getSlugAttribute(mixed $value): ?string
@@ -188,8 +204,12 @@ class Program extends Model
             return $legacy;
         }
 
-        $master = $this->masterProgram;
-        return $master ? ($master->live_image_url ?: $master->caratula_url ?: null) : null;
+        try {
+            $master = $this->masterProgram;
+            return $master ? ($master->live_image_url ?: $master->caratula_url ?: null) : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function getSortOrderAttribute(mixed $value): int
@@ -210,18 +230,22 @@ class Program extends Model
      */
     public function getScheduleTimeAttribute(): string
     {
-        $master = MasterProgram::query()->find($this->master_program_id);
-        $time = trim((string) ($this->hora_transmision ?: $master?->hora_transmision ?? ''));
+        try {
+            $master = $this->master_program_id ? MasterProgram::query()->find($this->master_program_id) : null;
+            $time = trim((string) ($this->hora_transmision ?: $master?->hora_transmision ?? ''));
 
-        if ($time === '') {
+            if ($time === '') {
+                return '';
+            }
+
+            // Formatear: "17:00:00" → "17:00"
+            if (preg_match('/^(\d{1,2}):(\d{2})/', $time, $m)) {
+                return sprintf('%02d:%02d', (int) $m[1], (int) $m[2]);
+            }
+
+            return $time;
+        } catch (\Throwable) {
             return '';
         }
-
-        // Formatear: "17:00:00" → "17:00"
-        if (preg_match('/^(\d{1,2}):(\d{2})/', $time, $m)) {
-            return sprintf('%02d:%02d', (int) $m[1], (int) $m[2]);
-        }
-
-        return $time;
     }
 }

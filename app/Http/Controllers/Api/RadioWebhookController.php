@@ -31,15 +31,19 @@ class RadioWebhookController extends Controller
             'casttitle' => ['nullable', 'string'],
             'artist' => ['nullable', 'string'],
             'title' => ['nullable', 'string'],
+            'tracktitle' => ['nullable', 'string'],
             'album' => ['nullable', 'string'],
             'year' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'comment' => ['nullable', 'string'],
             'genre' => ['nullable', 'string'],
             'len' => ['nullable', 'string'],
+            'duration' => ['nullable'],
             'duration_seconds' => ['nullable', 'integer', 'min:0'],
             'listeners' => ['nullable', 'integer', 'min:0'],
             'artwork' => ['nullable', 'string'],
+            'cover' => ['nullable', 'string'],
             'cover_image' => ['nullable', 'string'],
+            'image' => ['nullable', 'string'],
             'lyrics' => ['nullable', 'string'],
             'band_info' => ['nullable', 'string'],
             'program_slug' => ['nullable', 'string'],
@@ -47,6 +51,10 @@ class RadioWebhookController extends Controller
             'audio_url' => ['nullable', 'string'],
             'is_live' => ['nullable', 'boolean'],
             'played_at' => ['nullable', 'date'],
+            'started_at' => ['nullable', 'string'],
+            'filename' => ['nullable', 'string'],
+            'file' => ['nullable', 'string'],
+            'song' => ['nullable', 'string'],
         ]);
 
         abort_unless(hash_equals((string) config('player.webhook.key'), (string) $validated['key']), 403);
@@ -58,43 +66,59 @@ class RadioWebhookController extends Controller
         $playedAt = isset($validated['played_at']) ? Carbon::parse($validated['played_at']) : now();
         $durationSeconds = $this->resolveDurationSeconds($validated);
 
+        $file = $validated['file'] ?? $validated['filename'] ?? $validated['song'] ?? $request->input('file') ?? $request->input('filename') ?? null;
+        $songField = $validated['song'] ?? $request->input('song') ?? null;
+
+        // Metadata CRUDO: No sustituir artist/title por los defaults aquí.
+        // Los defaults se aplican solo al construir la respuesta (build()), nunca en el estado.
         $payload = [
             'song_id' => $song?->id,
             'program_id' => $program?->id,
-            'artist' => $artist ?: config('player.defaults.artist'),
-            'title' => $title ?: config('player.defaults.title'),
+            'artist' => $artist !== '' ? $artist : null,
+            'title' => $title !== '' ? $title : null,
             'album' => $validated['album'] ?? $song?->album,
+            'filename' => $file,
+            'file' => $file,
+            'song' => $songField,
+            'tracktitle' => $validated['tracktitle'] ?? null,
+            'casttitle' => $validated['casttitle'] ?? null,
             'year' => $validated['year'] ?? null,
             'comment' => $validated['comment'] ?? null,
             'genre' => $validated['genre'] ?? null,
             'cover' => $cover,
+            'cover_image' => $validated['cover_image'] ?? $validated['cover'] ?? null,
+            'artwork' => $validated['artwork'] ?? null,
+            'image' => $validated['image'] ?? null,
             'lyrics' => $validated['lyrics'] ?? $song?->lyrics,
             'band_info' => $validated['band_info'] ?? $song?->band_info,
             'band_members' => $song?->band_members ?? [],
             'social_links' => $song?->social_links ?? [],
             'audio_url' => $validated['audio_url'] ?? $song?->audio_url,
             'is_live' => (bool) ($validated['is_live'] ?? true),
-            'duration_seconds' => $durationSeconds ?: (int) ($validated['duration_seconds'] ?? $song?->duration_seconds ?? 0),
+            'duration_seconds' => $durationSeconds ?: (int) ($validated['duration_seconds'] ?? $validated['duration'] ?? $song?->duration_seconds ?? 0),
             'listeners' => (int) ($validated['listeners'] ?? 0),
-            'started_at' => $playedAt->toIso8601String(),
+            'started_at' => $validated['started_at'] ?? $playedAt->toIso8601String(),
             'played_at' => $playedAt->toIso8601String(),
+            'raw' => $request->except(['key']),
         ];
 
         $this->playerService->storeTrack($payload);
 
-        $this->warmupService->warmComplete($payload['artist'], $payload['title']);
+        if (! empty($payload['artist']) && ! empty($payload['title'])) {
+            $this->warmupService->warmComplete($payload['artist'], $payload['title']);
+        }
 
         if ($this->hasTable('play_history')) {
             PlayHistory::query()->create([
                 'song_id' => $song?->id,
                 'program_id' => $program?->id,
-                'title' => $payload['title'],
-                'artist' => $payload['artist'],
-                'cover_image' => $cover,
+                'title' => $payload['title'] ?: (config('player.defaults.title') ?? 'Transmisión oficial'),
+                'artist' => $payload['artist'] ?: (config('player.defaults.artist') ?? 'Seven Rock Radio'),
+                'cover_image' => $cover ?: asset(config('player.defaults.cover')),
                 'source' => 'webhook',
                 'duration_seconds' => $payload['duration_seconds'] ?: null,
                 'is_live' => $payload['is_live'],
-                'metadata' => $validated,
+                'metadata' => $request->except(['key']),
                 'played_at' => $playedAt,
             ]);
         }
@@ -117,6 +141,9 @@ class RadioWebhookController extends Controller
     {
         $artist = trim((string) ($validated['artist'] ?? ''));
         $title = trim((string) ($validated['title'] ?? ''));
+        if ($title === '') {
+            $title = trim((string) ($validated['tracktitle'] ?? ''));
+        }
         $castTitle = trim((string) ($validated['casttitle'] ?? ''));
 
         if ($castTitle !== '') {
@@ -184,13 +211,21 @@ class RadioWebhookController extends Controller
             return Program::query()->where('slug', $validated['program_slug'])->first();
         }
 
-        return Program::query()->active()->latestEditorial()->first();
+        return null;
     }
 
-    private function resolveCover(array $validated, ?Song $song): string
+    private function resolveCover(array $validated, ?Song $song): ?string
     {
         if (! empty($validated['cover_image'])) {
             return (string) $validated['cover_image'];
+        }
+
+        if (! empty($validated['cover'])) {
+            return (string) $validated['cover'];
+        }
+
+        if (! empty($validated['image'])) {
+            return (string) $validated['image'];
         }
 
         if (! empty($validated['artwork'])) {
@@ -199,9 +234,13 @@ class RadioWebhookController extends Controller
                 Storage::disk('public')->put($this->stateStore->coverPath(), $decoded);
                 return Storage::disk('public')->url($this->stateStore->coverPath());
             }
+
+            if (filter_var($validated['artwork'], FILTER_VALIDATE_URL)) {
+                return (string) $validated['artwork'];
+            }
         }
 
-        return $song?->cover_url ?: asset(config('player.defaults.cover'));
+        return $song?->cover_url ?: null;
     }
 
     private function decodeArtwork(string $payload): ?string

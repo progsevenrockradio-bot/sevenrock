@@ -25,14 +25,53 @@ class RadioPlayerService
 {
     public const MARGIN_BEFORE_MINUTES = 2;
     public const MARGIN_AFTER_MINUTES = 2;
+    public const MARGIN_EPISODE_MINUTES = 30;
 
     private const STATUS_CACHE_KEY = 'radio-player-status:v6';
+
+    /**
+     * @var array{
+     *     match_found: bool,
+     *     match_via: string|null,
+     *     matched_program: string|null,
+     *     matched_program_id: int|null,
+     *     matched_episode: string|null,
+     *     matched_episode_id: int|null,
+     *     vias: array{
+     *         fichero: string,
+     *         caratula: string,
+     *         album: string,
+     *         texto: string,
+     *         horario: string
+     *     }
+     * }
+     */
+    private array $lastDiagnosis = [
+        'match_found' => false,
+        'match_via' => null,
+        'matched_program' => null,
+        'matched_program_id' => null,
+        'matched_episode' => null,
+        'matched_episode_id' => null,
+        'vias' => [
+            'fichero' => 'ninguno',
+            'caratula' => 'ninguna',
+            'album' => 'ninguno',
+            'texto' => 'ninguno',
+            'horario' => 'ninguno',
+        ],
+    ];
 
     public function __construct(
         private readonly RadioPlayerStateStore $store,
         private readonly BandInfoResolver $bandInfoResolver,
         private readonly ProgramScheduleService $programScheduleService,
     ) {
+    }
+
+    public function getLastDiagnosis(): array
+    {
+        return $this->lastDiagnosis;
     }
 
     public function resolve(): array
@@ -80,6 +119,22 @@ class RadioPlayerService
 
     private function build(): array
     {
+        $this->lastDiagnosis = [
+            'match_found' => false,
+            'match_via' => null,
+            'matched_program' => null,
+            'matched_program_id' => null,
+            'matched_episode' => null,
+            'matched_episode_id' => null,
+            'vias' => [
+                'fichero' => 'ninguno',
+                'caratula' => 'ninguna',
+                'album' => 'ninguno',
+                'texto' => 'ninguno',
+                'horario' => 'ninguno',
+            ],
+        ];
+
         $defaults = config('player.defaults');
         $state = array_replace($this->currentState(), $this->remoteNowPlayingState());
 
@@ -102,10 +157,26 @@ class RadioPlayerService
             Arr::get($state, 'artwork'),
             Arr::get($state, 'image'),
         ]);
+        $rawFilename = $this->firstFilledString([
+            Arr::get($state, 'filename'),
+            Arr::get($state, 'file'),
+            Arr::get($state, 'song'),
+            Arr::get($state, 'raw.filename'),
+            Arr::get($state, 'raw.file'),
+            Arr::get($state, 'raw.song'),
+        ]);
+        $rawAlbum = $this->firstFilledString([
+            Arr::get($state, 'album'),
+            Arr::get($state, 'raw.album'),
+        ]);
+
         $lookupState = $state;
         $lookupState['title'] = $rawTitle;
         $lookupState['artist'] = $rawArtist;
         $lookupState['cover'] = $rawCover;
+        $lookupState['filename'] = $rawFilename;
+        $lookupState['file'] = $rawFilename;
+        $lookupState['album'] = $rawAlbum;
 
         $song = $this->resolveSong($lookupState);
         $trackTitle = $this->firstFilledString([
@@ -135,6 +206,20 @@ class RadioPlayerService
         $matchedTrackProgram = $this->resolveCurrentProgram($lookupState, $song, $programs);
         $scheduleContext = $this->resolveActiveProgramContext();
 
+        if ($matchedTrackProgram === null && ! empty($scheduleContext['es_bloque_programa'])) {
+            $this->lastDiagnosis['match_found'] = true;
+            $this->lastDiagnosis['match_via'] = 'horario';
+            $this->lastDiagnosis['matched_program'] = $scheduleContext['program_name'];
+            $this->lastDiagnosis['matched_program_id'] = $scheduleContext['program_id'];
+            $this->lastDiagnosis['vias']['horario'] = 'emisión activa: ' . $scheduleContext['program_name'];
+        } elseif ($matchedTrackProgram !== null) {
+            $this->lastDiagnosis['vias']['horario'] = ! empty($scheduleContext['es_bloque_programa'])
+                ? 'emisión activa: ' . $scheduleContext['program_name']
+                : 'no evaluado por coincidencia previa';
+        } else {
+            $this->lastDiagnosis['vias']['horario'] = 'sin emisión activa en ventana horaria';
+        }
+
         $currentProgram = $matchedTrackProgram ?? $scheduleContext['program'] ?? null;
         $nextProgram = $this->resolveNextProgram(
             $currentProgram,
@@ -146,10 +231,95 @@ class RadioPlayerService
             : collect();
 
         // «Canción real» = título del stream no vacío, distinto del genérico de
-        // fallback, y con artista no vacío.  Cuando hay canción real el programa
-        // no debe robar carátula, clic ni pestaña.
-        $defaultTitle = $defaults['title'] ?? '';
-        $hasRealSong = $rawTitle !== '' && $rawTitle !== $defaultTitle && $rawArtist !== '';
+        // fallback, y con artista no vacío distinto del genérico.  Cuando hay canción real
+        // no asociada a un programa, no debe robar carátula, clic ni pestaña.
+        $defaultTitle = $defaults['title'] ?? 'Transmisión oficial';
+        $defaultArtist = $defaults['artist'] ?? 'Seven Rock Radio';
+        $isDefaultTitle = ($rawTitle === '' || mb_strtolower($rawTitle) === mb_strtolower($defaultTitle));
+        $isDefaultArtist = ($rawArtist === '' || mb_strtolower($rawArtist) === mb_strtolower($defaultArtist));
+        $hasRealSong = ! $isDefaultTitle && ! $isDefaultArtist;
+
+        // Si se detecta un programa (por fichero, carátula, álbum, texto u horario)
+        $isProgramBlock = (bool) ($matchedTrackProgram !== null || (! $hasRealSong && ! empty($scheduleContext['es_bloque_programa'])));
+
+        // Log cuando no hay match (nivel info, sin ruido)
+        if ($currentProgram === null && ! $isProgramBlock) {
+            $throttleKey = 'log.no_prog_match.' . md5(
+                ($this->lastDiagnosis['vias']['fichero'] ?? '') . '|' .
+                ($this->lastDiagnosis['vias']['caratula'] ?? '') . '|' .
+                ($this->lastDiagnosis['vias']['texto'] ?? '') . '|' .
+                Carbon::now()->format('YmdH')
+            );
+            if (Cache::add($throttleKey, 1, 300)) {
+                \Illuminate\Support\Facades\Log::info(sprintf(
+                    'Programa no identificado. Vías probadas: fichero=<%s> carátula=<%s> texto=<%s> horario=<%s>',
+                    $this->lastDiagnosis['vias']['fichero'] ?? 'ninguno',
+                    $this->lastDiagnosis['vias']['caratula'] ?? 'ninguna',
+                    $this->lastDiagnosis['vias']['texto'] ?? 'ninguno',
+                    $this->lastDiagnosis['vias']['horario'] ?? 'ninguno'
+                ));
+            }
+        }
+
+        $resolvedProgramId = null;
+        $resolvedProgramName = null;
+        $resolvedProgramDescription = null;
+        $resolvedProgramHost = null;
+        $resolvedProgramSchedule = null;
+
+        if ($isProgramBlock) {
+            $progSource = $matchedTrackProgram ?? $scheduleContext['program'] ?? null;
+            $masterSource = $matchedTrackProgram?->masterProgram ?? $scheduleContext['master'] ?? null;
+
+            $resolvedProgramId = $progSource?->id ?? $scheduleContext['program_id'] ?? null;
+            $resolvedProgramName = $this->firstFilledString([
+                $masterSource?->name,
+                $masterSource?->nombre,
+                $progSource?->name,
+                $progSource?->titulo_programa,
+                $scheduleContext['program_name'] ?? null,
+            ]);
+            $resolvedProgramDescription = $this->firstFilledString([
+                $progSource?->live_description,
+                $progSource?->description,
+                $progSource?->informacion_fija_programa,
+                $masterSource?->description,
+                $scheduleContext['program_description'] ?? null,
+            ]);
+            $resolvedProgramHost = $this->firstFilledString([
+                $progSource?->host,
+                $progSource?->conductor,
+                $masterSource?->host,
+                $masterSource?->conductor,
+                $scheduleContext['program_host'] ?? null,
+            ]);
+            $resolvedProgramSchedule = $this->firstFilledString([
+                $progSource?->schedule,
+                $masterSource?->schedule,
+                $scheduleContext['program_schedule'] ?? null,
+            ]);
+
+            // Determinar título del episodio para track.title
+            $episodeTitle = $this->firstFilledString([
+                $progSource?->live_title,
+                $progSource?->titulo_programa,
+                $resolvedProgramName,
+            ]);
+
+            // Determinar artista para track.artist
+            $programArtist = $this->firstFilledString([
+                $resolvedProgramName,
+                $resolvedProgramHost,
+                $defaultArtist,
+            ]);
+
+            // Si se identificó un programa (vía fichero, carátula, álbum, texto u horario):
+            // rellenar track.title y track.artist con el programa/episodio
+            if ($matchedTrackProgram !== null || ! $hasRealSong) {
+                $trackTitle = $episodeTitle !== '' ? $episodeTitle : ($rawTitle !== '' ? $rawTitle : $defaultTitle);
+                $trackArtist = $programArtist !== '' ? $programArtist : ($rawArtist !== '' ? $rawArtist : $defaultArtist);
+            }
+        }
 
         $cover = $hasRealSong
             ? $this->resolveCover(
@@ -158,8 +328,8 @@ class RadioPlayerService
                     ?? $defaults['cover']
             )
             : $this->resolveCover(
-                $song?->cover_image
-                    ?? Arr::get($state, 'cover')
+                Arr::get($state, 'cover')
+                    ?? $song?->cover_image
                     ?? $currentProgram?->cover_image
                     ?? $defaults['cover']
             );
@@ -182,15 +352,6 @@ class RadioPlayerService
         if ($duration > 0 && $elapsed > $duration) {
             $elapsed = 0;
         }
-
-        // Si hay canción real en el stream, el programa no gana isProgramBlock
-        // (salvo que la canción esté asociada a ese programa vía matchedTrackProgram).
-        $isProgramBlock = (bool) ($matchedTrackProgram !== null || (!$hasRealSong && !empty($scheduleContext['es_bloque_programa'])));
-        $resolvedProgramId = $isProgramBlock ? ($matchedTrackProgram?->id ?? $scheduleContext['program_id'] ?? null) : null;
-        $resolvedProgramName = $isProgramBlock ? ($matchedTrackProgram?->name ?? $matchedTrackProgram?->titulo_programa ?? $scheduleContext['program_name'] ?? null) : null;
-        $resolvedProgramDescription = $isProgramBlock ? ($matchedTrackProgram?->description ?? $matchedTrackProgram?->informacion_fija_programa ?? $scheduleContext['program_description'] ?? null) : null;
-        $resolvedProgramHost = $isProgramBlock ? ($matchedTrackProgram?->host ?? $matchedTrackProgram?->conductor ?? $currentProgram?->host ?? $scheduleContext['program_host'] ?? null) : null;
-        $resolvedProgramSchedule = $isProgramBlock ? ($matchedTrackProgram?->schedule ?? $currentProgram?->schedule ?? $scheduleContext['program_schedule'] ?? null) : null;
 
         $track = [
             'id' => $song?->id,
@@ -323,9 +484,11 @@ class RadioPlayerService
 
     private function resolveCurrentProgram(array $state, ?Song $song, \Illuminate\Support\Collection $programs): ?Program
     {
+        // 1. Coincidencia por ID explícito
         if ($programId = Arr::get($state, 'program_id')) {
             $program = $programs->firstWhere('id', (int) $programId);
             if ($program) {
+                $this->recordMatch('id', $program->name, (int) $program->id, $program->live_title ?: $program->name, (int) $program->id);
                 return $program;
             }
         }
@@ -333,30 +496,184 @@ class RadioPlayerService
         if ($song?->program_id) {
             $program = $programs->firstWhere('id', (int) $song->program_id);
             if ($program) {
+                $this->recordMatch('id', $program->name, (int) $program->id, $program->live_title ?: $program->name, (int) $program->id);
                 return $program;
             }
         }
 
         $rawTitle = trim((string) Arr::get($state, 'title', ''));
         $rawArtist = trim((string) Arr::get($state, 'artist', ''));
+        $rawAlbum = trim((string) Arr::get($state, 'album', ''));
+        $rawFile = $this->firstFilledString([
+            Arr::get($state, 'filename'),
+            Arr::get($state, 'file'),
+            Arr::get($state, 'song'),
+            Arr::get($state, 'raw.filename'),
+            Arr::get($state, 'raw.file'),
+            Arr::get($state, 'raw.song'),
+        ]);
+        $rawCover = $this->firstFilledString([
+            Arr::get($state, 'cover'),
+            Arr::get($state, 'cover_image'),
+            Arr::get($state, 'artwork'),
+            Arr::get($state, 'image'),
+            Arr::get($state, 'raw.cover'),
+            Arr::get($state, 'raw.cover_image'),
+            Arr::get($state, 'raw.artwork'),
+            Arr::get($state, 'raw.image'),
+        ]);
 
+        $cleanFile = '';
+        if ($rawFile !== '') {
+            $path = str_replace('\\', '/', $rawFile);
+            $basename = basename($path);
+            $withoutExt = preg_replace('/\.[a-zA-Z0-9]{2,5}$/', '', $basename) ?? $basename;
+            $cleanFile = $this->cleanMetadataForProgramMatch($withoutExt);
+        }
+
+        $cleanCover = $this->cleanCoverBasename($rawCover);
+        if ($this->isGenericCover($cleanCover)) {
+            $cleanCover = '';
+        }
+
+        $cleanAlbum = $this->cleanMetadataForProgramMatch($rawAlbum);
         $cleanTitle = $this->cleanMetadataForProgramMatch($rawTitle);
         $cleanArtist = $this->cleanMetadataForProgramMatch($rawArtist);
 
-        // 1. Coincidencia por metadatos en colección de programas/episodios (sin exigir horario)
-        if ($cleanTitle !== '' || $cleanArtist !== '') {
+        $defaultTitleClean = $this->cleanMetadataForProgramMatch(config('player.defaults.title', 'Transmisión oficial'));
+        $defaultArtistClean = $this->cleanMetadataForProgramMatch(config('player.defaults.artist', 'Seven Rock Radio'));
+        if ($cleanTitle === $defaultTitleClean) {
+            $cleanTitle = '';
+        }
+        if ($cleanArtist === $defaultArtistClean) {
+            $cleanArtist = '';
+        }
+
+        $this->lastDiagnosis['vias']['fichero'] = $rawFile !== '' ? "file={$rawFile} clean={$cleanFile}" : 'vacío';
+        $this->lastDiagnosis['vias']['caratula'] = $cleanCover !== '' ? "cover={$rawCover} clean={$cleanCover}" : ($rawCover !== '' ? "cover={$rawCover} (genérica o no analizable)" : 'vacía');
+        $this->lastDiagnosis['vias']['album'] = $cleanAlbum !== '' ? "album={$rawAlbum} clean={$cleanAlbum}" : 'vacío';
+        $this->lastDiagnosis['vias']['texto'] = ($cleanTitle !== '' || $cleanArtist !== '') ? "title={$rawTitle} artist={$rawArtist}" : 'vacío o por defecto';
+
+        $masters = $this->hasTable('master_programs')
+            ? MasterProgram::query()->where('activo', true)->get()
+            : collect();
+
+        // 2. Vía NOMBRE DE FICHERO: filename/file/song
+        if ($cleanFile !== '' && strlen($cleanFile) >= 3) {
+            // 2a. Comparar contra episodios / programas
             foreach ($programs as $p) {
-                $pName = $this->cleanMetadataForProgramMatch((string) ($p->name ?: $p->titulo_programa ?: ''));
-                if ($pName !== '' && (($cleanTitle !== '' && str_contains($cleanTitle, $pName)) || ($cleanArtist !== '' && str_contains($cleanArtist, $pName)))) {
+                $pLive = $this->cleanMetadataForProgramMatch((string) $p->live_title);
+                $pProg = $this->cleanMetadataForProgramMatch((string) ($p->titulo_programa ?: $p->name ?: ''));
+                $pSlug = $this->cleanMetadataForProgramMatch((string) ($p->slug ?: ''));
+
+                $matchLive = ($pLive !== '' && strlen($pLive) >= 3 && (str_contains($cleanFile, $pLive) || str_contains($pLive, $cleanFile)));
+                $matchProg = ($pProg !== '' && strlen($pProg) >= 3 && (str_contains($cleanFile, $pProg) || str_contains($pProg, $cleanFile)));
+                $matchSlug = ($pSlug !== '' && strlen($pSlug) >= 3 && (str_contains($cleanFile, $pSlug) || str_contains($pSlug, $cleanFile)));
+
+                if ($matchLive || $matchProg || $matchSlug) {
+                    $p->match_via = 'fichero';
+                    $this->recordMatch('fichero', $p->name, (int) $p->id, $p->live_title ?: $p->name, (int) $p->id);
                     return $p;
+                }
+            }
+
+            // 2b. Comparar contra MasterProgram
+            foreach ($masters as $m) {
+                $mName = $this->cleanMetadataForProgramMatch((string) ($m->name ?: $m->nombre ?: ''));
+                $mSlug = $this->cleanMetadataForProgramMatch((string) ($m->publicSlug() ?: ''));
+
+                $matchName = ($mName !== '' && strlen($mName) >= 3 && (str_contains($cleanFile, $mName) || str_contains($mName, $cleanFile)));
+                $matchSlug = ($mSlug !== '' && strlen($mSlug) >= 3 && (str_contains($cleanFile, $mSlug) || str_contains($mSlug, $cleanFile)));
+
+                if ($matchName || $matchSlug) {
+                    $episode = $this->matchEpisodeForMaster($m, $cleanFile, $cleanCover);
+                    $program = $this->buildProgramFromMasterAndEpisode($m, $episode, 'fichero');
+                    $this->recordMatch('fichero', $m->name, (int) $m->id, $episode?->live_title ?: $m->name, $episode?->id);
+                    return $program;
                 }
             }
         }
 
-        // 2. Coincidencia por metadatos en MasterProgram (sin exigir horario)
-        if ($this->hasTable('master_programs') && ($cleanTitle !== '' || $cleanArtist !== '')) {
-            $masters = MasterProgram::query()->where('activo', true)->get();
-            $matchedMaster = null;
+        // 3. Vía CARÁTULA: artwork / cover
+        if ($cleanCover !== '' && strlen($cleanCover) >= 3) {
+            // 3a. Comparar contra episodios / programas
+            foreach ($programs as $p) {
+                $pCover = $this->cleanCoverBasename((string) ($p->cover_image ?: $p->caratula_programa ?: $p->imagen_episodio ?: ''));
+                $pName = $this->cleanMetadataForProgramMatch((string) ($p->name ?: $p->titulo_programa ?: ''));
+                $pSlug = $this->cleanMetadataForProgramMatch((string) ($p->slug ?: ''));
+
+                $matchCover = ($pCover !== '' && ! $this->isGenericCover($pCover) && (str_contains($cleanCover, $pCover) || str_contains($pCover, $cleanCover)));
+                $matchName = ($pName !== '' && strlen($pName) >= 3 && (str_contains($cleanCover, $pName) || str_contains($pName, $cleanCover)));
+                $matchSlug = ($pSlug !== '' && strlen($pSlug) >= 3 && (str_contains($cleanCover, $pSlug) || str_contains($pSlug, $cleanCover)));
+
+                if ($matchCover || $matchName || $matchSlug) {
+                    $p->match_via = 'caratula';
+                    $this->recordMatch('caratula', $p->name, (int) $p->id, $p->live_title ?: $p->name, (int) $p->id);
+                    return $p;
+                }
+            }
+
+            // 3b. Comparar contra MasterProgram
+            foreach ($masters as $m) {
+                $mCover1 = $this->cleanCoverBasename((string) ($m->caratula_url ?: ''));
+                $mCover2 = $this->cleanCoverBasename((string) ($m->live_image_url ?: ''));
+                $mName = $this->cleanMetadataForProgramMatch((string) ($m->name ?: $m->nombre ?: ''));
+                $mSlug = $this->cleanMetadataForProgramMatch((string) ($m->publicSlug() ?: ''));
+
+                $matchCover = ($mCover1 !== '' && ! $this->isGenericCover($mCover1) && (str_contains($cleanCover, $mCover1) || str_contains($mCover1, $cleanCover)))
+                    || ($mCover2 !== '' && ! $this->isGenericCover($mCover2) && (str_contains($cleanCover, $mCover2) || str_contains($mCover2, $cleanCover)));
+                $matchName = ($mName !== '' && strlen($mName) >= 3 && (str_contains($cleanCover, $mName) || str_contains($mName, $cleanCover)));
+                $matchSlug = ($mSlug !== '' && strlen($mSlug) >= 3 && (str_contains($cleanCover, $mSlug) || str_contains($mSlug, $cleanCover)));
+
+                if ($matchCover || $matchName || $matchSlug) {
+                    $episode = $this->matchEpisodeForMaster($m, $cleanFile, $cleanCover);
+                    $program = $this->buildProgramFromMasterAndEpisode($m, $episode, 'caratula');
+                    $this->recordMatch('caratula', $m->name, (int) $m->id, $episode?->live_title ?: $m->name, $episode?->id);
+                    return $program;
+                }
+            }
+        }
+
+        // 4. Vía ÁLBUM
+        if ($cleanAlbum !== '' && strlen($cleanAlbum) >= 3) {
+            foreach ($programs as $p) {
+                $pName = $this->cleanMetadataForProgramMatch((string) ($p->name ?: $p->titulo_programa ?: ''));
+                $pSlug = $this->cleanMetadataForProgramMatch((string) ($p->slug ?: ''));
+
+                if (($pName !== '' && (str_contains($cleanAlbum, $pName) || str_contains($pName, $cleanAlbum))) ||
+                    ($pSlug !== '' && (str_contains($cleanAlbum, $pSlug) || str_contains($pSlug, $cleanAlbum)))) {
+                    $p->match_via = 'album';
+                    $this->recordMatch('album', $p->name, (int) $p->id, $p->live_title ?: $p->name, (int) $p->id);
+                    return $p;
+                }
+            }
+
+            foreach ($masters as $m) {
+                $mName = $this->cleanMetadataForProgramMatch((string) ($m->name ?: $m->nombre ?: ''));
+                $mSlug = $this->cleanMetadataForProgramMatch((string) ($m->publicSlug() ?: ''));
+
+                if (($mName !== '' && (str_contains($cleanAlbum, $mName) || str_contains($mName, $cleanAlbum))) ||
+                    ($mSlug !== '' && (str_contains($cleanAlbum, $mSlug) || str_contains($mSlug, $cleanAlbum)))) {
+                    $episode = $this->matchEpisodeForMaster($m, $cleanFile, $cleanCover);
+                    $program = $this->buildProgramFromMasterAndEpisode($m, $episode, 'album');
+                    $this->recordMatch('album', $m->name, (int) $m->id, $episode?->live_title ?: $m->name, $episode?->id);
+                    return $program;
+                }
+            }
+        }
+
+        // 5. Vía TEXTO: title / artist / host
+        if ($cleanTitle !== '' || $cleanArtist !== '') {
+            foreach ($programs as $p) {
+                $pName = $this->cleanMetadataForProgramMatch((string) ($p->name ?: $p->titulo_programa ?: ''));
+                $pLive = $this->cleanMetadataForProgramMatch((string) ($p->live_title ?: ''));
+                if (($pName !== '' && (($cleanTitle !== '' && str_contains($cleanTitle, $pName)) || ($cleanArtist !== '' && str_contains($cleanArtist, $pName)))) ||
+                    ($pLive !== '' && (($cleanTitle !== '' && str_contains($cleanTitle, $pLive)) || ($cleanArtist !== '' && str_contains($cleanArtist, $pLive))))) {
+                    $p->match_via = 'texto';
+                    $this->recordMatch('texto', $p->name, (int) $p->id, $p->live_title ?: $p->name, (int) $p->id);
+                    return $p;
+                }
+            }
 
             foreach ($masters as $m) {
                 $mName = $this->cleanMetadataForProgramMatch((string) ($m->name ?: $m->nombre ?: ''));
@@ -367,40 +684,136 @@ class RadioPlayerService
                 $matchHost = ($mHost !== '' && strlen($mHost) >= 3 && (($cleanTitle !== '' && str_contains($cleanTitle, $mHost)) || ($cleanArtist !== '' && str_contains($cleanArtist, $mHost))));
 
                 if ($matchName || $matchHost) {
-                    $matchedMaster = $m;
-                    break;
+                    $episode = $this->matchEpisodeForMaster($m, $cleanFile, $cleanCover);
+                    $program = $this->buildProgramFromMasterAndEpisode($m, $episode, 'texto');
+                    $this->recordMatch('texto', $m->name, (int) $m->id, $episode?->live_title ?: $m->name, $episode?->id);
+                    return $program;
                 }
-            }
-
-            if ($matchedMaster) {
-                if ($this->hasTable('radio_programs')) {
-                    $latestEpisode = RadioProgram::query()
-                        ->where('master_program_id', $matchedMaster->id)
-                        ->orderByDesc('fecha_emision')
-                        ->orderByDesc('id')
-                        ->first();
-
-                    if ($latestEpisode) {
-                        return Program::query()->find($latestEpisode->getKey());
-                    }
-                }
-
-                $dummy = new Program();
-                $dummy->id = $matchedMaster->id;
-                $dummy->exists = true;
-                $dummy->fill([
-                    'name' => $matchedMaster->name ?: $matchedMaster->nombre,
-                    'description' => $matchedMaster->description,
-                    'host' => $matchedMaster->host,
-                    'cover_image' => $matchedMaster->live_image_url ?: $matchedMaster->caratula_url,
-                    'schedule' => $matchedMaster->schedule,
-                ]);
-                $dummy->setAttribute('id', $matchedMaster->id);
-                return $dummy;
             }
         }
 
         return null;
+    }
+
+    private function matchEpisodeForMaster(MasterProgram $master, string $cleanFile = '', string $cleanCover = ''): ?RadioProgram
+    {
+        if (! $this->hasTable('radio_programs')) {
+            return null;
+        }
+
+        $episodes = RadioProgram::query()
+            ->where('master_program_id', $master->id)
+            ->orderByDesc('fecha_emision')
+            ->orderByDesc('id')
+            ->get();
+
+        if ($episodes->isEmpty()) {
+            return null;
+        }
+
+        // Si tenemos un nombre de fichero limpio, buscar si algún episodio coincide específicamente
+        if ($cleanFile !== '') {
+            foreach ($episodes as $ep) {
+                $epLive = $this->cleanMetadataForProgramMatch((string) $ep->live_title);
+                $epProg = $this->cleanMetadataForProgramMatch((string) $ep->titulo_programa);
+
+                if ($epLive !== '' && strlen($epLive) >= 3 && (str_contains($cleanFile, $epLive) || str_contains($epLive, $cleanFile))) {
+                    return $ep;
+                }
+                if ($epProg !== '' && strlen($epProg) >= 3 && (str_contains($cleanFile, $epProg) || str_contains($epProg, $cleanFile))) {
+                    return $ep;
+                }
+                if ($ep->numero_episodio && preg_match('/\b' . $ep->numero_episodio . '\b/', $cleanFile)) {
+                    return $ep;
+                }
+            }
+        }
+
+        // Si tenemos carátula, buscar si coincide con la carátula del episodio
+        if ($cleanCover !== '') {
+            foreach ($episodes as $ep) {
+                foreach ([$ep->caratula_programa, $ep->imagen_episodio, $ep->live_image_url] as $img) {
+                    $imgBase = $this->cleanCoverBasename((string) $img);
+                    if ($imgBase !== '' && strlen($imgBase) >= 3 && (str_contains($cleanCover, $imgBase) || str_contains($imgBase, $cleanCover))) {
+                        return $ep;
+                    }
+                }
+            }
+        }
+
+        // Fallback: el más reciente del master_program_id
+        return $episodes->first();
+    }
+
+    private function buildProgramFromMasterAndEpisode(MasterProgram $master, ?RadioProgram $episode, string $matchVia): Program
+    {
+        if ($episode) {
+            $prog = Program::query()->find($episode->getKey());
+            if ($prog) {
+                $prog->match_via = $matchVia;
+                $prog->matched_episode = $episode;
+                if (! filled($prog->live_title) && filled($episode->live_title)) {
+                    $prog->live_title = $episode->live_title;
+                }
+                return $prog;
+            }
+        }
+
+        $dummy = new Program();
+        $dummy->id = $episode ? $episode->id : $master->id;
+        $dummy->exists = true;
+        $dummy->fill([
+            'name' => $master->name ?: $master->nombre,
+            'description' => $episode?->live_description ?: $episode?->comentario_episodio ?: $episode?->resena ?: $master->description,
+            'host' => $episode?->conductor ?: $master->host ?: $master->conductor,
+            'cover_image' => $episode?->caratula_programa ?: $episode?->imagen_episodio ?: $master->live_image_url ?: $master->caratula_url,
+            'schedule' => $master->schedule,
+        ]);
+        $dummy->setAttribute('id', $episode ? $episode->id : $master->id);
+        $dummy->setAttribute('live_title', $episode?->live_title ?: $episode?->titulo_programa ?: ($master->name ?: $master->nombre));
+        $dummy->match_via = $matchVia;
+        $dummy->matched_episode = $episode;
+
+        return $dummy;
+    }
+
+    private function cleanCoverBasename(string $urlOrPath): string
+    {
+        $urlOrPath = trim($urlOrPath);
+        if ($urlOrPath === '' || str_starts_with($urlOrPath, 'data:image')) {
+            return '';
+        }
+
+        $path = parse_url($urlOrPath, PHP_URL_PATH) ?? $urlOrPath;
+        $basename = basename(str_replace('\\', '/', $path));
+        $withoutExt = preg_replace('/\.[a-zA-Z0-9]{2,5}$/', '', $basename) ?? $basename;
+
+        return $this->cleanMetadataForProgramMatch($withoutExt);
+    }
+
+    private function isGenericCover(string $cleanCover): bool
+    {
+        if ($cleanCover === '' || strlen($cleanCover) < 3) {
+            return true;
+        }
+
+        $generics = [
+            'album3', 'current cover', 'current-cover', 'artwork', 'default',
+            'logo', 'stationlogo', 'station-logo', 'stream', 'transmision oficial',
+            'seven rock radio', 'cover', 'image', 'radio', 'placeholder', 'null',
+        ];
+
+        return in_array($cleanCover, $generics, true);
+    }
+
+    private function recordMatch(string $via, ?string $programName, ?int $programId, ?string $episodeTitle, ?int $episodeId): void
+    {
+        $this->lastDiagnosis['match_found'] = true;
+        $this->lastDiagnosis['match_via'] = $via;
+        $this->lastDiagnosis['matched_program'] = $programName;
+        $this->lastDiagnosis['matched_program_id'] = $programId;
+        $this->lastDiagnosis['matched_episode'] = $episodeTitle;
+        $this->lastDiagnosis['matched_episode_id'] = $episodeId;
     }
 
     private function cleanMetadataForProgramMatch(string $text): string
@@ -454,6 +867,9 @@ class RadioPlayerService
             'program_name' => null,
             'program_description' => null,
             'program' => null,
+            'program_host' => null,
+            'program_schedule' => null,
+            'master' => null,
         ];
 
         if (! $this->hasTable('master_programs') || ! $this->hasTable('radio_programs')) {
@@ -617,21 +1033,9 @@ class RadioPlayerService
         $timezone = $this->normalizeTimezone((string) ($master->timezone ?: config('app.timezone')));
         $localNow = $now->copy()->setTimezone($timezone);
 
-        if ($episode->fecha_emision) {
-            $episodeDate = Carbon::parse((string) $episode->fecha_emision, $timezone)->toDateString();
-            if ($episodeDate !== $localNow->toDateString()) {
-                return false;
-            }
-        } else {
-            $daySource = strtoupper(trim((string) ($episode->dia_transmision ?: $master->dia_transmision)));
-            if ($daySource !== '' && $daySource !== $this->currentDayKey($localNow)) {
-                return false;
-            }
-        }
-
         if ($master->live_starts_at && $master->live_ends_at) {
-            $start = Carbon::parse((string) $master->live_starts_at, $timezone);
-            $end = Carbon::parse((string) $master->live_ends_at, $timezone);
+            $start = Carbon::parse((string) $master->live_starts_at, $timezone)->subMinutes(self::MARGIN_EPISODE_MINUTES);
+            $end = Carbon::parse((string) $master->live_ends_at, $timezone)->addMinutes(self::MARGIN_EPISODE_MINUTES);
 
             if ($end->lessThan($start)) {
                 return $localNow->greaterThanOrEqualTo($start) || $localNow->lessThanOrEqualTo($end);
@@ -708,9 +1112,21 @@ class RadioPlayerService
     private function resolveEpisodeWindow(RadioProgram $episode, MasterProgram $master, Carbon $reference): ?array
     {
         $timezone = $this->normalizeTimezone((string) ($master->timezone ?: config('app.timezone')));
-        $baseDate = $episode->fecha_emision
-            ? Carbon::parse((string) $episode->fecha_emision, $timezone)->startOfDay()
-            : $reference->copy()->setTimezone($timezone)->startOfDay();
+
+        if ($episode->fecha_emision) {
+            $baseDate = Carbon::parse((string) $episode->fecha_emision, $timezone)->startOfDay();
+            $refDate = $reference->copy()->setTimezone($timezone)->startOfDay();
+            // Si la fecha del episodio difiere más de 1 día respecto a la fecha actual, descartar
+            if (abs($baseDate->diffInDays($refDate, false)) > 1) {
+                return null;
+            }
+        } else {
+            $daySource = strtoupper(trim((string) ($episode->dia_transmision ?: $master->dia_transmision)));
+            if ($daySource !== '' && $daySource !== $this->currentDayKey($reference)) {
+                return null;
+            }
+            $baseDate = $reference->copy()->setTimezone($timezone)->startOfDay();
+        }
 
         $start = $this->parseTimeToCarbon($baseDate, (string) ($episode->hora_inicio ?: $master->hora_transmision ?: ''));
         if ($start === null) {
@@ -723,7 +1139,12 @@ class RadioPlayerService
             ->where('dia_semana', $currentDay)
             ->first();
 
-        $duracionRealSegundos = $emision?->duracion_segundos ?? ((int) ($episode->duration_seconds ?? 0) > 0 ? (int) $episode->duration_seconds : null);
+        // Prioridad de duración: 1) duration_seconds de radio_programs (episodio real)
+        // 2) duracion_segundos de emisión, 3) duracion_minutos de master
+        $episodeDuration = (int) ($episode->duration_seconds ?? 0);
+        $duracionRealSegundos = $episodeDuration > 0
+            ? $episodeDuration
+            : ($emision?->duracion_segundos ?? null);
 
         $endTime = trim((string) ($episode->hora_fin ?: ''));
         if ($endTime !== '') {
@@ -732,10 +1153,8 @@ class RadioPlayerService
                 $end = $end->copy()->addDay();
             }
         } elseif ($duracionRealSegundos && $duracionRealSegundos > 0) {
-            $scheduledStart = $start->copy();
-            $start = $start->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
-            $duracionMinutos = (int) ceil($duracionRealSegundos / 60) + self::MARGIN_AFTER_MINUTES;
-            $end = $scheduledStart->copy()->addMinutes($duracionMinutos);
+            $duracionMinutos = (int) ceil($duracionRealSegundos / 60);
+            $end = $start->copy()->addMinutes($duracionMinutos);
         } elseif ((int) ($master->duracion_minutos ?? 0) > 0) {
             $end = $start->copy()->addMinutes((int) $master->duracion_minutos);
         } else {
@@ -745,6 +1164,10 @@ class RadioPlayerService
         if (! $end instanceof Carbon) {
             return null;
         }
+
+        // Añadir margen de ±30 minutos alrededor del inicio y fin
+        $start = $start->copy()->subMinutes(self::MARGIN_EPISODE_MINUTES);
+        $end = $end->copy()->addMinutes(self::MARGIN_EPISODE_MINUTES);
 
         $cutoff = $this->programScheduleService->nextProgramStartFor($master, $reference);
         if ($cutoff instanceof Carbon && $cutoff->greaterThan($start) && $cutoff->lessThan($end)) {
@@ -958,6 +1381,8 @@ class RadioPlayerService
                 'title' => $normalized['title'] !== '' ? $normalized['title'] : null,
                 'artist' => $normalized['artist'] !== '' ? $normalized['artist'] : null,
                 'album' => $normalized['album'] !== '' ? $normalized['album'] : null,
+                'filename' => $normalized['filename'] ?? null,
+                'file' => $normalized['file'] ?? null,
                 'cover' => $normalized['cover'] !== '' ? $normalized['cover'] : null,
                 'is_live' => (bool) Arr::get($data, 'live', true),
                 'program_name' => $normalized['program_name'] !== '' ? $normalized['program_name'] : null,
@@ -1014,11 +1439,18 @@ class RadioPlayerService
                 Arr::get($item, 'trackartist'),
                 Arr::get($item, 'performer'),
             ]);
+            $filename = $this->firstFilledString([
+                Arr::get($item, 'filename'),
+                Arr::get($item, 'file'),
+                Arr::get($item, 'path'),
+            ]);
 
             return array_filter([
                 'title' => $title !== '' ? $title : null,
                 'artist' => $artist !== '' ? $artist : null,
                 'album' => $this->firstFilledString([Arr::get($item, 'album'), Arr::get($item, 'program')]),
+                'filename' => $filename !== '' ? $filename : null,
+                'file' => $filename !== '' ? $filename : null,
                 'cover' => $this->firstFilledString([Arr::get($item, 'artwork'), Arr::get($item, 'cover'), Arr::get($item, 'image')]),
             ], static fn ($value): bool => $value !== null && $value !== '');
         } catch (\Throwable) {
@@ -1155,9 +1587,22 @@ class RadioPlayerService
             $title = $line;
         }
 
+        $filename = $this->firstFilledString([
+            trim((string) Arr::get($trackAttributes, 'FILENAME', '')),
+            trim((string) Arr::get($trackAttributes, 'FILE', '')),
+            trim((string) Arr::get($currentTrack, 'FILENAME', '')),
+            trim((string) Arr::get($currentTrack, 'FILE', '')),
+            trim((string) Arr::get($data, 'filename', '')),
+            trim((string) Arr::get($data, 'file', '')),
+            trim((string) Arr::get($recentTrack, 'filename', '')),
+            trim((string) Arr::get($recentTrack, 'file', '')),
+        ]);
+
         return [
             'title' => $title,
             'artist' => $artist,
+            'filename' => $filename !== '' ? $filename : null,
+            'file' => $filename !== '' ? $filename : null,
             'album' => $this->firstFilledString([
                 trim((string) Arr::get($trackAttributes, 'ALBUM', '')),
                 trim((string) Arr::get($currentTrack, 'ALBUM', '')),
