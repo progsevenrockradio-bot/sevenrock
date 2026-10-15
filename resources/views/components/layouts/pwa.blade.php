@@ -425,9 +425,9 @@
             {{-- Info del track --}}
             <div class="flex-1 min-w-0">
                 <p class="font-display text-sm font-semibold text-white truncate leading-tight"
-                   x-text="currentTrack.title || 'Seven Rock Radio'"></p>
+                   x-text="tituloVisible"></p>
                 <p class="text-xs text-gray-400 truncate leading-tight mt-0.5"
-                   x-text="currentTrack.artist || 'En Vivo'"></p>
+                   x-text="subtituloVisible"></p>
             </div>
 
             {{-- Visualizador de ondas (solo en live) / barra de tiempo (podcast) --}}
@@ -517,9 +517,9 @@
         {{-- Título y Artista --}}
         <div class="w-full px-8 mt-6 text-center">
             <h2 class="font-display text-2xl font-bold text-white leading-tight"
-                x-text="currentTrack.title || 'Seven Rock Radio'"></h2>
+                x-text="tituloVisible"></h2>
             <p class="text-base text-gray-400 mt-1"
-               x-text="currentTrack.artist || 'En Vivo'"></p>
+               x-text="subtituloVisible"></p>
         </div>
 
         {{-- Botón Instalar App Prominente en el Reproductor --}}
@@ -974,6 +974,27 @@
                 }
             },
 
+            get tituloVisible() {
+                const esPrograma = this.currentTrack?.es_bloque_programa || (this.currentTrack?.program_name ?? '') !== '';
+                if (esPrograma) {
+                    const t = (this.currentTrack?.title ?? '').trim();
+                    const isGeneric = !t || t.toLowerCase() === 'transmisión oficial' || t.toLowerCase() === 'transmision oficial' || t.toLowerCase() === 'seven rock radio';
+                    if (!isGeneric) {
+                        return this.currentTrack.title;
+                    }
+                    return this.currentTrack?.program_name || this.currentTrack?.title || 'Seven Rock Radio';
+                }
+                return (this.currentTrack?.title ?? '') !== '' ? this.currentTrack.title : 'Seven Rock Radio';
+            },
+
+            get subtituloVisible() {
+                const esPrograma = this.currentTrack?.es_bloque_programa || (this.currentTrack?.program_name ?? '') !== '';
+                if (esPrograma) {
+                    return this.currentTrack?.program_host || this.currentTrack?.program_schedule || this.currentTrack?.artist || 'En Vivo';
+                }
+                return (this.currentTrack?.artist ?? '') !== '' ? this.currentTrack.artist : 'En Vivo';
+            },
+
             async fetchNowPlaying() {
                 try {
                     const res  = await fetch('/app/api/now-playing');
@@ -982,6 +1003,10 @@
                         this.currentTrack.title  = data.title  || this.currentTrack.title;
                         this.currentTrack.artist = data.artist || this.currentTrack.artist;
                         this.currentTrack.cover  = data.cover  || this.currentTrack.cover;
+                        this.currentTrack.program_name = data.program_name || data.program || '';
+                        this.currentTrack.program_host = data.program_host || '';
+                        this.currentTrack.program_schedule = data.program_schedule || '';
+                        this.currentTrack.es_bloque_programa = Boolean(data.es_bloque_programa);
                     }
                 } catch { /* Silencioso */ }
             },

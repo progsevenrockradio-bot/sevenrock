@@ -1984,8 +1984,8 @@ export function registerRadioPlayer(Alpine) {
         },
 
         async updateShareKey() {
-            const title = this.track.title || this.defaultTitle || 'Seven Rock Radio';
-            const artist = this.track.artist || this.defaultArtist || '';
+            const title = this.tituloVisible;
+            const artist = this.subtituloVisible;
             const program = this.track.program_name || '';
             const cover = this.track.cover || this.fallbackCover || '';
 
@@ -2011,8 +2011,8 @@ export function registerRadioPlayer(Alpine) {
         },
 
         shareContext() {
-            const title = this.track.title || this.defaultTitle || 'Seven Rock Radio';
-            const artist = this.track.artist || this.defaultArtist || '';
+            const title = this.tituloVisible;
+            const artist = this.subtituloVisible;
             const program = this.track.program_name || '';
             const cover = this.track.cover || this.fallbackCover || '';
             const baseUrl = window.location.origin + '/';
@@ -2154,8 +2154,8 @@ export function registerRadioPlayer(Alpine) {
                 return;
             }
 
-            const title = track.title && track.title !== this.defaultTitle ? track.title : 'Seven Rock Radio';
-            const artist = track.artist && track.artist !== this.defaultArtist ? track.artist : 'En vivo';
+            const title = this.tituloVisible || 'Seven Rock Radio';
+            const artist = this.subtituloVisible || 'En vivo';
             const coverUrl = track.cover || track.band_thumbnail || this.bandPanel.cover || this.fallbackCover;
             const absoluteCoverUrl = coverUrl ? (coverUrl.startsWith('http') ? coverUrl : window.location.origin + coverUrl) : '';
 
@@ -2269,6 +2269,28 @@ export function registerRadioPlayer(Alpine) {
 
         get biographyExpanded() {
             return this.bandWindowView.biography || '';
+        },
+
+        get tituloVisible() {
+            const esPrograma = this.track?.es_bloque_programa || (this.track?.program_name ?? '') !== '';
+            if (esPrograma) {
+                const t = (this.track?.title ?? '').trim();
+                const def = (this.defaultTitle ?? '').trim().toLowerCase();
+                const isGeneric = !t || t.toLowerCase() === def || t.toLowerCase() === 'transmisión oficial' || t.toLowerCase() === 'transmision oficial' || t.toLowerCase() === 'seven rock radio';
+                if (!isGeneric) {
+                    return this.track.title;
+                }
+                return this.track?.program_name || this.track?.title || this.defaultTitle;
+            }
+            return (this.track?.title ?? '') !== '' ? this.track.title : this.defaultTitle;
+        },
+
+        get subtituloVisible() {
+            const esPrograma = this.track?.es_bloque_programa || (this.track?.program_name ?? '') !== '';
+            if (esPrograma) {
+                return this.track?.program_host || this.track?.program_schedule || this.track?.artist || this.defaultArtist;
+            }
+            return (this.track?.artist ?? '') !== '' ? this.track.artist : this.defaultArtist;
         },
     }));
 }

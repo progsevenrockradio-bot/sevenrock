@@ -159,41 +159,33 @@ class PwaAppController extends Controller
         $stationId = config('player.radioboss.station_id', '569');
         $apiUrl    = config('player.radioboss.api_url', 'https://c30.radioboss.fm');
 
-        $data = Cache::remember('pwa.now_playing', 12, function () use ($apiUrl, $stationId): array {
-            $defaults = [
-                'title'    => config('player.defaults.title',  'Transmisión oficial'),
-                'artist'   => config('player.defaults.artist', 'Seven Rock Radio'),
-                'cover'    => "{$apiUrl}/w/artwork/{$stationId}.jpg",
-                'program'  => config('player.defaults.show',   'Programación habitual'),
-                'is_live'  => true,
-                'duration' => null,
-            ];
-
-            // Endpoint 1: RadioBoss API nowplayinginfo
+        $data = Cache::remember('pwa.now_playing', 8, function () use ($apiUrl, $stationId): array {
             try {
-                $r = Http::timeout(4)->withoutVerifying()
-                    ->get("{$apiUrl}/w/nowplayinginfo", ['u' => $stationId]);
-                if ($r->successful()) {
-                    $j = $r->json();
-                    $title  = trim((string)($j['currenttrack_title'] ?? ''));
-                    $artist = trim((string)($j['currenttrack_artist'] ?? ''));
-                    
-                    if (!$title && !empty($j['nowplaying'])) {
-                        $parts = explode(' - ', $j['nowplaying'], 2);
-                        if (count($parts) === 2) {
-                            $title = trim($parts[0]);
-                            $artist = trim($parts[1]);
-                        } else {
-                            $title = trim($j['nowplaying']);
-                        }
-                    }
-                    if ($title) {
-                        return array_merge($defaults, array_filter(compact('title', 'artist')));
-                    }
-                }
-            } catch (\Throwable) {}
+                $playerState = app(\App\Services\RadioPlayerService::class)->resolve();
+                $track = $playerState['track'] ?? [];
 
-            return $defaults;
+                return [
+                    'title' => $track['title'] ?? config('player.defaults.title', 'Transmisión oficial'),
+                    'artist' => $track['artist'] ?? config('player.defaults.artist', 'Seven Rock Radio'),
+                    'cover' => $track['cover'] ?? "{$apiUrl}/w/artwork/{$stationId}.jpg",
+                    'program' => $playerState['program_name'] ?? $track['program_name'] ?? config('player.defaults.show', 'Programación habitual'),
+                    'program_name' => $playerState['program_name'] ?? $track['program_name'] ?? '',
+                    'program_host' => $track['program_host'] ?? '',
+                    'program_schedule' => $track['program_schedule'] ?? '',
+                    'es_bloque_programa' => (bool) ($playerState['es_bloque_programa'] ?? $track['es_bloque_programa'] ?? false),
+                    'is_live' => (bool) ($track['is_live'] ?? true),
+                    'duration' => $track['duration'] ?? null,
+                ];
+            } catch (\Throwable) {
+                return [
+                    'title'    => config('player.defaults.title',  'Transmisión oficial'),
+                    'artist'   => config('player.defaults.artist', 'Seven Rock Radio'),
+                    'cover'    => "{$apiUrl}/w/artwork/{$stationId}.jpg",
+                    'program'  => config('player.defaults.show',   'Programación habitual'),
+                    'is_live'  => true,
+                    'duration' => null,
+                ];
+            }
         });
 
         return response()->json($data)

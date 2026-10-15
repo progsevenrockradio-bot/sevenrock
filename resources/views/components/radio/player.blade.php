@@ -115,6 +115,99 @@
             min-width: 36px !important;
             justify-content: flex-end !important;
         }
+
+        /* ── Ventanas y Modales en Móvil (Prompt 54) ── */
+        .radio-modal-overlay {
+            padding: 6px !important;
+            align-items: center !important;
+        }
+
+        .radio-player-popup,
+        .radio-modal-container,
+        .radio-modal-container--band,
+        .radio-modal-container--program {
+            width: calc(100vw - 12px) !important;
+            max-width: calc(100vw - 12px) !important;
+            max-height: 88vh !important;
+            min-height: unset !important;
+            border-radius: 14px !important;
+            padding: 12px !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .radio-modal-card {
+            width: 100% !important;
+            max-width: 100% !important;
+            border-radius: 12px !important;
+            padding: 12px !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Botón de cerrar (X) siempre accesible y dentro de la pantalla */
+        .radio-modal-close-btn,
+        .radio-modal-close-btn--program {
+            top: 10px !important;
+            right: 10px !important;
+            width: 34px !important;
+            height: 34px !important;
+            font-size: 18px !important;
+            z-index: 50 !important;
+        }
+
+        .radio-modal-media--band,
+        .radio-modal-cover--band,
+        .radio-modal-cover--program,
+        .radio-modal-skeleton__cover,
+        .radio-modal-skeleton__cover--program,
+        .radio-player-popup-cover img,
+        .radio-modal-card img {
+            max-width: 60vw !important;
+            max-height: 60vw !important;
+            width: 130px !important;
+            height: 130px !important;
+            min-width: unset !important;
+            margin-inline: auto !important;
+            object-fit: cover !important;
+        }
+
+        .radio-player-popup-title {
+            font-size: 1.05rem !important;
+            line-height: 1.25 !important;
+        }
+
+        .radio-player-popup-artist {
+            font-size: .85rem !important;
+        }
+
+        /* pestañas (Biografía/Letras) con scroll horizontal y sin cortarse */
+        .radio-player-popup-tabs,
+        .radio-modal-tabs {
+            display: flex !important;
+            gap: 8px !important;
+            overflow-x: auto !important;
+            white-space: nowrap !important;
+            padding-bottom: 4px !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .radio-player-popup-tabs::-webkit-scrollbar,
+        .radio-modal-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* textos largos: que no desborden */
+        .radio-modal-text,
+        .radio-player-popup-text,
+        .radio-player-popup-section-text,
+        .radio-modal-summary,
+        .radio-modal-episode-text {
+            font-size: .85rem !important;
+            line-height: 1.45 !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+        }
     }
 </style>
 @endonce
@@ -324,8 +417,8 @@
 
                             <div class="radio-player-popup-meta">
                                 <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'EN VIVO' : 'PLAYBACK'"></span>
-                                <h1 class="radio-player-popup-title" x-text="track.title || defaultTitle"></h1>
-                                <p class="band-name-animated radio-player-popup-artist" x-text="track.artist || defaultArtist"></p>
+                                <h1 class="radio-player-popup-title" x-text="tituloVisible"></h1>
+                                <p class="band-name-animated radio-player-popup-artist" x-text="subtituloVisible"></p>
                                 <p class="radio-player-popup-state" x-text="track.is_live ? 'Transmitiendo ahora' : (track.program_name || '')"></p>
                                 <p class="radio-player-popup-listeners" x-text="listeners > 0 ? `${listeners} oyentes` : ''"></p>
                             </div>
@@ -454,7 +547,7 @@
                     {{-- Cover + info --}}
                     <div class="flex items-center gap-3 min-w-0 flex-[2] sm:flex-[1.5] lg:flex-[1.2] w-full sm:w-auto">
                         <div class="group h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#2b2b2b] bg-[#111] shadow-md relative cursor-pointer" @click="toggleInfoWindow($event)" title="Ver Info">
-                            <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="track.title || defaultTitle" width="256" height="256" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
+                            <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="tituloVisible" width="256" height="256" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
                             <div x-show="track.is_live" class="absolute inset-0 flex items-center justify-center bg-black/60">
                                 <span class="text-[8px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
                             </div>
@@ -468,9 +561,9 @@
                             </div>
                         </div>
                         <div class="min-w-0">
-                            <div class="truncate font-display text-[12px] uppercase tracking-[.08em] text-[#dcdcdc] leading-tight" x-text="track.title || defaultTitle"></div>
-                            <div class="truncate text-[10px] text-[#888] mt-0.5" x-text="track.artist || defaultArtist"></div>
-                            <small x-show="track.program_name" class="block truncate text-[9px] text-[#555] font-display tracking-wider mt-0.5" x-text="track.program_name"></small>
+                            <div class="truncate font-display text-[12px] uppercase tracking-[.08em] text-[#dcdcdc] leading-tight" x-text="tituloVisible"></div>
+                            <div class="truncate text-[10px] text-[#888] mt-0.5" x-text="subtituloVisible"></div>
+                            <small x-show="track.program_name && track.title && track.title !== track.program_name" class="block truncate text-[9px] text-[#555] font-display tracking-wider mt-0.5" x-text="track.program_name"></small>
                         </div>
                     </div>
 
@@ -579,17 +672,17 @@
                     {{-- Fila 1: Cover + info --}}
                     <div class="flex items-center gap-2.5 min-w-0 w-full cursor-pointer" @click="toggleInfoWindow($event)" title="Ver Info">
                         <div class="group h-10 w-10 shrink-0 overflow-hidden rounded border border-white/10 bg-[#111] shadow relative">
-                            <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="track.title || defaultTitle" width="128" height="128" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
+                            <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="tituloVisible" width="128" height="128" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
                             <div x-show="track.is_live" class="absolute inset-0 flex items-center justify-center bg-black/60">
                                 <span class="text-[7px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
                             </div>
                         </div>
                         <div class="min-w-0 flex-1 overflow-hidden relative">
                             <div class="w-full overflow-hidden whitespace-nowrap">
-                                <div class="font-display text-[12px] uppercase tracking-wider text-[#dcdcdc] leading-tight animate-marquee-text" x-text="track.title || defaultTitle"></div>
+                                <div class="font-display text-[12px] uppercase tracking-wider text-[#dcdcdc] leading-tight animate-marquee-text" x-text="tituloVisible"></div>
                             </div>
                             <div class="w-full overflow-hidden whitespace-nowrap mt-0.5">
-                                <div class="text-[9.5px] text-[#777] animate-marquee-text" x-text="track.artist || defaultArtist"></div>
+                                <div class="text-[9.5px] text-[#777] animate-marquee-text" x-text="subtituloVisible"></div>
                             </div>
                         </div>
                     </div>
