@@ -179,13 +179,14 @@ final class PodcastUploadController extends Controller
             'sync_archive_org' => ['nullable', 'boolean'],
             'download_processed_mp3' => ['nullable', 'boolean'],
             'r2_key' => ['nullable', 'string', 'max:255'],
+            'chunked_key' => ['nullable', 'string', 'max:255'],
             'archivo_mp3' => [
-                'required_without:r2_key',
+                'required_without_all:r2_key,chunked_key',
                 'nullable',
                 'file',
                 'max:512000',
                 function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
-                    if ($request->filled('r2_key')) {
+                    if ($request->filled('r2_key') || $request->filled('chunked_key')) {
                         return;
                     }
                     if (! $value instanceof UploadedFile) {
@@ -213,6 +214,7 @@ final class PodcastUploadController extends Controller
             'imagen_episodio_url.max' => 'La URL de la imagen no puede superar 255 caracteres.',
             'imagen_episodio_file.image' => 'El archivo de imagen debe ser una imagen válida.',
             'imagen_episodio_file.max' => 'La imagen no puede superar 10 MB.',
+            'archivo_mp3.required_without_all' => 'Debes seleccionar un archivo MP3.',
             'archivo_mp3.required_without' => 'Debes seleccionar un archivo MP3.',
             'archivo_mp3.file' => 'El archivo MP3 no es válido.',
             'archivo_mp3.max' => 'El archivo MP3 no puede superar 500 MB.',
@@ -221,9 +223,18 @@ final class PodcastUploadController extends Controller
         $master = MasterProgram::query()->findOrFail((int) $data['master_program_id']);
         
         $isR2 = $request->filled('r2_key');
+        $isChunked = $request->filled('chunked_key');
+
         if ($isR2) {
             $rawPath = trim((string) $request->input('r2_key'));
             $disk = 'r2';
+        } elseif ($isChunked) {
+            $chunkedKey = trim((string) $request->input('chunked_key'));
+            if (! Storage::disk('public')->exists($chunkedKey)) {
+                return back()->withInput()->withErrors(['archivo_mp3' => 'El archivo subido por partes no se encuentra en el servidor.']);
+            }
+            $rawPath = $chunkedKey;
+            $disk = 'public';
         } else {
             $rawFileName = $this->buildRawFileName($data);
             $rawPath = $this->storeRawMp3(
@@ -239,13 +250,21 @@ final class PodcastUploadController extends Controller
 
         $durationSeconds = 0;
         $realFileDurationSeconds = null;
-        if (! $isR2 && $request->hasFile('archivo_mp3')) {
+        $localFilePath = null;
+
+        if ($isChunked) {
+            $localFilePath = Storage::disk('public')->path($rawPath);
+        } elseif (! $isR2 && $request->hasFile('archivo_mp3')) {
+            $localFilePath = $request->file('archivo_mp3')->getRealPath();
+        }
+
+        if ($localFilePath && file_exists($localFilePath)) {
             try {
                 $className = class_exists('\\getID3') ? '\\getID3' : (class_exists('\\JamesHeinrich\\GetID3\\GetID3') ? '\\JamesHeinrich\\GetID3\\GetID3' : null);
                 if ($className) {
                     /** @var mixed $getID3 */
                     $getID3 = new $className();
-                    $fileInfo = $getID3->analyze($request->file('archivo_mp3')->getRealPath());
+                    $fileInfo = $getID3->analyze($localFilePath);
                     if (isset($fileInfo['playtime_seconds']) && is_numeric($fileInfo['playtime_seconds'])) {
                         $realFileDurationSeconds = (int) round((float) $fileInfo['playtime_seconds']);
                         // Se suman 5 minutos (300 segundos) adicionales según solicitud del usuario para radio_programs.

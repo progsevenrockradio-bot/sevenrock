@@ -15,10 +15,25 @@
     <div class="mt-6 grid gap-6 xl:grid-cols-2">
         <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] p-5">
             <label class="mb-3 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Archivo MP3</label>
-            <input type="file" name="archivo_mp3" accept="audio/mpeg,audio/mp3" class="lucille-product-field w-full">
+            <input type="file" name="archivo_mp3" accept="audio/mpeg,audio/mp3" class="lucille-product-field w-full" x-on:change="engancharFichero($event)">
             @error('archivo_mp3')
                 <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
             @enderror
+
+            <div class="mt-3 flex items-start gap-2.5 rounded border border-[#2b2b2b] bg-[rgba(0,0,0,.25)] p-3 text-xs leading-5">
+                <template x-if="uppy">
+                    <div class="flex items-start gap-2 text-[#98d8aa]">
+                        <span class="mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,.6)]"></span>
+                        <span><strong>Subida directa a R2:</strong> Los ficheros grandes (300 MB o más) se suben directamente a Cloudflare R2 sin límite. No los reduzcas.</span>
+                    </div>
+                </template>
+                <template x-if="!uppy">
+                    <div class="flex items-start gap-2 text-[#f3bb6a]">
+                        <span class="mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-400"></span>
+                        <span><strong>Atención:</strong> Subida directa no inicializada. Recarga la página (Ctrl+F5) si vas a subir un archivo grande (>100 MB).</span>
+                    </div>
+                </template>
+            </div>
 
             <div class="mt-4 space-y-2 border border-[#242424] bg-[#131313] p-4">
                 <div class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Estado de carga</div>

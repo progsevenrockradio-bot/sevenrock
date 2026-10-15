@@ -52,7 +52,7 @@
     "src": "_instrument-sans-600-normal-DMks36a2.woff"
   },
   "resources/css/app.css": {
-    "file": "assets/app-boeBfVnY.css",
+    "file": "assets/app-p0nH7pUx.css",
     "name": "app",
     "names": [
       "app.css"
@@ -67,10 +67,13 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-BC36aSa-.js",
+    "file": "assets/app-sZKir0KC.js",
     "name": "app",
     "src": "resources/js/app.js",
-    "isEntry": true
+    "isEntry": true,
+    "css": [
+      "assets/app-7mre7XQa.css"
+    ]
   },
   "vendor/sparrowhawk-labs/pinion-ui/src/resources/fonts/pixelmplus/PixelMplus10-Bold.ttf": {
     "file": "assets/PixelMplus10-Bold-C_7OC1o5.ttf",

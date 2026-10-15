@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
 use App\Http\Controllers\Admin\AdminPodcastPresignController;
+use App\Http\Controllers\Admin\AdminPodcastChunkUploadController;
 use App\Http\Controllers\Admin\ProgramCodeController as AdminProgramCodeController;
 use App\Http\Controllers\Admin\NewReleaseController as AdminNewReleaseController;
 use App\Http\Controllers\Admin\MarketingController as AdminMarketingController;
@@ -299,6 +300,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/publicados/imprimir', 'publishedPrint')->name('published.print');
         Route::get('/recent', 'recentUploadsFragment')->name('recent');
         Route::post('/presign', [AdminPodcastPresignController::class, 'presign'])->name('presign');
+        Route::post('/chunk', [AdminPodcastChunkUploadController::class, 'uploadChunk'])->name('chunk');
+        Route::post('/chunk/complete', [AdminPodcastChunkUploadController::class, 'completeChunk'])->name('chunk.complete');
         Route::post('/', 'store')->name('store');
         Route::post('/{radioProgram}/retry', 'retry')->name('retry');
         Route::get('/{radioProgram}/download', 'download')->name('download');
