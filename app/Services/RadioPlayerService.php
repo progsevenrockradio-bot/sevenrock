@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use App\Support\Radio\StreamNowPlaying;
+use App\Support\Radio\StreamMetadataReader;
 
 class RadioPlayerService
 {
@@ -28,6 +29,8 @@ class RadioPlayerService
     public const MARGIN_EPISODE_MINUTES = 30;
 
     private const STATUS_CACHE_KEY = 'radio-player-status:v6';
+
+    private StreamMetadataReader $streamReader;
 
     /**
      * @var array{
@@ -66,7 +69,14 @@ class RadioPlayerService
         private readonly RadioPlayerStateStore $store,
         private readonly BandInfoResolver $bandInfoResolver,
         private readonly ProgramScheduleService $programScheduleService,
+        ?StreamMetadataReader $streamReader = null,
     ) {
+        $this->streamReader = $streamReader ?? new StreamMetadataReader();
+    }
+
+    public function setStreamReader(StreamMetadataReader $reader): void
+    {
+        $this->streamReader = $reader;
     }
 
     public function getLastDiagnosis(): array
@@ -136,41 +146,79 @@ class RadioPlayerService
         ];
 
         $defaults = config('player.defaults');
-        $state = array_replace($this->currentState(), $this->remoteNowPlayingState());
+        $defaultTitle = $defaults['title'] ?? 'Transmisión oficial';
+        $defaultArtist = $defaults['artist'] ?? 'Seven Rock Radio';
 
-        // Emisora activa distinta de RadioBOSS: su "suena ahora" manda sobre lo anterior.
-        // Si la activa es RadioBOSS esto devuelve [] y NO cambia absolutamente nada.
-        $state = array_replace($state, StreamNowPlaying::state());
+        // -------------------------------------------------------------
+        // 1. LECTURA DE LAS 3 FUENTES (sin que ninguna decida aún)
+        // -------------------------------------------------------------
+        // Fuente 2: Webhook / estado guardado de RadioBOSS
+        $stored = $this->currentState();
+
+        // Fuente 3: API / status-json de RadioBOSS (y StreamNowPlaying para otros servidores)
+        $api = array_replace($this->remoteNowPlayingState(), StreamNowPlaying::state());
+
+        // Fuente 1: Stream de radio (ICY)
+        $hintTitle = $this->firstFilledString([$stored['title'] ?? null, $api['title'] ?? null]);
+        $hintArtist = $this->firstFilledString([$stored['artist'] ?? null, $api['artist'] ?? null]);
+        $icy = $this->streamReader->read(false, $hintTitle, $hintArtist);
+
+        // Registro de trazabilidad por campo
+        $metaSources = [
+            'title' => 'default',
+            'artist' => 'default',
+            'program' => 'none',
+            'cover' => 'default',
+            'duration' => 'none',
+            'elapsed' => 'none',
+        ];
+
+        // -------------------------------------------------------------
+        // Preparación del lookupState para matching de Canción y Programa
+        // -------------------------------------------------------------
         $rawTitle = $this->firstFilledString([
-            Arr::get($state, 'title'),
-            Arr::get($state, 'casttitle'),
-            Arr::get($state, 'tracktitle'),
-        ]);
-        $rawArtist = $this->firstFilledString([
-            Arr::get($state, 'artist'),
-            Arr::get($state, 'trackartist'),
-            Arr::get($state, 'program_name'),
-        ]);
-        $rawCover = $this->firstFilledString([
-            Arr::get($state, 'cover'),
-            Arr::get($state, 'cover_image'),
-            Arr::get($state, 'artwork'),
-            Arr::get($state, 'image'),
-        ]);
-        $rawFilename = $this->firstFilledString([
-            Arr::get($state, 'filename'),
-            Arr::get($state, 'file'),
-            Arr::get($state, 'song'),
-            Arr::get($state, 'raw.filename'),
-            Arr::get($state, 'raw.file'),
-            Arr::get($state, 'raw.song'),
-        ]);
-        $rawAlbum = $this->firstFilledString([
-            Arr::get($state, 'album'),
-            Arr::get($state, 'raw.album'),
+            $icy['title'] ?? null,
+            $stored['title'] ?? null,
+            $stored['casttitle'] ?? null,
+            $stored['tracktitle'] ?? null,
+            $api['title'] ?? null,
         ]);
 
-        $lookupState = $state;
+        $rawArtist = $this->firstFilledString([
+            $icy['artist'] ?? null,
+            $stored['artist'] ?? null,
+            $stored['trackartist'] ?? null,
+            $stored['program_name'] ?? null,
+            $api['artist'] ?? null,
+        ]);
+
+        $rawCover = $this->firstFilledString([
+            $stored['cover'] ?? null,
+            $stored['cover_image'] ?? null,
+            $stored['artwork'] ?? null,
+            $stored['image'] ?? null,
+            $api['cover'] ?? null,
+        ]);
+
+        $rawFilename = $this->firstFilledString([
+            $stored['filename'] ?? null,
+            $stored['file'] ?? null,
+            $stored['song'] ?? null,
+            $stored['raw']['filename'] ?? null,
+            $stored['raw']['file'] ?? null,
+            $stored['raw']['song'] ?? null,
+            $api['filename'] ?? null,
+            $api['file'] ?? null,
+            $icy['raw'] ?? null,
+        ]);
+
+        $rawAlbum = $this->firstFilledString([
+            $stored['album'] ?? null,
+            $stored['raw']['album'] ?? null,
+            $api['album'] ?? null,
+        ]);
+
+        $lookupState = array_replace($api, $stored);
         $lookupState['title'] = $rawTitle;
         $lookupState['artist'] = $rawArtist;
         $lookupState['cover'] = $rawCover;
@@ -179,33 +227,11 @@ class RadioPlayerService
         $lookupState['album'] = $rawAlbum;
 
         $song = $this->resolveSong($lookupState);
-        $trackTitle = $this->firstFilledString([
-            $song?->title,
-            $rawTitle,
-            $defaults['title'] ?? '',
-        ]);
-        $trackArtist = $this->firstFilledString([
-            $song?->artist,
-            $rawArtist,
-            $defaults['artist'] ?? '',
-        ]);
-        $stateSignature = $this->trackSignature(
-            $rawTitle !== '' ? $rawTitle : $trackTitle,
-            $rawArtist !== '' ? $rawArtist : $trackArtist,
-            $this->resolveCover(
-                $rawCover
-                    ?: Arr::get($state, 'cover')
-                    ?? Arr::get($state, 'cover_image')
-                    ?? Arr::get($state, 'artwork')
-                    ?? Arr::get($state, 'image')
-                    ?? $defaults['cover']
-            )
-        );
-        $lyrics = $song?->lyrics ?? '';  // From band-info API only
         $programs = $this->loadPrograms();
         $matchedTrackProgram = $this->resolveCurrentProgram($lookupState, $song, $programs);
         $scheduleContext = $this->resolveActiveProgramContext();
 
+        // Registrar diagnóstico de horario
         if ($matchedTrackProgram === null && ! empty($scheduleContext['es_bloque_programa'])) {
             $this->lastDiagnosis['match_found'] = true;
             $this->lastDiagnosis['match_via'] = 'horario';
@@ -231,16 +257,13 @@ class RadioPlayerService
             : collect();
 
         // «Canción real» = título del stream no vacío, distinto del genérico de
-        // fallback, y con artista no vacío distinto del genérico.  Cuando hay canción real
-        // no asociada a un programa, no debe robar carátula, clic ni pestaña.
-        $defaultTitle = $defaults['title'] ?? 'Transmisión oficial';
-        $defaultArtist = $defaults['artist'] ?? 'Seven Rock Radio';
+        // fallback, y con artista no vacío distinto del genérico.
         $isDefaultTitle = ($rawTitle === '' || mb_strtolower($rawTitle) === mb_strtolower($defaultTitle));
         $isDefaultArtist = ($rawArtist === '' || mb_strtolower($rawArtist) === mb_strtolower($defaultArtist));
         $hasRealSong = ! $isDefaultTitle && ! $isDefaultArtist;
 
-        // Si se detecta un programa (por fichero, carátula, álbum, texto u horario)
-        $isProgramBlock = (bool) ($matchedTrackProgram !== null || (! $hasRealSong && ! empty($scheduleContext['es_bloque_programa'])));
+        $hasStoredProgram = filled($stored['program_id'] ?? null) || filled($stored['program_name'] ?? null);
+        $isProgramBlock = (bool) ($hasStoredProgram || $matchedTrackProgram !== null || (! $hasRealSong && ! empty($scheduleContext['es_bloque_programa'])));
 
         // Log cuando no hay match (nivel info, sin ruido)
         if ($currentProgram === null && ! $isProgramBlock) {
@@ -261,6 +284,15 @@ class RadioPlayerService
             }
         }
 
+        // -------------------------------------------------------------
+        // 2. RESOLUCIÓN POR CAMPO (según la tabla de prioridades)
+        // -------------------------------------------------------------
+
+        // CAMPO: program_id / program_name / program_host
+        // 1ª opción: program_id del estado
+        // 2ª opción: vía fichero / carátula / álbum / texto
+        // 3ª opción: horario (±30 min)
+        // Último recurso: vacío
         $resolvedProgramId = null;
         $resolvedProgramName = null;
         $resolvedProgramDescription = null;
@@ -271,8 +303,9 @@ class RadioPlayerService
             $progSource = $matchedTrackProgram ?? $scheduleContext['program'] ?? null;
             $masterSource = $matchedTrackProgram?->masterProgram ?? $scheduleContext['master'] ?? null;
 
-            $resolvedProgramId = $progSource?->id ?? $scheduleContext['program_id'] ?? null;
+            $resolvedProgramId = $stored['program_id'] ?? $progSource?->id ?? $scheduleContext['program_id'] ?? null;
             $resolvedProgramName = $this->firstFilledString([
+                $stored['program_name'] ?? null,
                 $masterSource?->name,
                 $masterSource?->nombre,
                 $progSource?->name,
@@ -280,78 +313,238 @@ class RadioPlayerService
                 $scheduleContext['program_name'] ?? null,
             ]);
             $resolvedProgramDescription = $this->firstFilledString([
+                $stored['program_description'] ?? null,
                 $progSource?->live_description,
                 $progSource?->description,
                 $progSource?->informacion_fija_programa,
                 $masterSource?->description,
                 $scheduleContext['program_description'] ?? null,
             ]);
-            $resolvedProgramHost = $this->firstFilledString([
+            $rawHost = $this->firstFilledString([
+                $stored['program_host'] ?? null,
                 $progSource?->host,
                 $progSource?->conductor,
                 $masterSource?->host,
                 $masterSource?->conductor,
                 $scheduleContext['program_host'] ?? null,
             ]);
+            // Limpiar prefijos de host: «Conducido por:», «Conductor:», etc.
+            $resolvedProgramHost = $this->cleanProgramHost($rawHost);
+
             $resolvedProgramSchedule = $this->firstFilledString([
+                $stored['program_schedule'] ?? null,
                 $progSource?->schedule,
                 $masterSource?->schedule,
                 $scheduleContext['program_schedule'] ?? null,
             ]);
 
-            // Determinar título del episodio para track.title
+            // Determinar fuente del programa para meta_sources
+            if (! empty($stored['program_id']) || ! empty($stored['program_name'])) {
+                $metaSources['program'] = ! empty($stored['program_id']) ? 'store:program_id' : 'store:program_name';
+            } elseif ($matchedTrackProgram !== null) {
+                $via = $this->lastDiagnosis['match_via'] ?? 'matched';
+                $metaSources['program'] = 'store:' . $via;
+            } elseif (! empty($scheduleContext['es_bloque_programa'])) {
+                $metaSources['program'] = 'schedule';
+            }
+        }
+
+        // CAMPO: title & artist
+        // Dato: title
+        // 1ª opción: ICY del stream
+        // 2ª opción: estado guardado (webhook/API)
+        // 3ª opción: programa identificado (live_title)
+        // Último recurso: defaults.title
+        // Dato: artist
+        // 1ª opción: ICY del stream
+        // 2ª opción: estado guardado
+        // 3ª opción: nombre del programa / conductor
+        // Último recurso: defaults.artist
+
+        $episodeTitle = '';
+        $programArtist = '';
+        if ($isProgramBlock) {
+            $progSource = $matchedTrackProgram ?? $scheduleContext['program'] ?? null;
             $episodeTitle = $this->firstFilledString([
                 $progSource?->live_title,
                 $progSource?->titulo_programa,
                 $resolvedProgramName,
             ]);
-
-            // Determinar artista para track.artist
             $programArtist = $this->firstFilledString([
                 $resolvedProgramName,
                 $resolvedProgramHost,
                 $defaultArtist,
             ]);
+        }
 
-            // Si se identificó un programa (vía fichero, carátula, álbum, texto u horario):
-            // rellenar track.title y track.artist con el programa/episodio
-            if ($matchedTrackProgram !== null || ! $hasRealSong) {
-                $trackTitle = $episodeTitle !== '' ? $episodeTitle : ($rawTitle !== '' ? $rawTitle : $defaultTitle);
-                $trackArtist = $programArtist !== '' ? $programArtist : ($rawArtist !== '' ? $rawArtist : $defaultArtist);
+        $trackTitle = '';
+        $trackArtist = '';
+
+        if ($isProgramBlock && ($matchedTrackProgram !== null || ! $hasRealSong)) {
+            // Programa al aire identificado: program_name + host + carátula del programa,
+            // aunque el ICY traiga el nombre del fichero.
+            $trackTitle = $episodeTitle !== '' ? $episodeTitle : ($rawTitle !== '' ? $rawTitle : $defaultTitle);
+            $trackArtist = $programArtist !== '' ? $programArtist : ($rawArtist !== '' ? $rawArtist : $defaultArtist);
+            $metaSources['title'] = $episodeTitle !== '' ? 'program' : 'store';
+            $metaSources['artist'] = $programArtist !== '' ? 'program' : 'store';
+        } else {
+            // Emisión de música habitual
+            // 1ª opción: ICY del stream
+            $icyTitle = trim((string) ($icy['title'] ?? ''));
+            $icyArtist = trim((string) ($icy['artist'] ?? ''));
+            $icyHasReal = ($icyTitle !== '' && mb_strtolower($icyTitle) !== mb_strtolower($defaultTitle))
+                || ($icyArtist !== '' && mb_strtolower($icyArtist) !== mb_strtolower($defaultArtist));
+
+            if ($icyHasReal) {
+                $trackTitle = $icyTitle !== '' ? $icyTitle : ($stored['title'] ?? $api['title'] ?? $defaultTitle);
+                $trackArtist = $icyArtist !== '' ? $icyArtist : ($stored['artist'] ?? $api['artist'] ?? $defaultArtist);
+                $metaSources['title'] = $icyTitle !== '' ? 'icy' : 'default';
+                $metaSources['artist'] = $icyArtist !== '' ? 'icy' : 'default';
+            } else {
+                // 2ª opción: estado guardado (webhook / API)
+                $storedTitle = trim((string) ($stored['title'] ?? ''));
+                $storedArtist = trim((string) ($stored['artist'] ?? ''));
+                $apiTitle = trim((string) ($api['title'] ?? ''));
+                $apiArtist = trim((string) ($api['artist'] ?? ''));
+
+                if ($storedTitle !== '' || $storedArtist !== '') {
+                    $trackTitle = $storedTitle !== '' ? $storedTitle : $defaultTitle;
+                    $trackArtist = $storedArtist !== '' ? $storedArtist : $defaultArtist;
+                    $metaSources['title'] = $storedTitle !== '' ? 'store' : 'default';
+                    $metaSources['artist'] = $storedArtist !== '' ? 'store' : 'default';
+                } elseif ($apiTitle !== '' || $apiArtist !== '') {
+                    $trackTitle = $apiTitle !== '' ? $apiTitle : $defaultTitle;
+                    $trackArtist = $apiArtist !== '' ? $apiArtist : $defaultArtist;
+                    $metaSources['title'] = $apiTitle !== '' ? 'api' : 'default';
+                    $metaSources['artist'] = $apiArtist !== '' ? 'api' : 'default';
+                } elseif ($episodeTitle !== '' || $programArtist !== '') {
+                    // 3ª opción: programa identificado
+                    $trackTitle = $episodeTitle !== '' ? $episodeTitle : $defaultTitle;
+                    $trackArtist = $programArtist !== '' ? $programArtist : $defaultArtist;
+                    $metaSources['title'] = 'program';
+                    $metaSources['artist'] = 'program';
+                } else {
+                    // Último recurso: defaults
+                    $trackTitle = $defaultTitle;
+                    $trackArtist = $defaultArtist;
+                    $metaSources['title'] = 'default';
+                    $metaSources['artist'] = 'default';
+                }
             }
         }
 
-        $cover = $hasRealSong
-            ? $this->resolveCover(
-                $song?->cover_image
-                    ?? Arr::get($state, 'cover')
-                    ?? $defaults['cover']
-            )
-            : $this->resolveCover(
-                Arr::get($state, 'cover')
-                    ?? $song?->cover_image
-                    ?? $currentProgram?->cover_image
-                    ?? $defaults['cover']
-            );
-        $trackSignature = $this->trackSignature($trackTitle, $trackArtist, $cover);
-        $trackChanged = $stateSignature !== $trackSignature;
+        // CAMPO: cover (+ cover_is_fallback)
+        // 1ª opción: carátula del programa (si está identificado)
+        // 2ª opción: artwork del estado/stream
+        // 3ª opción: songs.cover_image → banda
+        // Último recurso: logo (cover_is_fallback=true)
+        $cover = null;
+        $coverIsFallback = false;
 
-        $duration = (int) Arr::get($state, 'duration_seconds', $song?->duration_seconds ?? 0);
-        $elapsed = (int) Arr::get($state, 'elapsed_seconds', 0);
-        if ($trackChanged) {
-            $duration = (int) ($song?->duration_seconds ?? 0);
-            $elapsed = 0;
-        } elseif ($elapsed <= 0 && filled(Arr::get($state, 'started_at'))) {
+        if ($isProgramBlock) {
+            $progCover = $this->resolveProgramCoverCandidate($currentProgram, $scheduleContext)
+                ?: ($stored['cover'] ?? $stored['cover_image'] ?? $stored['artwork'] ?? null);
+            if ($progCover && ! $this->isFallbackCover($progCover)) {
+                $cover = $this->resolveCover($progCover);
+                $metaSources['cover'] = 'program';
+                $coverIsFallback = false;
+            }
+        }
+
+        if (! $cover) {
+            // 2ª opción: artwork del estado/stream (webhook o API de RadioBOSS)
+            $stateArtwork = $this->firstFilledString([
+                $stored['cover'] ?? null,
+                $stored['cover_image'] ?? null,
+                $stored['artwork'] ?? null,
+                $api['cover'] ?? null,
+            ]);
+            if ($stateArtwork !== '') {
+                $resolvedStateCover = $this->resolveCover($stateArtwork);
+                if (! $this->isFallbackCover($resolvedStateCover)) {
+                    $cover = $resolvedStateCover;
+                    $metaSources['cover'] = filled($stored['cover'] ?? $stored['artwork'] ?? null) ? 'store' : 'api';
+                    $coverIsFallback = false;
+                }
+            }
+        }
+
+        if (! $cover && $song && filled($song->cover_image)) {
+            // 3ª opción: songs.cover_image → banda
+            $resolvedSongCover = $this->resolveCover($song->cover_image);
+            if (! $this->isFallbackCover($resolvedSongCover)) {
+                $cover = $resolvedSongCover;
+                $metaSources['cover'] = 'song';
+                $coverIsFallback = false;
+            }
+        }
+
+        if (! $cover) {
+            // Último recurso: logo
+            $cover = $this->resolveCover($defaults['cover'] ?? 'assets/lucille/album3.jpg');
+            $metaSources['cover'] = 'default';
+            $coverIsFallback = true;
+        }
+
+        // CAMPO: duration / elapsed
+        // 1ª opción: estado (started_at + duración)
+        // 2ª opción: API de RadioBOSS
+        // 3ª opción: derivado
+        // Último recurso: 0
+        $duration = 0;
+        $elapsed = 0;
+
+        if ((int) ($stored['duration_seconds'] ?? 0) > 0) {
+            $duration = (int) $stored['duration_seconds'];
+            $metaSources['duration'] = 'store';
+        } elseif ((int) ($api['duration_seconds'] ?? 0) > 0) {
+            $duration = (int) $api['duration_seconds'];
+            $metaSources['duration'] = 'api';
+        } elseif ($song && (int) ($song->duration_seconds ?? 0) > 0) {
+            $duration = (int) $song->duration_seconds;
+            $metaSources['duration'] = 'song';
+        }
+
+        if (filled($stored['started_at'] ?? null)) {
             try {
-                $elapsed = max(0, Carbon::parse((string) Arr::get($state, 'started_at'))->diffInSeconds(now()));
+                $elapsed = max(0, Carbon::parse((string) $stored['started_at'])->diffInSeconds(now()));
+                $metaSources['elapsed'] = 'store';
             } catch (\Throwable) {
                 $elapsed = 0;
             }
+        } elseif ((int) ($api['elapsed_seconds'] ?? 0) > 0) {
+            $elapsed = (int) $api['elapsed_seconds'];
+            $metaSources['elapsed'] = 'api';
         }
 
         if ($duration > 0 && $elapsed > $duration) {
             $elapsed = 0;
         }
+
+        // CAMPO: listeners, queue, next_program
+        // 1ª opción: API / status-json
+        // Último recurso: vacío
+        $listeners = (int) ($api['listeners'] ?? $stored['listeners'] ?? 0);
+
+        // CAMPO: signature
+        // calculada por el resolvedor (título+artista+carátula+programa)
+        $trackSignature = $this->trackSignature($trackTitle, $trackArtist, $cover, $resolvedProgramName);
+
+        // Determinación del meta_source principal
+        if ($metaSources['title'] === 'icy' || $metaSources['artist'] === 'icy') {
+            $metaSource = 'icy';
+        } elseif ($isProgramBlock && ($metaSources['title'] === 'program' || $metaSources['program'] !== 'none')) {
+            $metaSource = 'program';
+        } elseif ($metaSources['title'] === 'store' || $metaSources['artist'] === 'store') {
+            $metaSource = 'store';
+        } elseif ($metaSources['title'] === 'api' || $metaSources['artist'] === 'api') {
+            $metaSource = 'api';
+        } else {
+            $metaSource = 'default';
+        }
+
+        $metaUpdatedAt = now()->toIso8601String();
+        $lyrics = $song?->lyrics ?? '';
 
         $track = [
             'id' => $song?->id,
@@ -359,19 +552,24 @@ class RadioPlayerService
             'artist' => $trackArtist !== '' ? $trackArtist : (string) ($defaults['artist'] ?? ''),
             'album' => $this->firstFilledString([
                 $song?->album,
-                Arr::get($state, 'album'),
+                $stored['album'] ?? null,
+                $api['album'] ?? null,
             ]),
             'cover' => $cover,
+            'cover_is_fallback' => $coverIsFallback,
+            'meta_source' => $metaSource,
+            'meta_sources' => $metaSources,
+            'meta_updated_at' => $metaUpdatedAt,
             'lyrics' => is_string($lyrics) ? $lyrics : '',
             'band_info' => '',  // Enriched via band-info API endpoint
             'band_thumbnail' => '',  // Enriched via band-info API endpoint
             'band_founded_year' => null,  // From band-info API
             'band_founded_label' => '',  // From band-info API
-            'comment' => Arr::get($state, 'comment'),
-            'band_members' => $song?->band_members ?? Arr::get($state, 'band_members', []),
+            'comment' => $stored['comment'] ?? $api['comment'] ?? null,
+            'band_members' => $song?->band_members ?? $stored['band_members'] ?? [],
             'social_links' => ! empty($song?->social_links)
                 ? $song->social_links
-                : (Arr::get($state, 'social_links', []) ?: []),
+                : ($stored['social_links'] ?? []),
             'audio_url' => null, // LIVE streams use the global streamUrl, never override with podcast URL
             'program_id' => $resolvedProgramId,
             'program_name' => $resolvedProgramName,
@@ -379,9 +577,9 @@ class RadioPlayerService
             'program_host' => $resolvedProgramHost,
             'program_schedule' => $resolvedProgramSchedule,
             'es_bloque_programa' => $isProgramBlock,
-            'is_live' => (bool) Arr::get($state, 'is_live', $song?->is_live ?? true),
+            'is_live' => (bool) ($stored['is_live'] ?? $api['is_live'] ?? $song?->is_live ?? true),
             'signature' => $trackSignature,
-            'started_at' => Arr::get($state, 'started_at'),
+            'started_at' => $stored['started_at'] ?? null,
             'published_at' => optional($song?->published_at)->toIso8601String(),
             'duration_seconds' => $duration,
             'elapsed_seconds' => $elapsed,
@@ -392,11 +590,15 @@ class RadioPlayerService
             'listen_url' => config('player.streams.listen'),
             'playlist_m3u' => config('player.streams.m3u'),
             'playlist_pls' => config('player.streams.pls'),
-            'listeners' => (int) Arr::get($state, 'listeners', 0),
+            'listeners' => $listeners,
             'es_bloque_programa' => $isProgramBlock,
             'program_id' => $resolvedProgramId,
             'program_name' => $resolvedProgramName,
             'program_description' => $resolvedProgramDescription,
+            'meta_source' => $metaSource,
+            'meta_sources' => $metaSources,
+            'meta_updated_at' => $metaUpdatedAt,
+            'cover_is_fallback' => $coverIsFallback,
             'track' => $track,
             'program' => $this->programPayload($currentProgram) ?? ($isProgramBlock ? $this->syntheticProgramPayload(
                 $resolvedProgramId,
@@ -415,7 +617,7 @@ class RadioPlayerService
                 'type' => $notice->type,
             ])->all(),
             'history' => $this->latestHistory(config('player.history_limit', 10)),
-            'updated_at' => now()->toIso8601String(),
+            'updated_at' => $metaUpdatedAt,
         ];
     }
 
@@ -1328,12 +1530,85 @@ class RadioPlayerService
         return $cover ? asset($cover) : asset(config('player.defaults.cover'));
     }
 
-    private function trackSignature(string $title, string $artist, string $cover): string
+    public function isFallbackCover(?string $cover): bool
+    {
+        if (! filled($cover)) {
+            return true;
+        }
+
+        $defaultCover = (string) config('player.defaults.cover', 'assets/lucille/album3.jpg');
+        $resolvedDefault = asset($defaultCover);
+
+        if ($cover === $resolvedDefault || str_contains($cover, $defaultCover)) {
+            return true;
+        }
+
+        if (str_contains($cover, 'album3.jpg') || str_contains($cover, 'logo.png')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function cleanProgramHost(?string $host): ?string
+    {
+        if (! filled($host)) {
+            return null;
+        }
+
+        $cleaned = trim((string) preg_replace('/^(conducido\s+por\s*:\s*|conductor\s*:\s*|host\s*:\s*)/iu', '', trim((string) $host)));
+
+        return $cleaned !== '' ? $cleaned : null;
+    }
+
+    private function resolveProgramCoverCandidate(?Program $program, array $scheduleContext): ?string
+    {
+        if ($program) {
+            $master = $program->masterProgram ?? $scheduleContext['master'] ?? null;
+            $candidates = [
+                $program->cover_image,
+                $program->cover,
+                $master?->cover_url,
+                $master?->live_image_url,
+                $master?->caratula_url,
+            ];
+            foreach ($candidates as $cand) {
+                if (filled($cand)) {
+                    $resolved = $this->resolveCover($cand);
+                    if (! $this->isFallbackCover($resolved)) {
+                        return $resolved;
+                    }
+                }
+            }
+        }
+
+        $masterContext = $scheduleContext['master'] ?? null;
+        if ($masterContext) {
+            $candidates = [
+                $masterContext->cover_url,
+                $masterContext->live_image_url,
+                $masterContext->caratula_url,
+            ];
+            foreach ($candidates as $cand) {
+                if (filled($cand)) {
+                    $resolved = $this->resolveCover($cand);
+                    if (! $this->isFallbackCover($resolved)) {
+                        return $resolved;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function trackSignature(string $title, string $artist, string $cover, ?string $program = null): string
     {
         return md5(mb_strtolower(implode('|', [
             trim($title),
             trim($artist),
             trim($cover),
+            trim((string) $program),
         ])));
     }
 

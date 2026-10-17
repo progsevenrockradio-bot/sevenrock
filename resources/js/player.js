@@ -149,6 +149,10 @@ export function registerRadioPlayer(Alpine) {
         notices: [],
         history: [],
         listeners: 0,
+        metaSource: 'default',
+        metaSources: {},
+        metaUpdatedAt: null,
+        coverIsFallback: false,
         bandLookupArtist: '',
         bandPanel: {
             title: '',
@@ -1131,6 +1135,15 @@ export function registerRadioPlayer(Alpine) {
             if (this.track && !this.track.is_live) {
                 return false;
             }
+
+            // El servidor (RadioPlayerService) es el único decisor.
+            // Los widgets de RadioBOSS (rbcloud_*) son fuente de último recurso
+            // que el cliente solo mira si el servidor devuelve meta_source = "default".
+            const currentMetaSource = this.track?.meta_source || this.metaSource || 'default';
+            if (currentMetaSource !== 'default' && !force) {
+                return false;
+            }
+
             const widgetTrack = this.resolveWidgetTrack();
             if (!widgetTrack) {
                 return false;
@@ -1344,13 +1357,19 @@ export function registerRadioPlayer(Alpine) {
         applyStatus(data, silent = false, widgetTrack = null) {
             const previousSignature = this.track.signature;
             const track = data.track || {};
-            const widgetTitle = widgetTrack?.title || '';
-            const widgetArtist = widgetTrack?.artist || '';
-            const widgetCover = widgetTrack?.cover || '';
+            const isServerDefault = (data.meta_source === 'default' || track.meta_source === 'default');
+
+            // El servidor (RadioPlayerService) es el único decisor.
+            // Los widgets de RadioBOSS (rbcloud_*) pasan a ser fuente de último recurso
+            // que el cliente solo mira si el servidor devuelve meta_source = "default".
+            const widgetTitle = isServerDefault ? (widgetTrack?.title || '') : '';
+            const widgetArtist = isServerDefault ? (widgetTrack?.artist || '') : '';
+            const widgetCover = isServerDefault ? (widgetTrack?.cover || '') : '';
+
             const currentTitle = this.track.title && this.track.title !== this.defaultTitle ? this.track.title : '';
             const currentArtist = this.track.artist && this.track.artist !== this.defaultArtist ? this.track.artist : '';
-            const nextTitle = this.normalizeTrackTitle(widgetTitle || track.title || currentTitle || this.defaultTitle || 'Transmisión Oficial');
-            const nextArtist = this.normalizeBandArtist(widgetArtist || track.artist || currentArtist || this.defaultArtist || 'Seven Rock Radio');
+            const nextTitle = this.normalizeTrackTitle(track.title || widgetTitle || currentTitle || this.defaultTitle || 'Transmisión Oficial');
+            const nextArtist = this.normalizeBandArtist(track.artist || widgetArtist || currentArtist || this.defaultArtist || 'Seven Rock Radio');
             const tempBuster = nextArtist + '|' + nextTitle;
 
             // Si es bloque de programa y ya tenemos una portada no-fallback, la conservamos
@@ -1387,12 +1406,21 @@ export function registerRadioPlayer(Alpine) {
             const nextFacts = Array.isArray(track.band_facts) ? track.band_facts : [];
             const nextLinks = Array.isArray(track.social_links) ? track.social_links : [];
 
+            this.metaSource = data.meta_source || track.meta_source || 'default';
+            this.metaSources = data.meta_sources || track.meta_sources || {};
+            this.metaUpdatedAt = data.meta_updated_at || track.meta_updated_at || null;
+            this.coverIsFallback = Boolean(data.cover_is_fallback ?? track.cover_is_fallback);
+
             this.track = {
                 ...this.track,
                 ...track,
                 title: nextTitle,
                 artist: nextArtist,
                 cover: nextCover,
+                meta_source: this.metaSource,
+                meta_sources: this.metaSources,
+                meta_updated_at: this.metaUpdatedAt,
+                cover_is_fallback: this.coverIsFallback,
                 lyrics: trackChanged ? nextLyrics : (nextLyrics || this.track.lyrics || ''),
                 band_info: trackChanged ? nextBandInfo : (nextBandInfo || this.track.band_info || ''),
                 band_biography: trackChanged ? nextBandBiography : (nextBandBiography || this.track.band_biography || ''),
@@ -1476,9 +1504,20 @@ export function registerRadioPlayer(Alpine) {
                 : 0;
 
             if (trackChanged) {
-                this.fixedDuration = widgetDuration || audioDuration || Number(track.duration_seconds || 0);
-                this.currentTime = audioElapsed || widgetElapsed || 0;
+                this.fixedDuration = Number(track.duration_seconds || 0) || widgetDuration || audioDuration;
+                this.currentTime = Number(track.elapsed_seconds || 0) || audioElapsed || widgetElapsed || 0;
                 this.syncCounter = 0;
+            } else {
+                if (Number(track.duration_seconds || 0) > 0) {
+                    this.fixedDuration = Number(track.duration_seconds || 0);
+                } else if (widgetDuration > 0 && isServerDefault) {
+                    this.fixedDuration = widgetDuration;
+                }
+                if (Number(track.elapsed_seconds || 0) > 0) {
+                    this.currentTime = Number(track.elapsed_seconds || 0);
+                } else if (widgetElapsed > 0 && isServerDefault) {
+                    this.currentTime = widgetElapsed;
+                }
             }
 
             if (!this.track.is_live && this.fixedDuration > 0 && this.currentTime > this.fixedDuration) {
