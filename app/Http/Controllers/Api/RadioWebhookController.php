@@ -62,7 +62,7 @@ class RadioWebhookController extends Controller
         [$artist, $title] = $this->resolveArtistAndTitle($validated);
         $song = $this->resolveSong($artist, $title, $validated);
         $program = $this->resolveProgram($validated);
-        $cover = $this->resolveCover($validated, $song);
+        $cover = $this->resolveCover($validated, $song, $artist, $title);
         $playedAt = isset($validated['played_at']) ? Carbon::parse($validated['played_at']) : now();
         $durationSeconds = $this->resolveDurationSeconds($validated);
 
@@ -214,7 +214,7 @@ class RadioWebhookController extends Controller
         return null;
     }
 
-    private function resolveCover(array $validated, ?Song $song): ?string
+    private function resolveCover(array $validated, ?Song $song, string $artist = '', string $title = ''): ?string
     {
         if (! empty($validated['cover_image'])) {
             return (string) $validated['cover_image'];
@@ -230,17 +230,94 @@ class RadioWebhookController extends Controller
 
         if (! empty($validated['artwork'])) {
             $decoded = $this->decodeArtwork((string) $validated['artwork']);
-            if ($decoded !== null) {
-                Storage::disk('public')->put($this->stateStore->coverPath(), $decoded);
-                return Storage::disk('public')->url($this->stateStore->coverPath());
+            if ($decoded !== null && strlen($decoded) > 0) {
+                if (! $this->isArtworkStationLogo($decoded)) {
+                    $hash = substr(md5($decoded), 0, 16);
+                    $coverRelPath = "radio/covers/cover-{$hash}.jpg";
+                    Storage::disk('public')->put($coverRelPath, $decoded);
+                    $this->pruneOldCovers(20);
+
+                    return Storage::disk('public')->url($coverRelPath);
+                }
             }
 
             if (filter_var($validated['artwork'], FILTER_VALIDATE_URL)) {
-                return (string) $validated['artwork'];
+                $artworkUrl = (string) $validated['artwork'];
+                if (! $this->playerService->isFallbackCover($artworkUrl)) {
+                    return $artworkUrl;
+                }
             }
         }
 
-        return $song?->cover_url ?: null;
+        // Si el artwork recibido es el logo de la emisora o viene vacío:
+        // No sobrescribir el fichero bueno anterior. Si el catálogo tiene portada, usarla.
+        if ($song?->cover_url) {
+            return $song->cover_url;
+        }
+
+        // Si es la misma pista que ya estaba en el estado, preservar su portada real anterior
+        $previousState = $this->stateStore->read();
+        $prevArtist = trim((string) ($previousState['artist'] ?? ''));
+        $prevTitle = trim((string) ($previousState['title'] ?? ''));
+        $isSameTrack = $artist !== '' && $title !== ''
+            && strcasecmp($prevArtist, $artist) === 0
+            && strcasecmp($prevTitle, $title) === 0;
+
+        if ($isSameTrack) {
+            $previousCover = $previousState['cover'] ?? null;
+            if ($previousCover && ! $this->playerService->isFallbackCover($previousCover)) {
+                return $previousCover;
+            }
+        }
+
+        return null;
+    }
+
+    private function isArtworkStationLogo(string $binary): bool
+    {
+        if (strlen($binary) < 200) {
+            return true;
+        }
+
+        $hash = md5($binary);
+
+        $stationLogoFiles = [
+            public_path('assets/lucille/logo.png'),
+            public_path('assets/lucille/album3.jpg'),
+        ];
+
+        foreach ($stationLogoFiles as $file) {
+            if (file_exists($file) && md5_file($file) === $hash) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function pruneOldCovers(int $maxToKeep = 20): void
+    {
+        try {
+            // Eliminar fichero viejo de nombre fijo si existiera
+            if (Storage::disk('public')->exists('radio/current-cover.jpg')) {
+                Storage::disk('public')->delete('radio/current-cover.jpg');
+            }
+
+            $files = Storage::disk('public')->files('radio/covers');
+            if (count($files) > $maxToKeep) {
+                $filesWithTime = [];
+                foreach ($files as $file) {
+                    $filesWithTime[$file] = Storage::disk('public')->lastModified($file);
+                }
+                asort($filesWithTime);
+                $toDelete = array_slice(array_keys($filesWithTime), 0, count($files) - $maxToKeep);
+                if (! empty($toDelete)) {
+                    Storage::disk('public')->delete($toDelete);
+                }
+            }
+        } catch (\Throwable) {
+            // Evitar que un fallo de disco interrumpa el webhook
+        }
     }
 
     private function decodeArtwork(string $payload): ?string

@@ -434,10 +434,12 @@ class RadioPlayerService
         }
 
         // CAMPO: cover (+ cover_is_fallback)
-        // 1ª opción: carátula del programa (si está identificado)
-        // 2ª opción: artwork del estado/stream
-        // 3ª opción: songs.cover_image → banda
-        // Último recurso: logo (cover_is_fallback=true)
+        // Si es bloque de programa: carátula del programa
+        // Si es canción real:
+        //   1. songs.cover_image (la carátula del disco de nuestro catálogo)
+        //   2. Artwork del tema en curso de RadioBOSS con cache-buster
+        //   3. Imagen de la banda (radio_artists.image_path → logo_path)
+        //   4. Logo del tema — último recurso, con cover_is_fallback = true
         $cover = null;
         $coverIsFallback = false;
 
@@ -452,16 +454,34 @@ class RadioPlayerService
         }
 
         if (! $cover) {
-            // 2ª opción: artwork del estado/stream (webhook o API de RadioBOSS)
-            $stateArtwork = $this->firstFilledString([
+            // 1. songs.cover_image (la carátula del disco de nuestro catálogo)
+            if ($song && filled($song->cover_image)) {
+                $resolvedSongCover = $this->resolveCover($song->cover_image);
+                if (! $this->isFallbackCover($resolvedSongCover)) {
+                    $cover = $resolvedSongCover;
+                    $metaSources['cover'] = 'song';
+                    $coverIsFallback = false;
+                }
+            }
+        }
+
+        if (! $cover) {
+            // 2. Artwork del tema en curso de RadioBOSS: https://c30.radioboss.fm/w/artwork/{station_id}
+            // (solo si es artwork del tema, no el logo de la emisora), con cache-buster.
+            $candidateArtwork = $this->firstFilledString([
                 $stored['cover'] ?? null,
                 $stored['cover_image'] ?? null,
                 $stored['artwork'] ?? null,
                 $api['cover'] ?? null,
             ]);
-            if ($stateArtwork !== '') {
-                $resolvedStateCover = $this->resolveCover($stateArtwork);
+
+            if ($candidateArtwork !== '') {
+                $resolvedStateCover = $this->resolveCover($candidateArtwork);
                 if (! $this->isFallbackCover($resolvedStateCover)) {
+                    if (str_contains($resolvedStateCover, '/w/artwork/')) {
+                        $cacheBuster = substr(md5($trackTitle . '|' . $trackArtist), 0, 8);
+                        $resolvedStateCover .= (str_contains($resolvedStateCover, '?') ? '&' : '?') . 'cb=' . $cacheBuster;
+                    }
                     $cover = $resolvedStateCover;
                     $metaSources['cover'] = filled($stored['cover'] ?? $stored['artwork'] ?? null) ? 'store' : 'api';
                     $coverIsFallback = false;
@@ -469,18 +489,24 @@ class RadioPlayerService
             }
         }
 
-        if (! $cover && $song && filled($song->cover_image)) {
-            // 3ª opción: songs.cover_image → banda
-            $resolvedSongCover = $this->resolveCover($song->cover_image);
-            if (! $this->isFallbackCover($resolvedSongCover)) {
-                $cover = $resolvedSongCover;
-                $metaSources['cover'] = 'song';
-                $coverIsFallback = false;
+        if (! $cover) {
+            // 3. Imagen de la banda (radio_artists.image_path → logo_path)
+            $bandProfile = $this->resolveBandProfile($lookupState, $song);
+            if ($bandProfile) {
+                $bandImage = $bandProfile->image_path ?: $bandProfile->logo_path;
+                if (filled($bandImage)) {
+                    $resolvedBandCover = $this->resolveCover($bandImage);
+                    if (! $this->isFallbackCover($resolvedBandCover)) {
+                        $cover = $resolvedBandCover;
+                        $metaSources['cover'] = 'band';
+                        $coverIsFallback = false;
+                    }
+                }
             }
         }
 
         if (! $cover) {
-            // Último recurso: logo
+            // 4. Logo del tema — último recurso, con cover_is_fallback = true
             $cover = $this->resolveCover($defaults['cover'] ?? 'assets/lucille/album3.jpg');
             $metaSources['cover'] = 'default';
             $coverIsFallback = true;
@@ -1543,7 +1569,15 @@ class RadioPlayerService
             return true;
         }
 
-        if (str_contains($cover, 'album3.jpg') || str_contains($cover, 'logo.png')) {
+        $lower = mb_strtolower((string) $cover);
+
+        if (
+            str_contains($lower, 'album3.jpg') ||
+            str_contains($lower, 'logo.png') ||
+            str_contains($lower, 'current-cover.jpg') ||
+            str_contains($lower, 'stationlogo') ||
+            str_contains($lower, 'station_logo')
+        ) {
             return true;
         }
 

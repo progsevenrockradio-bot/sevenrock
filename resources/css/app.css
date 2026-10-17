@@ -4817,25 +4817,7 @@
         border: 1px solid rgba(184, 175, 162, .20);
         border-radius: 16px;
         box-shadow: 0 12px 32px rgba(0, 0, 0, .40);
-        transition: opacity .18s ease, transform .18s ease;
-    }
-
-    .radio-modal-cover--band-bio {
         opacity: 1;
-    }
-
-    .radio-modal-cover--band-track {
-        opacity: 0;
-    }
-
-    .radio-modal-media--band.is-lyrics .radio-modal-cover--band-bio {
-        opacity: 0;
-        transform: scale(.985);
-    }
-
-    .radio-modal-media--band.is-lyrics .radio-modal-cover--band-track {
-        opacity: 1;
-        transform: scale(1);
     }
 
     .radio-modal-cover--program {

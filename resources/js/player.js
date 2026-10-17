@@ -51,7 +51,9 @@ export function registerRadioPlayer(Alpine) {
             if (logoUrl && lowerUrl.includes(logoUrl.toLowerCase())) return true;
             if (lowerUrl.includes('logo.png')) return true;
             if (lowerUrl.includes('album3.jpg')) return true;
-            if (lowerUrl.includes('artwork/569')) return true;
+            if (lowerUrl.includes('current-cover.jpg')) return true;
+            if (lowerUrl.includes('stationlogo')) return true;
+            if (lowerUrl.includes('station_logo')) return true;
         } catch (e) {
             // safe catch
         }
@@ -967,14 +969,20 @@ export function registerRadioPlayer(Alpine) {
                 panelCoverCandidate = '';
             }
 
+            const effectiveCover = this.coverVisible && !isFallbackImage(this.coverVisible, this.fallbackCover, this.logoUrl)
+                ? this.coverVisible
+                : (track.cover && !isFallbackImage(track.cover, this.fallbackCover, this.logoUrl) ? track.cover : this.fallbackCover);
+
+            const unifiedBandCover = bioCoverCandidate || panelCoverCandidate || effectiveCover;
+
             return {
                 title: track.title || this.bandPanel.title || '',
                 artist: track.artist || this.bandPanel.artist || '',
                 info: track.band_info || this.bandPanel.info || track.comment || '',
                 biography: track.band_biography || this.bandPanel.biography || '',
                 biographySource: track.band_biography_source || this.bandPanel.biographySource || '',
-                bioCover: bioCoverCandidate || panelCoverCandidate || track.cover || this.fallbackCover,
-                trackCover: track.cover || this.fallbackCover,
+                bioCover: unifiedBandCover,
+                trackCover: unifiedBandCover,
                 foundedLabel: track.band_founded_label || this.bandPanel.foundedLabel || '',
                 facts: Array.isArray(track.band_facts) ? track.band_facts : (this.bandPanel.facts || []),
                 logo: track.band_logo || this.bandPanel.logo || '',
@@ -994,7 +1002,7 @@ export function registerRadioPlayer(Alpine) {
         },
 
         get bandWindowTrackCover() {
-            return this.cleanCover(this.bandWindowView.trackCover, this.logoUrl);
+            return this.bandWindowBioCover;
         },
 
         get bandWindowView() {
@@ -1377,7 +1385,7 @@ export function registerRadioPlayer(Alpine) {
             const currentCoverIsReal = this.track?.cover && !isFallbackImage(this.track.cover, this.fallbackCover, this.logoUrl);
 
             let nextCoverCandidate = this.fallbackCover;
-            if (track.cover && !isFallbackImage(track.cover, this.fallbackCover, this.logoUrl)) {
+            if (track.cover && (track.cover_is_fallback === false || !isFallbackImage(track.cover, this.fallbackCover, this.logoUrl))) {
                 nextCoverCandidate = track.cover;
             } else if (currentIsPrograma && currentCoverIsReal) {
                 // Programa activo: NO degradar la portada al fallback aunque el poll no traiga cover
@@ -2358,8 +2366,13 @@ export function registerRadioPlayer(Alpine) {
             }
 
             const actual = this.track?.cover || '';
-            if (actual && !isFallbackImage(actual, this.fallbackCover, this.logoUrl)) {
-                return actual;
+            if (actual) {
+                if (this.track?.cover_is_fallback === false) {
+                    return actual;
+                }
+                if (!isFallbackImage(actual, this.fallbackCover, this.logoUrl)) {
+                    return actual;
+                }
             }
 
             return this.fallbackCover;

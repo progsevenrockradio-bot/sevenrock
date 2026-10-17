@@ -279,7 +279,7 @@
         <div class="radio-player-popup-shell">
             <img
                 class="radio-player-popup-bg"
-                :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')"
+                :src="coverVisible + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')"
                 alt=""
                 aria-hidden="true"
                 loading="lazy"
@@ -863,18 +863,11 @@
                     <template x-if="!bandInfoLoading">
                         <div class="radio-modal-content radio-modal-content--band">
                             <div class="radio-modal-header radio-modal-header--band">
-                                <div class="radio-modal-media radio-modal-media--band" :class="{ 'is-lyrics': bandWindowTab === 'lyrics' }">
+                                <div class="radio-modal-media radio-modal-media--band">
                                     <img
-                                        class="radio-modal-cover radio-modal-cover--band radio-modal-cover--band-bio"
+                                        class="radio-modal-cover radio-modal-cover--band"
                                         data-player-band-cover-image
                                         :src="bandWindowBioCover"
-                                        alt=""
-                                        onerror="this.onerror=null; this.src='{{ $fallbackCover }}';"
-                                        loading="lazy"
-                                    >
-                                    <img
-                                        class="radio-modal-cover radio-modal-cover--band radio-modal-cover--band-track"
-                                        :src="bandWindowTrackCover"
                                         alt=""
                                         onerror="this.onerror=null; this.src='{{ $fallbackCover }}';"
                                         loading="lazy"
