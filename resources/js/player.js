@@ -1353,9 +1353,16 @@ export function registerRadioPlayer(Alpine) {
             const nextArtist = this.normalizeBandArtist(widgetArtist || track.artist || currentArtist || this.defaultArtist || 'Seven Rock Radio');
             const tempBuster = nextArtist + '|' + nextTitle;
 
+            // Si es bloque de programa y ya tenemos una portada no-fallback, la conservamos
+            const currentIsPrograma = Boolean(this.track?.es_bloque_programa);
+            const currentCoverIsReal = this.track?.cover && !isFallbackImage(this.track.cover, this.fallbackCover, this.logoUrl);
+
             let nextCoverCandidate = this.fallbackCover;
             if (track.cover && !isFallbackImage(track.cover, this.fallbackCover, this.logoUrl)) {
                 nextCoverCandidate = track.cover;
+            } else if (currentIsPrograma && currentCoverIsReal) {
+                // Programa activo: NO degradar la portada al fallback aunque el poll no traiga cover
+                nextCoverCandidate = this.track.cover;
             } else if (this.track && this.track.cover && !isFallbackImage(this.track.cover, this.fallbackCover, this.logoUrl) && nextArtist === this.track.artist && nextTitle === this.track.title) {
                 nextCoverCandidate = this.track.cover;
             } else if (widgetCover && !isFallbackImage(widgetCover, this.fallbackCover, this.logoUrl)) {
@@ -2291,6 +2298,32 @@ export function registerRadioPlayer(Alpine) {
                 return this.track?.program_host || this.track?.program_schedule || this.track?.artist || this.defaultArtist;
             }
             return (this.track?.artist ?? '') !== '' ? this.track.artist : this.defaultArtist;
+        },
+
+        /**
+         * coverVisible — única fuente de verdad para la portada.
+         * Prioridad: portada del programa > portada de la pista > fallbackCover.
+         * Nunca devuelve el logo/fallback cuando hay un bloque de programa activo
+         * con una imagen real disponible.
+         */
+        get coverVisible() {
+            const esPrograma = Boolean(this.track?.es_bloque_programa)
+                || (this.track?.program_name ?? '') !== '';
+            const coverPrograma = this.programInfo?.cover
+                || this.track?.program_cover
+                || '';
+
+            if (esPrograma && coverPrograma
+                && !isFallbackImage(coverPrograma, this.fallbackCover, this.logoUrl)) {
+                return coverPrograma;
+            }
+
+            const actual = this.track?.cover || '';
+            if (actual && !isFallbackImage(actual, this.fallbackCover, this.logoUrl)) {
+                return actual;
+            }
+
+            return this.fallbackCover;
         },
     }));
 }

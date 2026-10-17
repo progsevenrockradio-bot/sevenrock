@@ -402,9 +402,10 @@
                             <div class="radio-player-popup-cover-wrap">
                                 <img
                                     class="radio-player-popup-cover"
-                                    :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')"
+                                    :src="coverVisible + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')"
                                     alt=""
-                                    onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;"
+                                    x-on:error="if (!$el.dataset.retried) { $el.dataset.retried = '1'; $el.src = $el.src.split('?')[0] + '?r=' + Date.now(); } else if (!$el.dataset.programa) { $el.src = '{{ $fallbackCover }}'; }"
+                                    x-bind:data-programa="(track.es_bloque_programa || track.program_name) ? '1' : ''"
                                     loading="lazy"
                                 >
                                 <div class="radio-player-popup-wavebars" :class="{ 'is-playing': playing }">
@@ -547,7 +548,7 @@
                     {{-- Cover + info --}}
                     <div class="flex items-center gap-3 min-w-0 flex-[2] sm:flex-[1.5] lg:flex-[1.2] w-full sm:w-auto">
                         <div class="group h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#2b2b2b] bg-[#111] shadow-md relative cursor-pointer" @click="toggleInfoWindow($event)" title="Ver Info">
-                            <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="tituloVisible" width="256" height="256" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
+                            <img :src="coverVisible + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="tituloVisible" width="256" height="256" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" x-on:error="if (!$el.dataset.retried) { $el.dataset.retried = '1'; $el.src = $el.src.split('?')[0] + '?r=' + Date.now(); } else if (!$el.dataset.programa) { $el.src = '{{ $fallbackCover }}'; }" x-bind:data-programa="(track.es_bloque_programa || track.program_name) ? '1' : ''">
                             <div x-show="track.is_live" class="absolute inset-0 flex items-center justify-center bg-black/60">
                                 <span class="text-[8px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
                             </div>
@@ -672,7 +673,7 @@
                     {{-- Fila 1: Cover + info --}}
                     <div class="flex items-center gap-2.5 min-w-0 w-full cursor-pointer" @click="toggleInfoWindow($event)" title="Ver Info">
                         <div class="group h-10 w-10 shrink-0 overflow-hidden rounded border border-white/10 bg-[#111] shadow relative">
-                            <img :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="tituloVisible" width="128" height="128" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;">
+                            <img :src="coverVisible + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="tituloVisible" width="128" height="128" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" x-on:error="if (!$el.dataset.retried) { $el.dataset.retried = '1'; $el.src = $el.src.split('?')[0] + '?r=' + Date.now(); } else if (!$el.dataset.programa) { $el.src = '{{ $fallbackCover }}'; }" x-bind:data-programa="(track.es_bloque_programa || track.program_name) ? '1' : ''">
                             <div x-show="track.is_live" class="absolute inset-0 flex items-center justify-center bg-black/60">
                                 <span class="text-[7px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
                             </div>
@@ -1021,7 +1022,7 @@
                     <div class="radio-modal-content radio-modal-content--program">
                         <div class="radio-modal-scroll">
                             <div class="radio-modal-header radio-modal-header--program">
-                                <img class="radio-modal-cover radio-modal-cover--program" :src="programInfo.cover || fallbackCover" :alt="programInfo.name || ''" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" loading="lazy">
+                                <img class="radio-modal-cover radio-modal-cover--program" :src="coverVisible + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="programInfo.name || ''" x-on:error="if (!$el.dataset.retried) { $el.dataset.retried = '1'; $el.src = $el.src.split('?')[0] + '?r=' + Date.now(); } else if (!$el.dataset.programa) { $el.src = '{{ $fallbackCover }}'; }" x-bind:data-programa="(track.es_bloque_programa || track.program_name) ? '1' : ''" loading="lazy">
                                 <div class="radio-modal-copy radio-modal-copy--program">
                                     <span x-show="track.is_live" class="radio-modal-live-badge">
                                         <span class="radio-modal-live-dot sr-pulse"></span>
@@ -1095,7 +1096,7 @@
                 <section class="player-expanded-main">
                     <div class="player-expanded-hero">
                         <div class="radio-player-cover-stack radio-player-cover-stack--dock">
-                            <img class="radio-player-cover-large radio-player-cover-large--dock" :src="(track.cover || fallbackCover) + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="" onerror="this.src='{{ $fallbackCover }}'; this.onerror=null;" loading="lazy">
+                            <img class="radio-player-cover-large radio-player-cover-large--dock" :src="coverVisible + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" alt="" x-on:error="if (!$el.dataset.retried) { $el.dataset.retried = '1'; $el.src = $el.src.split('?')[0] + '?r=' + Date.now(); } else if (!$el.dataset.programa) { $el.src = '{{ $fallbackCover }}'; }" x-bind:data-programa="(track.es_bloque_programa || track.program_name) ? '1' : ''" loading="lazy">
                             <div class="radio-player-cover-actions" aria-label="Acciones de portada">
                                 <button type="button" class="radio-player-chip radio-player-chip--ghost" @click="shareCurrent()">Share</button>
                                 <button type="button" class="radio-player-chip radio-player-chip--ghost" @click="openPopout()">Popup</button>
