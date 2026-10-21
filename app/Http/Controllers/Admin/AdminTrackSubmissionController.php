@@ -201,6 +201,7 @@ class AdminTrackSubmissionController extends Controller
                 'is_active' => true,
                 'show_in_feed' => $request->boolean('show_in_feed'),
                 'author_email' => $submission->contact_email,
+                'origin' => 'submission',
             ]);
 
             \App\Jobs\ExtractReleaseCoverJob::dispatch($newRelease, $submission->file_path);
@@ -305,6 +306,7 @@ class AdminTrackSubmissionController extends Controller
                 'is_active' => true,
                 'show_in_feed' => $showInFeed,
                 'author_email' => $submission->contact_email,
+                'origin' => 'submission',
             ]);
 
             \App\Jobs\ExtractReleaseCoverJob::dispatch($newRelease, $submission->file_path);

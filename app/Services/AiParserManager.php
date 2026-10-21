@@ -12,6 +12,7 @@ class AiParserManager
 {
     public ?string $lastError = null;
     public ?string $lastProvider = null;
+    public ?array $lastTelemetry = null;
 
     public function resolveChain(): array
     {
@@ -64,6 +65,109 @@ class AiParserManager
     {
         return $this->executeChain('parseEfemeridesBatch', [$subject, $body]);
     }
+
+    /**
+     * Ejecuta una llamada estructurada recorriendo la cadena de proveedores y auditando consumo.
+     */
+    public function generateStructured(
+        string $prompt,
+        array $schema,
+        string $stage = 'generic',
+        ?string $messageId = null,
+        ?string $contentHash = null
+    ): ?array {
+        $this->lastError = null;
+        $this->lastProvider = null;
+        $this->lastTelemetry = null;
+
+        $chain = $this->resolveChain();
+        $errors = [];
+        $contentHash = $contentHash ?: hash('sha256', $prompt);
+
+        foreach ($chain as $provider) {
+            $apiKey = $this->getApiKey($provider);
+            if (empty($apiKey)) {
+                $errors[] = "{$provider}: api_key_missing";
+                continue;
+            }
+
+            $driver = $this->resolveDriver($provider);
+            if (!$driver || !method_exists($driver, 'generateStructured')) {
+                $errors[] = "{$provider}: driver_unsupported";
+                continue;
+            }
+
+            // Registrar llamada en contador diario
+            app(\App\Services\AiUsageTracker::class)->incrementCall($provider);
+
+            $result = $driver->generateStructured($prompt, $schema, $apiKey);
+            $telemetry = $driver->lastTelemetry ?? [];
+
+            if ($result !== null) {
+                $this->lastProvider = $provider;
+                $this->lastTelemetry = $telemetry;
+
+                // Registrar auditoría exitosa si la tabla existe
+                $this->recordAudit([
+                    'message_id'        => $messageId,
+                    'content_hash'      => $contentHash,
+                    'provider'          => $provider,
+                    'model'             => $telemetry['model'] ?? 'unknown',
+                    'stage'             => $stage,
+                    'prompt_tokens'     => $telemetry['prompt_tokens'] ?? null,
+                    'completion_tokens' => $telemetry['completion_tokens'] ?? null,
+                    'total_tokens'      => $telemetry['total_tokens'] ?? null,
+                    'usage_source'      => $telemetry['usage_source'] ?? 'estimated',
+                    'estimated_cost_eur'=> \App\Models\AiCallAudit::calculateEstimatedCost(
+                        $provider,
+                        $telemetry['model'] ?? 'unknown',
+                        (int) ($telemetry['prompt_tokens'] ?? 0),
+                        (int) ($telemetry['completion_tokens'] ?? 0)
+                    ),
+                    'duration_ms'       => $telemetry['duration_ms'] ?? 0,
+                    'status'            => 'success',
+                ]);
+
+                return $result;
+            } else {
+                $err = $driver->lastError ?? 'unknown_error';
+                $errors[] = "{$provider}: {$err}";
+                Log::warning("AiParserManager: Proveedor {$provider} falló en generateStructured.", ['error' => $err]);
+
+                // Registrar auditoría de error
+                $this->recordAudit([
+                    'message_id'        => $messageId,
+                    'content_hash'      => $contentHash,
+                    'provider'          => $provider,
+                    'model'             => method_exists($driver, 'resolveModel') ? $driver->resolveModel() : 'unknown',
+                    'stage'             => $stage,
+                    'prompt_tokens'     => 0,
+                    'completion_tokens' => 0,
+                    'total_tokens'      => 0,
+                    'usage_source'      => 'estimated',
+                    'estimated_cost_eur'=> 0.0,
+                    'duration_ms'       => 0,
+                    'status'            => 'error',
+                    'error_message'     => $err,
+                ]);
+            }
+        }
+
+        $this->lastError = implode(' | ', $errors);
+        return null;
+    }
+
+    protected function recordAudit(array $data): void
+    {
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('ai_call_audits')) {
+                \App\Models\AiCallAudit::create($data);
+            }
+        } catch (\Throwable $e) {
+            Log::error("AiParserManager: Error al registrar AiCallAudit: " . $e->getMessage());
+        }
+    }
+
 
     protected function executeChain(string $method, array $args): ?array
     {

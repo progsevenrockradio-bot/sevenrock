@@ -66,6 +66,7 @@ class NewRelease extends Model
         'show_in_feed',
         'author_email',
         'notification_sender',
+        'origin',
     ];
 
     protected function casts(): array
@@ -88,6 +89,17 @@ class NewRelease extends Model
             return;
         }
 
+        // Distinción de procedencia:
+        // Solo los lanzamientos enviados voluntariamente por artistas ('submission')
+        // o creados manualmente por administradores ('manual') pueden enviar notificaciones.
+        // Los lanzamientos importados ('email') y los de procedencia desconocida ('unknown' o nulos)
+        // tienen bloqueadas las notificaciones automáticas para evitar spam a terceros.
+        $origin = (string) ($this->origin ?? 'unknown');
+        if (! in_array($origin, ['submission', 'manual'], true)) {
+            Log::info("Notificación omitida para NewRelease ID {$this->id}: procedencia '{$origin}' no autorizada para avisos automáticos.");
+            return;
+        }
+
         $emailString = trim((string) $this->author_email);
         if ($emailString === '') {
             return;
@@ -95,6 +107,21 @@ class NewRelease extends Model
 
         // Dividir por punto y coma (;) o coma (,) y limpiar espacios
         $emails = array_values(array_filter(array_map('trim', preg_split('/[;,]/', $emailString))));
+        if (empty($emails)) {
+            return;
+        }
+
+        // Excluir bots internos y direcciones del sistema
+        $ignored = array_filter([
+            'dark.vader.agent@gmail.com',
+            'prog.sevenrockradio@gmail.com',
+            strtolower(trim((string) config('mail.from.address'))),
+        ]);
+
+        $emails = array_values(array_filter($emails, function ($e) use ($ignored) {
+            return ! in_array(strtolower($e), $ignored, true);
+        }));
+
         if (empty($emails)) {
             return;
         }

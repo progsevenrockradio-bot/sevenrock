@@ -188,10 +188,70 @@ class ProcessIncomingEmails extends Command
                 $senderAddress = $message->getFrom()->first();
                 $senderEmail = $senderAddress instanceof \Webklex\PHPIMAP\Address ? trim((string) $senderAddress->mail) : null;
 
-                // Dark Vader es un agente de confianza: siempre pasa el filtro de relevancia sin depender de la whitelist manual
-                $isDarkVaderAgent = strtolower((string) $senderEmail) === 'dark.vader.agent@gmail.com';
+                // Obtener cabeceras crudas del mensaje para verificación criptográfica
+                $rawHeaders = '';
+                try {
+                    if (isset($message->header) && is_object($message->header) && isset($message->header->raw)) {
+                        $rawHeaders = (string) $message->header->raw;
+                    } elseif (method_exists($message, 'getHeader') && $message->getHeader()) {
+                        $rawHeaders = (string) ($message->getHeader()->raw ?? '');
+                    }
+                } catch (\Throwable $e) {
+                    $rawHeaders = '';
+                }
 
-                $isWhitelisted = $isDarkVaderAgent; // Dark Vader siempre está en whitelist implícita
+                // Verificación de autenticidad para el agente Dark Vader
+                $isDarkVaderAgent = false;
+                if ($senderEmail && strtolower($senderEmail) === 'dark.vader.agent@gmail.com') {
+                    $securityVerifier = app(\App\Services\EmailSecurityVerifier::class);
+                    if ($securityVerifier->isDarkVaderLegitimate($senderEmail, $rawHeaders)) {
+                        $isDarkVaderAgent = true;
+                    } else {
+                        $this->warn("[SEGURIDAD] Remitente Dark Vader no verificado criptográficamente: {$senderEmail}. Retenido fuera de la vía privilegiada.");
+                        Log::warning("ProcessIncomingEmails: Correo con From de Dark Vader falló verificación criptográfica.", [
+                            'message_id' => $messageId,
+                            'sender'     => $senderEmail,
+                            'subject'    => $subject,
+                        ]);
+                    }
+                }
+
+                // Resolución de Fuente (Agencia, Sello, Promotora)
+                $sourceResolver = app(\App\Services\EmailSenderSourceResolver::class);
+                $resolvedSource = $sourceResolver->resolve((string) $senderEmail);
+                $sourceEntity = $resolvedSource['source'];
+                $sourceStatus = $resolvedSource['status'];
+
+                // Descartar si el remitente está bloqueado
+                if ($sourceStatus === 'blocked') {
+                    $this->warn("[BLOQUEADO] Remitente en lista de fuentes bloqueadas: {$senderEmail}. Descartando correo.");
+                    Log::info("ProcessIncomingEmails: Correo descartado por remitente bloqueado.", [
+                        'sender'     => $senderEmail,
+                        'message_id' => $messageId,
+                        'subject'    => $subject,
+                    ]);
+                    $this->recordProcessedEmail($messageId, $subject, 'blocked_sender');
+                    $message->setFlag('SEEN');
+                    continue;
+                }
+
+                // Verificación técnica de identidad (SPF / DKIM / DMARC)
+                if (! $isDarkVaderAgent && $senderEmail) {
+                    $securityVerifier = app(\App\Services\EmailSecurityVerifier::class);
+                    $securityResult = $securityVerifier->verify($senderEmail, $rawHeaders, $sourceEntity);
+
+                    if ($securityResult['is_spoofing']) {
+                        $this->error("[SPOOFING] Suplantación detectada para {$senderEmail}. Reteniendo correo sin publicar.");
+                        if ($sourceEntity) {
+                            $sourceEntity->increment('incidents_count');
+                        }
+                        $this->recordProcessedEmail($messageId, $subject, 'spoofing_detected');
+                        $message->setFlag('SEEN');
+                        continue;
+                    }
+                }
+
+                $isWhitelisted = $isDarkVaderAgent || ($sourceStatus === 'authorized');
                 if (! $isWhitelisted && $senderEmail && $settings->email_whitelist_senders) {
                     $whitelist = array_values(array_filter(array_map('trim', explode(',', $settings->email_whitelist_senders))));
                     foreach ($whitelist as $allowed) {
@@ -204,7 +264,7 @@ class ProcessIncomingEmails extends Command
                     }
                 }
 
-                $whitelistReason = $isDarkVaderAgent ? 'Dark Vader Agent (implícito)' : ($isWhitelisted ? 'Lista blanca manual' : 'NO');
+                $whitelistReason = $isDarkVaderAgent ? 'Dark Vader Agent (autenticado)' : ($isWhitelisted ? 'Fuente autorizada o whitelist' : 'NO');
                 $this->info("[EMAIL] Remitente: " . ($senderEmail ?: 'Desconocido') . " | Whitelist: {$whitelistReason} | Asunto: {$subject}");
                 Log::info("ProcessIncomingEmails: Procesando correo.", [
                     'message_id' => $messageId,
@@ -212,6 +272,7 @@ class ProcessIncomingEmails extends Command
                     'subject'    => $subject,
                     'whitelisted' => $isWhitelisted,
                     'is_dark_vader' => $isDarkVaderAgent,
+                    'source_status' => $sourceStatus,
                 ]);
 
                 // Extraer MP3 (la portada se maneja luego con PostImageResolver)
@@ -357,7 +418,7 @@ class ProcessIncomingEmails extends Command
                             'content'        => $cleanItemSave,
                             'excerpt'        => Str::limit(strip_tags($cleanItemSave), 160),
                             'status'         => $status,
-                            'is_published'   => $settings->email_auto_publish,
+                            'is_published'   => ($status === 'published'),
                             'published_at'   => now(),
                             'featured_image' => null, // Efemérides van al cintillo, no llevan imagen
                             'source_url'     => null,
@@ -520,9 +581,25 @@ class ProcessIncomingEmails extends Command
                     continue;
                 }
 
+                // ── SANEAMIENTO DE CONTENIDOS Y EVALUACIÓN DE FECHAS (FASE 3) ─────
+                $sanitizer = app(\App\Services\EmailContentSanitizer::class);
+                $sanitized = $sanitizer->sanitize($body);
+                $cleanBody = $sanitized['clean_html'];
+                $editorialNotes = $sanitized['editorial_notes'];
+
+                // Detección de Rectificaciones y Fe de Erratas
+                $scheduleManager = app(\App\Services\ReleaseScheduleManager::class);
+                $rectification = $scheduleManager->detectRectification($subject, $body, (string) $senderEmail, $messageId);
+                if ($rectification && $rectification['is_rectification']) {
+                    $this->warn("[RECTIFICACIÓN] Detectada corrección o fe de erratas para: {$subject}");
+                }
+
+                // Evaluación de 4 Fechas (Recepción, Lanzamiento, Embargo, Publicación Permitida)
+                $schedule = $scheduleManager->evaluateSchedule($subject, $body, now());
+
                 // ── FILTRO PREVIO DETERMINISTA ANTES DE LA IA (para correo externo) ─────
                 $relevanceFilter = app(\App\Support\EmailRelevanceFilter::class);
-                $filterResult = $relevanceFilter->shouldProcess($senderEmail, $subject, $body, $settings);
+                $filterResult = $relevanceFilter->shouldProcess($senderEmail, $subject, $cleanBody ?: $body, $settings);
 
                 if (! $filterResult['pass']) {
                     $this->info("[FILTRO DETERMINISTA] Correo externo omitido por falta de relevancia: {$subject} (motivo: {$filterResult['reason']})");
@@ -567,13 +644,44 @@ class ProcessIncomingEmails extends Command
                     continue;
                 }
 
-                // ── LLAMAR A LA IA PARA CLASIFICAR Y REDACTAR CORREO EXTERNO ─────
-                $this->info("Consultando a la IA para redactar y clasificar correo externo...");
-                $parserManager = app(\App\Services\AiParserManager::class);
-                $parsed = $parserManager->parse($subject, $body);
+                // ── LLAMAR AL PIPELINE EDITORIAL DE IA DE DOS ETAPAS (FASE 4) ─────
+                $this->info("Consultando al pipeline editorial de IA (Clasificación + Redacción)...");
+                $editorialPipeline = app(\App\Services\EditorialAiPipeline::class);
+                $pipelineResult = $editorialPipeline->process([
+                    'subject'    => $subject,
+                    'body'       => $body,
+                    'sender'     => $senderEmail,
+                    'message_id' => $messageId,
+                    'account'    => $accountEmail,
+                ]);
 
-                if (! $parsed || ! isset($parsed['type'])) {
-                    $lastError = $parserManager->lastError ?? 'Fallo desconocido de IA';
+                if ($pipelineResult['status'] === 'duplicate') {
+                    $this->info("Correo duplicado detectado ({$pipelineResult['reason']}): {$subject}");
+                    $this->recordProcessedEmail($messageId, $subject, 'duplicate');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    $message->setFlag('SEEN');
+                    continue;
+                }
+
+                if ($pipelineResult['status'] === 'discarded') {
+                    $this->info("Correo descartado por la IA ({$pipelineResult['reason']}): {$subject}");
+                    $this->recordProcessedEmail($messageId, $subject, 'discarded');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    $message->setFlag('SEEN');
+                    continue;
+                }
+
+                if ($pipelineResult['status'] === 'radio_program') {
+                    $this->info("Correo de programa de radio o podcast aislado del feed de noticias: {$subject}");
+                    $this->recordProcessedEmail($messageId, $subject, 'radio_program');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    $message->setFlag('SEEN');
+                    continue;
+                }
+
+                $parserManager = app(\App\Services\AiParserManager::class);
+                if ($pipelineResult['status'] === 'fallback_draft' && ($pipelineResult['failure_type'] ?? '') === 'ai_failure') {
+                    $lastError = $pipelineResult['failure_reason'] ?? 'Fallo en pipeline de IA';
 
                     // Reintentar si es un error recuperable (429, 500, 503, timeout)
                     if ($parserManager->isRecoverableError($lastError)) {
@@ -595,18 +703,36 @@ class ProcessIncomingEmails extends Command
                         ]);
 
                         $this->recordProcessedEmail($messageId, $subject, 'pending_retry', $lastError);
-
                         $message->setFlag('SEEN');
                         continue;
                     }
 
-                    // Errores no recuperables (401, 400, etc.) -> fallback determinista a draft
+                    // Errores no recuperables -> fallback determinista a draft
                     $this->error("La IA falló con error no recuperable: {$lastError}. Aplicando fallback determinista a draft.");
                     $this->createDraftFallbackPost($message, $body, $subject, $senderEmail, $messageId, $settings, $lastError);
                     $message->setFlag('SEEN');
                     if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
                     continue;
                 }
+
+                // Adaptar el resultado estructurado de la FASE 4 para la persistencia
+                $draft = $pipelineResult['draft'] ?? [];
+                $facts = $pipelineResult['stage1_facts'] ?? [];
+                $cType = $pipelineResult['content_type'] ?? 'musical_news';
+
+                $parsed = [
+                    'type'          => in_array($cType, ['new_release', 'release']) ? 'release' : 'post',
+                    'importance'    => $pipelineResult['importance'] ?? 1,
+                    'title'         => $draft['title'] ?? $subject,
+                    'artist_name'   => $facts['artist_name'] ?? null,
+                    'excerpt'       => $draft['excerpt'] ?? '',
+                    'content'       => $draft['content'] ?? '',
+                    'events'        => $facts['confirmed_tour_dates'] ?? [],
+                    'youtube_url'   => $facts['verified_evidence']['youtube_url'] ?? null,
+                    'spotify_url'   => $facts['verified_evidence']['spotify_url'] ?? null,
+                    'editorial_warning' => $draft['editorial_warning'] ?? null,
+                ];
+
 
                 $aiType = $parsed['type'];
                 $type = $aiType;
@@ -728,8 +854,8 @@ class ProcessIncomingEmails extends Command
                         $this->info("Ignorando post duplicado (similar a post ID: {$similarPostId})");
                         Log::info("ProcessIncomingEmails: Post duplicado ignorado.", ['title' => $title, 'subject' => $subject, 'similar_to_post_id' => $similarPostId]);
                     } else {
-                        // Crear Post
-                        $status = ($settings->email_auto_publish && !$isFallback) ? 'published' : 'draft';
+                        // En FASE 2: Todos los posts externos se generan estrictamente como borrador (draft)
+                        $status = 'draft';
 
                         // Asignar categoría correcta
                         if ($isEfemerides) {
@@ -773,7 +899,7 @@ class ProcessIncomingEmails extends Command
                             'status'      => $status,
                             'categories'  => $categories,
                             'cover_url'   => $featuredImageUrl,
-                            'is_published' => $settings->email_auto_publish,
+                            'is_published' => ($status === 'published'),
                         ]);
 
                         $post = Post::create([
@@ -782,7 +908,7 @@ class ProcessIncomingEmails extends Command
                             'content'           => $this->limpiarContenidoDeCorreo($parsed['content'] ?? ''),
                             'excerpt'           => $parsed['excerpt'] ?? '',
                             'status'            => $status,
-                            'is_published'      => $settings->email_auto_publish,
+                            'is_published'      => ($status === 'published'),
                             'published_at'      => now(),
                             'featured_image'    => $featuredImageUrl,
                             'source_url'        => $resolverInfo['article_url'] ?? null,
@@ -798,6 +924,30 @@ class ProcessIncomingEmails extends Command
                             'source_subject'    => $subject,
                         ]);
                         $this->syncTaxonomies($post, $categories);
+
+                        // Validación de seguridad centralizada previa (FASE 3)
+                        $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+                        $safetyResult = $safetyValidator->validatePost($post);
+
+                        try {
+                            \App\Models\EmailPostSanitizedMeta::create([
+                                'post_id'                  => $post->id,
+                                'source_message_id'        => $messageId,
+                                'sender_email'             => $senderEmail,
+                                'received_at'              => now(),
+                                'musical_release_date'     => $schedule['musical_release_date'] ?? null,
+                                'embargo_until'            => $schedule['embargo_until'] ?? null,
+                                'publish_permitted_at'     => $schedule['publish_permitted_at'] ?? now(),
+                                'is_embargo_active'        => $schedule['is_embargo_active'] ?? false,
+                                'editorial_notes'          => $editorialNotes ?? null,
+                                'security_status'          => $safetyResult['is_safe'] ? 'passed' : 'needs_review',
+                                'incident_reason'          => ! empty($safetyResult['violations']) ? implode(' | ', $safetyResult['violations']) : null,
+                                'superseded_by_message_id' => ! empty($rectification['target_post']) ? (string) $rectification['target_post']->id : null,
+                            ]);
+                        } catch (\Throwable $e) {
+                            // Continuar con seguridad si la tabla aún no se ha migrado en producción
+                        }
+
                         if (! $isNoticiaRock) $postsCreatedToday++;
                         $this->info("[OK] Post creado en estado [{$status}]: ID {$post->id} — {$title}");
                         Log::info("ProcessIncomingEmails: Post creado exitosamente.", [
@@ -838,8 +988,8 @@ class ProcessIncomingEmails extends Command
                             Log::warning("ProcessIncomingEmails: Fallback de imagen aplicado para NewRelease (PostImageResolver devolvió vacío).", ['message_id' => $messageId]);
                         }
 
-                        // Crear Lanzamiento (si es fallback nunca se auto-publica)
-                        $isActive = (bool) $settings->email_auto_publish && !$isFallback;
+                        // En FASE 2: Todo NewRelease procedente de correo externo es estrictamente borrador (inactivo)
+                        $isActive = false;
                         $release = NewRelease::create([
                             'title' => $title,
                             'slug' => Str::slug($title . '-' . $artistName),
@@ -852,7 +1002,8 @@ class ProcessIncomingEmails extends Command
                             // but we use the resolved cover image.
                             'youtube_url' => $parsed['youtube_url'] ?? null,
                             'spotify_url' => $parsed['spotify_url'] ?? null,
-                            'author_email' => $senderEmail,
+                            'author_email' => null,
+                            'origin' => 'email',
                         ]);
 
                         $releasesCreatedToday++;

@@ -19,6 +19,13 @@ class GeminiContentParser implements ContentParserInterface
     public ?string $lastError = null;
 
     /**
+     * Almacena la telemetría de la última llamada (tokens, duración, modelo).
+     *
+     * @var array|null
+     */
+    public ?array $lastTelemetry = null;
+
+    /**
      * Resuelve el modelo a usar consultando primero BD, luego config y luego el por defecto.
      */
     public function resolveModel(): string
@@ -26,6 +33,29 @@ class GeminiContentParser implements ContentParserInterface
         $settings = \App\Models\ThemeSetting::current();
         return trim((string) ($settings->ai_gemini_model ?? '')) 
             ?: config('services.gemini.model', 'gemini-flash-latest');
+    }
+
+    /**
+     * Ejecuta una llamada estructurada con prompt y esquema arbitrario, registrando telemetría.
+     */
+    public function generateStructured(string $prompt, array $schema, string $apiKey, ?string $model = null): ?array
+    {
+        $this->lastError = null;
+        $this->lastTelemetry = null;
+        $resolvedModel = $model ?: $this->resolveModel();
+
+        $result = $this->callApi($resolvedModel, $prompt, $apiKey, $schema);
+
+        if ($result === null && ($this->isNotFoundError($this->lastError) || $this->isQuotaZeroError($this->lastError))) {
+            Log::warning("GeminiContentParser: Modelo '{$resolvedModel}' falló. Intentando auto-descubrimiento...");
+            $discovered = $this->discoverBestModel($apiKey);
+            if ($discovered && $discovered !== $resolvedModel) {
+                $this->lastError = null;
+                $result = $this->callApi($discovered, $prompt, $apiKey, $schema);
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -64,8 +94,76 @@ class GeminiContentParser implements ContentParserInterface
     /**
      * Hace la llamada HTTP a la API de Gemini.
      */
-    protected function callApi(string $model, string $prompt, string $apiKey): ?array
+    protected function callApi(string $model, string $prompt, string $apiKey, ?array $customSchema = null): ?array
     {
+        $startTime = microtime(true);
+
+        $schema = $customSchema ?: [
+            'type' => 'OBJECT',
+            'properties' => [
+                'type' => [
+                    'type' => 'STRING',
+                    'enum' => ['post', 'release', 'event', 'discard'],
+                    'description' => 'El tipo de contenido clasificado.'
+                ],
+                'importance' => [
+                    'type' => 'INTEGER',
+                    'description' => 'Un valor del 1 al 5 que califica la importancia o relevancia.'
+                ],
+                'title' => [
+                    'type' => 'STRING',
+                    'description' => 'El título del post o el título de la canción/disco lanzado.'
+                ],
+                'artist_name' => [
+                    'type' => 'STRING',
+                    'description' => 'El nombre del artista o banda (obligatorio para release, vacío para post).'
+                ],
+                'excerpt' => [
+                    'type' => 'STRING',
+                    'description' => 'Resumen o extracto de 150-180 caracteres.'
+                ],
+                'content' => [
+                    'type' => 'STRING',
+                    'description' => 'El cuerpo principal del artículo o descripción redactado en español.'
+                ],
+                'events' => [
+                    'type' => 'ARRAY',
+                    'description' => 'Lista de conciertos, giras o eventos mencionados (solo para tipo event).',
+                    'items' => [
+                        'type' => 'OBJECT',
+                        'properties' => [
+                            'title' => ['type' => 'STRING', 'description' => 'El título del evento o ciudad de la gira.'],
+                            'starts_at' => ['type' => 'STRING', 'description' => 'Fecha de inicio del evento en formato YYYY-MM-DD o YYYY-MM-DD HH:mm:ss'],
+                            'location' => ['type' => 'STRING', 'description' => 'Ciudad y País/Estado del evento.'],
+                            'venue' => ['type' => 'STRING', 'description' => 'Lugar, sala o recinto del concierto.'],
+                            'ticket_url' => ['type' => 'STRING', 'description' => 'Enlace para comprar tickets.']
+                        ]
+                    ]
+                ],
+                'youtube_url' => [
+                    'type' => 'STRING',
+                    'description' => 'URL de YouTube extraída.'
+                ],
+                'spotify_url' => [
+                    'type' => 'STRING',
+                    'description' => 'URL de Spotify extraída.'
+                ],
+                'facebook_url' => [
+                    'type' => 'STRING',
+                    'description' => 'URL de Facebook extraída.'
+                ],
+                'instagram_url' => [
+                    'type' => 'STRING',
+                    'description' => 'URL de Instagram extraída.'
+                ],
+                'twitter_url' => [
+                    'type' => 'STRING',
+                    'description' => 'URL de Twitter/X extraída.'
+                ]
+            ],
+            'required' => ['type', 'importance', 'title', 'excerpt', 'content']
+        ];
+
         try {
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
@@ -79,71 +177,7 @@ class GeminiContentParser implements ContentParserInterface
                 ],
                 'generationConfig' => [
                     'responseMimeType' => 'application/json',
-                    'responseSchema' => [
-                        'type' => 'OBJECT',
-                        'properties' => [
-                            'type' => [
-                                'type' => 'STRING',
-                                'enum' => ['post', 'release', 'event', 'discard'],
-                                'description' => 'El tipo de contenido clasificado.'
-                            ],
-                            'importance' => [
-                                'type' => 'INTEGER',
-                                'description' => 'Un valor del 1 al 5 que califica la importancia o relevancia.'
-                            ],
-                            'title' => [
-                                'type' => 'STRING',
-                                'description' => 'El título del post o el título de la canción/disco lanzado.'
-                            ],
-                            'artist_name' => [
-                                'type' => 'STRING',
-                                'description' => 'El nombre del artista o banda (obligatorio para release, vacío para post).'
-                            ],
-                            'excerpt' => [
-                                'type' => 'STRING',
-                                'description' => 'Resumen o extracto de 150-180 caracteres.'
-                            ],
-                            'content' => [
-                                'type' => 'STRING',
-                                'description' => 'El cuerpo principal del artículo o descripción redactado en español.'
-                            ],
-                            'events' => [
-                                'type' => 'ARRAY',
-                                'description' => 'Lista de conciertos, giras o eventos mencionados (solo para tipo event).',
-                                'items' => [
-                                    'type' => 'OBJECT',
-                                    'properties' => [
-                                        'title' => ['type' => 'STRING', 'description' => 'El título del evento o ciudad de la gira.'],
-                                        'starts_at' => ['type' => 'STRING', 'description' => 'Fecha de inicio del evento en formato YYYY-MM-DD o YYYY-MM-DD HH:mm:ss'],
-                                        'location' => ['type' => 'STRING', 'description' => 'Ciudad y País/Estado del evento.'],
-                                        'venue' => ['type' => 'STRING', 'description' => 'Lugar, sala o recinto del concierto.'],
-                                        'ticket_url' => ['type' => 'STRING', 'description' => 'Enlace para comprar tickets.']
-                                    ]
-                                ]
-                            ],
-                            'youtube_url' => [
-                                'type' => 'STRING',
-                                'description' => 'URL de YouTube extraída.'
-                            ],
-                            'spotify_url' => [
-                                'type' => 'STRING',
-                                'description' => 'URL de Spotify extraída.'
-                            ],
-                            'facebook_url' => [
-                                'type' => 'STRING',
-                                'description' => 'URL de Facebook extraída.'
-                            ],
-                            'instagram_url' => [
-                                'type' => 'STRING',
-                                'description' => 'URL de Instagram extraída.'
-                            ],
-                            'twitter_url' => [
-                                'type' => 'STRING',
-                                'description' => 'URL de Twitter/X extraída.'
-                            ]
-                        ],
-                        'required' => ['type', 'importance', 'title', 'excerpt', 'content']
-                    ]
+                    'responseSchema' => $schema
                 ]
             ]);
 
@@ -175,6 +209,26 @@ class GeminiContentParser implements ContentParserInterface
                 Log::error("Failed to decode Gemini JSON response for model {$model}: " . json_last_error_msg());
                 return null;
             }
+
+            // Registrar telemetría de tokens y duración
+            $durationMs = (int) round((microtime(true) - $startTime) * 1000);
+            $usage = $result['usageMetadata'] ?? [];
+            $promptTokens = $usage['promptTokenCount'] ?? (int) ceil(strlen($prompt) / 4);
+            $completionTokens = $usage['candidatesTokenCount'] ?? (int) ceil(strlen($text) / 4);
+            $totalTokens = $usage['totalTokenCount'] ?? ($promptTokens + $completionTokens);
+            $usageSource = !empty($usage) ? 'api_reported' : 'estimated';
+
+            $this->lastTelemetry = [
+                'provider'          => 'gemini',
+                'model'             => $model,
+                'prompt_tokens'     => $promptTokens,
+                'completion_tokens' => $completionTokens,
+                'total_tokens'      => $totalTokens,
+                'usage_source'      => $usageSource,
+                'duration_ms'       => $durationMs,
+                'status'            => 'success',
+            ];
+
 
             return $parsedData;
 

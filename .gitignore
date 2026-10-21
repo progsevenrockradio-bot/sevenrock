@@ -49,3 +49,5 @@ composer.phar
 *.bak-*
 /scratch/
 /storage/app/temp/
+/docs/auditoria-correos/
+storage/framework/lsp-*.php

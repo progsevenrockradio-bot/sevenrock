@@ -19,6 +19,13 @@ class OpenRouterContentParser implements ContentParserInterface
     public ?string $lastError = null;
 
     /**
+     * Almacena la telemetría de la última llamada.
+     *
+     * @var array|null
+     */
+    public ?array $lastTelemetry = null;
+
+    /**
      * Resuelve el modelo a usar consultando primero BD, luego config y luego el por defecto.
      */
     public function resolveModel(): string
@@ -26,6 +33,16 @@ class OpenRouterContentParser implements ContentParserInterface
         $settings = \App\Models\ThemeSetting::current();
         return trim((string) ($settings->ai_openrouter_model ?? '')) 
             ?: config('services.openrouter.model', 'openrouter/free');
+    }
+
+    /**
+     * Ejecuta una llamada estructurada con prompt y esquema arbitrario, registrando telemetría.
+     */
+    public function generateStructured(string $prompt, array $schema, string $apiKey, ?string $model = null): ?array
+    {
+        $this->lastError = null;
+        $this->lastTelemetry = null;
+        return $this->callApi($prompt, $apiKey, $schema, $model);
     }
 
     public function parse(string $subject, string $body, string $apiKey): ?array
@@ -101,9 +118,10 @@ class OpenRouterContentParser implements ContentParserInterface
         ]);
     }
 
-    protected function callApi(string $prompt, string $apiKey, ?array $jsonSchema = null): ?array
+    protected function callApi(string $prompt, string $apiKey, ?array $jsonSchema = null, ?string $customModel = null): ?array
     {
-        $model = $this->resolveModel();
+        $startTime = microtime(true);
+        $model = $customModel ?: $this->resolveModel();
         $baseUrl = config('services.openrouter.base_url', 'https://openrouter.ai/api/v1');
 
         try {
@@ -143,10 +161,24 @@ class OpenRouterContentParser implements ContentParserInterface
                 return null;
             }
 
-            // Note: OpenRouter JSON object responses for Gemini sometimes wrap in the schema key.
-            // Since we use response_format: type: json_object without strict structured outputs,
-            // the LLM typically returns a raw JSON object.
-            
+            $durationMs = (int) round((microtime(true) - $startTime) * 1000);
+            $usage = $result['usage'] ?? [];
+            $promptTokens = $usage['prompt_tokens'] ?? (int) ceil(strlen($prompt) / 4);
+            $completionTokens = $usage['completion_tokens'] ?? (int) ceil(strlen($text) / 4);
+            $totalTokens = $usage['total_tokens'] ?? ($promptTokens + $completionTokens);
+            $usageSource = !empty($usage) ? 'api_reported' : 'estimated';
+
+            $this->lastTelemetry = [
+                'provider'          => 'openrouter',
+                'model'             => $model,
+                'prompt_tokens'     => $promptTokens,
+                'completion_tokens' => $completionTokens,
+                'total_tokens'      => $totalTokens,
+                'usage_source'      => $usageSource,
+                'duration_ms'       => $durationMs,
+                'status'            => 'success',
+            ];
+
             return $parsedData;
 
         } catch (\Throwable $e) {
@@ -156,3 +188,4 @@ class OpenRouterContentParser implements ContentParserInterface
         }
     }
 }
+

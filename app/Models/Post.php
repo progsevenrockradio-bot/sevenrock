@@ -6,6 +6,7 @@ use App\Models\Concerns\Auditable;
 use App\Support\WordPressContent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -200,6 +201,13 @@ class Post extends Model
             return;
         }
 
+        // Si el post proviene de la recepción automática de correos (source_subject presente),
+        // no enviar notificaciones indebidas a agencias externas ni a bots.
+        if (! empty($this->source_subject)) {
+            \Illuminate\Support\Facades\Log::info("Notificación omitida para post ID {$this->id}: generado automáticamente desde correo externo.");
+            return;
+        }
+
         $emailString = trim((string) $this->author_email);
         if ($emailString === '') {
             return;
@@ -207,6 +215,21 @@ class Post extends Model
 
         // Split by semicolon (;) or comma (,) and trim each email
         $emails = array_values(array_filter(array_map('trim', preg_split('/[;,]/', $emailString))));
+        if (empty($emails)) {
+            return;
+        }
+
+        // Excluir bots internos y direcciones del sistema
+        $ignored = array_filter([
+            'dark.vader.agent@gmail.com',
+            'prog.sevenrockradio@gmail.com',
+            strtolower(trim((string) config('mail.from.address'))),
+        ]);
+
+        $emails = array_values(array_filter($emails, function ($e) use ($ignored) {
+            return ! in_array(strtolower($e), $ignored, true);
+        }));
+
         if (empty($emails)) {
             return;
         }
@@ -306,4 +329,23 @@ class Post extends Model
         return array_values(array_filter(array_map('strval', $this->{$attribute} ?? [])));
     }
 
+    public function incidents(): HasMany
+    {
+        return $this->hasMany(EditorialIncident::class);
+    }
+
+    public function sanitizedMeta(): HasOne
+    {
+        return $this->hasOne(EmailPostSanitizedMeta::class, 'post_id');
+    }
+
+    /**
+     * Determina de forma fehaciente si este post procede de la ingesta editorial de correo.
+     */
+    public function isFromEmailPipeline(): bool
+    {
+        return !empty($this->source_subject)
+            || ($this->relationLoaded('sanitizedMeta') ? $this->sanitizedMeta !== null : $this->sanitizedMeta()->exists());
+    }
 }
+

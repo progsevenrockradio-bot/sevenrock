@@ -76,11 +76,38 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
             return;
         }
 
-        // 2. Intentar llamar a la IA
-        $parsed = $parserManager->parse($subject, $body);
+        // 2. Procesar a través de EditorialAiPipeline de dos etapas
+        $pipeline = app(\App\Services\EditorialAiPipeline::class);
+        $pipelineResult = $pipeline->process([
+            'subject'    => $subject,
+            'body'       => $body,
+            'sender'     => $senderEmail,
+            'message_id' => $messageId,
+        ]);
 
-        if (! $parsed || ! isset($parsed['type'])) {
-            $lastError = $parserManager->lastError ?? 'Fallo desconocido de IA';
+        if ($pipelineResult['status'] === 'duplicate') {
+            Log::info("ProcessExternalEmailWithAiJob: Duplicado detectado por pipeline.", ['subject' => $subject]);
+            $this->markProcessed($messageId, $subject, 'duplicate');
+            $this->cleanTempMp3($tempMp3Path);
+            return;
+        }
+
+        if ($pipelineResult['status'] === 'discarded') {
+            Log::info("ProcessExternalEmailWithAiJob: Descartado por pipeline.", ['subject' => $subject]);
+            $this->markProcessed($messageId, $subject, 'discarded');
+            $this->cleanTempMp3($tempMp3Path);
+            return;
+        }
+
+        if ($pipelineResult['status'] === 'radio_program') {
+            Log::info("ProcessExternalEmailWithAiJob: Desviado programa de radio.", ['subject' => $subject]);
+            $this->markProcessed($messageId, $subject, 'radio_program');
+            $this->cleanTempMp3($tempMp3Path);
+            return;
+        }
+
+        if ($pipelineResult['status'] === 'fallback_draft' && ($pipelineResult['failure_type'] ?? '') === 'ai_failure') {
+            $lastError = $pipelineResult['failure_reason'] ?? 'Fallo desconocido de IA';
 
             // Comprobar si el error es recuperable (429, 500, 503, timeouts)
             $isRecoverable = $parserManager->isRecoverableError($lastError);
@@ -90,27 +117,35 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 throw new \RuntimeException("Error temporal de IA recuperable: {$lastError}");
             }
 
-            // Si es un error no recuperable (401, 400) o se agotaron los intentos: fallback determinista a draft
+            // Si es un error no recuperable o se agotaron los intentos: fallback determinista a draft
             Log::error("ProcessExternalEmailWithAiJob: Fallo definitivo o no recuperable ({$lastError}). Aplicando fallback determinista a draft.");
             $this->applyDeterministicFallback($subject, $body, $senderEmail, $messageId, $settings, $imageResolver, $lastError);
             return;
         }
 
-        // 3. IA clasificó exitosamente el correo
-        $type = $parsed['type'];
-        $title = $parsed['title'] ?? TextNormalizer::normalizeTitle($subject);
-        $content = $parsed['content'] ?? '';
-        $excerpt = $parsed['excerpt'] ?? Str::limit(strip_tags($content), 160);
-        $excerpt = \App\Support\ExcerptCleaner::clean($excerpt);
-        
-        $status = $settings->email_auto_publish ? 'published' : 'draft';
+        // 3. Pipeline estructuró exitosamente el borrador
+        $draft = $pipelineResult['draft'] ?? [];
+        $facts = $pipelineResult['stage1_facts'] ?? [];
+        $cType = $pipelineResult['content_type'] ?? 'musical_news';
 
-        if ($type === 'discard') {
-            Log::info("ProcessExternalEmailWithAiJob: Correo descartado por la IA como spam/promo.", ['subject' => $subject]);
-            $this->markProcessed($messageId, $subject, 'discarded');
-            $this->cleanTempMp3($tempMp3Path);
-            return;
-        }
+        $parsed = [
+            'type'        => in_array($cType, ['new_release', 'release']) ? 'release' : 'post',
+            'title'       => $draft['title'] ?? TextNormalizer::normalizeTitle($subject),
+            'artist_name' => $facts['artist_name'] ?? null,
+            'content'     => $draft['content'] ?? '',
+            'excerpt'     => $draft['excerpt'] ?? '',
+            'events'      => $facts['confirmed_tour_dates'] ?? [],
+            'youtube_url' => $facts['verified_evidence']['youtube_url'] ?? null,
+            'spotify_url' => $facts['verified_evidence']['spotify_url'] ?? null,
+            'editorial_warning' => $draft['editorial_warning'] ?? null,
+        ];
+
+        $type = $parsed['type'];
+        $title = $parsed['title'];
+        $content = $parsed['content'];
+        $excerpt = $parsed['excerpt'];
+        $status = 'draft';
+
 
         if ($type === 'release') {
             $artistName = $parsed['artist_name'] ?? 'Artista Desconocido';
@@ -129,11 +164,12 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 'artist_name'  => $artistName,
                 'description'  => $content,
                 'released_at'  => now(),
-                'is_active'    => (bool) $settings->email_auto_publish,
+                'is_active'    => false, // En FASE 2: Todo NewRelease procesado por IA queda inactivo (borrador)
                 'cover_image'  => $resolverInfo['url'] ?? null,
                 'youtube_url'  => $parsed['youtube_url'] ?? null,
                 'spotify_url'  => $parsed['spotify_url'] ?? null,
-                'author_email' => $senderEmail,
+                'author_email' => null,
+                'origin'       => 'email',
             ]);
 
             Log::info("ProcessExternalEmailWithAiJob: Lanzamiento creado vía IA (ID {$release->id}).");
@@ -167,7 +203,7 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 'content'           => $content,
                 'excerpt'           => $excerpt,
                 'status'            => $status,
-                'is_published'      => (bool) $settings->email_auto_publish,
+                'is_published'      => ($status === 'published'),
                 'published_at'      => now(),
                 'featured_image'    => $resolverInfo['url'] ?? null,
                 'source_url'        => $resolverInfo['article_url'] ?? null,
@@ -180,6 +216,33 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
             ]);
 
             $this->syncTaxonomies($post, $categories);
+
+            // Validación de seguridad centralizada (FASE 3)
+            $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+            $safetyResult = $safetyValidator->validatePost($post);
+
+            try {
+                $attachmentsList = [];
+                if (!empty($tempMp3Name)) {
+                    $attachmentsList[] = $tempMp3Name;
+                }
+                $mediaExtractor = app(\App\Services\EmailMediaInventoryExtractor::class);
+                $mediaInventory = $mediaExtractor->extract($body, !empty($tempMp3Name) ? $attachmentsList : null);
+
+                \App\Models\EmailPostSanitizedMeta::create([
+                    'post_id'           => $post->id,
+                    'source_message_id' => $messageId,
+                    'sender_email'      => $senderEmail,
+                    'source_subject'    => $subject,
+                    'received_at'       => now(),
+                    'security_status'   => $safetyResult['is_safe'] ? 'passed' : 'needs_review',
+                    'incident_reason'   => ! empty($safetyResult['violations']) ? implode(' | ', $safetyResult['violations']) : null,
+                    'media_inventory'   => $mediaInventory,
+                ]);
+            } catch (\Throwable $e) {
+                // Silencioso si la tabla aún no se ha migrado
+            }
+
             Log::info("ProcessExternalEmailWithAiJob: Post creado vía IA (ID {$post->id}).");
         }
 
@@ -236,7 +299,8 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 'released_at'  => now(),
                 'is_active'    => false, // SIEMPRE borrador en fallback
                 'cover_image'  => $resolverInfo['url'] ?? null,
-                'author_email' => $senderEmail,
+                'author_email' => null,
+                'origin'       => 'email',
             ]);
         } else {
             $title = TextNormalizer::normalizeTitle($subject) ?: $subject;

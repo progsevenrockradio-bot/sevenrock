@@ -213,6 +213,30 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::match(['POST', 'PUT'], '/{post}/retry-image', 'retryImage')->name('retry-image');
     });
 
+    // FASE 6: Bandeja Editorial, Fuentes e Incidencias
+    Route::controller(\App\Http\Controllers\Admin\AdminEditorialController::class)->prefix('editorial')->name('editorial.')->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{post}/quick-view', 'quickView')->name('quick-view');
+        Route::post('/{post}/approve', 'approve')->name('approve');
+        Route::post('/{post}/schedule', 'schedule')->name('schedule');
+        Route::post('/{post}/reject', 'reject')->name('reject');
+        Route::post('/{post}/hold', 'hold')->name('hold');
+        Route::post('/bulk-action', 'bulkAction')->name('bulk-action');
+
+        Route::controller(\App\Http\Controllers\Admin\AdminEditorialSourceController::class)->prefix('sources')->name('sources.')->group(function (): void {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::patch('/{source}/status', 'updateStatus')->name('update-status');
+            Route::put('/{source}', 'update')->name('update');
+        });
+
+        Route::controller(\App\Http\Controllers\Admin\AdminEditorialIncidentController::class)->prefix('incidents')->name('incidents.')->group(function (): void {
+            Route::get('/', 'index')->name('index');
+            Route::get('/{incident}/diff', 'diff')->name('diff');
+            Route::post('/{incident}/resolve', 'resolve')->name('resolve');
+        });
+    });
+
     Route::controller(\App\Http\Controllers\Admin\ModerationController::class)->prefix('moderation')->name('moderation.')->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/{item}', 'show')->name('show');

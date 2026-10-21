@@ -60,9 +60,6 @@ class EmailRelevanceFilter
         'ashermedia.com',
         'hauruck.org',
         'haulix.com',
-        'brevo.com',
-        'mailchimp.com',
-        'mailchimpapp.com',
     ];
 
     /**
@@ -128,17 +125,23 @@ class EmailRelevanceFilter
         $subjectLower = mb_strtolower(trim($subject));
         $bodyPlain = mb_strtolower(strip_tags($body));
 
-        // 1. Comprobar Lista Blanca del panel
-        if ($this->isWhitelisted($senderLower, $settings)) {
-            return ['pass' => true, 'reason' => 'whitelisted_sender'];
-        }
-
-        // 2. Comprobar señales negativas (facturas, recibos, newsletters irrelevantes, etc.)
+        // 1. Comprobar señales negativas (facturas, recibos, newsletters irrelevantes, etc.)
+        // Las señales de basura/administrativo tienen prioridad absoluta, incluso sobre la lista blanca.
         if ($this->matchesJunkPatterns($subjectLower, $bodyPlain)) {
             return ['pass' => false, 'reason' => 'junk_or_service_notice'];
         }
 
-        // 3. Comprobar dominios de sellos y promoción
+        // 2. Comprobar si el remitente pertenece a una fuente autorizada registrada
+        if ($this->isAuthorizedSource($senderLower)) {
+            return ['pass' => true, 'reason' => 'authorized_sender_source'];
+        }
+
+        // 3. Comprobar Lista Blanca del panel
+        if ($this->isWhitelisted($senderLower, $settings)) {
+            return ['pass' => true, 'reason' => 'whitelisted_sender'];
+        }
+
+        // 4. Comprobar dominios de sellos y promoción
         if ($this->isPromoDomain($senderLower, $settings)) {
             return ['pass' => true, 'reason' => 'promo_domain'];
         }
@@ -162,7 +165,22 @@ class EmailRelevanceFilter
     }
 
     /**
+     * Comprueba si el remitente está registrado como fuente autorizada.
+     */
+    protected function isAuthorizedSource(string $senderEmail): bool
+    {
+        try {
+            $resolver = app(\App\Services\EmailSenderSourceResolver::class);
+            $res = $resolver->resolve($senderEmail);
+            return ($res['status'] ?? '') === 'authorized';
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
      * Verifica si el remitente coincide con la lista blanca.
+     * Solo permite coincidencia exacta de correo o sufijo exacto de dominio (@dominio.com).
      */
     protected function isWhitelisted(string $senderEmail, ?ThemeSetting $settings): bool
     {
@@ -176,8 +194,21 @@ class EmailRelevanceFilter
             if ($entry === '') {
                 continue;
             }
-            if ($senderEmail === $entry || str_contains($senderEmail, $entry)) {
-                return true;
+
+            // Si la entrada contiene @, puede ser un correo exacto o un comodín de dominio (@dominio.com)
+            if (str_starts_with($entry, '@')) {
+                if (str_ends_with($senderEmail, $entry)) {
+                    return true;
+                }
+            } elseif (str_contains($entry, '@')) {
+                if ($senderEmail === $entry) {
+                    return true;
+                }
+            } else {
+                // Entrada sin @ se considera nombre de dominio (ej. "centurymedia.com")
+                if (str_ends_with($senderEmail, '@' . $entry) || str_ends_with($senderEmail, '.' . $entry)) {
+                    return true;
+                }
             }
         }
 
@@ -185,7 +216,8 @@ class EmailRelevanceFilter
     }
 
     /**
-     * Verifica si el remitente pertenece a sellos o plataformas de promoción.
+     * Verifica si el remitente pertenece a sellos o plataformas de promoción reconocidas.
+     * Requiere coincidencia exacta de dominio o subdominio, no subcadena arbitraria.
      */
     protected function isPromoDomain(string $senderEmail, ?ThemeSetting $settings): bool
     {
@@ -197,9 +229,11 @@ class EmailRelevanceFilter
         }
 
         foreach ($domains as $domain) {
-            $domain = trim($domain);
-            if ($domain !== '' && str_contains($senderEmail, $domain)) {
-                return true;
+            $domain = ltrim(trim($domain), '@');
+            if ($domain !== '') {
+                if (str_ends_with($senderEmail, '@' . $domain) || str_ends_with($senderEmail, '.' . $domain)) {
+                    return true;
+                }
             }
         }
 

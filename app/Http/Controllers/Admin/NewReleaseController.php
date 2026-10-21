@@ -75,6 +75,7 @@ class NewReleaseController extends Controller
             'catalog/releases/audio'
         );
 
+        $data['origin'] = 'manual';
         NewRelease::query()->create($data);
 
         return redirect()->route('admin.new-releases.index')->with('status', 'Lanzamiento creado con éxito.');
@@ -116,6 +117,8 @@ class NewReleaseController extends Controller
             'catalog/releases/audio'
         );
 
+        // Preservar estrictamente el origen existente (no sobreescribir 'unknown' ni 'email' a 'manual')
+        unset($data['origin']);
         $newRelease->update($data);
 
         return redirect()->route('admin.new-releases.index')->with('status', 'Lanzamiento actualizado con éxito.');
