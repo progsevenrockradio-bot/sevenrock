@@ -66,16 +66,25 @@
             }, 7000);
         },
         infoModalOpen: false,
+        lastTrigger: null,
         openInfoModal(event = null) {
             if ((event && event.isTrusted === false) || !window.__srUserGesture) {
                 return;
             }
+            this.lastTrigger = event ? (event.currentTarget || event.target) : document.activeElement;
             this.infoModalOpen = true;
             document.body.style.overflow = 'hidden';
+            this.$nextTick(() => {
+                const closeBtn = document.querySelector('#next-prog-modal button[aria-label="Cerrar"]');
+                if (closeBtn) closeBtn.focus();
+            });
         },
         closeInfoModal() {
             this.infoModalOpen = false;
             document.body.style.overflow = '';
+            if (this.lastTrigger && typeof this.lastTrigger.focus === 'function') {
+                this.lastTrigger.focus();
+            }
         },
         init() {
             window.addEventListener('sr-force-close-modals', () => {
@@ -205,9 +214,14 @@
 
     <template x-teleport="body">
     <div
+        id="next-prog-modal"
         x-show="infoModalOpen"
+        x-trap.noscroll.inert="infoModalOpen"
         x-transition.opacity.duration.300ms
         x-cloak
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="next-prog-modal-title"
         class="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 px-4 py-8 backdrop-blur-sm"
         @keydown.escape.window="closeInfoModal()"
         @click.self="closeInfoModal()"
@@ -235,18 +249,18 @@
                             </div>
                         </template>
                     </div>
-                    <h4 class="mt-3 font-display text-[22px] uppercase leading-none tracking-[.12em]" x-html="activeProgram.title_html || formatearTituloJS(activeProgram.title || '')"></h4>
+                    <h3 id="next-prog-modal-title" class="mt-3 font-display text-[22px] uppercase leading-none tracking-[.12em]" x-html="activeProgram.title_html || formatearTituloJS(activeProgram.title || '')"></h3>
                     <p class="mt-2 text-xs uppercase tracking-[.24em] text-[#bfbfbf]" x-text="activeProgram.schedule || ''"></p>
-                    <p class="mt-1 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeProgram.host || ''"></p>
+                    <p class="mt-1 font-display text-[11px] uppercase tracking-[.18em] text-[var(--lucille-accent-readable,#ff5b52)]" x-text="activeProgram.host || ''"></p>
                 </div>
 
                 <button
                     type="button"
-                    class="h-10 w-10 border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:bg-white/5"
+                    class="h-10 w-10 border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:bg-white/5 flex items-center justify-center text-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
                     @click="closeInfoModal()"
-                    aria-label="Cerrar"
+                    aria-label="Cerrar modal de programa"
                 >
-                    ×
+                    &times;
                 </button>
             </div>
 

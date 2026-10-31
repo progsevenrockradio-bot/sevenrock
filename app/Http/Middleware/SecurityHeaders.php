@@ -53,13 +53,13 @@ class SecurityHeaders
 
             $csp = implode(' ', [
                 "default-src 'self';",
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;",
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://*.radioboss.fm https://c30.radioboss.fm https://www.googletagmanager.com;",
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;",
                 "font-src 'self' https://fonts.gstatic.com data:;",
                 $imgSrc,
                 $mediaSrc,
                 "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://open.spotify.com https://embed.spotify.com;",
-                "connect-src 'self' https:;",
+                "connect-src 'self' https: https://*.radioboss.fm https://c30.radioboss.fm;",
                 "object-src 'none';",
                 "base-uri 'self';",
                 "form-action 'self';",

@@ -1,16 +1,26 @@
 <x-layouts.site :title="'Seven Rock Radio - Muro del Rock'" description="Descubre bandas y artistas independientes en el Muro del Rock de Seven Rock Radio. Bandas emergentes y música original.">
     {{-- Exclusivo Fondo de Pared de Rock con Glassmorphism para Muro del Rock --}}
     <div class="relative min-h-screen bg-[#0a0a0b]">
-        {{-- Imagen de Fondo Fijo / Parallax Vívida Limpia (Sin duplicación de tarjetas o texto) --}}
-        <div class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-40 mix-blend-luminosity blur-[2px]" style="background-image: url('{{ asset('assets/lucille/dark-background.jpg') }}');"></div>
+        {{-- Imagen de Fondo Fijo / Parallax Vívida Limpia (con WebP moderno y fallback JPG) --}}
+        <div class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-40 mix-blend-luminosity blur-[2px]" style="background-image: -webkit-image-set(url('{{ asset('assets/lucille/dark-background.webp') }}') 1x, url('{{ asset('assets/lucille/dark-background.jpg') }}') 1x); background-image: image-set(url('{{ asset('assets/lucille/dark-background.webp') }}') type('image/webp'), url('{{ asset('assets/lucille/dark-background.jpg') }}') type('image/jpeg'));"></div>
         
         {{-- Capa de Cristal Esmerilado (Overlay Translúcido sin backdrop-blur para evitar ghosting) --}}
         <div class="fixed inset-0 z-0 bg-gradient-to-b from-[#0a0a0b]/60 via-[#0a0a0b]/80 to-[#0a0a0b] pointer-events-none"></div>
 
         <section class="relative z-10 mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
-        <!-- Section Header Banner (Image Only) -->
-        <div class="mb-8 w-full flex justify-center rounded-[var(--radius-box,16px)] overflow-hidden">
-            <img src="{{ \App\Models\ThemeSetting::current()->talents_banner_url }}" alt="Muro del Rock - Seven Rock Radio" class="w-full h-auto max-w-full">
+        <!-- Section Header Banner with H1 -->
+        <div class="mb-8 w-full flex flex-col items-center justify-center rounded-[var(--radius-box,16px)] overflow-hidden">
+            <h1 class="font-display text-3xl sm:text-4xl md:text-5xl uppercase font-bold tracking-[.12em] text-[#dcdcdc] text-center mb-3">Muro del Rock</h1>
+            <p class="text-sm md:text-base text-[#9a9a9a] text-center max-w-2xl mb-6">Directorio y catálogo oficial de bandas y artistas independientes de Seven Rock Radio. ¿Buscas dejar saludos o interactuar en directo con los oyentes? Visita el <a href="{{ route('comunidad.muro') }}" class="text-[var(--lucille-accent-readable,#ff5b52)] hover:underline font-semibold">Muro de la Comunidad</a>.</p>
+            <picture class="w-full">
+                <source srcset="{{ asset('assets/lucille/muro-del-rock-banner.webp') }}" type="image/webp">
+                <img src="{{ \App\Models\ThemeSetting::current()->talents_banner_url }}"
+                     alt="Muro del Rock - Seven Rock Radio"
+                     width="1024" height="361"
+                     style="aspect-ratio: 1024 / 361;"
+                     class="w-full h-auto max-w-full rounded-[var(--radius-box,16px)]"
+                     loading="eager" fetchpriority="high" decoding="async">
+            </picture>
         </div>
 
         @php
@@ -33,13 +43,20 @@
 
         <!-- Filter Form -->
         <form method="GET" action="{{ route('talents.explore') }}" class="relative z-20 grid gap-4 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:grid-cols-[1.5fr_1fr_auto] shadow-lg" x-data="{ dropdownOpen: false, selectedPlan: '{{ $selectedPlan }}', selectedLabel: '{{ addslashes($activePlanLabel) }}' }">
-            <input type="search" name="search" value="{{ $search }}" placeholder="Buscar banda o artista..." class="lucille-product-field w-full rounded-[8px]">
+            <div>
+                <label for="muro-search-input" class="sr-only">Buscar banda o artista en el Muro del Rock</label>
+                <input id="muro-search-input" type="search" name="search" value="{{ $search }}" placeholder="Buscar banda o artista..." aria-label="Buscar banda o artista en el Muro del Rock" class="lucille-product-field w-full rounded-[8px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent">
+            </div>
             
             <div class="relative w-full">
                 <input type="hidden" name="plan" :value="selectedPlan">
                 
                 <button type="button" @click="dropdownOpen = !dropdownOpen" @click.away="dropdownOpen = false" 
-                    class="lucille-product-field w-full flex items-center justify-between text-left rounded-[8px]" 
+                    id="muro-plan-filter-button"
+                    aria-label="Filtrar por tipo de plan: {{ $activePlanLabel }}"
+                    aria-haspopup="listbox"
+                    :aria-expanded="dropdownOpen.toString()"
+                    class="lucille-product-field w-full flex items-center justify-between text-left rounded-[8px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" 
                     style="color: #dcdcdc; background-color: rgba(0, 0, 0, .22); cursor: pointer; height: 50px; border: 1px solid rgba(255,255,255,0.06); padding: 0 16px; font-size: 14px;">
                     <span x-text="selectedLabel"></span>
                     <svg class="w-4 h-4 ml-2 transition-transform duration-200" :class="dropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
@@ -161,11 +178,11 @@
                         <div class="min-w-0 flex-1 flex flex-col justify-between">
                             <div>
                                 <div class="flex items-center justify-between gap-3">
-                                    <h2 class="font-display text-2xl uppercase tracking-[.12em] text-white truncate {{ $theme['hoverText'] }} transition-colors">
+                                    <h3 class="font-display text-2xl uppercase tracking-[.12em] text-white truncate {{ $theme['hoverText'] }} transition-colors">
                                         <a href="{{ route('talents.show', ['bandName' => $talent->band_name]) }}" class="hover:underline">
                                             {{ $talent->band_name }}
                                         </a>
-                                    </h2>
+                                    </h3>
                                     <span class="hidden sm:inline-flex items-center gap-1 text-[11px] uppercase font-mono tracking-[.12em] text-[#dcdcdc] bg-white/[0.04] border border-white/15 px-2.5 py-1 rounded-full"><svg class="h-3 w-3 text-[var(--lucille-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg> Banda Verificada</span>
                                 </div>
 
@@ -204,7 +221,7 @@
                                             @endforeach
                                         </ul>
 
-                                        <audio src="{{ $latestTrack->url }}" controls controlsList="nodownload" class="mt-2 h-8 w-full text-xs"></audio>
+                                        <audio src="{{ $latestTrack->url }}" preload="none" controls controlsList="nodownload" class="mt-2 h-8 w-full text-xs"></audio>
                                     </div>
                                 @elseif ($latestTrack && $latestTrack->url)
                                     <div class="mt-3 p-3 rounded-[10px] bg-black/50 border border-white/10 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -217,7 +234,7 @@
                                                 <div class="text-xs font-semibold text-white truncate font-mono">{{ $latestTrack->title ?: $latestTrack->filename }}</div>
                                             </div>
                                         </div>
-                                        <audio controls controlsList="nodownload" class="h-8 w-full sm:w-auto sm:max-w-[220px] shrink-0 text-xs">
+                                        <audio preload="none" controls controlsList="nodownload" class="h-8 w-full sm:w-auto sm:max-w-[220px] shrink-0 text-xs">
                                             <source src="{{ $latestTrack->url }}" type="{{ $latestTrack->mime_type ?: 'audio/mpeg' }}">
                                             Tu navegador no soporta el reproductor de audio.
                                         </audio>
@@ -256,7 +273,7 @@
                             </div>
                             <div class="min-w-0 flex-1">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <h2 class="font-display text-xl uppercase tracking-[.12em] text-white truncate {{ $theme['hoverText'] }} transition-colors">{{ $talent->band_name }}</h2>
+                                    <h3 class="font-display text-xl uppercase tracking-[.12em] text-white truncate {{ $theme['hoverText'] }} transition-colors">{{ $talent->band_name }}</h3>
                                     @if ($talent->is_featured)
                                         <span class="border border-[#d4af37]/40 bg-[#d4af37]/15 px-2.5 py-1 inline-flex text-[11px] font-bold uppercase tracking-[.12em] text-[#d4af37] rounded-sm shadow-[0_0_8px_rgba(212,175,55,0.2)]"><svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.95 6.36 6.95.86-5.1 4.78 1.32 6.87L12 18.1l-6.12 3.27 1.32-6.87-5.1-4.78 6.95-.86L12 2.5Z"/></svg></span>
                                     @endif
@@ -276,10 +293,44 @@
                     </a>
                 @endif
             @empty
-                <div class="col-span-full border border-white/10 bg-[#101014]/90 backdrop-blur-md rounded-[16px] p-8 text-sm text-gray-400 text-center shadow-lg">No se encontraron bandas o artistas en el Muro del Rock con estos criterios de búsqueda.</div>
+                @php
+                    $hasActiveFilters = filled($search) || filled($selectedPlan);
+                @endphp
+                <div class="col-span-full border border-white/10 bg-[#101014]/90 backdrop-blur-md rounded-[16px] p-8 md:p-12 text-center shadow-lg">
+                    @if ($hasActiveFilters)
+                        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white/5 text-gray-400">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </div>
+                        <h3 class="font-display text-xl uppercase tracking-wider text-white">Búsqueda sin resultados</h3>
+                        <p class="mt-2 text-sm text-[#8e8e8e] max-w-md mx-auto leading-relaxed">No se encontraron bandas o artistas con los criterios o filtros seleccionados.</p>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                if (window.SevenRockAnalytics) {
+                                    window.SevenRockAnalytics.track('search_no_results', {
+                                        section: 'muro_del_rock',
+                                        query_length: {{ mb_strlen($search) }}
+                                    });
+                                }
+                            });
+                        </script>
+                        <div class="mt-6 flex flex-wrap justify-center gap-3">
+                            <a href="{{ route('talents.explore') }}" class="lucille-button-solid text-xs py-2.5 px-6">Limpiar filtros</a>
+                            <a href="{{ route('talents.register') }}" class="border border-white/20 bg-white/5 hover:bg-white/10 text-white text-xs py-2.5 px-6 rounded font-display uppercase tracking-wider transition-colors">Registrar banda</a>
+                        </div>
+                    @else
+                        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white/5 text-gray-400">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/></svg>
+                        </div>
+                        <h3 class="font-display text-xl uppercase tracking-wider text-white">Catálogo del Muro del Rock</h3>
+                        <p class="mt-2 text-sm text-[#8e8e8e] max-w-md mx-auto leading-relaxed">El catálogo de bandas no cuenta con perfiles públicos en este momento. ¡Sé el primero en dar a conocer tu música a nuestra comunidad!</p>
+                        <div class="mt-6 flex justify-center">
+                            <a href="{{ route('talents.register') }}" class="lucille-button-solid text-xs py-2.5 px-6">Registrar banda</a>
+                        </div>
+                    @endif
+                </div>
             @endforelse
 
-            @if(count($talents) < 6)
+            @if(count($talents) > 0 && count($talents) < 6)
                 <div class="col-span-1 border border-dashed border-white/10 bg-[#101014]/80 backdrop-blur-md rounded-[16px] p-6 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.03] shadow-lg flex flex-col justify-between min-h-[260px] text-center items-center group">
                     <div class="flex-1 flex flex-col items-center justify-center">
                         <div class="h-12 w-12 rounded-full border border-white/10 flex items-center justify-center bg-white/[0.02] mb-3 group-hover:border-[var(--lucille-accent)]/30 group-hover:bg-[var(--lucille-accent)]/5 transition-all duration-300">

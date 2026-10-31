@@ -1,3 +1,23 @@
 User-agent: *
 Allow: /
+Allow: /build/
+Allow: /assets/
+Allow: /storage/
+
+# Proteger áreas administrativas, privadas y de autenticación
+Disallow: /admin
+Disallow: /admin/
+Disallow: /conductor
+Disallow: /conductor/
+Disallow: /agencia
+Disallow: /agencia/
+Disallow: /afiliados
+Disallow: /afiliados/
+Disallow: /talentos/dashboard
+Disallow: /talentos/login
+Disallow: /talentos/register
+Disallow: /search
+Disallow: /diagnose-media
+Disallow: /dev/
+
 Sitemap: https://sevenrockradio.com/sitemap.xml

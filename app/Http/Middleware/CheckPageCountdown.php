@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\PageCountdown;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class CheckPageCountdown
 {
@@ -23,6 +24,10 @@ class CheckPageCountdown
         }
 
         $path = $request->path();
+
+        if (!Schema::hasTable('page_countdowns')) {
+            return $next($request);
+        }
 
         // Find an active countdown matching the path
         $countdown = PageCountdown::where('is_enabled', true)

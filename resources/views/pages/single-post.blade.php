@@ -21,7 +21,59 @@
         . ($shareImage !== '' ? '&media=' . urlencode($shareImage) : '')
         . '&description=' . $shareTitleEncoded;
     $postLikeUrl = filled(data_get($post, 'id')) ? route('posts.like', ['post' => data_get($post, 'id')]) : '';
-    $postDescription = \Illuminate\Support\Str::limit(strip_tags(data_get($post, 'excerpt') ?: (isset($post['content']) && is_array($post['content']) ? implode(' ', $post['content']) : 'Artículo en Seven Rock Radio')), 150);
+    $postDescription = \Illuminate\Support\Str::limit(\App\Models\Post::sanitizeExcerpt(data_get($post, 'excerpt'), data_get($post, 'content')) ?: 'Artículo en Seven Rock Radio', 150);
+
+    $authorName = trim((string) data_get($post, 'author', ''));
+    $pubDate = data_get($post, 'published_at');
+    if ($pubDate instanceof \Carbon\CarbonInterface) {
+        $pubDate = $pubDate->toIso8601String();
+    } elseif (is_string($pubDate) && $pubDate !== '') {
+        try {
+            $pubDate = \Illuminate\Support\Carbon::parse($pubDate)->toIso8601String();
+        } catch (\Throwable) {
+            $pubDate = now()->toIso8601String();
+        }
+    } else {
+        $pubDate = now()->toIso8601String();
+    }
+
+    $modDate = data_get($post, 'updated_at');
+    if ($modDate instanceof \Carbon\CarbonInterface) {
+        $modDate = $modDate->toIso8601String();
+    } elseif (is_string($modDate) && $modDate !== '') {
+        try {
+            $modDate = \Illuminate\Support\Carbon::parse($modDate)->toIso8601String();
+        } catch (\Throwable) {
+            $modDate = $pubDate;
+        }
+    } else {
+        $modDate = $pubDate;
+    }
+
+    $articleSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'NewsArticle',
+        'headline' => $shareTitle,
+        'image' => array_values(array_filter([$shareImage])),
+        'datePublished' => $pubDate,
+        'dateModified' => $modDate,
+        'description' => $postDescription,
+        'mainEntityOfPage' => [
+            '@type' => 'WebPage',
+            '@id' => $shareBaseUrl,
+        ],
+        'publisher' => [
+            '@type' => 'Organization',
+            'name' => 'Seven Rock Radio',
+            'url' => config('app.url'),
+        ],
+        'author' => [
+            [
+                '@type' => $authorName !== '' ? 'Person' : 'Organization',
+                'name' => $authorName !== '' ? $authorName : 'Seven Rock Radio',
+            ],
+        ],
+    ];
 @endphp
 
 <x-layouts.site 
@@ -30,25 +82,12 @@
     og-type="article"
     :og-image="$shareImage"
     :description="$postDescription"
-    :og-article-published-time="data_get($post, 'published_at')"
-    :og-article-author="data_get($post, 'author')"
+    :og-article-published-time="$pubDate"
+    :og-article-author="$authorName ?: 'Seven Rock Radio'"
 >
     @push('jsonld')
     <script type="application/ld+json">
-    {
-        "@@context": "https://schema.org",
-        "@@type": "NewsArticle",
-        "headline": "{{ $shareTitle }}",
-        "image": [
-            "{{ $shareImage }}"
-        ],
-        "datePublished": "{{ data_get($post, 'published_at') }}",
-        "dateModified": "{{ data_get($post, 'updated_at') }}",
-        "author": [{
-            "@@type": "Person",
-            "name": "{{ data_get($post, 'author') }}"
-        }]
-    }
+    {!! json_encode($articleSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
     </script>
     @endpush
 
@@ -494,20 +533,49 @@
                     <div class="lucille-sidebar-widget">
                         <h3 class="lucille-sidebar-title">{{ $ui['tags'] }}</h3>
                         <div class="flex flex-wrap gap-2">
-                            @foreach ($blogTags as $blogTag)
+                            @foreach (collect($blogTags)->take(10) as $blogTag)
                                 <a href="{{ route('blog.tag', ['slug' => \Illuminate\Support\Str::slug($blogTag)]) }}" class="lucille-tag">{{ $blogTag }}</a>
                             @endforeach
                         </div>
                     </div>
 
                     <div class="lucille-sidebar-widget">
-                        <h3 class="lucille-sidebar-title">{{ $ui['meta'] }}</h3>
-                        <ul class="lucille-sidebar-list">
-                            <li><a href="#">Log in</a></li>
-                            <li><a href="#">Entries feed</a></li>
-                            <li><a href="#">Comments feed</a></li>
-                            <li><a href="#">WordPress.org</a></li>
-                        </ul>
+                        <h3 class="lucille-sidebar-title">Artículos relacionados</h3>
+                        @php
+                            $relatedPosts = !empty($recentPosts) ? collect($recentPosts)->where('id', '!=', data_get($post, 'id'))->take(4) : collect();
+                        @endphp
+                        @if ($relatedPosts->isNotEmpty())
+                            <ul class="lucille-sidebar-list space-y-3">
+                                @foreach ($relatedPosts as $related)
+                                    @php
+                                        $relPub = data_get($related, 'published_at');
+                                        if (is_string($relPub) && $relPub !== '') {
+                                            $relPub = \Illuminate\Support\Carbon::parse($relPub);
+                                        }
+                                        $relUrl = route('posts.single', [
+                                            'year' => $relPub?->format('Y') ?? now()->format('Y'),
+                                            'month' => $relPub?->format('m') ?? now()->format('m'),
+                                            'day' => $relPub?->format('d') ?? now()->format('d'),
+                                            'slug' => data_get($related, 'slug', ''),
+                                        ]);
+                                    @endphp
+                                    <li class="border-b border-white/5 pb-2">
+                                        <a href="{{ $relUrl }}" class="group block">
+                                            <span class="block text-sm font-medium text-[#dcdcdc] group-hover:text-lucille-accent transition-colors leading-snug">
+                                                {{ data_get($related, 'title') }}
+                                            </span>
+                                            @if ($relPub)
+                                                <span class="block text-[11px] text-[#777] font-mono mt-1">
+                                                    {{ $relPub->locale('es')->translatedFormat('d M, Y') }}
+                                                </span>
+                                            @endif
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="text-sm text-[#5b5b5b]">No hay artículos relacionados por el momento.</p>
+                        @endif
                     </div>
                 </aside>
             </div>

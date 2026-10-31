@@ -5,6 +5,7 @@ import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
 import '@uppy/core/dist/style.css';
 import { registerRadioPlayer } from './player.js';
+import './analytics.js';
 
 Alpine.plugin(focus);
 Alpine.plugin(collapse);

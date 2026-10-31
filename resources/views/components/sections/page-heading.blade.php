@@ -15,7 +15,7 @@
                     : asset((string) $image));
         @endphp
         <div class="absolute inset-0 hero-slide" style="background-image: url('{{ $pageHeadingImage }}');">
-            <img src="{{ $pageHeadingImage }}" alt="Background" class="hero-slide-img" aria-hidden="true">
+            <img src="{{ $pageHeadingImage }}" alt="Background" class="hero-slide-img" width="1920" height="500" loading="eager" fetchpriority="high" decoding="async" aria-hidden="true">
         </div>
         <div class="absolute inset-0" style="background: {{ $overlay === 'rgba(21,21,21,.88)' ? 'rgba(16, 16, 18, 0.75)' : $overlay }}; z-index: 2;"></div>
     @else
@@ -25,7 +25,7 @@
     <div class="lucille-page-heading-inner">
         <h1 class="lucille-page-title">{!! formatear_titulo($title) !!}</h1>
         @if ($subtitle)
-            <h2 class="lucille-page-subtitle">{{ $subtitle }}</h2>
+            <p class="lucille-page-subtitle">{{ $subtitle }}</p>
         @endif
         @if ($slot->isNotEmpty())
             <div class="mt-5 text-sm italic text-[#757575]">

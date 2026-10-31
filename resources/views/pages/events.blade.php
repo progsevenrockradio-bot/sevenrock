@@ -1,7 +1,7 @@
-<x-layouts.site title="Seven Rock Radio - {{ $pageTitle ?? 'Eventos' }}" description="{{ $description ?? 'Proximos eventos, conciertos y festivales de rock. Mantente al dia con la agenda musical de Seven Rock Radio.' }}">
+<x-layouts.site title="Seven Rock Radio - {{ $pageTitle ?? 'Próximos conciertos' }}" description="{{ $description ?? 'Próximos eventos, conciertos y festivales de rock. Mantente al día con la agenda musical de Seven Rock Radio.' }}">
     <x-sections.page-heading
-        :title="$pageTitle ?? 'Upcoming Shows'"
-        :subtitle="$pageSubtitle ?? 'Tour Dates 2026'"
+        :title="$pageTitle ?? 'Próximos conciertos'"
+        :subtitle="$pageSubtitle ?? 'Fechas de conciertos'"
         overlay="rgba(0,0,0,0)"
     />
 

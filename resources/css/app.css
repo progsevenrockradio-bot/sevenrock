@@ -10,6 +10,7 @@
     --font-sans: var(--lucille-body-font, 'Open Sans', ui-sans-serif, system-ui, sans-serif);
     --font-display: var(--lucille-heading-font, 'Oswald', ui-sans-serif, system-ui, sans-serif);
     --color-lucille-accent: var(--lucille-accent, #c32720);
+    --color-lucille-accent-readable: var(--lucille-accent-readable, #ff5b52);
     --color-lucille-nav: var(--lucille-nav, #081a24);
     --color-lucille-surface: var(--lucille-surface, #101012);
     --color-lucille-body: var(--lucille-body, #7b7b7b);
@@ -30,6 +31,7 @@
 
 @layer base {
     :root {
+        --lucille-accent-readable: var(--theme-accent-readable, #ff5b52);
         --radio-player-offset: 108px;
         --radio-player-lift: 0px;
         --modal-overlay-bg: rgba(0, 0, 0, .72);
@@ -47,7 +49,6 @@
 
     body {
         min-height: 100vh;
-        overflow-x: hidden;
         background: var(--lucille-body-bg, #151515);
         color: var(--color-lucille-body);
         font-family: var(--font-sans);
@@ -1885,7 +1886,7 @@
         font-weight: 700;
         letter-spacing: 3px;
         line-height: 1;
-        opacity: .1;
+        opacity: .35;
     }
 
     .lucille-event-month {

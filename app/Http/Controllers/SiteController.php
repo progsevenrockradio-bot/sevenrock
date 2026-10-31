@@ -149,19 +149,52 @@ class SiteController extends Controller
         );
 
         $efemerides = $this->safeValue(
-            fn () => Post::query()
-                ->published()
-                ->whereJsonContains('categories', 'Hoy en el Rock')
-                ->where(function ($q) {
-                    $q->where('author_email', 'dark.vader.agent@gmail.com')
-                      ->orWhereNull('author_email');
-                })
-                ->where('content', 'not like', '%html,body,table%')
-                ->where('excerpt', 'not like', '%html,body,table%')
-                ->where('excerpt', 'not like', '%mso-table-lspace%')
-                ->orderByDesc('published_at')
-                ->take(4)
-                ->get(),
+            function () {
+                $tz = config('app.timezone', 'America/Caracas');
+                $nowTz = \Carbon\Carbon::now($tz);
+                $today = $nowTz->format('Y-m-d');
+
+                $baseQuery = fn () => Post::query()
+                    ->published()
+                    ->where(function ($q) {
+                        $q->whereJsonContains('categories', 'Hoy en el Rock')
+                          ->orWhereHas('taxonomies', fn ($t) => $t->where('name', 'Hoy en el Rock'));
+                    })
+                    ->where(function ($q) {
+                        $q->where('author_email', 'dark.vader.agent@gmail.com')
+                          ->orWhereNull('author_email');
+                    })
+                    ->where('content', 'not like', '%html,body,table%')
+                    ->where('excerpt', 'not like', '%html,body,table%')
+                    ->where('excerpt', 'not like', '%mso-table-lspace%');
+
+                $todayItems = $baseQuery()
+                    ->whereDate('published_at', $today)
+                    ->orderBy('published_at')
+                    ->orderBy('id')
+                    ->take(20)
+                    ->get();
+
+                if ($todayItems->isNotEmpty()) {
+                    return $todayItems;
+                }
+
+                // Coincidencia estricta por mes y día de hoy (efemérides verificadas del mismo día y mes)
+                $sameDayMonthItems = $baseQuery()
+                    ->whereMonth('published_at', $nowTz->month)
+                    ->whereDay('published_at', $nowTz->day)
+                    ->orderBy('published_at')
+                    ->orderBy('id')
+                    ->take(20)
+                    ->get();
+
+                if ($sameDayMonthItems->isNotEmpty()) {
+                    return $sameDayMonthItems;
+                }
+
+                // Si faltan entradas verificadas para hoy, no reutilizar contenido de otro día
+                return collect();
+            },
             collect()
         );
 
@@ -359,9 +392,9 @@ class SiteController extends Controller
     public function events(): View
     {
         return $this->eventsCatalog(
-            title: 'Upcoming Shows',
-            subtitle: 'Tour Dates 2026',
-            description: 'Proximos eventos, conciertos y festivales de rock. Mantente al dia con la agenda musical de Seven Rock Radio.',
+            title: 'Próximos conciertos',
+            subtitle: 'Fechas de conciertos',
+            description: 'Próximos eventos, conciertos y festivales de rock. Mantente al día con la agenda musical de Seven Rock Radio.',
             events: $this->cachedEvents('upcoming', fn () => Event::query()->published()->upcoming()->orderBy('starts_at')->get(), 15)
         );
     }
@@ -914,17 +947,17 @@ class SiteController extends Controller
             } catch (\Throwable) {
             }
 
-            if (!$program) {
+            if (!$program && $masterProgram) {
                 $program = [
                     'id' => $identifier,
-                    'title' => $masterProgram?->nombre ?? 'Programa',
-                    'name' => $masterProgram?->nombre ?? 'Programa',
-                    'cover' => $masterProgram?->cover_url ?: asset('assets/lucille/logo.png'),
-                    'host' => \App\Support\ProgramTextNormalizer::limpiarConductor($masterProgram?->host ?? ''),
-                    'conductor' => $masterProgram?->conductor ?? '',
-                    'schedule' => $masterProgram?->schedule ?? '',
-                    'description' => \App\Support\ProgramTextNormalizer::limpiarDescripcion($masterProgram?->description ?? ''),
-                    'mixcloud' => $masterProgram?->url_mixcloud ?? '',
+                    'title' => $masterProgram->nombre,
+                    'name' => $masterProgram->nombre,
+                    'cover' => $masterProgram->cover_url ?: asset('assets/lucille/logo.png'),
+                    'host' => \App\Support\ProgramTextNormalizer::limpiarConductor($masterProgram->host ?? ''),
+                    'conductor' => $masterProgram->conductor ?? '',
+                    'schedule' => $masterProgram->schedule ?? '',
+                    'description' => \App\Support\ProgramTextNormalizer::limpiarDescripcion($masterProgram->description ?? ''),
+                    'mixcloud' => $masterProgram->url_mixcloud ?? '',
                 ];
             }
         } catch (\Throwable) {
@@ -1083,20 +1116,36 @@ class SiteController extends Controller
         );
     }
 
-    public function singlePost(string $year, string $month, string $day, string $slug): View
+    public function singlePost(string $year, string $month, string $day, string $slug): View|RedirectResponse
     {
+        $targetDate = sprintf('%04d-%02d-%02d', (int) $year, (int) $month, (int) $day);
+
         /** @var Post|null $post */
-        $post = $this->safeValue(function () use ($slug, $year, $month, $day) {
+        $post = $this->safeValue(function () use ($slug, $targetDate) {
             return Post::query()
                 ->published()
                 ->where('slug', $slug)
-                ->whereDate('published_at', sprintf('%04d-%02d-%02d', (int) $year, (int) $month, (int) $day))
+                ->whereDate('published_at', $targetDate)
                 ->first();
         }, null);
 
+        // Si la fecha en la URL no coincide exactamente, buscar si el post existe con ese slug
         if (! $post) {
-            /** @var Post|null $post */
-            $post = $this->safeValue(fn () => Post::query()->published()->orderByDesc('published_at')->first(), null);
+            /** @var Post|null $postBySlug */
+            $postBySlug = $this->safeValue(function () use ($slug) {
+                return Post::query()
+                    ->published()
+                    ->where('slug', $slug)
+                    ->first();
+            }, null);
+
+            // Redirección canónica 301 a la URL real del artículo si existe en otra fecha
+            if ($postBySlug && $postBySlug->published_at && ! empty($postBySlug->slug)) {
+                return redirect()->to($postBySlug->url, 301);
+            }
+
+            // Si la noticia no existe, responder 404 (nunca mostrar la última noticia como sustituto)
+            abort(404);
         }
 
         if ($post) {
@@ -1121,6 +1170,7 @@ class SiteController extends Controller
                     'source_url' => $post->source_url,
                     'meta_title' => $post->meta_title,
                     'meta_description' => $post->meta_description,
+                    'excerpt' => $post->clean_excerpt,
                     'content' => WordPressContent::toRenderableBlocks($post->content),
                     'quote' => $post->quote ?: '',
                     'likes_count' => $this->postLikesCount($post->id),
@@ -1929,10 +1979,13 @@ class SiteController extends Controller
         $startsAt = $event->starts_at ?? now();
 
         return [
+            'slug'         => $event->slug,
             'title'        => $event->title,
             'categories'   => $event->categories ?? [],
             'date'         => $startsAt->format('F j, Y'),
             'time'         => $startsAt->format('g:i a'),
+            'starts_at_iso'=> $startsAt->toIso8601String(),
+            'is_cancelled' => (bool) $event->is_cancelled,
             'location'     => $event->location,
             'venue'        => $event->venue,
             'venue_url'    => $event->venue_url ?: '#',

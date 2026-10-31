@@ -5,6 +5,6 @@
         {!! formatear_titulo(trim($title . ($accent ? ' ' . $accent : ''))) !!}
     </h2>
     @if ($subtitle)
-        <h4 class="lucille-subtitle mt-4 text-[12px] leading-6 md:text-sm">{{ $subtitle }}</h4>
+        <p class="lucille-subtitle mt-4 text-[12px] leading-6 md:text-sm">{{ $subtitle }}</p>
     @endif
 </div>

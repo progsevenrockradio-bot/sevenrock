@@ -23,6 +23,16 @@
 
                 @if ($results->isEmpty())
                     <p class="text-[#7b7b7b]">No se encontraron resultados para tu búsqueda.</p>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            if (window.SevenRockAnalytics) {
+                                window.SevenRockAnalytics.track('search_no_results', {
+                                    section: 'global',
+                                    query_length: {{ mb_strlen($query) }}
+                                });
+                            }
+                        });
+                    </script>
                 @else
                     <div class="divide-y divide-[#2b2b2b]">
                         @foreach ($results as $item)

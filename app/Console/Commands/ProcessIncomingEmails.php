@@ -330,21 +330,21 @@ class ProcessIncomingEmails extends Command
                 // Efemérides: un post independiente por cada evento del día
                 if ($isEfemerides) {
                     $this->info("[DARK VADER] Procesando Efemérides directamente (sin Gemini)...");
-                    $plainBody = strip_tags($body);
+                    $preparedBody = preg_replace('/<(?:br|\/p|\/div|\/li|\/tr|\/h[1-6])[^>]*>/i', "\n", $body) ?? $body;
+                    $plainBody = strip_tags($preparedBody);
                     $plainBody = html_entity_decode($plainBody, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-                    // ── Estrategia 1: items numerados (1. texto, 2. texto...)  ──────────────
-                    // Detectamos líneas que empiezan por número + punto/paréntesis
+                    // ── Estrategia 1: items numerados (1. texto, 2. texto, 1.- texto, 🎸 1. ...) ──────────
                     $lines = array_values(array_filter(
                         array_map('trim', preg_split('/\r?\n/', $plainBody) ?: [])
                     ));
 
-                    // Agrupar líneas en "items": una nueva entrada cada vez que aparece
-                    // una línea que empieza por \d+[.)]\s
+                    $itemPattern = '/^(?:[\x{1F300}-\x{1FFFF}\x{2600}-\x{27BF}]\s*)?(?:\[?\d+[.)\-\]]+|\d+\s*[-–—])\s*/u';
+
                     $items = [];
                     $current = null;
                     foreach ($lines as $line) {
-                        if (preg_match('/^\d+[.)]\s+/', $line)) {
+                        if (preg_match($itemPattern, $line)) {
                             if ($current !== null) {
                                 $items[] = $current;
                             }
@@ -375,11 +375,9 @@ class ProcessIncomingEmails extends Command
                     $efemCreadas = 0;
 
                     foreach ($items as $item) {
-                        // Quitar el prefijo numérico y el emoji para obtener el título real
-                        // Ejemplo: "1. 🎸 1942 - Nace Ronnie James Dio..." → "1942 - Nace Ronnie James Dio..."
-                        $cleanItem = preg_replace('/^\d+[.)]\s*/', '', $item);
-                        // Quitar emojis del inicio (caracteres unicode en rango de emojis)
-                        $cleanItem = preg_replace('/^[\x{1F300}-\x{1FFFF}\x{2600}-\x{27BF}]\s*/u', '', $cleanItem);
+                        // Quitar el prefijo numérico y los emojis para obtener el título real
+                        $cleanItem = preg_replace($itemPattern, '', $item) ?? $item;
+                        $cleanItem = preg_replace('/^[\x{1F300}-\x{1FFFF}\x{2600}-\x{27BF}]\s*/u', '', $cleanItem) ?? $cleanItem;
                         $cleanItem = trim($cleanItem);
 
                         if ($cleanItem === '' || strlen($cleanItem) < 8) continue;
@@ -440,7 +438,7 @@ class ProcessIncomingEmails extends Command
                                 'title'          => $efTitle,
                                 'slug'           => $slug,
                                 'content'        => $cleanContentEf,
-                                'excerpt'        => Str::limit(strip_tags($cleanContentEf), 160),
+                                'excerpt'        => Post::sanitizeExcerpt($cleanContentEf, $cleanContentEf, 160),
                                 'status'         => 'draft',
                                 'is_published'   => false,
                                 'published_at'   => now(),
@@ -652,7 +650,7 @@ class ProcessIncomingEmails extends Command
                                 'title'              => $noticiaTitle,
                                 'slug'               => $slug,
                                 'content'            => $cleanContentNoticia,
-                                'excerpt'            => Str::limit(strip_tags($cleanContentNoticia), 160),
+                                'excerpt'            => Post::sanitizeExcerpt($cleanContentNoticia, $cleanContentNoticia, 160),
                                 'status'             => 'draft', // Creado como borrador antes de validar
                                 'is_published'       => false,
                                 'published_at'       => now(),
@@ -1523,7 +1521,7 @@ class ProcessIncomingEmails extends Command
                 'title'             => $title,
                 'slug'              => $slug,
                 'content'           => $cleanContent,
-                'excerpt'           => Str::limit(strip_tags($cleanContent), 160),
+                'excerpt'           => Post::sanitizeExcerpt($cleanContent, $cleanContent, 160),
                 'status'            => 'draft', // SIEMPRE borrador en fallback
                 'is_published'      => false,
                 'published_at'      => now(),

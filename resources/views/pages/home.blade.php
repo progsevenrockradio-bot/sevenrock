@@ -19,6 +19,24 @@
 
     <x-sections.hero-rocks :slides="$themeAppearance['hero_slides']" :auto-slides="$heroAutoSlides ?? []" :interval="$themeAppearance['hero_slides_interval']" :transition="$themeAppearance['hero_slides_transition']" />
 
+    {{-- CTA Móvil Principal: Escuchar en Vivo (Reutiliza el reproductor existente sin duplicar audio) --}}
+    <div class="relative z-30 mx-auto -mt-4 mb-4 flex justify-center px-4 md:hidden">
+        <button
+            type="button"
+            onclick="window.dispatchEvent(new CustomEvent('play-multimedia-track', { detail: { src: 'live', type: 'live' } }))"
+            class="group inline-flex items-center gap-3 rounded-full bg-[#c32720] px-6 py-3 font-display text-xs uppercase tracking-[0.16em] text-white shadow-[0_4px_25px_rgba(195,39,32,0.5)] transition-all duration-300 hover:bg-[#d62d25] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            aria-label="Escuchar Seven Rock Radio en vivo"
+        >
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-black/30 text-white transition-transform duration-300 group-hover:scale-110">
+                <svg class="h-3.5 w-3.5 fill-current ml-0.5" viewBox="0 0 24 24" aria-hidden="true">
+                    <polygon points="5,3 19,12 5,21"></polygon>
+                </svg>
+            </span>
+            <span class="font-bold">Escuchar en vivo</span>
+            <span class="flex h-2 w-2 rounded-full bg-white animate-pulse" aria-hidden="true"></span>
+        </button>
+    </div>
+
     <x-home.headline-ticker :ticker="$headlineTicker" />
 
     @if (!empty($noticiasRock) && $noticiasRock->count() > 0)
@@ -30,31 +48,7 @@
                 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach($noticiasRock as $post)
                         @php
-                            $rawExcerpt = (string) ($post->excerpt ?? '');
-                            if (str_starts_with(trim($rawExcerpt), '{') || str_starts_with(trim($rawExcerpt), '[')) {
-                                $decoded = json_decode($rawExcerpt, true);
-                                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                                    $rawExcerpt = data_get($decoded, 'rendered')
-                                        ?? data_get($decoded, 'raw')
-                                        ?? data_get($decoded, '0.value')
-                                        ?? data_get($decoded, '0.content.html')
-                                        ?? (is_string(reset($decoded)) ? reset($decoded) : '');
-                                }
-                            }
-                            if (trim((string)$rawExcerpt) === '' && !empty($post->content)) {
-                                $c = $post->content;
-                                if (is_array($c)) {
-                                    $rawExcerpt = data_get($c, '0.value') ?? data_get($c, '0.content.html') ?? '';
-                                } elseif (is_string($c)) {
-                                    $rawExcerpt = $c;
-                                }
-                            }
-                            $rawExcerpt = html_entity_decode((string)$rawExcerpt, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                            $rawExcerpt = html_entity_decode($rawExcerpt, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                            $rawExcerpt = strip_tags($rawExcerpt);
-                            $rawExcerpt = str_replace(['\r', '\n', '\t', '\/'], [' ', ' ', ' ', '/'], $rawExcerpt);
-                            $cleanExcerpt = trim(preg_replace('/\s+/u', ' ', $rawExcerpt) ?? '');
-                            $cleanExcerpt = \Illuminate\Support\Str::limit($cleanExcerpt, 160, '...');
+                            $cleanExcerpt = $post->clean_excerpt;
                         @endphp
                         <div class="border border-lucille-line/30 bg-lucille-surface/80 p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:border-lucille-accent/40 group relative cursor-pointer">
                             <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-30" aria-label="Leer más sobre {{ $post->title }}"></a>
@@ -69,9 +63,9 @@
                                         <x-luto :nombre="$post->en_memoria_nombre" />
                                     @endif
                                 </div>
-                                <h4 class="mt-4 font-display text-[15px] sm:text-[16px] uppercase tracking-[.08em] text-lucille-heading line-clamp-2 group-hover:text-lucille-accent transition-colors relative z-20">
+                                <h3 class="mt-4 font-display text-[15px] sm:text-[16px] uppercase tracking-[.08em] text-lucille-heading line-clamp-2 group-hover:text-lucille-accent transition-colors relative z-20">
                                     {{ $post->title }}
-                                </h4>
+                                </h3>
                                 @if($post->published_at)
                                     <p class="text-[10px] uppercase tracking-[.12em] text-lucille-body mt-2 relative z-20">{{ $post->published_at->locale('es')->translatedFormat('d M, Y') }}</p>
                                 @endif
@@ -116,15 +110,31 @@
             <div class="mx-auto max-w-[1200px] px-6">
                 <div class="relative w-full overflow-hidden rounded-sm border border-[#c32720]/30 bg-black shadow-lg flex flex-col md:block" id="efemerides-ticker">
 
-                    {{-- Etiqueta "HOY EN EL ROCK" --}}
+                    {{-- Etiqueta "HOY EN EL ROCK" con control de pausa accesible --}}
                     <div class="relative w-full py-2.5 flex flex-col items-center justify-center bg-[#c32720] px-5 shadow-[0_4px_15px_rgba(195,39,32,.4)] md:absolute md:left-0 md:top-0 md:h-full md:w-auto md:z-20 md:shadow-[4px_0_20px_rgba(195,39,32,.5)]">
-                        <div class="flex flex-col items-center justify-center">
+                        <div class="flex flex-col items-center justify-center text-center">
                             <span class="whitespace-nowrap font-display text-[10px] uppercase tracking-[.22em] text-white">
                                 🎸 Hoy en el Rock
                             </span>
                             <span class="mt-[2px] whitespace-nowrap font-sans text-[7px] uppercase tracking-[.15em] text-white/80">
-                                {{ \Carbon\Carbon::now()->locale('es')->isoFormat('D \d\e MMMM YYYY') }}
+                                {{ \Carbon\Carbon::now(config('app.timezone', 'America/Caracas'))->locale('es')->isoFormat('D \d\e MMMM YYYY') }}
                             </span>
+                            <button 
+                                type="button"
+                                id="efem-ticker-toggle"
+                                onclick="toggleEfemTicker()"
+                                aria-pressed="false"
+                                aria-label="Pausar movimiento de efemérides"
+                                class="mt-1 inline-flex h-6 w-6 items-center justify-center rounded text-white/80 transition hover:text-white hover:bg-black/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            >
+                                <svg id="efem-pause-icon" class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+                                    <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+                                </svg>
+                                <svg id="efem-play-icon" class="hidden h-3 w-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                            </button>
                         </div>
                     </div>
 
@@ -140,29 +150,47 @@
                 ]);
             @endphp
 
-            {{-- Doble pasada para loop continuo --}}
-            @foreach([0,1] as $_)
+            {{-- 1. Pista canónica accesible --}}
+            <div class="flex items-center gap-0 shrink-0">
                 @foreach($efemItems as $idx => $post)
                     @php $postTags = $efemTagsByPost[$post->id] ?? []; @endphp
                     <button
                         type="button"
                         data-efem-idx="{{ $idx }}"
-                        class="efem-pill group inline-flex shrink-0 cursor-pointer items-center gap-2 border-r border-[#1e1e1e] px-6 py-4 text-left transition-colors duration-200 hover:bg-[#c32720]/10 focus:outline-none"
+                        class="efem-pill group inline-flex shrink-0 cursor-pointer items-center gap-2 border-r border-[#1e1e1e] px-6 py-4 text-left transition-colors duration-200 hover:bg-[#c32720]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent focus-visible:ring-inset"
                         onclick="openEfemModal({{ $idx }})"
                         aria-label="Leer: {{ $post->title }}"
                     >
-                        <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#c32720] opacity-70 group-hover:opacity-100 transition-opacity"></span>
+                        <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#c32720] opacity-70 group-hover:opacity-100 transition-opacity" aria-hidden="true"></span>
                         <span class="whitespace-nowrap text-[12px] tracking-wide text-[#9a9a9a] group-hover:text-[#e0e0e0] transition-colors">
                             {{ $post->title }}
                         </span>
                         @if(!empty($postTags[0]))
-                            <span class="whitespace-nowrap text-[10px] tracking-wider text-[#c32720]/70 group-hover:text-[#c32720] transition-colors font-medium">
+                            <span class="whitespace-nowrap text-[10px] tracking-wider text-[var(--lucille-accent-readable,#ff5b52)] group-hover:text-[var(--lucille-accent-readable,#ff5b52)] transition-colors font-medium">
                                 {{ $postTags[0] }}
                             </span>
                         @endif
                     </button>
                 @endforeach
-            @endforeach
+            </div>
+
+            {{-- 2. Pista decorativa para continuidad visual (oculta a lectores y teclado) --}}
+            <div class="pointer-events-none flex items-center gap-0 shrink-0 efem-track-clone" aria-hidden="true">
+                @foreach($efemItems as $idx => $post)
+                    @php $postTags = $efemTagsByPost[$post->id] ?? []; @endphp
+                    <div class="efem-pill group inline-flex shrink-0 items-center gap-2 border-r border-[#1e1e1e] px-6 py-4 text-left transition-colors duration-200" aria-hidden="true">
+                        <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#c32720] opacity-70" aria-hidden="true"></span>
+                        <span class="whitespace-nowrap text-[12px] tracking-wide text-[#9a9a9a]" aria-hidden="true">
+                            {{ $post->title }}
+                        </span>
+                        @if(!empty($postTags[0]))
+                            <span class="whitespace-nowrap text-[10px] tracking-wider text-[var(--lucille-accent-readable,#ff5b52)] font-medium" aria-hidden="true">
+                                {{ $postTags[0] }}
+                            </span>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
         </div>
     </div>
     </div>
@@ -179,23 +207,23 @@
              class="relative w-full max-w-lg scale-95 rounded-sm border border-[#c32720]/30 bg-black p-8 shadow-[0_0_60px_rgba(195,39,32,.4)] transition-transform duration-300">
 
             {{-- Línea decorativa superior --}}
-            <div class="absolute left-0 top-0 h-[2px] w-full bg-gradient-to-r from-[#c32720] via-[#ff4a42] to-transparent rounded-t-sm"></div>
+            <div class="absolute left-0 top-0 h-[2px] w-full bg-gradient-to-r from-[#c32720] via-[#ff4a42] to-transparent rounded-t-sm" aria-hidden="true"></div>
 
             {{-- Cerrar --}}
-            <button onclick="closeEfemModal()" class="absolute right-4 top-4 text-[#555] hover:text-[#e0e0e0] transition-colors focus:outline-none" aria-label="Cerrar">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <button onclick="closeEfemModal()" class="absolute right-4 top-4 p-1 rounded text-[#7b7b7b] hover:text-[#e0e0e0] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" aria-label="Cerrar modal">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
 
             {{-- Icono musical --}}
             <div class="mb-5 flex items-center gap-3">
-                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#c32720]/15 text-[#c32720]">
+                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#c32720]/15 text-[#c32720]" aria-hidden="true">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M9 3v10.55A4 4 0 1 0 11 17V7h4V3H9z"/>
                     </svg>
                 </span>
-                <p class="text-[10px] uppercase tracking-[.2em] text-[#c32720]">Hoy en el Rock</p>
+                <p class="text-[10px] uppercase tracking-[.2em] text-[var(--lucille-accent-readable,#ff5b52)]">Hoy en el Rock</p>
             </div>
 
             <h3 id="efem-modal-title" class="mb-4 font-display text-[18px] uppercase tracking-[.06em] leading-snug text-[#dcdcdc]"></h3>
@@ -208,7 +236,7 @@
     @php
         $modalData = $efemItems->map(fn($p) => [
             'title'   => $p->title,
-            'content' => $p->excerpt ?: $p->title,
+            'content' => $p->clean_excerpt ?: $p->title,
             'tags'    => method_exists($p, 'taxonomies')
                 ? $p->taxonomies->where('type', 'tag')->pluck('name')->map(fn($t) => '#'.$t)->values()->all()
                 : [],
@@ -223,7 +251,25 @@
             0%   { transform: translateX(0); }
             100% { transform: translateX(-50%); }
         }
-        #efemerides-ticker:hover .efem-track { animation-play-state: paused; }
+        #efemerides-ticker:hover .efem-track,
+        #efemerides-ticker:focus-within .efem-track {
+            animation-play-state: paused;
+        }
+        .efem-track-paused {
+            animation-play-state: paused !important;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #efemerides-ticker {
+                overflow-x: auto !important;
+                scrollbar-width: thin;
+            }
+            .efem-track {
+                animation: none !important;
+            }
+            .efem-track-clone {
+                display: none !important;
+            }
+        }
     </style>
 
     <script>
@@ -233,8 +279,39 @@
             const box    = document.getElementById('efem-modal-box');
             const title  = document.getElementById('efem-modal-title');
             const body   = document.getElementById('efem-modal-body');
+            window._lastEfemTrigger = null;
+
+            const setBackgroundInert = (isInert) => {
+                if (!modal) return;
+                if (isInert && modal.parentElement !== document.body) {
+                    document.body.appendChild(modal);
+                }
+                const siblings = Array.from(document.body.children).filter(el => 
+                    el !== modal && el.tagName !== 'SCRIPT' && el.tagName !== 'STYLE' && el.id !== 'efem-modal'
+                );
+                siblings.forEach(el => {
+                    if (isInert) el.setAttribute('inert', '');
+                    else el.removeAttribute('inert');
+                });
+            };
+
+            window.toggleEfemTicker = function () {
+                const track = document.querySelector('.efem-track');
+                const btn = document.getElementById('efem-ticker-toggle');
+                const pauseIcon = document.getElementById('efem-pause-icon');
+                const playIcon = document.getElementById('efem-play-icon');
+                if (!track || !btn) return;
+                const isPaused = track.classList.toggle('efem-track-paused');
+                btn.setAttribute('aria-pressed', isPaused.toString());
+                btn.setAttribute('aria-label', isPaused ? 'Reanudar movimiento de efemérides' : 'Pausar movimiento de efemérides');
+                if (pauseIcon && playIcon) {
+                    pauseIcon.classList.toggle('hidden', isPaused);
+                    playIcon.classList.toggle('hidden', !isPaused);
+                }
+            };
 
             window.openEfemModal = function (idx) {
+                window._lastEfemTrigger = document.activeElement;
                 const item = data[idx % data.length];
                 if (!item) return;
                 title.textContent = item.title;
@@ -246,7 +323,7 @@
                 if (item.tags && item.tags.length) {
                     item.tags.forEach(function(tag) {
                         const pill = document.createElement('span');
-                        pill.className = 'inline-block rounded-full border border-[#c32720]/40 bg-[#c32720]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[.16em] text-[#c32720]';
+                        pill.className = 'inline-block rounded-full border border-[#c32720]/40 bg-[#c32720]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[.16em] text-[var(--lucille-accent-readable,#ff5b52)]';
                         pill.textContent = tag;
                         tagsEl.appendChild(pill);
                     });
@@ -257,14 +334,26 @@
                 box.classList.remove('scale-95');
                 box.classList.add('scale-100');
                 document.body.style.overflow = 'hidden';
+                setBackgroundInert(true);
+
+                setTimeout(() => {
+                    const closeBtn = modal.querySelector('button[aria-label="Cerrar modal"]');
+                    if (closeBtn) closeBtn.focus();
+                }, 50);
             };
 
             window.closeEfemModal = function () {
+                if (modal.classList.contains('opacity-0')) return;
                 modal.classList.add('opacity-0', 'pointer-events-none');
                 modal.classList.remove('opacity-100');
                 box.classList.add('scale-95');
                 box.classList.remove('scale-100');
                 document.body.style.overflow = '';
+                setBackgroundInert(false);
+
+                if (window._lastEfemTrigger && typeof window._lastEfemTrigger.focus === 'function') {
+                    window._lastEfemTrigger.focus();
+                }
             };
 
             // Cerrar al hacer clic fuera del box
@@ -272,9 +361,29 @@
                 if (e.target === modal) closeEfemModal();
             });
 
-            // Cerrar con Escape
+            // Atrapado de foco Tab / Shift+Tab y cierre con Escape
             document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') closeEfemModal();
+                if (modal.classList.contains('opacity-0')) return;
+
+                if (e.key === 'Escape') {
+                    closeEfemModal();
+                    return;
+                }
+
+                if (e.key === 'Tab') {
+                    const focusables = modal.querySelectorAll('button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                    if (!focusables.length) return;
+                    const first = focusables[0];
+                    const last = focusables[focusables.length - 1];
+
+                    if (e.shiftKey && document.activeElement === first) {
+                        e.preventDefault();
+                        last.focus();
+                    } else if (!e.shiftKey && document.activeElement === last) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                }
             });
         })();
     </script>
@@ -329,7 +438,7 @@
                                 </div>
 
                                 <!-- Meta -->
-                                <h4 class="mt-4 font-display text-[15px] sm:text-[16px] uppercase tracking-[.08em] text-lucille-heading line-clamp-1 group-hover:text-lucille-accent transition-colors">{{ $release->title }}</h4>
+                                <h3 class="mt-4 font-display text-[15px] sm:text-[16px] uppercase tracking-[.08em] text-lucille-heading line-clamp-1 group-hover:text-lucille-accent transition-colors">{{ $release->title }}</h3>
                                 <p class="text-[12px] uppercase tracking-[.18em] text-lucille-body line-clamp-1 mt-1">{{ $release->artist_name }}</p>
 
                                 @if($release->released_at)

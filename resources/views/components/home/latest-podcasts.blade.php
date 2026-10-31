@@ -136,6 +136,7 @@
             return `<span class='text-white'>${words.slice(0, half).join(' ')}</span> <span class='text-lucille-accent'>${words.slice(half).join(' ')}</span>`;
         },
         infoModalOpen: false,
+        lastTrigger: null,
         playing: false,
         muted: false,
         volume: 85,
@@ -202,12 +203,16 @@
             if ((event && event.isTrusted === false) || !window.__srUserGesture) {
                 return;
             }
+            this.lastTrigger = event ? (event.currentTarget || event.target) : document.activeElement;
             this.infoModalOpen = true;
             document.body.style.overflow = 'hidden';
         },
         closeInfoModal() {
             this.infoModalOpen = false;
             document.body.style.overflow = '';
+            if (this.lastTrigger && typeof this.lastTrigger.focus === 'function') {
+                this.lastTrigger.focus();
+            }
         },
         syncAudio(autoplay = false) {
             const audio = this.$refs.audio;
@@ -570,7 +575,7 @@
     <x-modal id="info-modal" size="md">
         <div>
             <x-badge x-text="activeEpisode.episode_title || 'Nuevo episodio'"></x-badge>
-            <h4 class="mt-md font-display text-[22px] uppercase leading-none tracking-[.12em] text-base-content" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title || 'Podcast')"></h4>
+            <h3 class="mt-md font-display text-[22px] uppercase leading-none tracking-[.12em] text-base-content" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title || 'Podcast')"></h3>
             <p class="mt-sm text-xs uppercase tracking-[.24em] text-base-content/70" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
             <p class="mt-xs font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
         </div>

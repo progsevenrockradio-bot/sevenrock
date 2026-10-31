@@ -187,9 +187,9 @@
         class="mx-auto flex h-full max-w-[1240px] flex-col justify-center px-4 lg:px-6 md:flex-row md:items-center md:justify-between md:py-0 md:gap-4 xl:gap-6"
     >
         <div class="flex w-full items-center justify-between md:contents">
-            <a href="{{ route('home') }}" class="relative z-10 flex h-full items-center gap-3 py-2 md:py-0 shrink-0 min-w-[200px] xl:min-w-[225px] select-none" aria-label="{{ $brandMark }} home">
+            <a href="{{ route('home') }}" class="relative z-10 flex h-full items-center gap-3 py-2 md:py-0 shrink-0 min-w-[200px] xl:min-w-[225px] select-none rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black" aria-label="{{ $brandMark }} home">
                 @if ($brandDisplayMode === 'both' && $logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both" loading="lazy">
+                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both" width="108" height="62" loading="eager" fetchpriority="high" decoding="async">
                     <span class="brand-mark-container" :class="sticky ? 'sticky-active' : 'normal'">
                         @php
                             $words = preg_split('/\s+/', trim($brandMark));
@@ -200,7 +200,7 @@
                         @endforeach
                     </span>
                 @elseif ($brandDisplayMode === 'logo' && $logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo" loading="lazy">
+                    <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo" width="108" height="62" loading="eager" fetchpriority="high" decoding="async">
                 @else
                     <span class="brand-mark-container" :class="sticky ? 'sticky-active' : 'normal'">
                         @php
@@ -215,7 +215,7 @@
             </a>
 
             <div class="relative z-[60] flex items-center gap-5 text-white">
-                <button type="button" class="relative h-11 w-11 xl:hidden mr-2 group" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
+                <button type="button" x-ref="menuTrigger" class="relative h-11 w-11 xl:hidden mr-2 group rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Menú principal de navegación">
                     <span class="absolute left-1/2 top-4 h-[1.5px] w-5 -translate-x-1/2 rounded-full bg-white transition-all duration-300 ease-out" :class="open ? 'top-1/2 rotate-45' : 'group-hover:-translate-y-0.5'"></span>
                     <span class="absolute left-1/2 top-1/2 h-[1.5px] w-5 -translate-x-1/2 rounded-full bg-white transition-all duration-300 ease-out" :class="open ? 'opacity-0' : ''"></span>
                     <span class="absolute left-1/2 top-7 h-[1.5px] w-5 -translate-x-1/2 rounded-full bg-white transition-all duration-300 ease-out" :class="open ? 'top-1/2 -rotate-45' : 'group-hover:translate-y-0.5'"></span>
@@ -235,10 +235,10 @@
                     @if (in_array($item['label'], ['Tienda', 'Programas', 'Programa', 'Iniciar Sesión']))
                         @continue
                     @endif
-                    <li class="group relative flex h-full items-center" x-data="{ subOpen: false }" @mouseenter="subOpen = true" @mouseleave="subOpen = false" @focusin="subOpen = true" @focusout="subOpen = false" @keydown.escape="subOpen = false">
+                    <li class="group relative flex h-full items-center" x-data="{ subOpen: false }" @mouseenter="subOpen = true" @mouseleave="subOpen = false" @focusin="subOpen = true" @focusout="if (!$el.contains($event.relatedTarget)) subOpen = false" @keydown.escape.stop="subOpen = false; $el.querySelector('a')?.focus()">
                         <a
                             href="{{ $item['url'] ?? route($item['route']) }}"
-                            class="flex h-full items-center px-[clamp(8px,0.8vw,16px)] font-display text-[clamp(10px,0.78vw,12px)] font-medium uppercase tracking-[.1em] text-white/90 transition-all duration-300 ease-in-out whitespace-nowrap hover:text-lucille-accent focus:text-lucille-accent focus:outline-none"
+                            class="flex h-full items-center px-[clamp(8px,0.8vw,16px)] font-display text-[clamp(10px,0.78vw,12px)] font-medium uppercase tracking-[.1em] text-white/90 transition-all duration-300 ease-in-out whitespace-nowrap hover:text-lucille-accent focus-visible:text-lucille-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black rounded-sm"
                             @if (! empty($item['children'])) aria-haspopup="true" :aria-expanded="subOpen.toString()" @endif
                         >
                             {{ $item['label'] }}
@@ -248,7 +248,7 @@
                             <ul :class="subOpen ? 'visible opacity-100' : 'invisible opacity-0'" class="absolute left-0 top-full min-w-48 bg-[rgba(16,16,18,.96)] backdrop-blur-md border border-white/5 py-3 shadow-[0_10px_30px_rgba(0,0,0,.22)] transition-all duration-300 group-hover:visible group-hover:opacity-100">
                                 @foreach ($item['children'] as $child)
                                     <li>
-                                        <a href="{{ $child['url'] ?? route($child['route']) }}" class="block whitespace-nowrap px-5 py-2 text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent focus:text-lucille-accent focus:bg-white/5 focus:outline-none">
+                                        <a href="{{ $child['url'] ?? route($child['route']) }}" class="block whitespace-nowrap px-5 py-2 text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent focus-visible:text-lucille-accent focus-visible:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent">
                                             {{ $child['label'] }}
                                         </a>
                                     </li>
@@ -262,7 +262,7 @@
 
         <div class="hidden items-center gap-3 xl:gap-5 border-l border-white/10 pl-3 xl:pl-5 shrink-0 xl:flex">
             <!-- Programas Icon -->
-            <a href="{{ route('programs') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent" aria-label="Programas" title="Programas">
+            <a href="{{ route('programs') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" aria-label="Programas" title="Programas">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:scale-110">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
                     <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -272,7 +272,7 @@
             </a>
 
             <!-- Tienda Icon -->
-            <a href="{{ route('shop') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent" aria-label="Tienda" title="Tienda">
+            <a href="{{ route('shop') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" aria-label="Tienda" title="Tienda">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:scale-110">
                     <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
                     <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -281,7 +281,7 @@
             </a>
 
             {{-- P1-2: Ícono de Carrito con Badge "Próximamente" --}}
-            <span class="relative group cursor-pointer flex items-center" title="Carrito — Próximamente" aria-label="Carrito (próximamente disponible)">
+            <span class="relative group cursor-pointer flex items-center p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" title="Carrito — Próximamente" aria-label="Carrito (próximamente disponible)" tabindex="0">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white/50 transition-all duration-300 group-hover:text-lucille-accent group-hover:scale-110">
                     <circle cx="9" cy="21" r="1"></circle>
                     <circle cx="20" cy="21" r="1"></circle>
@@ -298,7 +298,7 @@
             </span>
 
             <!-- Buscar Icon -->
-            <button type="button" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent" @click="searchOpen = true" aria-label="Buscar" title="Buscar">
+            <button type="button" x-ref="searchTrigger" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" @click="searchOpen = true; $nextTick(() => $refs.siteSearchInput?.focus())" aria-label="Buscar en el sitio" title="Buscar">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:scale-110">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -307,14 +307,14 @@
 
             <!-- Iniciar Sesión / Mi Cuenta Icon -->
             @auth('talent')
-                <a href="{{ route('talents.dashboard') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent" aria-label="Mi Cuenta" title="Mi Cuenta (Talentos)">
+                <a href="{{ route('talents.dashboard') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" aria-label="Mi Cuenta" title="Mi Cuenta (Talentos)">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:scale-110">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                         <circle cx="12" cy="7" r="4"></circle>
                     </svg>
                 </a>
             @else
-                <a href="{{ route('talents.login') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent" aria-label="Iniciar Sesión" title="Iniciar Sesión (Talentos)">
+                <a href="{{ route('talents.login') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" aria-label="Iniciar Sesión" title="Iniciar Sesión (Talentos)">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:scale-110">
                         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
                         <polyline points="10 17 15 12 10 7"></polyline>
@@ -323,7 +323,7 @@
                 </a>
             @endauth
 
-            <a href="{{ route('app.download') }}" target="_blank" rel="noopener noreferrer" class="ml-2 xl:ml-3 flex items-center gap-1.5 rounded-full border border-lucille-accent/60 px-3 py-1.5 text-[11px] font-display font-medium uppercase tracking-[.1em] text-lucille-accent transition-all duration-300 ease-in-out whitespace-nowrap hover:bg-lucille-accent hover:text-white shrink-0" aria-label="Descargar la aplicación de la radio" title="Descargar App">
+            <a href="{{ route('app.download') }}" target="_blank" rel="noopener noreferrer" class="ml-2 xl:ml-3 flex items-center gap-1.5 rounded-full border border-lucille-accent/60 px-3 py-1.5 text-[11px] font-display font-medium uppercase tracking-[.1em] text-lucille-accent transition-all duration-300 ease-in-out whitespace-nowrap hover:bg-lucille-accent hover:text-white shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black" aria-label="Descargar la aplicación de la radio" title="Descargar App">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7 10 12 15 17 10"></polyline>
@@ -334,7 +334,17 @@
         </div>
     </div>
 
-    <div x-cloak x-show="open" @keydown.escape.window="open = false" x-transition.opacity class="fixed inset-0 z-40 bg-[rgba(16,16,18,.98)] backdrop-blur-md pt-[100px] px-5 pb-6 xl:hidden overflow-y-auto flex flex-col">
+    <div 
+        x-cloak 
+        x-show="open" 
+        x-trap.noscroll.inert="open"
+        @keydown.escape.window="if (open) { open = false; $nextTick(() => $refs.menuTrigger?.focus()); }" 
+        x-transition.opacity 
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menú de navegación móvil"
+        class="fixed inset-0 z-40 bg-[rgba(16,16,18,.98)] backdrop-blur-md pt-[100px] px-5 pb-6 xl:hidden overflow-y-auto flex flex-col"
+    >
         <nav class="flex-1 flex flex-col min-h-[calc(100vh-140px)]">
             <ul class="mx-auto w-full max-w-[1180px] divide-y divide-white/5 flex-1">
                 @foreach ($items as $item)
@@ -348,12 +358,12 @@
                         <div class="flex items-center justify-between">
                             <a
                                 href="{{ $item['url'] ?? route($item['route']) }}"
-                                class="block py-3 font-display text-sm uppercase tracking-[.08em] transition-colors duration-200 {{ $isActive ? 'text-lucille-accent' : 'text-white' }}"
+                                class="block py-3 font-display text-sm uppercase tracking-[.08em] transition-colors duration-200 {{ $isActive ? 'text-lucille-accent' : 'text-white' }} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
                                 @if($isActive) aria-current="page" @endif
                             >{{ $item['label'] }}</a>
                             @if (! empty($item['children']))
                                 {{-- P2-4: Área táctil mínima 44×44px en el botón de submenú --}}
-                                <button type="button" class="flex items-center justify-center w-11 h-11 text-white/60 hover:text-lucille-accent transition-colors duration-300" @click.prevent="childOpen = ! childOpen" aria-label="Toggle submenu">
+                                <button type="button" class="flex items-center justify-center w-11 h-11 text-white/60 hover:text-lucille-accent transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent rounded" @click.prevent="childOpen = ! childOpen" aria-label="Desplegar submenú de {{ $item['label'] }}" :aria-expanded="childOpen.toString()">
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300" :class="childOpen ? 'rotate-180 text-lucille-accent' : ''">
                                         <polyline points="6 9 12 15 18 9"></polyline>
                                     </svg>
@@ -369,7 +379,7 @@
                                     <li>
                                         <a
                                             href="{{ $child['url'] ?? route($child['route']) }}"
-                                            class="block py-2 text-[13px] transition-colors duration-200 {{ $isChildActive ? 'text-lucille-accent' : 'text-[#b7b7b7]' }}"
+                                            class="block py-2 text-[13px] transition-colors duration-200 {{ $isChildActive ? 'text-lucille-accent' : 'text-[#b7b7b7]' }} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
                                             @if($isChildActive) aria-current="page" @endif
                                         >{{ $child['label'] }}</a>
                                     </li>
@@ -381,7 +391,7 @@
             </ul>
             
             <div class="mt-8 mb-24 flex flex-col gap-3 px-8">
-                <a href="{{ route('app.download') }}" target="_blank" rel="noopener noreferrer" class="group flex w-full items-center justify-center gap-2 rounded-full bg-lucille-accent px-4 py-2.5 text-[10px] font-display font-medium uppercase tracking-[.1em] text-white shadow-lg shadow-lucille-accent/20 transition-all duration-300 hover:bg-[#d42c24] hover:shadow-lucille-accent/40 active:scale-95">
+                <a href="{{ route('app.download') }}" target="_blank" rel="noopener noreferrer" class="group flex w-full items-center justify-center gap-2 rounded-full bg-lucille-accent px-4 py-2.5 text-[10px] font-display font-medium uppercase tracking-[.1em] text-white shadow-lg shadow-lucille-accent/20 transition-all duration-300 hover:bg-[#d42c24] hover:shadow-lucille-accent/40 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:-translate-y-0.5">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
@@ -389,17 +399,40 @@
                     </svg>
                     <span>Descargar App</span>
                 </a>
-                <a href="{{ route('talents.login') }}" class="flex w-full items-center justify-center rounded-full border border-white/20 bg-transparent px-4 py-2.5 text-[10px] font-display font-medium uppercase tracking-[.1em] text-white transition-all duration-300 hover:bg-white/5 active:scale-95">
+                <a href="{{ route('talents.login') }}" class="flex w-full items-center justify-center rounded-full border border-white/20 bg-transparent px-4 py-2.5 text-[10px] font-display font-medium uppercase tracking-[.1em] text-white transition-all duration-300 hover:bg-white/5 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                     Iniciar Sesión
                 </a>
             </div>
         </nav>
     </div>
 
-    <div x-cloak x-show="searchOpen" x-transition.opacity class="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-6">
-        <button type="button" class="absolute right-8 top-7 font-display text-3xl text-white" @click="searchOpen = false" aria-label="Close search">&times;</button>
+    <div 
+        x-cloak 
+        x-show="searchOpen" 
+        x-trap.noscroll.inert="searchOpen"
+        @keydown.escape.window="if (searchOpen) { searchOpen = false; $nextTick(() => $refs.searchTrigger?.focus()); }"
+        x-transition.opacity 
+        role="dialog"
+        aria-modal="true"
+        aria-label="Buscador en el sitio"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-6"
+    >
+        <button 
+            type="button" 
+            class="absolute right-8 top-7 font-display text-3xl text-white hover:text-lucille-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent rounded p-2" 
+            @click="searchOpen = false; $nextTick(() => $refs.searchTrigger?.focus())" 
+            aria-label="Cerrar buscador"
+        >&times;</button>
         <form method="GET" action="{{ route('search') }}" class="w-full max-w-3xl">
-            <input type="search" name="q" placeholder="{{ $ui['search_placeholder'] }}" class="w-full border-0 border-b border-white/40 bg-transparent px-0 py-5 font-display text-4xl uppercase tracking-[.04em] text-white placeholder:text-white/45 focus:border-lucille-accent focus:outline-none">
+            <label for="site-nav-search-input" class="sr-only">Buscar canciones, artistas, podcasts o noticias</label>
+            <input 
+                id="site-nav-search-input"
+                x-ref="siteSearchInput"
+                type="search" 
+                name="q" 
+                placeholder="{{ $ui['search_placeholder'] }}" 
+                class="w-full border-0 border-b border-white/40 bg-transparent px-0 py-5 font-display text-2xl sm:text-4xl uppercase tracking-[.04em] text-white placeholder:text-white/45 focus:border-lucille-accent focus:outline-none focus:ring-0"
+            >
         </form>
     </div>
 </header>

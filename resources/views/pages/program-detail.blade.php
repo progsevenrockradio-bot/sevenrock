@@ -1,12 +1,42 @@
 @php
     /** @var \Illuminate\Pagination\LengthAwarePaginator $episodes */
     /** @var array $program */
+    $programDesc = \Illuminate\Support\Str::limit(strip_tags($program['description'] ?? 'Programa de Seven Rock Radio'), 250);
+    $programCanonical = url()->current();
+    if (str_contains($programCanonical, '?')) {
+        $programCanonical = explode('?', $programCanonical)[0];
+    }
+
+    $programSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'RadioSeries',
+        'name' => $program['title'] ?? 'Programa',
+        'description' => $programDesc,
+        'url' => $programCanonical,
+    ];
+
+    if (!empty($program['cover'])) {
+        $programSchema['image'] = $program['cover'];
+    }
+
+    if (!empty($program['host'])) {
+        $programSchema['author'] = [
+            '@type' => 'Person',
+            'name' => $program['host'],
+        ];
+    }
 @endphp
 <x-layouts.site 
     title="Seven Rock Radio - {{ $program['title'] ?? 'Programa' }}"
     :og-image="$program['cover'] ?? null"
-    :description="\Illuminate\Support\Str::limit(strip_tags($program['description'] ?? 'Programa de Seven Rock Radio'), 150)"
+    :description="$programDesc"
+    :canonical="$programCanonical"
 >
+    @push('jsonld')
+    <script type="application/ld+json">
+    {!! json_encode($programSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
+    </script>
+    @endpush
     <x-sections.page-heading
         :title="$program['title'] ?? 'Programa'"
         :subtitle="$program['host'] ? 'Conduce: ' . $program['host'] : 'Programa de radio'"

@@ -83,6 +83,23 @@ class AppServiceProvider extends ServiceProvider
 
         RadioProgram::observe(RadioProgramObserver::class);
 
+        // Invalidación automática de caché del sitemap dinámico
+        $invalidateSitemap = static function (): void {
+            \App\Http\Controllers\SitemapController::invalidateCache();
+        };
+        \App\Models\Post::saved($invalidateSitemap);
+        \App\Models\Post::deleted($invalidateSitemap);
+        \App\Models\Event::saved($invalidateSitemap);
+        \App\Models\Event::deleted($invalidateSitemap);
+        \App\Models\RadioProgram::saved($invalidateSitemap);
+        \App\Models\RadioProgram::deleted($invalidateSitemap);
+        \App\Models\MasterProgram::saved($invalidateSitemap);
+        \App\Models\MasterProgram::deleted($invalidateSitemap);
+        \App\Models\Talent::saved($invalidateSitemap);
+        \App\Models\Talent::deleted($invalidateSitemap);
+        \App\Models\NewRelease::saved($invalidateSitemap);
+        \App\Models\NewRelease::deleted($invalidateSitemap);
+
         View::share('themeSettings', ThemeSetting::current());
         View::share('themeAppearance', ThemeAppearance::resolved());
         View::share('admin', ThemeAppearance::resolved()['admin_texts'] ?? []);

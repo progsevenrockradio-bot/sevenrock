@@ -344,7 +344,7 @@ class ThemeSetting extends Model
                 'upcoming_shows' => [
                     'title' => 'Próximos',
                     'accent' => 'Conciertos',
-                    'subtitle' => 'Fechas de gira 2026',
+                    'subtitle' => 'Fechas de conciertos',
                 ],
                 'new_album_release' => [
                     'title' => 'Nuevo',

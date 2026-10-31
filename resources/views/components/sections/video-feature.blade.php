@@ -58,7 +58,7 @@
                                 </div>
                             </div>
                             @if ($videos->count() > 1)
-                                <h4 class="mt-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 transition-colors text-center">{!! formatear_titulo_hover($video->title) !!}</h4>
+                                <h3 class="mt-4 font-display text-[15px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 transition-colors text-center">{!! formatear_titulo_hover($video->title) !!}</h3>
                             @endif
                         </a>
                     </div>

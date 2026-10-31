@@ -181,6 +181,89 @@ class Post extends Model
         return (bool) ($this->getAttribute('published_at') && $this->getAttribute('published_at') <= now());
     }
 
+    public function getCleanExcerptAttribute(): string
+    {
+        return self::sanitizeExcerpt($this->excerpt, $this->content);
+    }
+
+    public static function sanitizeExcerpt(?string $raw, string|array|null $fallback = null, int $limit = 160): string
+    {
+        $text = (string) ($raw ?? '');
+
+        $trimmed = trim($text);
+        if (str_starts_with($trimmed, '{') || str_starts_with($trimmed, '[')) {
+            $decoded = json_decode($trimmed, true);
+            if (is_array($decoded)) {
+                $text = data_get($decoded, 'rendered')
+                    ?? data_get($decoded, 'content')
+                    ?? data_get($decoded, 'text')
+                    ?? data_get($decoded, '0.value')
+                    ?? data_get($decoded, '0.content.html')
+                    ?? '';
+            }
+        }
+
+        if (trim((string) $text) === '' && ! empty($fallback)) {
+            if (is_array($fallback)) {
+                foreach ($fallback as $candidate) {
+                    $candStr = is_string($candidate)
+                        ? $candidate
+                        : (is_array($candidate) ? (data_get($candidate, 'value') ?? data_get($candidate, 'content.html') ?? data_get($candidate, 'content') ?? data_get($candidate, 'text') ?? '') : (string) $candidate);
+                    $decoded = html_entity_decode((string) $candStr, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    if (preg_match('/(?:<!doctype|xmlns:|urn:schemas|<head|<body|<td|<tr|<table)/i', $decoded)) {
+                        continue;
+                    }
+                    $plainCand = trim(strip_tags($decoded));
+                    if (strlen($plainCand) >= 15) {
+                        $text = $plainCand;
+                        break;
+                    }
+                }
+                if (trim((string) $text) === '') {
+                    $first = reset($fallback);
+                    $text = is_string($first) ? $first : (is_array($first) ? (data_get($first, 'value') ?? '') : (string) $first);
+                }
+            } else {
+                $trimmedFallback = trim((string) $fallback);
+                if (str_starts_with($trimmedFallback, '{') || str_starts_with($trimmedFallback, '[')) {
+                    $c = json_decode($trimmedFallback, true);
+                    if (is_array($c)) {
+                        $firstC = reset($c);
+                        if (is_string($firstC)) {
+                            $text = $firstC;
+                        } elseif (is_array($firstC)) {
+                            $text = data_get($firstC, 'value')
+                                ?? data_get($firstC, 'content.html')
+                                ?? data_get($firstC, 'content')
+                                ?? data_get($firstC, 'text')
+                                ?? '';
+                        } else {
+                            $text = (string) $firstC;
+                        }
+                    } else {
+                        $text = $fallback;
+                    }
+                } else {
+                    $text = $fallback;
+                }
+            }
+        }
+
+        $text = preg_replace('/<!--\s*\/?wp:[^>]*-->/i', ' ', (string) $text) ?? $text;
+        $text = html_entity_decode((string) $text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = strip_tags($text);
+
+        $text = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function ($m) {
+            return mb_chr((int) hexdec($m[1]), 'UTF-8');
+        }, $text) ?? $text;
+
+        $text = str_replace(['\r', '\n', '\t', '\/'], [' ', ' ', ' ', '/'], $text);
+        $clean = trim(preg_replace('/\s+/u', ' ', $text) ?? '');
+
+        return mb_strlen($clean) > $limit ? mb_substr($clean, 0, $limit - 3) . '...' : $clean;
+    }
+
     public function getUrlAttribute(): string
     {
         if (! $this->published_at || ! $this->slug) {

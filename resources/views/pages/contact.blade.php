@@ -11,6 +11,29 @@
             <div class="grid gap-12 lg:grid-cols-2">
                 <div class="md:pr-[15px]">
                     <h3 class="mb-10 mt-[30px] font-display text-[16px] font-light tracking-[.04em] text-[#dcdcdc]">{{ $contact['form_title'] }}</h3>
+
+                    @if (session('success'))
+                        <div class="mb-6 rounded-[8px] border border-green-500/20 bg-green-500/10 p-4 text-sm text-green-400">
+                            {{ session('success') }}
+                        </div>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                if (window.SevenRockAnalytics) {
+                                    window.SevenRockAnalytics.track('contact_success', {
+                                        form_name: 'contact_page',
+                                        subject_category: 'general'
+                                    });
+                                }
+                            });
+                        </script>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="mb-6 rounded-[8px] border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
                     <form method="POST" action="{{ route("contact.send") }}" class="space-y-6" x-data="{ subject: 'general', dropdownOpen: false, selectedLabel: 'Consulta general / Otro' }">
                         @csrf
                         <div class="hidden" style="display:none !important" aria-hidden="true">

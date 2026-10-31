@@ -1,8 +1,52 @@
+@php
+    $episodeTitle = $episode->live_title ?: (($master->nombre ?? 'Programa') . ' #' . ($episode->numero_episodio ?? '1'));
+    $episodeDesc = \Illuminate\Support\Str::limit(strip_tags($episode->editorial_summary ?: $episode->resena ?: 'Episodio exclusivo en Seven Rock Radio'), 250);
+    $episodeCanonical = route('public.podcasts.episode', [
+        'programSlug' => $master->publicSlug(),
+        'episodeNumber' => (int) $episode->numero_episodio,
+    ]);
+
+    $podcastEpisodeSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'PodcastEpisode',
+        'name' => $episodeTitle,
+        'episodeNumber' => (int) $episode->numero_episodio,
+        'description' => $episodeDesc,
+        'url' => $episodeCanonical,
+        'partOfSeries' => [
+            '@type' => 'PodcastSeries',
+            'name' => $master->nombre,
+            'url' => route('programs.detail', $master->archive_identifier ?: \Illuminate\Support\Str::slug($master->nombre)),
+        ],
+    ];
+
+    if (!empty($coverUrl)) {
+        $podcastEpisodeSchema['image'] = $coverUrl;
+    }
+
+    if (!empty($episode->created_at)) {
+        $podcastEpisodeSchema['datePublished'] = $episode->created_at->toIso8601String();
+    }
+
+    if (!empty($audioPlaybackUrl)) {
+        $podcastEpisodeSchema['associatedMedia'] = [
+            '@type' => 'MediaObject',
+            'contentUrl' => $audioPlaybackUrl,
+        ];
+    }
+@endphp
+
 <x-layouts.site 
     :title="'Seven Rock Radio · ' . ($master->nombre ?? 'Programa') . ' #' . ($episode->numero_episodio ?? '1') . ' — ' . ($episode->live_title ?? 'Episodio')"
     :og-image="$coverUrl"
-    :description="\Illuminate\Support\Str::limit(strip_tags($episode->editorial_summary ?: $episode->resena ?: 'Episodio exclusivo en Seven Rock Radio'), 150)"
+    :description="$episodeDesc"
+    :canonical="$episodeCanonical"
 >
+    @push('jsonld')
+    <script type="application/ld+json">
+    {!! json_encode($podcastEpisodeSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
+    </script>
+    @endpush
     <x-sections.page-heading
         :title="$master->nombre"
         :subtitle="sprintf('Episodio #%d · Conduce: %s', (int) $episode->numero_episodio, $episode->conductor ?: $master->conductor ?: 'Seven Rock Radio')"
@@ -55,7 +99,10 @@
                         @if (!empty($audioPlaybackUrl))
                             <div class="border border-[#2b2b2b] bg-[#0c0c0e] p-5 rounded">
                                 <p class="mb-3 text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Escuchar episodio</p>
-                                <audio controls class="w-full" preload="metadata">
+                                <audio controls class="w-full" preload="metadata"
+                                    onplay="if (window.SevenRockAnalytics) window.SevenRockAnalytics.track('podcast_play', { episode_id: '{{ $episode->id }}', program_slug: '{{ $master->publicSlug() }}' });"
+                                    onseeked="if (window.SevenRockAnalytics) window.SevenRockAnalytics.track('podcast_seek', { episode_id: '{{ $episode->id }}', seek_position_seconds: Math.round(this.currentTime) });"
+                                >
                                     <source src="{{ $audioPlaybackUrl }}" type="audio/mpeg">
                                     Tu navegador no soporta el reproductor de audio HTML5.
                                 </audio>

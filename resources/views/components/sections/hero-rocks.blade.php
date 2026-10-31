@@ -27,25 +27,60 @@
         total: {{ $totalSlideCount }},
         interval: null,
         delay: {{ (int) $interval }},
-        paused: false,
+        userPaused: false,
+        hovered: false,
+        focused: false,
+        reducedMotion: false,
         init() {
-            if (this.total < 2) return;
-            this.interval = setInterval(() => { if (!this.paused) this.next(); }, this.delay);
+            const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+            this.reducedMotion = mq.matches;
+            mq.addEventListener('change', (e) => {
+                this.reducedMotion = e.matches;
+                this.syncAutoPlay();
+            });
+            this.syncAutoPlay();
+        },
+        get isPlaying() {
+            return !this.userPaused && !this.reducedMotion && !this.hovered && !this.focused;
+        },
+        syncAutoPlay() {
+            if (this.interval) {
+                clearInterval(this.interval);
+                this.interval = null;
+            }
+            if (this.total >= 2 && this.isPlaying) {
+                this.interval = setInterval(() => {
+                    this.next();
+                }, this.delay);
+            }
         },
         next() {
             this.active = (this.active + 1) % this.total;
         },
         go(index) {
-            clearInterval(this.interval);
             this.active = index;
-            this.interval = setInterval(() => { if (!this.paused) this.next(); }, this.delay);
+            this.syncAutoPlay();
         },
-        pause() { this.paused = true; },
-        resume() { this.paused = false; },
+        togglePlayPause() {
+            this.userPaused = !this.userPaused;
+            this.syncAutoPlay();
+        },
+        onHover(state) {
+            this.hovered = state;
+            this.syncAutoPlay();
+        },
+        onFocus(state) {
+            this.focused = state;
+            this.syncAutoPlay();
+        },
     }"
     x-init="init"
-    @hero-pause.window="pause()"
-    @hero-resume.window="resume()"
+    @mouseenter="onHover(true)"
+    @mouseleave="onHover(false)"
+    @focusin="onFocus(true)"
+    @focusout="onFocus(false)"
+    @hero-pause.window="onHover(true)"
+    @hero-resume.window="onHover(false)"
     class="relative min-h-[340px] overflow-hidden sm:min-h-[70svh] md:min-h-[960px] xl:min-h-[868px] hero-rocks-section"
 >
     {{-- ═══════════ Manual Slides (imágenes estáticas) ═══════════ --}}
@@ -62,9 +97,14 @@
             :class="active === {{ $index }} ? 'z-20' : 'z-10'"
             class="absolute inset-0 hero-slide"
             style="background-image: url('{{ $slideImage }}');"
-            aria-hidden="{{ $index === 0 ? 'false' : 'true' }}"
+            :aria-hidden="(active !== {{ $index }}).toString()"
+            :inert="active !== {{ $index }}"
         >
             <img src="{{ $slideImage }}" alt="Slide {{ $index + 1 }}" class="hero-slide-img"
+                 width="1920" height="1080"
+                 loading="{{ $index === 0 ? 'eager' : 'lazy' }}"
+                 fetchpriority="{{ $index === 0 ? 'high' : 'low' }}"
+                 decoding="{{ $index === 0 ? 'sync' : 'async' }}"
                  onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ $fallbackImage }}'; this.parentElement.style.backgroundImage = 'url(\'{{ $fallbackImage }}\')'; }">
         </div>
     @endforeach
@@ -89,6 +129,8 @@
                 :class="active === {{ $slideIndex }} ? 'z-20' : 'z-10'"
                 class="absolute inset-0 program-grid-slide bg-[#1a1512]"
                 style="background-image: url('https://images.unsplash.com/photo-1501166222995-ff4133408a04?q=80&w=1920&auto=format&fit=crop'); background-size: cover; background-position: center;"
+                :aria-hidden="(active !== {{ $slideIndex }}).toString()"
+                :inert="active !== {{ $slideIndex }}"
             >
                 <div class="program-grid-noise"></div>
                 <div class="program-grid-vignette-left"></div>
@@ -155,7 +197,7 @@
                                         <p class="font-sans text-gray-300 text-xs mt-1 uppercase truncate">{{ $prog['host'] }}</p>
                                     @endif
                                     @if ($prog['schedule'])
-                                        <p class="font-sans text-[#c32720] text-[10px] mt-1 font-bold">{{ $prog['schedule'] }}</p>
+                                        <p class="font-sans text-[var(--lucille-accent-readable,#ff5b52)] text-[10px] mt-1 font-semibold tracking-wide">{{ $prog['schedule'] }}</p>
                                     @endif
                                 </div>
                             </div>
@@ -225,9 +267,25 @@
 
 
     @if ($totalSlideCount > 1)
-        <div class="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-3">
+        <div class="absolute bottom-8 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/10" role="region" aria-label="Controles del carrusel de portada">
+            <button type="button"
+                @click="togglePlayPause()"
+                :aria-label="isPlaying ? 'Pausar pase automático de diapositivas' : 'Reanudar pase automático de diapositivas'"
+                :aria-pressed="(!isPlaying).toString()"
+                class="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-white/70 hover:text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent">
+                <svg x-show="isPlaying" class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                <svg x-show="!isPlaying" class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
+                <span class="sr-only" x-text="isPlaying ? 'Pausar pase de diapositivas' : 'Reanudar pase de diapositivas'"></span>
+            </button>
+
             @for ($i = 0; $i < $totalSlideCount; $i++)
-                <button type="button" class="h-2.5 w-2.5 rounded-full border border-white/70 transition" :class="active === {{ $i }} ? 'bg-lucille-accent border-lucille-accent' : 'bg-transparent'" @click="go({{ $i }})" aria-label="Show slide {{ $i + 1 }}"></button>
+                <button type="button" 
+                    class="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center p-0 bg-transparent rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" 
+                    @click="go({{ $i }})" 
+                    :aria-current="active === {{ $i }} ? 'true' : 'false'"
+                    aria-label="Ir a la diapositiva {{ $i + 1 }} de {{ $totalSlideCount }}">
+                    <span class="h-2.5 w-2.5 rounded-full border border-white/70 transition pointer-events-none" :class="active === {{ $i }} ? 'bg-lucille-accent border-lucille-accent scale-125' : 'bg-transparent'"></span>
+                </button>
             @endfor
         </div>
     @endif

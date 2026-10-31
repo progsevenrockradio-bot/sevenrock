@@ -21,7 +21,9 @@
                     </div>
                 @endif
 
-                <form action="{{ route('talents.register.store') }}" method="POST" enctype="multipart/form-data" class="mt-8 space-y-6">
+                <form action="{{ route('talents.register.store') }}" method="POST" enctype="multipart/form-data" class="mt-8 space-y-6"
+                    @focusin.once="if (window.SevenRockAnalytics) window.SevenRockAnalytics.track('band_registration_started', { category: 'band' });"
+                >
                     @csrf
                     
                     {{-- Honeypot Spam Protection --}}

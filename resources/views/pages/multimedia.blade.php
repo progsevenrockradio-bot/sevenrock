@@ -30,6 +30,39 @@
         songSearch: '',
         currentlyPlayingUrl: '',
 
+        init() {
+            const validTabs = ['radio', 'podcasts', 'musica', 'videos', 'galeria'];
+            const syncFromHash = (e) => {
+                let h = '';
+                if (e && e.state && e.state.tab && validTabs.includes(e.state.tab)) {
+                    h = e.state.tab;
+                } else {
+                    h = (window.location.hash || '').replace('#', '').toLowerCase();
+                }
+                if (validTabs.includes(h)) {
+                    this.activeTab = h;
+                } else if (!h) {
+                    this.activeTab = 'radio';
+                }
+            };
+            syncFromHash();
+            // Ensure initial entry has state
+            if (!history.state || !history.state.tab) {
+                history.replaceState({ tab: this.activeTab }, '', window.location.href);
+            }
+            window.addEventListener('popstate', syncFromHash);
+            window.addEventListener('hashchange', syncFromHash);
+        },
+
+        switchTab(tabKey) {
+            if (this.activeTab === tabKey) return;
+            this.activeTab = tabKey;
+            const currentHash = (window.location.hash || '').replace('#', '').toLowerCase();
+            if (currentHash !== tabKey) {
+                history.pushState({ tab: tabKey }, '', '#' + tabKey);
+            }
+        },
+
         playTrack(track) {
             window.dispatchEvent(new CustomEvent('play-multimedia-track', { detail: track }));
         },
@@ -56,7 +89,7 @@
                 ['key'=>'galeria',  'icon'=>'📷', 'label'=>'Galería'],
             ] as $tab)
                 <button type="button"
-                    @click="activeTab = '{{ $tab['key'] }}'"
+                    @click="switchTab('{{ $tab['key'] }}')"
                     :class="activeTab === '{{ $tab['key'] }}' ? 'border-lucille-accent text-white bg-lucille-accent/10' : 'border-transparent text-[#666] hover:text-[#aaa] hover:border-[#333]'"
                     class="flex items-center gap-2 px-5 py-2.5 rounded-lg border font-display text-xs uppercase tracking-[.1em] transition-all duration-200 shrink-0"
                     id="tab-{{ $tab['key'] }}"
@@ -327,7 +360,7 @@
                         <span class="hidden group-hover/song:flex text-lucille-accent w-6 justify-center shrink-0"
                               x-show="currentlyPlayingUrl !== '{{ addslashes($audioUrl) }}'">▶</span>
                         <div class="w-10 h-10 rounded overflow-hidden border border-[#2a2a2a] shrink-0">
-                            <img src="{{ $coverUrl }}" alt="{{ $song->title }}" class="w-full h-full object-cover" loading="lazy">
+                            <img src="{{ $coverUrl }}" alt="{{ $song->title }}" class="w-full h-full object-cover" width="40" height="40" loading="lazy" decoding="async">
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="font-display text-[13px] text-[#dcdcdc] truncate group-hover/song:text-lucille-accent transition-colors"
@@ -337,6 +370,12 @@
 
                     </div>
                 @endforeach
+
+                <div x-show="songSearch !== '' && !$el.parentElement.querySelector('.group\\/song:not([style*=\'display: none\'])')"
+                     x-cloak
+                     class="py-16 text-center text-sm text-[#7b7b7b]">
+                    No se encontraron canciones que coincidan con «<span x-text="songSearch" class="text-white"></span>».
+                </div>
             </div>
         @endif
     </div>
@@ -402,7 +441,7 @@
                 </p>
                 <a href="{{ route('talents.login') }}" class="mt-6 inline-flex items-center gap-2 border border-lucille-accent/30 px-5 py-2.5 font-display text-[11px] uppercase tracking-[.15em] text-lucille-accent hover:bg-lucille-accent/10 transition-colors duration-200">
                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                    ¡Sóy un Talento &mdash; Acceder!
+                    ¡Soy un Talento &mdash; Acceder!
                 </a>
             </div>
         @else
@@ -410,7 +449,7 @@
                 @foreach ($galleryImages as $idx => $image)
                     @php $talent = data_get($image, 'talent'); @endphp
                     <a href="{{ data_get($image,'url') }}" class="lucille-gallery-tile group relative mb-[5px] block overflow-hidden bg-[#1d1d1d]" @click.prevent="showImage({{ $idx }})">
-                        <img src="{{ data_get($image,'url') }}" alt="{{ data_get($image,'title', data_get($image,'filename','')) }}" loading="lazy" class="w-full opacity-50 transition duration-500 ease-out group-hover:scale-[1.03] group-hover:opacity-100">
+                        <img src="{{ data_get($image,'url') }}" alt="{{ data_get($image,'title', data_get($image,'filename','')) }}" loading="lazy" decoding="async" style="aspect-ratio: 4 / 3;" class="w-full opacity-50 transition duration-500 ease-out group-hover:scale-[1.03] group-hover:opacity-100">
                         <span class="absolute inset-0 bg-[rgba(7,16,33,.4)] opacity-0 transition duration-300 group-hover:opacity-100"></span>
                         <span class="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-xs font-bold uppercase tracking-[5px] text-white opacity-0 transition duration-300 group-hover:opacity-100">
                             {{ data_get($image,'title',data_get($image,'filename','')) }}@if($talent) — {{ data_get($talent,'band_name') }}@endif

@@ -13,13 +13,50 @@
     $pinterestShareUrl = 'https://pinterest.com/pin/create/button/?url=' . rawurlencode($shareUrl)
         . ($poster !== '' ? '&media=' . rawurlencode($poster) : '')
         . '&description=' . rawurlencode($shareTitle);
+    $eventDesc = \Illuminate\Support\Str::limit(strip_tags(implode(' ', $event['content'] ?? [])), 250);
+    $normalizedPoster = \App\Support\PublicMediaUrl::normalizePublicUrl($poster);
+
+    $eventSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Event',
+        'name' => $shareTitle,
+        'description' => $eventDesc ?: $shareTitle,
+        'eventStatus' => !empty($event['is_cancelled']) ? 'https://schema.org/EventCancelled' : 'https://schema.org/EventScheduled',
+        'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode',
+        'location' => [
+            '@type' => 'Place',
+            'name' => $event['venue'] ?: ($event['location'] ?: 'Recinto del evento'),
+            'address' => $event['location'] ?: 'Colombia',
+        ],
+    ];
+
+    if (!empty($event['starts_at_iso'])) {
+        $eventSchema['startDate'] = $event['starts_at_iso'];
+    }
+
+    if (!empty($normalizedPoster)) {
+        $eventSchema['image'] = [$normalizedPoster];
+    }
+
+    if (!empty($ticketUrl) && $ticketUrl !== '#') {
+        $eventSchema['offers'] = [
+            '@type' => 'Offer',
+            'url' => $ticketUrl,
+            'availability' => !empty($event['is_cancelled']) ? 'https://schema.org/Discontinued' : 'https://schema.org/InStock',
+        ];
+    }
 @endphp
 
 <x-layouts.site 
     title="Seven Rock Radio - {{ $event['title'] }}"
-    :og-image="\App\Support\PublicMediaUrl::normalizePublicUrl($poster)"
-    :description="\Illuminate\Support\Str::limit(strip_tags(implode(' ', $event['content'] ?? [])), 150)"
+    :og-image="$normalizedPoster"
+    :description="$eventDesc"
 >
+    @push('jsonld')
+    <script type="application/ld+json">
+    {!! json_encode($eventSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
+    </script>
+    @endpush
     <section class="lucille-event-single-shell">
         <div class="mx-auto max-w-[1200px] px-6 pt-6">
             <div class="relative overflow-hidden border border-[#2b2b2b] bg-[rgba(16,16,18,.62)] px-6 py-8 text-center md:px-10 md:py-10">
@@ -35,7 +72,7 @@
                 @endif
 
                 <h1 class="font-display text-4xl uppercase tracking-[.12em] md:text-[4.35rem] {{ !empty($event['is_cancelled']) ? 'text-[#7b7b7b] line-through' : 'text-[#dcdcdc]' }}">{{ $event['title'] }}</h1>
-                <p class="mt-3 text-[11px] uppercase tracking-[.36em] text-[#7b7b7b]">Upcoming shows 2026</p>
+                <p class="mt-3 text-[11px] uppercase tracking-[.36em] text-[#7b7b7b]">Próximos conciertos</p>
                 <div class="mt-5 flex flex-wrap justify-center gap-3 text-[12px] uppercase tracking-[.18em] text-[#dcdcdc]">
                     <span class="border border-[#2b2b2b] px-4 py-2">{{ $event['date'] }}</span>
                     <span class="border border-[#2b2b2b] px-4 py-2">{{ $event['time'] }}</span>
@@ -71,10 +108,10 @@
 
                     <div class="mt-7 flex flex-wrap gap-2">
                         @if ($ticketUrl && $ticketUrl !== '#')
-                            <a href="{{ $ticketUrl }}" target="_blank" rel="noreferrer" class="lucille-button">{{ $ticketLabel }}</a>
+                            <a href="{{ $ticketUrl }}" target="_blank" rel="noreferrer" class="lucille-button">{{ strcasecmp($ticketLabel, 'Tickets') === 0 ? 'Comprar entradas' : $ticketLabel }}</a>
                         @endif
                         @if ($facebookUrl)
-                            <a href="{{ $facebookUrl }}" target="_blank" rel="noreferrer" class="lucille-button">Check event on Facebook</a>
+                            <a href="{{ $facebookUrl }}" target="_blank" rel="noreferrer" class="lucille-button">Ver evento en Facebook</a>
                         @endif
                     </div>
 
@@ -85,7 +122,7 @@
                     </div>
 
                     <div class="mt-9 flex items-center gap-4 text-[#757575]">
-                        <span class="font-display text-sm uppercase tracking-[.08em] text-[#dcdcdc]">Share:</span>
+                        <span class="font-display text-sm uppercase tracking-[.08em] text-[#dcdcdc]">Compartir:</span>
                         <a href="{{ $twitterShareUrl }}" target="_blank" rel="noopener noreferrer" class="transition duration-300 hover:text-lucille-accent">Twitter</a>
                         <a href="{{ $facebookShareUrl }}" target="_blank" rel="noopener noreferrer" class="transition duration-300 hover:text-lucille-accent">Facebook</a>
                         <a href="{{ $pinterestShareUrl }}" target="_blank" rel="noopener noreferrer" class="transition duration-300 hover:text-lucille-accent">Pinterest</a>

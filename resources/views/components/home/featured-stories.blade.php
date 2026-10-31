@@ -38,7 +38,7 @@
                 </div>
                 <div class="min-w-0 flex-1 px-5 py-5">
                     <div class="text-xs uppercase tracking-[.22em] text-[#7b7b7b]">{{ $story['type'] }}</div>
-                    <h4 class="mt-2 font-display text-[24px] uppercase leading-none tracking-[.12em] text-[#dcdcdc] transition group-hover:text-lucille-accent">{!! formatear_titulo($story['title']) !!}</h4>
+                    <h3 class="mt-2 font-display text-[24px] uppercase leading-none tracking-[.12em] text-[#dcdcdc] transition group-hover:text-lucille-accent">{!! formatear_titulo($story['title']) !!}</h3>
                     <p class="mt-2 text-sm text-[#7b7b7b]">{{ $story['location'] }}</p>
                     <div class="mt-4 flex flex-wrap gap-3 text-xs uppercase tracking-[.18em] text-[#bdbdbd]">
                         <span>{{ $story['signal'] }}</span>

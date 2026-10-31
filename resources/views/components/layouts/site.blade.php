@@ -136,22 +136,22 @@
         });
     }
     
-    $finalCanonical = $canonical ?? (request()->has('v') ? request()->fullUrl() : url()->current());
-    if ($finalCanonical) {
-        $finalCanonical = \App\Support\PublicMediaUrl::normalize($finalCanonical) ?? $finalCanonical;
+    // Strip query parameters and version tokens from canonical to guarantee pure canonical URLs
+    $rawCanonical = $canonical ?? url()->current();
+    if (is_string($rawCanonical) && str_contains($rawCanonical, '?')) {
+        $rawCanonical = explode('?', $rawCanonical)[0];
     }
+    $finalCanonical = \App\Support\PublicMediaUrl::normalize($rawCanonical) ?? $rawCanonical;
 @endphp
 
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" style="scrollbar-gutter: stable;" data-theme="pinion-dark" data-tune="modern">
 <head>
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-5NCG6PN');</script>
-    <!-- End Google Tag Manager -->
+    <!-- DataLayer inicializado (Carga externa de GTM deshabilitada preventivamente hasta auditar contenedor) -->
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        window.SR_EXTERNAL_ANALYTICS_ENABLED = false;
+    </script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -199,8 +199,9 @@
     @stack('jsonld')
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ $logoUrl }}">
-    <link rel="apple-touch-icon" href="{{ $logoUrl }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="apple-touch-icon" href="{{ asset('assets/lucille/logo.png') }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -213,6 +214,7 @@
     <style>
         :root {
             --lucille-accent: {{ $theme['visual']['accent_color'] }};
+            --lucille-accent-readable: {{ $theme['visual']['accent_readable_color'] ?? '#ff5b52' }};
             --lucille-nav: {{ $theme['visual']['nav_color'] }};
             --lucille-surface: {{ $theme['visual']['surface_color'] }};
             --lucille-body: {{ $theme['visual']['body_color'] }};
@@ -227,15 +229,16 @@
     @stack('styles')
 </head>
 <body class="antialiased">
-    <!-- Google Tag Manager (noscript) -->
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5NCG6PN"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-    <!-- End Google Tag Manager (noscript) -->
+    {{-- Enlace accesible para saltar al contenido principal --}}
+    <a href="#site-main" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-5 focus:py-2.5 focus:bg-[#c32720] focus:text-white focus:font-display focus:text-xs focus:uppercase focus:tracking-[0.15em] focus:rounded-sm focus:shadow-[0_4px_25px_rgba(0,0,0,0.9)] focus:outline-none focus:ring-2 focus:ring-white">
+        Saltar al contenido
+    </a>
+
     <div class="lucille-fixed-bg" aria-hidden="true"></div>
 
     <x-navigation.rocks-menu :theme="$theme" />
 
-    <main id="site-main" class="flex min-h-screen flex-col">
+    <main id="site-main" tabindex="-1" class="flex min-h-screen flex-col focus:outline-none">
         <div id="site-content" class="flex-1">
             {{ $slot }}
         </div>
@@ -387,16 +390,14 @@
             </div>
             {{-- Menú Legal en el Footer --}}
             <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-display tracking-[0.1em] text-[#9aa7b1] mt-1">
-                <a href="{{ route('copyright-policy') }}" class="transition hover:text-lucille-accent">Términos y copyright</a>
-                <span class="text-white/10 hidden sm:inline">|</span>
-                <a href="{{ route('privacy-policy') }}" class="transition hover:text-lucille-accent">Política de privacidad</a>
-                <span class="text-white/10 hidden sm:inline">|</span>
-                <button type="button" onclick="openCookieSettings()" class="transition hover:text-lucille-accent focus:outline-none">Preferencias de cookies</button>
-                <span class="text-white/10 hidden sm:inline">|</span>
-                <button type="button" onclick="document.getElementById('affiliate-modal').style.display = 'flex'" class="transition hover:text-lucille-accent focus:outline-none">Patrocinador: RadioBoss</button>
+                <a href="{{ route('copyright-policy') }}" class="transition hover:text-lucille-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent rounded px-1">Términos y copyright</a>
+                <span class="text-white/10 hidden sm:inline" aria-hidden="true">|</span>
+                <a href="{{ route('privacy-policy') }}" class="transition hover:text-lucille-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent rounded px-1">Política de privacidad</a>
+                <span class="text-white/10 hidden sm:inline" aria-hidden="true">|</span>
+                <button type="button" onclick="openCookieSettings()" class="transition hover:text-lucille-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent rounded px-1">Preferencias de cookies</button>
+                <span class="text-white/10 hidden sm:inline" aria-hidden="true">|</span>
+                <button type="button" onclick="openAffiliateModal(this)" class="transition hover:text-lucille-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent rounded px-1">Patrocinador: RadioBoss</button>
             </div>
-            
-            <x-home.affiliate-modal />
             
             {{-- Texto de Copyright Detallado --}}
             <div class="text-[11px] max-w-[850px] leading-relaxed text-[#5c5c5c] mt-2 select-none">
@@ -576,29 +577,20 @@
         }
 
         function applyCookiePreferences(prefs) {
-            console.log('Cookie preferences applied:', prefs);
+            if (window.SevenRockAnalytics && typeof window.SevenRockAnalytics.setConsent === 'function') {
+                window.SevenRockAnalytics.setConsent(prefs);
+            } else {
+                if (typeof window.gtag === 'function') {
+                    window.gtag('consent', 'update', {
+                        'analytics_storage': prefs.analytics ? 'granted' : 'denied',
+                        'functionality_storage': prefs.personalization ? 'granted' : 'denied'
+                    });
+                }
+            }
         }
     </script>
 
-    <!-- Google Analytics (Condicionado) -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const consent = localStorage.getItem('sevenrock_cookie_consent');
-            if (consent) {
-                const prefs = JSON.parse(consent);
-                if (prefs.analytics) {
-                    const s = document.createElement('script');
-                    s.async = true;
-                    s.src = 'https://www.googletagmanager.com/gtag/js?id={{ config("services.google.analytics_id", env("GOOGLE_ANALYTICS_ID")) }}';
-                    document.head.appendChild(s);
-                    window.dataLayer = window.dataLayer || [];
-                    function gtag(){dataLayer.push(arguments);}
-                    gtag('js', new Date());
-                    gtag('config', '{{ config("services.google.analytics_id", env("GOOGLE_ANALYTICS_ID")) }}');
-                }
-            }
-        });
-    </script>
+    <x-home.affiliate-modal />
 
     @stack('modals')
     @stack('scripts')

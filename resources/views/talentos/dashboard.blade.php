@@ -4,6 +4,16 @@
             <div class="mb-6 border border-[#1e4d2b] bg-[rgba(16,64,30,.2)] px-4 py-3 text-sm text-[#b8e6c3]">
                 {{ session('status') }}
             </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    if (window.SevenRockAnalytics) {
+                        window.SevenRockAnalytics.track('band_registration_completed', {
+                            category: 'band',
+                            plan: '{{ $talent->plan ?? "free" }}'
+                        });
+                    }
+                });
+            </script>
         @endif
 
         <div class="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 border border-white/10 bg-[#10161b] p-4 sm:p-8">

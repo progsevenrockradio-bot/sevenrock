@@ -276,6 +276,10 @@ export function registerRadioPlayer(Alpine) {
             this.boundHotkeys = (event) => this.handleHotkeys(event);
             window.addEventListener('keydown', this.boundHotkeys);
 
+            // Control de visibilidad de pestaña para optimizar consumo y sondeos en segundo plano
+            this.boundVisibilityChange = () => this.handleVisibilityChange();
+            document.addEventListener('visibilitychange', this.boundVisibilityChange);
+
             // Sincronización multi-ventana (Popup y Dock) mediante BroadcastChannel y StorageEvent
             this.syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('sevenrock_player_sync') : null;
             if (this.syncChannel) {
@@ -325,6 +329,9 @@ export function registerRadioPlayer(Alpine) {
             if (this.boundHotkeys) {
                 window.removeEventListener('keydown', this.boundHotkeys);
             }
+            if (this.boundVisibilityChange) {
+                document.removeEventListener('visibilitychange', this.boundVisibilityChange);
+            }
             if (this.syncChannel) {
                 this.syncChannel.close();
             }
@@ -351,28 +358,58 @@ export function registerRadioPlayer(Alpine) {
             }
         },
 
+        handleVisibilityChange() {
+            if (document.hidden) {
+                // En segundo plano: si no reproduce, pausa sondeos; si reproduce, extiende intervalo a 30s
+                if (!this.playing) {
+                    if (this.pollHandle) {
+                        clearTimeout(this.pollHandle);
+                        this.pollHandle = null;
+                    }
+                } else {
+                    this.adjustPollingInterval();
+                }
+            } else {
+                // Al volver a primer plano: sincroniza de inmediato y restablece cadencia activa
+                this.statusFailureCount = 0;
+                void this.refreshStatus(true);
+                this.adjustPollingInterval();
+            }
+        },
+
         startPolling() {
             if (this.pollHandle) {
                 clearTimeout(this.pollHandle);
-                clearInterval(this.pollHandle);
             }
             const run = async () => {
                 await this.refreshStatus(true);
-                const interval = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
-                this.pollHandle = setTimeout(run, interval);
+                let baseInterval = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
+                if (document.hidden) {
+                    baseInterval = this.playing ? 30000 : 60000;
+                }
+                const backoff = (this.statusFailureCount && this.statusFailureCount > 0)
+                    ? Math.min(60000, baseInterval * Math.pow(1.5, Math.min(4, this.statusFailureCount)))
+                    : baseInterval;
+                this.pollHandle = setTimeout(run, backoff);
             };
-            this.pollHandle = setTimeout(run, Math.max(3, this.pollInterval) * 1000);
+            const initialDelay = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
+            this.pollHandle = setTimeout(run, initialDelay);
         },
 
         adjustPollingInterval() {
             if (this.pollHandle) {
                 clearTimeout(this.pollHandle);
-                clearInterval(this.pollHandle);
             }
             const run = async () => {
                 await this.refreshStatus(true);
-                const interval = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
-                this.pollHandle = setTimeout(run, interval);
+                let baseInterval = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
+                if (document.hidden) {
+                    baseInterval = this.playing ? 30000 : 60000;
+                }
+                const backoff = (this.statusFailureCount && this.statusFailureCount > 0)
+                    ? Math.min(60000, baseInterval * Math.pow(1.5, Math.min(4, this.statusFailureCount)))
+                    : baseInterval;
+                this.pollHandle = setTimeout(run, backoff);
             };
             const initialDelay = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
             this.pollHandle = setTimeout(run, initialDelay);
@@ -500,6 +537,18 @@ export function registerRadioPlayer(Alpine) {
                     this.updateMediaSessionPlaybackState(true);
                 });
 
+                audio.addEventListener('playing', () => {
+                    this.loading = false;
+                    const timeToStart = this._listenClickTimestamp ? Math.round(performance.now() - this._listenClickTimestamp) : 0;
+                    this._listenClickTimestamp = null;
+                    if (typeof window !== 'undefined' && window.SevenRockAnalytics) {
+                        window.SevenRockAnalytics.track('playback_started', {
+                            stream_type: (this.track && !this.track.is_live) ? 'on_demand' : 'live',
+                            time_to_start_ms: timeToStart,
+                        });
+                    }
+                });
+
                 audio.addEventListener('pause', () => {
                     this.playing = false;
                     this.updateDocumentTitle();
@@ -529,6 +578,12 @@ export function registerRadioPlayer(Alpine) {
                 });
 
                 audio.addEventListener('error', () => {
+                    if (typeof window !== 'undefined' && window.SevenRockAnalytics) {
+                        window.SevenRockAnalytics.track('playback_error', {
+                            stream_type: (this.track && !this.track.is_live) ? 'on_demand' : 'live',
+                            error_code: audio.error ? audio.error.code : 'stream_error',
+                        });
+                    }
                     if (this.currentStreamIndex + 1 < this.streamCandidates.length) {
                         this.currentStreamIndex += 1;
                         this.ensureAudioSource();
@@ -613,6 +668,14 @@ export function registerRadioPlayer(Alpine) {
                 audio.pause();
                 this.toastMessage('Reproductor en pausa');
                 return;
+            }
+
+            this._listenClickTimestamp = performance.now();
+            if (typeof window !== 'undefined' && window.SevenRockAnalytics) {
+                window.SevenRockAnalytics.track('listen_click', {
+                    source: this.mode || 'dock',
+                    stream_type: (this.track && !this.track.is_live) ? 'on_demand' : 'live',
+                });
             }
 
             // Al reanudar en directo: conectar al borde en vivo y purgar buffer congelado
@@ -1223,6 +1286,8 @@ export function registerRadioPlayer(Alpine) {
         },
 
         watchNowPlayingWidget() {
+            let retries = 0;
+            const maxRetries = 10;
             const bind = () => {
                 const root = document.getElementById(this.widgetIds.root);
                 const cover = document.getElementById(this.widgetIds.cover);
@@ -1234,7 +1299,11 @@ export function registerRadioPlayer(Alpine) {
                         clearTimeout(this.widgetRetryHandle);
                     }
 
-                    this.widgetRetryHandle = setTimeout(bind, 500);
+                    if (++retries <= maxRetries) {
+                        this.widgetRetryHandle = setTimeout(bind, 500);
+                    } else {
+                        this.widgetRetryHandle = null;
+                    }
                     return;
                 }
 
@@ -1540,7 +1609,9 @@ export function registerRadioPlayer(Alpine) {
                 this.applyStatus(payload.data, silent, this.resolveWidgetTrack());
                 this.currentStreamIndex = 0;
                 this.loading = false;
+                this.statusFailureCount = 0;
             } catch (error) {
+                this.statusFailureCount = Math.min(6, (this.statusFailureCount || 0) + 1);
                 if (!silent) {
                     this.toastMessage('No se pudo actualizar el reproductor');
                 }

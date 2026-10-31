@@ -20,12 +20,47 @@
             $shareTitle = $talent->band_name . ' (' . $agency->name . ')';
         }
     }
+
+    $profileCanonical = route('talents.show', ['bandName' => $talent->band_name]);
+    $musicGroupSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'MusicGroup',
+        'name' => $talent->band_name,
+        'url' => $profileCanonical,
+    ];
+
+    if (!empty($bestImage)) {
+        $musicGroupSchema['image'] = $bestImage;
+    }
+
+    if (!empty($talent->bio)) {
+        $musicGroupSchema['description'] = \Illuminate\Support\Str::limit(strip_tags($talent->bio), 250);
+    }
+
+    if (!empty($talent->country)) {
+        $musicGroupSchema['location'] = [
+            '@type' => 'Place',
+            'name' => $talent->country,
+        ];
+    }
+
+    if (!empty($talent->genre)) {
+        $musicGroupSchema['genre'] = $talent->genre;
+    }
 @endphp
 
-<x-layouts.site :title="$shareTitle"
+<x-layouts.site 
+    :title="'Seven Rock Radio - ' . $shareTitle"
     :description="$shareDesc"
+    :canonical="$profileCanonical"
     :og-image="route('talents.og-image', \Illuminate\Support\Str::slug($talent->band_name))"
-    :twitter-card="'summary_large_image'">
+    :twitter-card="'summary_large_image'"
+>
+    @push('jsonld')
+    <script type="application/ld+json">
+    {!! json_encode($musicGroupSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
+    </script>
+    @endpush
     
     @php
         $planKey = strtolower((string) ($talent->plan ?? 'free'));
@@ -43,7 +78,7 @@
         <div class="relative overflow-hidden rounded-[20px] bg-[#070a0d] border border-white/10 p-8 md:p-12 text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
             <!-- Background Banner -->
             <div class="absolute inset-0 z-0 opacity-40 mix-blend-luminosity">
-                <img src="{{ \App\Models\ThemeSetting::current()->talents_banner_url ?? asset('assets/lucille/dark-background.jpg') }}" alt="Banner" class="w-full h-full object-cover">
+                <img src="{{ \App\Models\ThemeSetting::current()->talents_banner_url ?? asset('assets/lucille/dark-background.jpg') }}" alt="Banner" class="w-full h-full object-cover" width="1280" height="400" loading="eager" fetchpriority="high" decoding="async">
             </div>
             <!-- Overlay Gradient for Readability -->
             <div class="absolute inset-0 z-0 bg-gradient-to-t from-[#10151a] via-[#10151a]/60 to-transparent"></div>
@@ -53,7 +88,7 @@
                 <div class="relative group">
                     <div class="absolute inset-0 rounded-full blur-[15px] opacity-60 bg-[var(--lucille-accent)] group-hover:opacity-85 transition-opacity duration-300"></div>
                     <div class="relative h-[160px] w-[160px] overflow-hidden rounded-full border-4 border-white/15 hover:border-[var(--lucille-accent)] transition-colors duration-300 shadow-2xl">
-                        <img src="{{ $bestImage ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" width="160" height="160">
+                        <img src="{{ $bestImage ?? asset('assets/lucille/beatles_t_shirt.jpeg') }}" alt="{{ $talent->band_name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="eager" fetchpriority="high" decoding="async" width="160" height="160">
                     </div>
                 </div>
                 <h1 class="font-display text-4xl md:text-6xl uppercase tracking-[.18em] mt-6 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] bg-clip-text text-transparent" style="background-image: linear-gradient(rgba(255,255,255,0.75), rgba(200,200,200,0.65)), url('{{ asset('assets/lucille/rock-wall.jpg') }}'); background-size: cover; background-position: center; text-shadow: 0 10px 30px rgba(0,0,0,0.5);">{{ $talent->band_name }}</h1>
@@ -212,7 +247,7 @@
                         <div class="mt-6 grid gap-6 md:grid-cols-2">
                             @foreach ($otherMedia as $item)
                                 <article class="overflow-hidden rounded-[12px] bg-white/[0.02] border border-white/5 p-4 hover:border-white/15 hover:bg-white/[0.04] transition-all duration-300 group" data-type="{{ $item->type }}">
-                                    @if ($item->is_exclusive && !Auth::guard('web')->check() && !Auth::guard('talent')->check())
+                                    @if (!empty($item->is_exclusive) && !Auth::guard('web')->check() && !Auth::guard('talent')->check())
                                         <div class="p-4 bg-black/40 rounded-[8px] text-center flex flex-col justify-between items-center h-full min-h-[140px]">
                                             <div>
                                                 <div class="h-9 w-9 mx-auto rounded-full bg-[var(--lucille-accent)]/10 border border-[var(--lucille-accent)]/20 text-[var(--lucille-accent)] flex items-center justify-center text-base">
@@ -349,22 +384,32 @@
                         <!-- Playlist -->
                         <div class="space-y-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                             @foreach ($audioFiles as $index => $item)
-                                <button type="button" @click="playTrack({{ $index }}, '{{ $item->url }}', '{{ addslashes($item->title ?: $item->filename) }}')" 
-                                    class="w-full text-left flex items-center justify-between p-3 rounded-[8px] border transition-all duration-200 group"
-                                    :class="currentIndex === {{ $index }} ? 'border-[var(--lucille-accent)]/50 bg-[var(--lucille-accent)]/10' : 'border-transparent hover:bg-white/5'">
-                                    <div class="flex items-start gap-3 flex-1 min-w-0 pr-2">
-                                        <span class="text-xs font-mono shrink-0 mt-0.5" :class="currentIndex === {{ $index }} ? 'text-[var(--lucille-accent)]' : 'text-gray-500'">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</span>
-                                        <span class="text-sm line-clamp-2" :class="currentIndex === {{ $index }} ? 'text-white font-semibold' : 'text-gray-300 group-hover:text-white'">{{ $item->title ?: $item->filename }}</span>
-                                    </div>
-                                    <template x-if="currentIndex === {{ $index }} && playing">
-                                        <!-- Animated bars -->
-                                        <div class="flex items-end gap-[2px] h-4 shrink-0 ml-2">
-                                            <div class="w-1 h-2 bg-[var(--lucille-accent)] animate-pulse"></div>
-                                            <div class="w-1 h-4 bg-[var(--lucille-accent)] animate-pulse" style="animation-delay: 150ms"></div>
-                                            <div class="w-1 h-3 bg-[var(--lucille-accent)] animate-pulse" style="animation-delay: 300ms"></div>
+                                @if (!empty($item->is_exclusive) && !Auth::guard('web')->check() && !Auth::guard('talent')->check())
+                                    <div class="w-full text-left flex items-center justify-between p-3 rounded-[8px] border border-white/5 bg-black/40 text-gray-400">
+                                        <div class="flex items-center gap-2">
+                                            <span>🔒</span>
+                                            <span class="text-xs font-semibold text-[#8a8a8a]">Exclusivo para Afiliados</span>
                                         </div>
-                                    </template>
-                                </button>
+                                        <a href="{{ route('afiliados.register') }}" class="text-[9px] uppercase tracking-wider text-[var(--lucille-accent)] hover:underline">Acceder</a>
+                                    </div>
+                                @else
+                                    <button type="button" @click="playTrack({{ $index }}, '{{ $item->url }}', '{{ addslashes($item->title ?: $item->filename) }}')" 
+                                        class="w-full text-left flex items-center justify-between p-3 rounded-[8px] border transition-all duration-200 group"
+                                        :class="currentIndex === {{ $index }} ? 'border-[var(--lucille-accent)]/50 bg-[var(--lucille-accent)]/10' : 'border-transparent hover:bg-white/5'">
+                                        <div class="flex items-start gap-3 flex-1 min-w-0 pr-2">
+                                            <span class="text-xs font-mono shrink-0 mt-0.5" :class="currentIndex === {{ $index }} ? 'text-[var(--lucille-accent)]' : 'text-gray-500'">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</span>
+                                            <span class="text-sm line-clamp-2" :class="currentIndex === {{ $index }} ? 'text-white font-semibold' : 'text-gray-300 group-hover:text-white'">{{ $item->title ?: $item->filename }}</span>
+                                        </div>
+                                        <template x-if="currentIndex === {{ $index }} && playing">
+                                            <!-- Animated bars -->
+                                            <div class="flex items-end gap-[2px] h-4 shrink-0 ml-2">
+                                                <div class="w-1 h-2 bg-[var(--lucille-accent)] animate-pulse"></div>
+                                                <div class="w-1 h-4 bg-[var(--lucille-accent)] animate-pulse" style="animation-delay: 150ms"></div>
+                                                <div class="w-1 h-3 bg-[var(--lucille-accent)] animate-pulse" style="animation-delay: 300ms"></div>
+                                            </div>
+                                        </template>
+                                    </button>
+                                @endif
                             @endforeach
                         </div>
                         <!-- Audio element (hidden) -->
@@ -589,6 +634,9 @@
                     currentTrackTitle: 'Selecciona una pista',
                     tracks: [
                         @foreach ($audioFiles as $item)
+                            @if (!empty($item->is_exclusive) && !Auth::guard('web')->check() && !Auth::guard('talent')->check())
+                                @continue
+                            @endif
                             { url: '{{ $item->url }}', title: '{{ addslashes($item->title ?: $item->filename) }}' },
                         @endforeach
                     ],

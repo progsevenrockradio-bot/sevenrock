@@ -20,7 +20,7 @@
                 <div class="mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-[var(--lucille-accent)] via-[var(--lucille-accent)]/50 to-transparent"></div>
 
                 <p class="mt-4 max-w-2xl text-sm md:text-base text-gray-300 font-sans leading-relaxed">
-                    El punto de encuentro oficial entre bandas, oyentes y locutores de Seven Rock Radio.
+                    El punto de encuentro oficial entre bandas, oyentes y locutores de Seven Rock Radio para compartir mensajes, saludos y dedicatorias en vivo. ¿Buscas el catálogo de bandas y talentos? Visita el <a href="{{ route('talents.explore') }}" class="text-[var(--lucille-accent-readable,#ff5b52)] hover:underline font-semibold">Muro del Rock</a>.
                 </p>
             </div>
 

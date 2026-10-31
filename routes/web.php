@@ -118,6 +118,7 @@ Route::get("/programas/track-play", [SiteController::class, "trackPlay"])->name(
 Route::get("/programas/{identifier}", [SiteController::class, "programDetail"])->name("programs.detail");
 
 Route::get("/multimedia", [SiteController::class, "multimedia"])->name("multimedia");
+Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'xml'])->name('sitemap');
 
 // ── Ficha pública de episodio y descarga autorizada ──────────────────────────
 Route::get('/podcasts/{programSlug}/{episodeNumber}', [\App\Http\Controllers\PublicPodcastEpisodeController::class, 'show'])->name('public.podcasts.episode');
@@ -545,7 +546,7 @@ Route::get('/muro-del-rock', [TalentPublicProfileController::class, 'index'])
     ->middleware('throttle:public-search')
     ->name('talents.explore');
 Route::get('/muro-del-rock/{bandName}', [TalentPublicProfileController::class, 'show'])
-    ->name('talents.show.muro');
+    ->name('talents.show');
 
 // Redirección compatible de /talentos hacia /muro-del-rock preservando query string
 Route::get('/talentos', function (\Illuminate\Http\Request $request) {
@@ -599,7 +600,9 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
         Route::post('/logout', [TalentAuthController::class, 'logout'])->name('logout');
     });
 
-    Route::get('/{bandName}', [TalentPublicProfileController::class, 'show'])->name('show');
+    Route::get('/{bandName}', function (string $bandName) {
+        return redirect()->to('/muro-del-rock/' . rawurlencode($bandName), 301);
+    })->name('show.legacy');
     Route::post('/{bandName}/like', [TalentPublicProfileController::class, 'like'])->name('like')->middleware('throttle:10,1');
     Route::post('/{bandName}/comment', [TalentPublicProfileController::class, 'comment'])->name('comment')->middleware([\App\Http\Middleware\PreventSpamWithHoneypot::class, 'throttle:5,1']);
 });

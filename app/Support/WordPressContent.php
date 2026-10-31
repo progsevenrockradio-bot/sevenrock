@@ -27,7 +27,91 @@ final class WordPressContent
         return array_values(array_filter(array_map(
             fn ($block) => self::serializeBlock($block),
             self::normalizeToArray($content)
-        )));
+        ), fn ($b) => self::isRenderableBlock((string) $b)));
+    }
+
+    /**
+     * Determines whether a block contains genuine editorial content rather than
+     * raw email boilerplate (DOCTYPE, <html>/<head>/<body> envelopes, layout tables, or tracking beacons).
+     */
+    public static function isRenderableBlock(string $html): bool
+    {
+        $text = trim($html);
+        if ($text === '') {
+            return false;
+        }
+
+        $decoded = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Descartar encabezados doctype o envolturas html de correos
+        if (preg_match('/^\s*(?:<p[^>]*>)?\s*(?:&lt;|<)!(?:doctype|DOCTYPE)/i', $decoded)) {
+            return false;
+        }
+        if (preg_match('/(?:xmlns:v=|xmlns:o=|urn:schemas-microsoft-com|w3\.org\/1999\/xhtml)/i', $decoded)) {
+            return false;
+        }
+        if (preg_match('/^\s*(?:<p[^>]*>)?\s*(?:&lt;|<)\/?(?:head|body|html)\b/i', $decoded)) {
+            return false;
+        }
+        if (preg_match('/^\s*(?:<p[^>]*>)?\s*(?:&lt;|<)\/?(?:table|tbody|tr|td|center)\b.*?(?:&gt;|>)\s*(?:<\/p>)?$/is', $decoded)) {
+            return false;
+        }
+
+        // Descartar píxeles de rastreo y balizas conocidas
+        if (preg_match('/<img[^>]+src=["\'][^"\']*(?:list-manage\.com|track|beacon|open\.php)[^"\']*["\']/i', $decoded)) {
+            return false;
+        }
+
+        // Descartar notas de confidencialidad, embargos internos y avisos de revisión exclusiva
+        if (preg_match('/(?:for\s+review\s+purposes\s+only|do\s+not\s+disseminate\s+any\s+download|not\s+for\s+public\s+dissemination|confidential\b)/i', $decoded)) {
+            return false;
+        }
+
+        // Descartar pies de agencias, avisos de copyright y desuscripción
+        if (preg_match('/(?:all\s+rights\s+reserved|independent\s+rock\s+&amp;\s+metal\s+publicity|independent\s+rock\s+&\s+metal\s+publicity|for\s+any\s+promo\s+enquiry|unsubscribe\b|update\s+your\s+preferences|mailing\s+address\s+is)/i', $decoded)) {
+            return false;
+        }
+
+        // Si solo contiene tags y espacios, solo conservar si tiene una imagen editorial real
+        $plain = trim(strip_tags($decoded));
+        if ($plain === '') {
+            return (bool) preg_match('/<img[^>]+src=["\'][^"\']+\.(?:jpg|jpeg|png|webp|gif)/i', $decoded) && !preg_match('/(?:list-manage|1x1|display:\s*none|width=["\']0|height=["\']0)/i', $decoded);
+        }
+
+        return true;
+    }
+
+    /**
+     * Clean an array of blocks, filtering out email boilerplate and sanitizing inline styles.
+     *
+     * @param array<int, mixed> $blocks
+     * @return array<int, string>
+     */
+    public static function cleanEmailHtmlBlocks(array $blocks): array
+    {
+        $cleaned = [];
+        $seen = [];
+        foreach ($blocks as $block) {
+            $html = is_string($block) ? $block : self::serializeBlock($block);
+            if (! self::isRenderableBlock($html)) {
+                continue;
+            }
+
+            // Normalizar y limpiar estilos inline heredados de plantillas de correo
+            $html = preg_replace('/\s*style=["\'](?:[^"\']*mso-[^"\']*|[^"\']*font-family:[^"\']*|background-color:\s*#[a-f0-9]+;?)["\']/i', '', $html) ?? $html;
+            $html = preg_replace('/\s*class=["\']mcn[^"\']*["\']/i', '', $html) ?? $html;
+            $html = trim($html);
+
+            $sig = md5(strip_tags(html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+            if (isset($seen[$sig])) {
+                continue;
+            }
+            $seen[$sig] = true;
+
+            $cleaned[] = $html;
+        }
+
+        return array_values($cleaned);
     }
 
     /**
