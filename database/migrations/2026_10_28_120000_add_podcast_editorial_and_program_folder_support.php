@@ -41,7 +41,12 @@ return new class extends Migration
         if (Schema::hasTable('users')) {
             Schema::table('users', function (Blueprint $table): void {
                 if (! Schema::hasColumn('users', 'is_conductor')) {
-                    $table->boolean('is_conductor')->default(false)->after('is_admin');
+                    $column = $table->boolean('is_conductor')->default(false);
+                    if (Schema::hasColumn('users', 'is_admin')) {
+                        $column->after('is_admin');
+                    } elseif (Schema::hasColumn('users', 'role')) {
+                        $column->after('role');
+                    }
                 }
             });
         }
