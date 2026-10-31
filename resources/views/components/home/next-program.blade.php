@@ -75,7 +75,7 @@
             this.infoModalOpen = true;
             document.body.style.overflow = 'hidden';
             this.$nextTick(() => {
-                const closeBtn = document.querySelector('#next-prog-modal button[aria-label="Cerrar"]');
+                const closeBtn = document.getElementById('next-prog-modal-close-btn');
                 if (closeBtn) closeBtn.focus();
             });
         },
@@ -255,6 +255,8 @@
                 </div>
 
                 <button
+                    id="next-prog-modal-close-btn"
+                    x-ref="modalCloseBtn"
                     type="button"
                     class="h-10 w-10 border border-[#2b2b2b] text-[#dcdcdc] transition-colors hover:bg-white/5 flex items-center justify-center text-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
                     @click="closeInfoModal()"
