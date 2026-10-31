@@ -12,9 +12,9 @@
                 <p class="mt-2 text-sm text-[#7b7b7b]">{{ $talent->bio ?: 'Sin biografía.' }}</p>
             </div>
             <div class="text-left sm:text-right w-full sm:w-auto text-sm text-[#7b7b7b]">
-                <div class="font-display text-xs uppercase tracking-[.18em] text-[#dcdcdc]">{{ ucfirst($talent->plan) }} plan</div>
-                <div>{{ ucfirst($talent->subscription_status) }}</div>
-                <div>Renueva: {{ $subscription?->end_date?->format('d M Y') ?? 'Sin fecha' }}</div>
+                <div class="font-display text-xs uppercase tracking-[.18em] text-[#dcdcdc]">Plan {{ ucfirst($talent->plan) }}</div>
+                <div>Estado: {{ match($talent->subscription_status) { 'active' => 'Activo', 'expired' => 'Vencido', 'pending' => 'Pendiente', 'cancelled' => 'Cancelado', default => ucfirst($talent->subscription_status) } }}</div>
+                <div>{{ $talent->plan === 'free' ? 'Próxima renovación' : 'Próximo cobro' }}: {{ $subscription?->end_date?->format('d/m/Y') ?? 'Sin fecha' }}</div>
             </div>
         </div>
 
@@ -25,7 +25,7 @@
                         <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Mi suscripción</div>
                         <h2 class="mt-2 font-display text-2xl uppercase tracking-[.12em] text-white">{{ ucfirst($talent->plan) }}</h2>
                         <p class="mt-1 text-sm text-[#8b8b8b]">
-                            Estado: <span class="text-[#dcdcdc]">{{ ucfirst($talent->subscription_status) }}</span>
+                            Estado: <span class="text-[#dcdcdc]">{{ match($talent->subscription_status) { 'active' => 'Activo', 'expired' => 'Vencido', 'pending' => 'Pendiente', 'cancelled' => 'Cancelado', default => ucfirst($talent->subscription_status) } }}</span>
                             · Renovación: <span class="text-[#dcdcdc]">{{ $subscription?->end_date?->format('d/m/Y') ?? 'Sin fecha' }}</span>
                         </p>
                     </div>
@@ -40,8 +40,10 @@
                         <div class="mt-2 text-sm text-white">{{ ucfirst((string) ($subscription?->payment_provider ?? $talent->payment_provider ?? 'manual')) }}</div>
                     </div>
                     <div class="border border-[#2b2b2b] bg-[#151515] p-4">
-                        <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Próximo cobro</div>
-                        <div class="mt-2 text-sm text-white">{{ $subscription?->end_date?->format('d M Y') ?? 'Sin fecha' }}</div>
+                        <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
+                            {{ $talent->plan === 'free' ? 'Próxima renovación' : 'Próximo cobro' }}
+                        </div>
+                        <div class="mt-2 text-sm text-white">{{ $subscription?->end_date?->format('d/m/Y') ?? 'Sin fecha' }}</div>
                     </div>
                 </div>
             </div>
@@ -85,7 +87,7 @@
             </div>
             <div class="border border-white/10 bg-[#10161b] p-4 sm:p-5">
                 <div class="text-[10px] sm:text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Días como miembro</div>
-                <div class="mt-2 font-display text-2xl sm:text-3xl text-white">{{ number_format($talent->created_at?->diffInDays(now()) ?? 0, 2) }}</div>
+                <div class="mt-2 font-display text-2xl sm:text-3xl text-white">{{ (int) floor($talent->created_at?->diffInDays(now()) ?? 0) }}</div>
             </div>
         </div>
 

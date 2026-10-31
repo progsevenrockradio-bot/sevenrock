@@ -69,25 +69,25 @@ class BandProfileMatcher
             return null;
         }
 
-        $candidate = $this->rankCandidates(
+        $bestCandidate = $this->rankCandidates(
             RadioArtist::query()->get(),
             $term,
             $normalizedTerm
         )->first();
 
-        if (! $candidate instanceof RadioArtist) {
-            return null;
+        if ($bestCandidate instanceof RadioArtist) {
+            $score = $this->scoreCandidate($bestCandidate, $term, $normalizedTerm);
+            if (! $allowFuzzy) {
+                return $score >= 1000 ? $bestCandidate : null;
+            }
+
+            // Fuzzy match threshold:
+            // High confidence required (>= 750) to prevent cross-matching different bands.
+            // Ambiguous matches return null to ensure neutral player metadata.
+            return $score >= 750 ? $bestCandidate : null;
         }
 
-        $score = $this->scoreCandidate($candidate, $term, $normalizedTerm);
-        if (! $allowFuzzy) {
-            return $score >= 1000 ? $candidate : null;
-        }
-
-        // Fuzzy matching is intentionally conservative.
-        // The previous threshold was permissive enough to cross-match similar band names
-        // (for example, Matchbook Romance -> My Chemical Romance).
-        return $score >= 650 ? $candidate : null;
+        return null;
     }
 
     /**
@@ -108,6 +108,35 @@ class BandProfileMatcher
             return 1000;
         }
 
+        $termLen = mb_strlen($normalizedTerm);
+        $nameLen = mb_strlen($normalizedName);
+
+        // Prefix matching: only if term is substantial (>= 4 chars) and covers significant part of the name
+        if ($normalizedName !== '' && $termLen >= 4 && str_starts_with($normalizedName, $normalizedTerm)) {
+            $ratio = $termLen / max(1, $nameLen);
+            if ($ratio >= 0.70) {
+                return 850;
+            }
+        }
+
+        if ($normalizedName !== '' && $nameLen >= 4 && str_starts_with($normalizedTerm, $normalizedName)) {
+            $ratio = $nameLen / max(1, $termLen);
+            if ($ratio >= 0.70) {
+                return 800;
+            }
+        }
+
+        // Substring matching: only if term is substantial and high ratio
+        if ($normalizedName !== '' && $termLen >= 5 && str_contains($normalizedName, $normalizedTerm)) {
+            $ratio = $termLen / max(1, $nameLen);
+            if ($ratio >= 0.75) {
+                return 700;
+            }
+        }
+
+        // Related artists: NEVER override primary artist matching.
+        // Cap related artist matches at 550 so they never exceed the fuzzy threshold (750)
+        // and cannot masquerade as the searched band.
         foreach ((array) $candidate->related_artists as $relatedArtist) {
             if (! is_string($relatedArtist)) {
                 continue;
@@ -115,30 +144,7 @@ class BandProfileMatcher
 
             $normalizedRelated = $this->normalizeKey($relatedArtist);
             if ($normalizedRelated === $normalizedTerm) {
-                return 950;
-            }
-        }
-
-        if ($normalizedName !== '' && str_starts_with($normalizedName, $normalizedTerm)) {
-            return 850;
-        }
-
-        if ($normalizedName !== '' && str_starts_with($normalizedTerm, $normalizedName)) {
-            return 800;
-        }
-
-        if ($normalizedName !== '' && str_contains($normalizedName, $normalizedTerm)) {
-            return 700;
-        }
-
-        foreach ((array) $candidate->related_artists as $relatedArtist) {
-            if (! is_string($relatedArtist)) {
-                continue;
-            }
-
-            $normalizedRelated = $this->normalizeKey($relatedArtist);
-            if ($normalizedRelated !== '' && str_contains($normalizedRelated, $normalizedTerm)) {
-                return 650;
+                return 550;
             }
         }
 
@@ -148,24 +154,12 @@ class BandProfileMatcher
             $best = max($best, (float) $percent);
         }
 
-        foreach ((array) $candidate->related_artists as $relatedArtist) {
-            if (! is_string($relatedArtist)) {
-                continue;
-            }
-
-            $normalizedRelated = $this->normalizeKey($relatedArtist);
-            if ($normalizedRelated === '') {
-                continue;
-            }
-
-            similar_text($normalizedRelated, $normalizedTerm, $percent);
-            $best = max($best, (float) $percent);
-        }
-
         if ($best <= 0) {
             return 0;
         }
 
+        // similar_text gives 0-100.
+        // 500 + 100 = max 600.
         return 500 + (int) round($best);
     }
 

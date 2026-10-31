@@ -22,10 +22,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->validateCsrfTokens(except: [
             'talentos/webhook/*',
+            'dev/player-scenario/*',
         ]);
 
         $middleware->alias([
             'admin' => RequireAdmin::class,
+            'conductor' => \App\Http\Middleware\RequireConductor::class,
             'talent' => TalentMiddleware::class,
             'audit' => TrackAdminAuditTrail::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,

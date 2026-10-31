@@ -112,7 +112,7 @@
 @endphp
 
 <div
-    class="mt-[60px] grid gap-6 lg:grid-cols-[1.15fr_.85fr]"
+    class="mt-8 md:mt-10 grid gap-6 lg:grid-cols-[1.15fr_.85fr] items-start"
     x-data="{
         activeEpisode: @js($heroEpisode),
         sidebarEpisodes: @js($sidebarEpisodes),
@@ -474,6 +474,7 @@
                 <div class="absolute inset-0 z-0 overflow-hidden">
                     <img 
                         :src="activeEpisode.image" 
+                        x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ $fallbackImage }}'; }"
                         class="h-full w-full object-cover blur-xl opacity-40 scale-125"
                         alt="" 
                         aria-hidden="true"
@@ -483,6 +484,7 @@
                 <!-- Imagen principal -->
                 <img
                     :src="activeEpisode.image"
+                    x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ $fallbackImage }}'; }"
                     :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
                     width="1280"
                     height="720"
@@ -540,7 +542,8 @@
                         @click="selectEpisode(@js($episode))"
                     >
                         <div class="h-16 w-16 shrink-0 overflow-hidden border border-base-300 bg-base-200 md:h-18 md:w-18">
-                            <img src="{{ $episode['image'] }}" alt="{{ $episode['program'] }}" width="320" height="240" class="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.02]" loading="lazy" decoding="async">
+                            <img src="{{ $episode['image'] }}" alt="{{ $episode['program'] }}" width="320" height="240" class="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.02]" loading="lazy" decoding="async"
+                                 onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ $fallbackImage }}'; }">
                         </div>
 
                         <div class="min-w-0 flex-1">

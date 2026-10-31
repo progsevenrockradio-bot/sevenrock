@@ -9,7 +9,9 @@ use App\Support\PublicMediaUrl;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -19,17 +21,23 @@ class MasterProgram extends Model
     use HasFactory;
     use Auditable;
 
+    public const EDITORIAL_MODE_MANDATORY = 'mandatory_review';
+    public const EDITORIAL_MODE_AUTONOMOUS = 'autonomous';
+
     protected $table = 'master_programs';
 
     protected $fillable = [
         'nombre',
         'program_code',
+        'storage_folder',
         'code_prefix',
         'conductor',
+        'pais',
         'dia_transmision',
         'hora_transmision',
         'timezone',
         'duracion_minutos',
+        'submission_cutoff_minutes',
         'genero',
         'caratula_url',
         'descripcion',
@@ -45,6 +53,10 @@ class MasterProgram extends Model
         'red_social1_url',
         'red_social2_url',
         'activo',
+        'editorial_mode',
+        'editorial_guide',
+        'autonomous_authorized_by',
+        'autonomous_authorized_at',
         'sync_archive_org',
         'archive_identifier',
         'vistas_archive',
@@ -60,9 +72,13 @@ class MasterProgram extends Model
         'activo' => 'boolean',
         'sync_archive_org' => 'boolean',
         'duracion_minutos' => 'integer',
+        'submission_cutoff_minutes' => 'integer',
         'default_news_ids' => 'array',
         'live_news_ids' => 'array',
         'preview_news_ids' => 'array',
+        'editorial_guide' => 'array',
+        'autonomous_authorized_by' => 'integer',
+        'autonomous_authorized_at' => 'datetime',
         'live_starts_at' => 'datetime',
         'live_ends_at' => 'datetime',
         'stats_updated_at' => 'datetime',
@@ -91,6 +107,30 @@ class MasterProgram extends Model
                 $program->code_prefix = static::normalizeProgramCode((string) ($program->name ?: $program->nombre ?: 'PROGRAMA'));
             } else {
                 $program->code_prefix = static::normalizeProgramCode((string) $program->code_prefix);
+            }
+
+            if (Schema::hasColumn($program->getTable(), 'storage_folder')) {
+                $originalFolder = trim((string) ($program->getOriginal('storage_folder') ?? ''));
+                if ($program->exists && $originalFolder !== '' && ! $program->isDirty('storage_folder')) {
+                    $program->storage_folder = $originalFolder;
+                } elseif (! filled($program->storage_folder)) {
+                    $program->storage_folder = static::generateUniqueStorageFolder(
+                        (string) ($program->nombre ?: $program->name ?: $program->program_code ?: 'programa'),
+                        $program->getKey()
+                    );
+                } else {
+                    $program->storage_folder = static::generateUniqueStorageFolder(
+                        (string) $program->storage_folder,
+                        $program->getKey()
+                    );
+                }
+            }
+
+            if (Schema::hasColumn($program->getTable(), 'editorial_mode')) {
+                $mode = trim((string) ($program->editorial_mode ?? ''));
+                if (! in_array($mode, [self::EDITORIAL_MODE_MANDATORY, self::EDITORIAL_MODE_AUTONOMOUS], true)) {
+                    $program->editorial_mode = self::EDITORIAL_MODE_MANDATORY;
+                }
             }
         });
     }
@@ -162,6 +202,325 @@ class MasterProgram extends Model
     public function outreachCampaigns(): HasMany
     {
         return $this->hasMany(OutreachCampaign::class, 'program_code', 'program_code');
+    }
+
+    public function conductors(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'master_program_conductor', 'master_program_id', 'user_id')
+            ->withPivot(['is_active', 'authorized_by', 'authorized_at'])
+            ->withTimestamps();
+    }
+
+    public function authorizedConductors(): BelongsToMany
+    {
+        return $this->conductors()->wherePivot('is_active', true);
+    }
+
+    public function authorizeConductor(User|int $user, ?int $authorizedBy = null): void
+    {
+        $userId = $user instanceof User ? (int) $user->id : (int) $user;
+        if ($userId <= 0 || ! Schema::hasTable('master_program_conductor')) {
+            return;
+        }
+
+        $this->conductors()->syncWithoutDetaching([
+            $userId => [
+                'is_active' => true,
+                'authorized_by' => $authorizedBy,
+                'authorized_at' => now(),
+            ],
+        ]);
+
+        if (Schema::hasColumn('users', 'is_conductor')) {
+            User::query()->whereKey($userId)->update(['is_conductor' => true]);
+        }
+    }
+
+    public function revokeConductor(User|int $user): void
+    {
+        $userId = $user instanceof User ? (int) $user->id : (int) $user;
+        if ($userId <= 0 || ! Schema::hasTable('master_program_conductor')) {
+            return;
+        }
+
+        $this->conductors()->updateExistingPivot($userId, [
+            'is_active' => false,
+        ]);
+    }
+
+    public function resolveStorageFolder(): string
+    {
+        $hasColumn = Schema::hasColumn($this->getTable(), 'storage_folder');
+        $existing = trim((string) ($this->getAttribute('storage_folder') ?? ''));
+
+        if ($existing !== '') {
+            return static::normalizeStorageFolder($existing);
+        }
+
+        $generated = static::generateUniqueStorageFolder(
+            (string) ($this->nombre ?: $this->name ?: $this->program_code ?: 'programa-' . ($this->id ?: 'general')),
+            $this->exists ? (int) $this->getKey() : null
+        );
+
+        $this->setAttribute('storage_folder', $generated);
+
+        if ($this->exists && $hasColumn) {
+            static::withoutEvents(function () use ($generated): void {
+                static::query()->whereKey($this->getKey())->update(['storage_folder' => $generated]);
+            });
+        }
+
+        return $generated;
+    }
+
+    public static function normalizeStorageFolder(string $value): string
+    {
+        $slug = Str::slug($value, '-');
+        $slug = preg_replace('/[^a-z0-9\-]+/', '-', strtolower($slug)) ?: '';
+        $slug = trim($slug, '-');
+
+        return $slug !== '' ? substr($slug, 0, 100) : 'programa';
+    }
+
+    public static function generateUniqueStorageFolder(string $source, ?int $ignoreId = null): string
+    {
+        $base = static::normalizeStorageFolder($source);
+        if ($base === '') {
+            $base = 'programa';
+        }
+
+        $table = (new static())->getTable();
+        if (! Schema::hasTable($table)) {
+            return $base;
+        }
+
+        $query = static::query();
+        if ($ignoreId !== null) {
+            $query->whereKeyNot($ignoreId);
+        }
+
+        $columns = ['id', 'nombre', 'program_code'];
+        if (Schema::hasColumn($table, 'storage_folder')) {
+            $columns[] = 'storage_folder';
+        }
+
+        $otherRows = $query->orderBy('id')->get($columns);
+        $taken = [];
+
+        foreach ($otherRows as $row) {
+            $rowFolder = trim((string) ($row->storage_folder ?? ''));
+            if ($rowFolder !== '') {
+                $taken[] = static::normalizeStorageFolder($rowFolder);
+            } elseif ($ignoreId === null || (int) $row->id < $ignoreId) {
+                $fallback = static::normalizeStorageFolder((string) ($row->nombre ?: $row->program_code ?: 'programa-' . $row->id));
+                $taken[] = $fallback;
+            }
+        }
+
+        $taken = array_values(array_unique(array_filter($taken)));
+
+        if (! in_array($base, $taken, true)) {
+            return $base;
+        }
+
+        for ($i = 2; $i <= 999; $i++) {
+            $candidate = substr($base, 0, 95) . '-' . $i;
+            if (! in_array($candidate, $taken, true)) {
+                return $candidate;
+            }
+        }
+
+        return substr($base, 0, 88) . '-' . ($ignoreId ?: now()->format('His'));
+    }
+
+    public function isAutonomousDeliveryAuthorized(): bool
+    {
+        return trim((string) ($this->editorial_mode ?? self::EDITORIAL_MODE_MANDATORY)) === self::EDITORIAL_MODE_AUTONOMOUS;
+    }
+
+    public function getSubmissionCutoffMinutesAttribute(?int $value): int
+    {
+        return $value !== null && $value > 0 ? (int) $value : 90;
+    }
+
+    /**
+     * Devuelve una representación legible del margen de cierre en horas o minutos
+     * (ej. «24 horas», «48 horas», «90 minutos»).
+     */
+    public function formatCutoffHuman(?int $minutes = null): string
+    {
+        $m = $minutes !== null ? $minutes : $this->submission_cutoff_minutes;
+        if ($m <= 0) {
+            return 'Sin margen';
+        }
+        if ($m % 1440 === 0) {
+            $days = intdiv($m, 1440);
+            return $days === 1 ? '24 horas' : ($days * 24) . ' horas';
+        }
+        if ($m % 60 === 0) {
+            $hours = intdiv($m, 60);
+            return $hours === 1 ? '1 hora' : "{$hours} horas";
+        }
+
+        return "{$m} minutos";
+    }
+
+    /**
+     * Calcula el plazo límite de entrega para una emisión específica.
+     *
+     * @param mixed $emissionDate Fecha de emisión (Y-m-d o objeto fecha)
+     * @return array<string, mixed>
+     */
+    public function calculateEmissionDeadline(mixed $emissionDate): array
+    {
+        $cutoffMinutes = $this->submission_cutoff_minutes;
+        $cutoffHuman = $this->formatCutoffHuman($cutoffMinutes);
+        $tz = trim((string) ($this->timezone ?: config('app.timezone', 'Europe/Madrid')));
+        if ($tz === '' || ! in_array($tz, timezone_identifiers_list(), true)) {
+            $tz = config('app.timezone', 'Europe/Madrid');
+        }
+
+        $rawTime = trim((string) ($this->hora_transmision ?? ''));
+        if ($rawTime === '') {
+            return [
+                'status' => 'undetermined',
+                'reason' => 'El Programa Maestro no tiene configurada una hora de transmisión fija.',
+                'cutoff_minutes' => $cutoffMinutes,
+                'cutoff_human' => $cutoffHuman,
+                'timezone' => $tz,
+                'is_closed' => false,
+                'emission_datetime' => null,
+                'emission_formatted' => null,
+                'deadline_datetime' => null,
+                'deadline_formatted' => null,
+                'deadline_human' => 'Horario no determinado',
+                'crosses_midnight' => false,
+                'remaining_seconds' => 0,
+                'remaining_human' => 'Horario no determinado',
+            ];
+        }
+
+        $dateStr = null;
+        if ($emissionDate instanceof Carbon || $emissionDate instanceof \DateTimeInterface) {
+            $dateStr = $emissionDate->format('Y-m-d');
+        } elseif (is_string($emissionDate) && trim($emissionDate) !== '') {
+            try {
+                $dateStr = Carbon::parse(trim($emissionDate))->format('Y-m-d');
+            } catch (\Throwable) {
+                $dateStr = null;
+            }
+        }
+
+        if ($dateStr === null) {
+            return [
+                'status' => 'undetermined',
+                'reason' => 'Fecha de emisión no especificada o inválida.',
+                'cutoff_minutes' => $cutoffMinutes,
+                'cutoff_human' => $cutoffHuman,
+                'timezone' => $tz,
+                'is_closed' => false,
+                'emission_datetime' => null,
+                'emission_formatted' => null,
+                'deadline_datetime' => null,
+                'deadline_formatted' => null,
+                'deadline_human' => 'Fecha no determinada',
+                'crosses_midnight' => false,
+                'remaining_seconds' => 0,
+                'remaining_human' => 'Fecha no determinada',
+            ];
+        }
+
+        $timeParts = explode(':', $rawTime);
+        $hour = str_pad(trim($timeParts[0] ?? '0'), 2, '0', STR_PAD_LEFT);
+        $minute = str_pad(trim($timeParts[1] ?? '0'), 2, '0', STR_PAD_LEFT);
+        $second = str_pad(trim($timeParts[2] ?? '0'), 2, '0', STR_PAD_LEFT);
+        $normalizedTime = "{$hour}:{$minute}:{$second}";
+
+        try {
+            $emissionDateTime = Carbon::createFromFormat('Y-m-d H:i:s', "{$dateStr} {$normalizedTime}", $tz);
+        } catch (\Throwable $e) {
+            return [
+                'status' => 'undetermined',
+                'reason' => 'Formato de hora de emisión inválido: ' . $e->getMessage(),
+                'cutoff_minutes' => $cutoffMinutes,
+                'cutoff_human' => $cutoffHuman,
+                'timezone' => $tz,
+                'is_closed' => false,
+                'emission_datetime' => null,
+                'emission_formatted' => null,
+                'deadline_datetime' => null,
+                'deadline_formatted' => null,
+                'deadline_human' => 'Hora inválida',
+                'crosses_midnight' => false,
+                'remaining_seconds' => 0,
+                'remaining_human' => 'Hora inválida',
+            ];
+        }
+
+        $deadlineDateTime = $emissionDateTime->copy()->subMinutes($cutoffMinutes);
+        $crossesMidnight = $deadlineDateTime->format('Y-m-d') !== $emissionDateTime->format('Y-m-d');
+
+        $now = Carbon::now($tz);
+        $isClosed = $now->greaterThanOrEqualTo($deadlineDateTime);
+        $diffSeconds = (int) $now->diffInSeconds($deadlineDateTime, false);
+
+        if ($isClosed) {
+            $remainingHuman = 'Plazo cerrado';
+        } else {
+            $h = intdiv($diffSeconds, 3600);
+            $m = intdiv($diffSeconds % 3600, 60);
+            if ($h > 0) {
+                $remainingHuman = "Quedan {$h}h {$m}m";
+            } elseif ($m > 0) {
+                $remainingHuman = "Quedan {$m}m";
+            } else {
+                $remainingHuman = "Menos de 1 minuto restante";
+            }
+        }
+
+        return [
+            'status' => 'ok',
+            'reason' => null,
+            'cutoff_minutes' => $cutoffMinutes,
+            'cutoff_human' => $cutoffHuman,
+            'timezone' => $tz,
+            'is_closed' => $isClosed,
+            'emission_datetime' => $emissionDateTime,
+            'emission_formatted' => $emissionDateTime->translatedFormat('d/m/Y H:i') . ' (' . $tz . ')',
+            'deadline_datetime' => $deadlineDateTime,
+            'deadline_formatted' => $deadlineDateTime->translatedFormat('d/m/Y H:i') . ' (' . $tz . ')',
+            'deadline_human' => 'Cierre ' . $cutoffHuman . ' antes de la emisión (' . $deadlineDateTime->translatedFormat('d/m/Y H:i') . ' ' . $tz . ')',
+            'crosses_midnight' => $crossesMidnight,
+            'remaining_seconds' => $diffSeconds,
+            'remaining_human' => $remainingHuman,
+        ];
+    }
+
+    /**
+     * Combina la guía general de la emisora con los ajustes específicos del programa maestro.
+     *
+     * @return array<string, mixed>
+     */
+    public function effectiveEditorialGuide(): array
+    {
+        $general = ThemeSetting::currentPodcastEditorialGuide();
+        $programSpecific = is_array($this->editorial_guide) ? $this->editorial_guide : [];
+
+        return [
+            'station_guide' => $general,
+            'identity_and_audience' => trim((string) ($programSpecific['identity_and_audience'] ?? $this->descripcion ?? $general['identity_and_audience'] ?? '')),
+            'tone_and_style' => trim((string) ($programSpecific['tone_and_style'] ?? $general['tone_and_style'] ?? '')),
+            'structure_rules' => array_merge(
+                is_array($general['structure_rules'] ?? null) ? $general['structure_rules'] : [],
+                is_array($programSpecific['structure_rules'] ?? null) ? array_filter($programSpecific['structure_rules'], static fn ($v) => $v !== null && $v !== '') : []
+            ),
+            'cover_requirements' => array_merge(
+                is_array($general['cover_requirements'] ?? null) ? $general['cover_requirements'] : [],
+                is_array($programSpecific['cover_requirements'] ?? null) ? array_filter($programSpecific['cover_requirements'], static fn ($v) => $v !== null && $v !== '') : []
+            ),
+            'particular_rules' => trim((string) ($programSpecific['particular_rules'] ?? '')),
+            'optional_examples' => trim((string) ($programSpecific['optional_examples'] ?? '')),
+        ];
     }
 
     /**
@@ -260,9 +619,12 @@ class MasterProgram extends Model
 
     public function getScheduleAttribute(): string
     {
+        $hora = trim((string) $this->hora_transmision);
+        $hora = preg_replace('/\b(\d{1,2}:\d{2}):\d{2}\b/', '$1', $hora);
+
         $parts = array_filter([
             trim((string) $this->dia_transmision),
-            trim((string) $this->hora_transmision),
+            $hora,
         ]);
 
         return $parts !== [] ? implode(' · ', $parts) : 'Programación continua';

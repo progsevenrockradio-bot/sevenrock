@@ -30,15 +30,42 @@ class ProgramInfoController extends Controller
         if (! $program && ! $masterProgram && $programName !== '') {
             if (class_exists(\App\Models\MasterProgram::class)) {
                 $masterProgram = \App\Models\MasterProgram::query()
-                    ->where('name', 'like', "%{$programName}%")
-                    ->orWhere('nombre', 'like', "%{$programName}%")
+                    ->where('nombre', 'like', "%{$programName}%")
                     ->first();
             }
             if (! $masterProgram) {
                 $program = Program::query()
-                    ->where('name', 'like', "%{$programName}%")
-                    ->orWhere('titulo_programa', 'like', "%{$programName}%")
+                    ->where('titulo_programa', 'like', "%{$programName}%")
                     ->first();
+            }
+        }
+
+        // Si estamos en entorno local y hay simulación activa, extraer el programa del estado simulado
+        if (app()->environment('local') && \Illuminate\Support\Facades\Cache::has('dev_player_simulated_status')) {
+            $sim = \Illuminate\Support\Facades\Cache::get('dev_player_simulated_status');
+            if (is_array($sim) && !empty($sim['program_name'])) {
+                $simProg = is_array($sim['program'] ?? null) ? $sim['program'] : [];
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'id' => $simProg['id'] ?? $sim['program_id'] ?? 901,
+                        'name' => $simProg['name'] ?? $simProg['nombre'] ?? $sim['program_name'],
+                        'title' => $simProg['name'] ?? $simProg['nombre'] ?? $sim['program_name'],
+                        'description' => $simProg['descripcion'] ?? $simProg['description'] ?? $sim['program_description'] ?? '',
+                        'host' => $simProg['host'] ?? $simProg['conductor'] ?? $sim['track']['program_host'] ?? '',
+                        'country' => $simProg['country'] ?? $simProg['pais'] ?? $sim['track']['program_country'] ?? null,
+                        'genre' => 'Rock / Metal',
+                        'schedule' => $simProg['horario'] ?? $sim['track']['program_schedule'] ?? '',
+                        'cover' => $simProg['cover'] ?? $sim['track']['cover'] ?? '',
+                        'social_links' => [],
+                        'episode' => $sim['track']['meta_source'] === 'program:emission' ? [
+                            'title' => $sim['track']['title'] ?? '',
+                            'description' => $sim['track']['program_description'] ?? '',
+                            'episode_number' => 12,
+                            'guest_bio' => '',
+                        ] : null,
+                    ],
+                ]);
             }
         }
 
@@ -59,8 +86,12 @@ class ProgramInfoController extends Controller
                 if (! $program && ! $masterProgram && $resolvedName !== '') {
                     if (class_exists(\App\Models\MasterProgram::class)) {
                         $masterProgram = \App\Models\MasterProgram::query()
-                            ->where('name', 'like', "%{$resolvedName}%")
-                            ->orWhere('nombre', 'like', "%{$resolvedName}%")
+                            ->where('nombre', 'like', "%{$resolvedName}%")
+                            ->first();
+                    }
+                    if (! $masterProgram) {
+                        $program = Program::query()
+                            ->where('titulo_programa', 'like', "%{$resolvedName}%")
                             ->first();
                     }
                 }
@@ -100,6 +131,7 @@ class ProgramInfoController extends Controller
 
         $description = trim((string) ($program?->informacion_fija_programa ?: $program?->description ?: ($masterProgram ? $masterProgram->description : '')));
         $host = trim((string) ($program?->conductor ?: $program?->host ?: ($masterProgram ? ($masterProgram->host ?: $masterProgram->conductor) : '')));
+        $pais = trim((string) ($episode?->pais ?: $program?->pais ?: ($masterProgram ? $masterProgram->pais : '')));
         $genre = trim((string) ($program?->genero_musical ?: ($masterProgram ? $masterProgram->genero : '')));
         $facebook = trim((string) ($program?->facebook_url ?: ($masterProgram ? $masterProgram->red_social1_url : '')));
         $instagram = trim((string) ($program?->instagram_url ?: ($masterProgram ? $masterProgram->red_social2_url : '')));
@@ -128,6 +160,7 @@ class ProgramInfoController extends Controller
                 'slug' => $resolvedSlug,
                 'description' => $description,
                 'host' => $host,
+                'country' => $pais !== '' ? $pais : null,
                 'schedule' => $schedule,
                 'cover' => $cover,
                 'genre' => $genre,

@@ -157,11 +157,11 @@ class Program extends Model
             return $value;
         }
 
-        $parts = array_filter([
+        $parts = array_values(array_filter([
             trim((string) ($this->attributes['dia_transmision'] ?? '')),
             trim((string) ($this->attributes['hora_inicio'] ?? '')),
             trim((string) ($this->attributes['hora_fin'] ?? '')),
-        ]);
+        ]));
 
         if ($parts !== []) {
             if (count($parts) === 1) {

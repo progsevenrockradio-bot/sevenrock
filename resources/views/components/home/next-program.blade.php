@@ -24,11 +24,15 @@
 @endphp
 
 <div
-    class="mt-[60px] grid gap-6 lg:grid-cols-[1.15fr_.85fr]"
+    class="mt-8 md:mt-10 grid gap-6 lg:grid-cols-[1.15fr_.85fr] items-start"
     x-data="{
         activeProgram: @js($heroProgram),
         originalProgram: @js($heroProgram),
         restoreTimer: null,
+        formatTimeClean(val) {
+            if (!val) return '';
+            return String(val).replace(/\b(\d{1,2}:\d{2}):\d{2}\b/g, '$1');
+        },
         formatearTituloJS(text) {
             if (!text) return '';
             let cleanText = text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
@@ -85,9 +89,10 @@
 >
     <article class="home-panel group overflow-hidden">
         <div class="p-4 md:p-6">
-            <div class="overflow-hidden border border-[#2b2b2b] bg-[#111]">
+            <div class="overflow-hidden border border-lucille-line/30 bg-[#111]">
                 <img
                     :src="activeProgram.image"
+                    x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ asset('assets/lucille/pedalboard-1511069_1920.jpg') }}'; }"
                     :alt="activeProgram.title || 'Próximo programa'"
                     class="block h-[220px] w-full bg-[#111] object-contain p-3 sm:h-[250px] md:h-[300px]"
                  loading="lazy">
@@ -100,7 +105,7 @@
 
             <div class="mt-4 max-w-[620px]">
                 <div class="flex items-center gap-3">
-                    <span class="home-badge" x-text="activeProgram.badge || 'On deck'"></span>
+                    <span class="home-badge" x-text="(activeProgram.badge === 'On deck' || !activeProgram.badge ? 'A continuación' : (activeProgram.badge === 'On air' ? 'En vivo' : activeProgram.badge))"></span>
                     <template x-if="activeProgram.tipo_emision === 'en_vivo'">
                         <div class="pointer-events-auto z-10 flex flex-wrap items-center gap-1.5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] drop-shadow-[0_0_10px_rgba(0,0,0,0.7)]">
                             <span class="relative flex h-2 w-2">
@@ -127,7 +132,7 @@
                 </div>
 
                 <div class="mt-3">
-                    <p class="text-[11px] uppercase tracking-[.28em] text-[#bfbfbf]" x-text="activeProgram.subtitle || ''"></p>
+                    <p class="text-[11px] uppercase tracking-[.28em] text-lucille-body" x-text="activeProgram.subtitle || ''"></p>
 
                     <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                         <div class="min-w-0 flex-1">
@@ -135,13 +140,13 @@
                                 <h3 class="font-display text-[24px] uppercase leading-[.95] tracking-[.12em] md:text-[34px]" x-html="activeProgram.title_html || formatearTituloJS(activeProgram.title || '')"></h3>
                                 <div class="flex flex-wrap gap-2">
                                     <a
-                                        class="inline-flex h-7 items-center justify-center border border-[#d42426] bg-[#d42426] px-2.5 py-0 text-[9px] font-display uppercase tracking-[.14em] text-white transition-colors hover:bg-[#ba1f22]"
+                                        class="inline-flex h-7 items-center justify-center border border-lucille-accent bg-lucille-accent px-2.5 py-0 text-[9px] font-display uppercase tracking-[.14em] text-white transition-colors hover:brightness-110"
                                         :href="activeProgram.button?.url || '{{ route('programs') }}'"
                                         x-text="activeProgram.button?.label || 'Ver programación'"
                                     ></a>
                                     <button
                                         type="button"
-                                        class="inline-flex h-7 items-center justify-center border border-[#dcdcdc] bg-transparent px-2.5 py-0 text-[9px] font-display uppercase tracking-[.14em] text-[#dcdcdc] transition-colors hover:bg-white/5"
+                                        class="inline-flex h-7 items-center justify-center border border-lucille-line/50 bg-transparent px-2.5 py-0 text-[9px] font-display uppercase tracking-[.14em] text-lucille-heading transition-colors hover:bg-white/5"
                                         @click="openInfoModal($event)"
                                     >
                                         Info
@@ -149,7 +154,7 @@
                                 </div>
                             </div>
 
-                            <div class="mt-3 text-[12px] uppercase tracking-[.24em] text-[#dcdcdc]" x-text="activeProgram.schedule || ''"></div>
+                            <div class="mt-3 text-[12px] uppercase tracking-[.24em] text-lucille-heading" x-text="formatTimeClean(activeProgram.schedule || '')"></div>
                             <div class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-lucille-accent" x-text="activeProgram.host || ''"></div>
                         </div>
                     </div>
@@ -159,36 +164,37 @@
     </article>
 
     <aside class="home-panel p-0">
-        <div class="border-b border-[#2b2b2b] px-6 py-5">
-            <div class="font-display text-sm uppercase tracking-[.22em] text-[#dcdcdc]">On deck</div>
-            <div class="mt-2 text-sm text-[#7b7b7b]">{{ $program['timezone'] }}</div>
+        <div class="border-b border-lucille-line/30 px-6 py-5">
+            <div class="font-display text-sm uppercase tracking-[.22em] text-lucille-heading">A continuación</div>
+            <div class="mt-2 text-sm text-lucille-body">{{ $program['timezone'] }}</div>
         </div>
 
-        <div class="grid gap-0 divide-y divide-[#2b2b2b]">
+        <div class="grid gap-0 divide-y divide-lucille-line/30">
             @foreach ($upcomingPrograms as $slot)
                 <button
                     type="button"
                     class="flex items-center gap-3 px-4 py-3 text-left transition-colors duration-300 hover:bg-[rgba(255,255,255,.03)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent/80"
-                    :class="isActiveProgram(@js($slot)) ? 'bg-[rgba(195,39,32,.08)] ring-1 ring-lucille-accent/50' : ''"
+                    :class="isActiveProgram(@js($slot)) ? 'bg-lucille-accent/10 ring-1 ring-lucille-accent/50' : ''"
                     @click="selectProgram(@js($slot))"
                 >
-                    <div class="h-16 w-16 shrink-0 overflow-hidden border border-[#2b2b2b] bg-[#111] md:h-18 md:w-18">
-                        <img src="{{ $slot['image'] }}" alt="{{ $slot['title'] }}" class="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.02]" loading="lazy">
+                    <div class="h-16 w-16 shrink-0 overflow-hidden border border-lucille-line/30 bg-[#111] md:h-18 md:w-18">
+                        <img src="{{ $slot['image'] }}" alt="{{ $slot['title'] }}" class="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.02]" loading="lazy"
+                             onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ asset('assets/lucille/pedalboard-1511069_1920.jpg') }}'; }">
                     </div>
 
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2">
-                            <div class="text-[10px] uppercase tracking-[.22em] text-[#7b7b7b]">
-                                {{ $slot['time'] ?? ($slot['schedule'] ?? '') }}
+                            <div class="text-[10px] uppercase tracking-[.22em] text-lucille-body">
+                                {{ preg_replace('/\b(\d{1,2}:\d{2}):\d{2}\b/', '$1', (string) ($slot['time'] ?? ($slot['schedule'] ?? ''))) }}
                             </div>
                             @if(isset($slot['tipo_emision']) && in_array($slot['tipo_emision'], ['en_vivo', 'retransmision']))
                                 <x-emision-badge :tipo="$slot['tipo_emision']" :enlace="$slot['enlace_en_vivo'] ?? null" class="mb-0" />
                             @endif
                         </div>
-                        <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-[#dcdcdc] md:text-[15px]">
+                        <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-lucille-heading md:text-[15px]">
                             {!! $slot['title_html'] !!}
                         </div>
-                        <div class="mt-1 text-[12px] text-[#7b7b7b] md:text-sm">
+                        <div class="mt-1 text-[12px] text-lucille-body md:text-sm">
                             {{ $slot['host'] }}
                         </div>
                     </div>

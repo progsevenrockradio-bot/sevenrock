@@ -35,6 +35,38 @@ class BandInfoController extends Controller
         $artist = trim((string) ($validated['artist'] ?? ''));
         $title = trim((string) ($validated['title'] ?? ''));
         [$artist, $title] = $this->normalizeTrackContext($artist, $title);
+
+        // Si estamos en entorno local y hay simulación activa con datos de banda simulados
+        if (app()->environment('local') && \Illuminate\Support\Facades\Cache::has('dev_player_simulated_status')) {
+            $sim = \Illuminate\Support\Facades\Cache::get('dev_player_simulated_status');
+            if (is_array($sim) && !empty($sim['track']) && !empty($sim['track']['band_info'])) {
+                $simTrack = $sim['track'];
+                $simArtist = trim((string) ($simTrack['artist'] ?? ''));
+                if ($artist === '' || mb_strtolower($artist) === mb_strtolower($simArtist)) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => [
+                            'summary' => $simTrack['band_info'] ?? '',
+                            'biography' => $simTrack['band_biography'] ?? $simTrack['band_info'] ?? '',
+                            'biography_source' => $simTrack['band_biography_source'] ?? 'editorial',
+                            'thumbnail' => $simTrack['band_thumbnail'] ?? $simTrack['cover'] ?? '',
+                            'logo_path' => '',
+                            'country' => $simTrack['band_country'] ?? '',
+                            'genre' => $simTrack['band_genre'] ?? '',
+                            'members_count' => null,
+                            'status' => $simTrack['band_status'] ?? '',
+                            'labels' => '',
+                            'social_links' => [],
+                            'formed_year' => $simTrack['band_founded_year'] ?? null,
+                            'formed_label' => $simTrack['band_founded_label'] ?? '',
+                            'facts' => [],
+                            'lyrics' => $simTrack['lyrics'] ?? '',
+                        ],
+                    ]);
+                }
+            }
+        }
+
         if (($artist === '' && $title === '') || $this->isProgramOrHost($artist, $title)) {
             return response()->json([
                 'success' => true,

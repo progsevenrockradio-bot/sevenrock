@@ -22,9 +22,9 @@ final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
 {
     private Client $client;
 
-    public function __construct()
+    public function __construct(?Client $client = null)
     {
-        $this->client = new Client([
+        $this->client = $client ?? new Client([
             'timeout' => 900,
             'connect_timeout' => 30,
             'read_timeout' => 900,
@@ -42,105 +42,111 @@ final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
 
         $master = $episode->masterProgram;
         $identifier = $this->resolveIdentifier($episode, $master);
+        $downloadResult = null;
 
         try {
-            $absolutePath = $this->resolveLocalPath($episode);
+            $downloadResult = $this->resolveLocalPath($episode);
+            $absolutePath = $downloadResult['path'];
+            $isOwnTemporary = $downloadResult['is_own_temporary'];
+
+            $remotePath = $this->resolveRemotePath($episode);
+            $itemExistsBefore = $this->itemExists($identifier);
+            $created = ! $itemExistsBefore;
+            $itemMetadata = $this->buildItemMetadata($episode, $master);
+            $fileMetadata = $this->buildEpisodeFileMetadata($episode, $master);
+            $snapshot = $this->buildArchiveSnapshot(
+                episode: $episode,
+                master: $master,
+                identifier: $identifier,
+                remotePath: $remotePath,
+                itemExistsBefore: $itemExistsBefore,
+                created: $created,
+                itemMetadata: $itemMetadata,
+                fileMetadata: $fileMetadata,
+            );
+
+            $episode->forceFill([
+                'archive_org_status' => 'archive_pending',
+                'archive_org_last_error' => null,
+                'archive_org_metadata' => $snapshot,
+                'status_message' => 'Sincronizando Archive.org.',
+            ])->saveQuietly();
+
+            $this->uploadFile($identifier, $remotePath, $absolutePath, $itemMetadata);
+
+            $episode->forceFill([
+                'archive_org_remote_path' => $remotePath,
+            ])->saveQuietly();
+
+            if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
+                Log::warning('ArchiveOrgPodcastService: file not reachable after waiting, continuing with metadata patch anyway.', [
+                    'identifier' => $identifier,
+                    'remote_path' => $remotePath,
+                ]);
+            }
+
+            try {
+                $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
+            } catch (Throwable $exception) {
+                Log::warning('ArchiveOrgPodcastService: metadata PATCH failed in syncEpisode (non-fatal).', [
+                    'identifier' => $identifier,
+                    'remote_path' => $remotePath,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+
+            $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
+            $pendingIndexing = (bool) ($verification['pending_indexing'] ?? false);
+
+            if (! ($verification['verified'] ?? false) && ! $pendingIndexing) {
+                throw new RuntimeException((string) ($verification['message'] ?? 'No se pudo verificar la subida en Archive.org.'));
+            }
+
+            if ($master instanceof MasterProgram && blank($master->archive_identifier)) {
+                $master->forceFill(['archive_identifier' => $identifier])->saveQuietly();
+            }
+
+            $episode->forceFill([
+                'archive_org_status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
+                'archive_org_remote_path' => $remotePath,
+                'archive_org_uploaded_at' => now(),
+                'archive_org_verified_at' => $pendingIndexing ? null : now(),
+                'archive_org_last_error' => null,
+                'archive_org_metadata' => array_merge($snapshot, [
+                    'status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
+                    'synced_at' => $pendingIndexing ? null : now()->toIso8601String(),
+                    'remote_path' => $remotePath,
+                    'verification' => $verification,
+                    'pending_indexing' => $pendingIndexing,
+                ]),
+                'status_message' => $pendingIndexing
+                    ? 'Archive.org subido, en espera de indexación.'
+                    : 'Archive.org sincronizado correctamente.',
+            ])->saveQuietly();
+
+            return [
+                'success' => true,
+                'created' => $created,
+                'identifier' => $identifier,
+                'remote_path' => $remotePath,
+                'item_exists_before' => $itemExistsBefore,
+                'verification' => $verification,
+                'status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
+                'pending_indexing' => $pendingIndexing,
+            ];
         } catch (Throwable $exception) {
             $episode->forceFill([
                 'archive_org_status' => 'archive_error',
                 'archive_org_last_error' => $exception->getMessage(),
-                'status_message' => 'Archive.org no pudo iniciar: falta el MP3 local.',
+                'status_message' => 'Archive.org falló: ' . $exception->getMessage(),
             ])->saveQuietly();
 
             throw $exception;
+        } finally {
+            if ($downloadResult !== null && ($downloadResult['is_own_temporary'] ?? false)) {
+                $this->cleanupLocalPath($downloadResult['path'], (string) $episode->archivo_mp3_disk);
+            }
         }
-        $remotePath = $this->resolveRemotePath($episode);
-        $itemExistsBefore = $this->itemExists($identifier);
-        $created = ! $itemExistsBefore;
-        $itemMetadata = $this->buildItemMetadata($episode, $master);
-        $fileMetadata = $this->buildEpisodeFileMetadata($episode, $master);
-        $snapshot = $this->buildArchiveSnapshot(
-            episode: $episode,
-            master: $master,
-            identifier: $identifier,
-            remotePath: $remotePath,
-            itemExistsBefore: $itemExistsBefore,
-            created: $created,
-            itemMetadata: $itemMetadata,
-            fileMetadata: $fileMetadata,
-        );
-
-        $episode->forceFill([
-            'archive_org_status' => 'archive_pending',
-            'archive_org_last_error' => null,
-            'archive_org_metadata' => $snapshot,
-            'status_message' => 'Sincronizando Archive.org.',
-        ])->saveQuietly();
-
-        $this->uploadFile($identifier, $remotePath, $absolutePath, $itemMetadata);
-
-        $episode->forceFill([
-            'archive_org_remote_path' => $remotePath,
-        ])->saveQuietly();
-
-        if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
-            Log::warning('ArchiveOrgPodcastService: file not reachable after waiting, continuing with metadata patch anyway.', [
-                'identifier' => $identifier,
-                'remote_path' => $remotePath,
-            ]);
-        }
-
-        try {
-            $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
-        } catch (Throwable $exception) {
-            Log::warning('ArchiveOrgPodcastService: metadata PATCH failed in syncEpisode (non-fatal).', [
-                'identifier' => $identifier,
-                'remote_path' => $remotePath,
-                'error' => $exception->getMessage(),
-            ]);
-        }
-
-        $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
-        $pendingIndexing = (bool) ($verification['pending_indexing'] ?? false);
-
-        if (! ($verification['verified'] ?? false) && ! $pendingIndexing) {
-            throw new RuntimeException((string) ($verification['message'] ?? 'No se pudo verificar la subida en Archive.org.'));
-        }
-
-        if ($master instanceof MasterProgram && blank($master->archive_identifier)) {
-            $master->forceFill(['archive_identifier' => $identifier])->saveQuietly();
-        }
-
-        $episode->forceFill([
-            'archive_org_status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
-            'archive_org_remote_path' => $remotePath,
-            'archive_org_uploaded_at' => now(),
-            'archive_org_verified_at' => $pendingIndexing ? null : now(),
-            'archive_org_last_error' => null,
-            'archive_org_metadata' => array_merge($snapshot, [
-                'status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
-                'synced_at' => $pendingIndexing ? null : now()->toIso8601String(),
-                'remote_path' => $remotePath,
-                'verification' => $verification,
-                'pending_indexing' => $pendingIndexing,
-            ]),
-            'status_message' => $pendingIndexing
-                ? 'Archive.org subido, en espera de indexación.'
-                : 'Archive.org sincronizado correctamente.',
-        ])->saveQuietly();
-
-        $this->cleanupLocalPath($absolutePath, (string) $episode->archivo_mp3_disk);
-
-        return [
-            'success' => true,
-            'created' => $created,
-            'identifier' => $identifier,
-            'remote_path' => $remotePath,
-            'item_exists_before' => $itemExistsBefore,
-            'verification' => $verification,
-            'status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
-            'pending_indexing' => $pendingIndexing,
-        ];
     }
 
     public function syncEpisodeMetadata(RadioProgram $episode): array
@@ -159,68 +165,73 @@ final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
             throw new RuntimeException('No se pudo determinar el archivo remoto del capítulo.');
         }
 
+        $downloadResult = null;
+
         try {
-            $absolutePath = $this->resolveLocalPath($episode);
+            $downloadResult = $this->resolveLocalPath($episode);
+            $absolutePath = $downloadResult['path'];
+
+            if (! $this->itemExists($identifier)) {
+                throw new RuntimeException("El item {$identifier} todavía no existe en Archive.org.");
+            }
+
+            $fileMetadata = $this->buildEpisodeFileMetadata($episode, $master);
+
+            if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
+                Log::warning('ArchiveOrgPodcastService: file not reachable before metadata PATCH, continuing anyway.', [
+                    'identifier' => $identifier,
+                    'remote_path' => $remotePath,
+                ]);
+            }
+
+            $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
+            $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
+
+            $pendingIndexing = (bool) ($verification['pending_indexing'] ?? false);
+
+            if (! ($verification['verified'] ?? false) && ! $pendingIndexing) {
+                throw new RuntimeException((string) ($verification['message'] ?? 'No se pudo verificar la metadata de Archive.org.'));
+            }
+
+            $snapshot = array_merge((array) ($episode->archive_org_metadata ?? []), [
+                'source' => 'archive-org-metadata-sync',
+                'record_id' => $episode->id,
+                'identifier' => $identifier,
+                'remote_path' => $remotePath,
+                'status' => 'archive_verified',
+                'synced_at' => now()->toIso8601String(),
+                'episode_metadata' => $fileMetadata,
+                'verification' => $verification,
+            ]);
+
+            $episode->forceFill([
+                'archive_org_status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
+                'archive_org_remote_path' => $remotePath,
+                'archive_org_uploaded_at' => $episode->archive_org_uploaded_at ?? now(),
+                'archive_org_verified_at' => $pendingIndexing ? null : now(),
+                'archive_org_last_error' => null,
+                'archive_org_metadata' => $snapshot,
+            ])->saveQuietly();
+
+            return [
+                'success' => true,
+                'identifier' => $identifier,
+                'remote_path' => $remotePath,
+                'verification' => $verification,
+            ];
         } catch (Throwable $exception) {
             $episode->forceFill([
                 'archive_org_status' => 'archive_error',
                 'archive_org_last_error' => $exception->getMessage(),
-                'status_message' => 'Archive.org no pudo verificar la metadata porque falta el MP3 local.',
+                'status_message' => 'Archive.org no pudo verificar la metadata: ' . $exception->getMessage(),
             ])->saveQuietly();
 
             throw $exception;
+        } finally {
+            if ($downloadResult !== null && ($downloadResult['is_own_temporary'] ?? false)) {
+                $this->cleanupLocalPath($downloadResult['path'], (string) $episode->archivo_mp3_disk);
+            }
         }
-
-        if (! $this->itemExists($identifier)) {
-            throw new RuntimeException("El item {$identifier} todavía no existe en Archive.org.");
-        }
-
-        $fileMetadata = $this->buildEpisodeFileMetadata($episode, $master);
-
-        if (! $this->waitForRemoteFileOnArchiveOrg($identifier, $remotePath)) {
-            Log::warning('ArchiveOrgPodcastService: file not reachable before metadata PATCH, continuing anyway.', [
-                'identifier' => $identifier,
-                'remote_path' => $remotePath,
-            ]);
-        }
-
-        $this->applyEpisodeMetadata($identifier, $remotePath, $fileMetadata);
-        $verification = $this->verifyUploadedEpisode($identifier, $remotePath, $absolutePath);
-
-        $pendingIndexing = (bool) ($verification['pending_indexing'] ?? false);
-
-        if (! ($verification['verified'] ?? false) && ! $pendingIndexing) {
-            throw new RuntimeException((string) ($verification['message'] ?? 'No se pudo verificar la metadata de Archive.org.'));
-        }
-
-        $snapshot = array_merge((array) ($episode->archive_org_metadata ?? []), [
-            'source' => 'archive-org-metadata-sync',
-            'record_id' => $episode->id,
-            'identifier' => $identifier,
-            'remote_path' => $remotePath,
-            'status' => 'archive_verified',
-            'synced_at' => now()->toIso8601String(),
-            'episode_metadata' => $fileMetadata,
-            'verification' => $verification,
-        ]);
-
-        $episode->forceFill([
-            'archive_org_status' => $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified',
-            'archive_org_remote_path' => $remotePath,
-            'archive_org_uploaded_at' => $episode->archive_org_uploaded_at ?? now(),
-            'archive_org_verified_at' => $pendingIndexing ? null : now(),
-            'archive_org_last_error' => null,
-            'archive_org_metadata' => $snapshot,
-        ])->saveQuietly();
-
-        $this->cleanupLocalPath($absolutePath, (string) $episode->archivo_mp3_disk);
-
-        return [
-            'success' => true,
-            'identifier' => $identifier,
-            'remote_path' => $remotePath,
-            'verification' => $verification,
-        ];
     }
 
     public function canSync(): bool
@@ -448,7 +459,10 @@ final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
         return ($slug !== '' ? $slug : 'podcast') . '-' . $suffix;
     }
 
-    private function resolveLocalPath(RadioProgram $episode): string
+    /**
+     * @return array{path: string, is_own_temporary: bool}
+     */
+    private function resolveLocalPath(RadioProgram $episode): array
     {
         $stored = trim((string) ($episode->archivo_mp3 ?? ''));
         if ($stored === '') {
@@ -461,7 +475,14 @@ final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
             throw new RuntimeException("No se pudo leer el MP3 local: {$stored}");
         }
 
-        return $absolutePath;
+        $isOwnTemporary = str_starts_with($absolutePath, storage_path('app/tmp/backblaze'))
+            || str_starts_with($absolutePath, storage_path('app/tmp/r2'))
+            || str_starts_with($absolutePath, storage_path('app/tmp/podcast-processing'));
+
+        return [
+            'path' => $absolutePath,
+            'is_own_temporary' => $isOwnTemporary,
+        ];
     }
 
     private function resolveRemotePath(RadioProgram $episode): string
@@ -489,7 +510,11 @@ final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
 
     private function cleanupLocalPath(string $absolutePath, string $disk): void
     {
-        if (! str_starts_with($absolutePath, storage_path('app/tmp/backblaze'))) {
+        $isTemporaryPath = str_starts_with($absolutePath, storage_path('app/tmp/backblaze'))
+            || str_starts_with($absolutePath, storage_path('app/tmp/r2'))
+            || str_starts_with($absolutePath, storage_path('app/tmp/podcast-processing'));
+
+        if (! $isTemporaryPath) {
             return;
         }
 
@@ -614,10 +639,16 @@ final class ArchiveOrgPodcastService implements ArchiveOrgPodcastServiceContract
 
     private function waitForRemoteFileOnArchiveOrg(string $identifier, string $remotePath): bool
     {
-        $delays = [30, 60, 120];
+        if ($this->verifyFileExistsOnArchiveOrg($identifier, $remotePath)) {
+            return true;
+        }
+
+        $delays = app()->environment('testing') ? [0, 0] : [30, 60, 120];
 
         foreach ($delays as $delaySeconds) {
-            sleep($delaySeconds);
+            if ($delaySeconds > 0) {
+                sleep($delaySeconds);
+            }
 
             if ($this->verifyFileExistsOnArchiveOrg($identifier, $remotePath)) {
                 return true;

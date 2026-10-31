@@ -209,6 +209,7 @@ final class ArchiveOrgService
                     'rp.live_description',
                     'rp.comentario_episodio',
                     'rp.archivo_mp3',
+                    'rp.archivo_mp3_disk',
                     'rp.caratula_programa',
                     'rp.imagen_episodio',
                     'rp.imagen_invitado',
@@ -258,6 +259,7 @@ final class ArchiveOrgService
             }
 
             $storedPath = trim((string) ($row->archivo_mp3 ?? ''));
+            $storedDisk = trim((string) ($row->archivo_mp3_disk ?? '')) ?: 'r2';
             $remotePath = trim((string) ($row->archive_org_remote_path ?? ''));
             $snapshotRemotePath = trim((string) data_get($snapshot, 'remote_path', ''));
             $snapshotSrc = trim((string) data_get($snapshot, 'src', ''));
@@ -267,7 +269,7 @@ final class ArchiveOrgService
                 $snapshotSrc,
                 $identifier !== '' && $snapshotRemotePath !== '' ? $this->buildArchiveDownloadSrc($identifier, $snapshotRemotePath) : '',
                 $identifier !== '' && $storedPath !== '' ? $this->buildArchiveDownloadSrc($identifier, basename(str_replace('\\', '/', $storedPath))) : '',
-                $storedPath !== '' ? asset('storage/' . ltrim(str_replace('\\', '/', $storedPath), '/')) : '',
+                $storedPath !== '' ? app(FileUploadService::class)->url($storedPath, $storedDisk) : '',
             ], static fn (string $source): bool => $source !== '')));
 
             $src = $audioSources[0] ?? '';

@@ -187,6 +187,11 @@ class Talent extends Authenticatable
         return $this->hasMany(TalentSubscription::class);
     }
 
+    public function subscriptionReminders(): HasMany
+    {
+        return $this->hasMany(TalentSubscriptionReminder::class);
+    }
+
     public function media(): HasMany
     {
         return $this->hasMany(TalentMedia::class);

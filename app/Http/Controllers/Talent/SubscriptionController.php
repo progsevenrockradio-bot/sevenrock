@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Talent;
 
+use App\Exceptions\Payment\MercadoPago\MercadoPagoPayloadValidationException;
+use App\Exceptions\Payment\MercadoPago\MercadoPagoSignatureValidationException;
+use App\Exceptions\Payment\MercadoPago\MercadoPagoWebhookConfigException;
 use App\Http\Controllers\Controller;
 use App\Models\Talent;
 use App\Models\TalentSubscription;
@@ -78,9 +81,16 @@ class SubscriptionController extends Controller
             $this->paymentManager->driver($gateway)->handleWebhook($request);
 
             return response('OK', 200);
+        } catch (MercadoPagoSignatureValidationException $exception) {
+            return response('Unauthorized', 401);
+        } catch (MercadoPagoPayloadValidationException $exception) {
+            return response('Bad Request', 400);
+        } catch (MercadoPagoWebhookConfigException $exception) {
+            return response('Configuration Error', 500);
         } catch (\Throwable $exception) {
             Log::error("Webhook {$gateway} error", [
-                'message' => $exception->getMessage(),
+                'gateway'     => $gateway,
+                'error_class' => get_class($exception),
             ]);
 
             return response('Error', 400);

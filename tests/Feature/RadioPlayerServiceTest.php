@@ -13,6 +13,18 @@ class RadioPlayerServiceTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config([
+            'player.radioboss.api_url' => '',
+            'player.radioboss.metadata_txt_url' => '',
+            'player.streams.direct' => '',
+            'player.streams.alt_direct' => '',
+        ]);
+    }
+
     public function test_rock_al_palo_bloque_programa_true()
     {
         Carbon::setTestNow(Carbon::parse('2026-10-06 15:30:00', 'America/Caracas')); // A Tuesday
@@ -230,8 +242,8 @@ class RadioPlayerServiceTest extends TestCase
 
     public function test_horario_con_margen_30_minutos()
     {
-        // Scheduled at 15:00 on Tuesday. Test at 14:40 (20 minutes before, inside 30m margin)
-        Carbon::setTestNow(Carbon::parse('2026-10-06 14:40:00', 'America/Caracas'));
+        // Scheduled at 15:00 on Tuesday. Test at 14:56 (4 minutes before, inside 5m advance window)
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:56:00', 'America/Caracas'));
 
         $master = MasterProgram::create([
             'nombre' => 'Rock al Palo',

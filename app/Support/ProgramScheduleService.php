@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Schema;
 
 class ProgramScheduleService
 {
-    public const MARGIN_BEFORE_MINUTES = 2;
-    public const MARGIN_AFTER_MINUTES = 2;
+    public const MARGIN_BEFORE_MINUTES = 5;
+    public const MARGIN_AFTER_MINUTES = 0;
 
     private const DAY_ORDER = [
         'LUNES' => 1,
@@ -36,7 +36,7 @@ class ProgramScheduleService
             $upcoming = $this->upcomingProgramsFromSchedule($scheduledPrograms, $current, $limit);
 
             return [
-                ...$this->programPayload($current, $theme, $this->programIsLiveNow($current) ? 'On air' : 'On deck'),
+                ...$this->programPayload($current, $theme, $this->programIsLiveNow($current) ? 'En vivo' : 'A continuación'),
                 'upcoming' => $this->mapUpcoming($upcoming, $theme),
             ];
         }
@@ -57,7 +57,7 @@ class ProgramScheduleService
             'timezone' => 'America/Caracas',
             'summary' => 'La grilla editorial se muestra aquí cuando existe programación maestro o cuando RadioBOSS devuelve la siguiente emisión.',
             'image' => 'assets/lucille/pedalboard-1511069_1920.jpg',
-            'badge' => 'On deck',
+            'badge' => 'A continuación',
             'button' => ['label' => 'Ver programación', 'url' => route('programs')],
             'upcoming' => [
                 [
@@ -299,7 +299,7 @@ class ProgramScheduleService
         $now = $now->copy()->setTimezone($timezone);
 
         if ($program->live_starts_at && $program->live_ends_at) {
-            $startsAt = $program->live_starts_at->copy()->setTimezone($timezone);
+            $startsAt = $program->live_starts_at->copy()->setTimezone($timezone)->subMinutes(self::MARGIN_BEFORE_MINUTES);
             $endsAt = $program->live_ends_at->copy()->setTimezone($timezone);
             if ($endsAt->lessThanOrEqualTo($startsAt)) {
                 $endsAt = $endsAt->copy()->addDay();
@@ -331,11 +331,13 @@ class ProgramScheduleService
                     if ($segundos && $segundos > 0) {
                         $scheduledStart = $start->copy();
                         $start = $start->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
-                        $duracion = (int) ceil($segundos / 60) + self::MARGIN_AFTER_MINUTES;
+                        $duracion = (int) ceil($segundos / 60);
                         $end = $scheduledStart->copy()->addMinutes($duracion);
                     } else {
+                        $scheduledStart = $start->copy();
+                        $start = $start->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
                         $duration = max(15, (int) ($program->duracion_minutos ?? 120));
-                        $end = $start->copy()->addMinutes($duration);
+                        $end = $scheduledStart->copy()->addMinutes($duration);
                     }
                 }
 
@@ -363,12 +365,12 @@ class ProgramScheduleService
 
                 if (!empty($emision->duracion_segundos) && $emision->duracion_segundos > 0) {
                     $start = $scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
-                    $duracion = (int) ceil($emision->duracion_segundos / 60) + self::MARGIN_AFTER_MINUTES;
+                    $duracion = (int) ceil($emision->duracion_segundos / 60);
                     $end = $scheduledStart->copy()->addMinutes($duracion);
                 } else {
-                    $start = $scheduledStart;
+                    $start = $scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
                     $duration = max(15, (int) ($emision->duracion_minutos ?? $program->duracion_minutos ?? 120));
-                    $end = $start->copy()->addMinutes($duration);
+                    $end = $scheduledStart->copy()->addMinutes($duration);
                 }
 
                 if ($end->lessThanOrEqualTo($start)) {
@@ -394,9 +396,10 @@ class ProgramScheduleService
 
         [$hour, $minute] = $hm;
         $daysSinceSchedule = ((int) $now->dayOfWeekIso - $dayNumber + 7) % 7;
-        $start = $now->copy()->startOfDay()->subDays($daysSinceSchedule)->setTime($hour, $minute, 0);
+        $scheduledStart = $now->copy()->startOfDay()->subDays($daysSinceSchedule)->setTime($hour, $minute, 0);
+        $start = $scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
         $duration = max(15, (int) ($program->duracion_minutos ?? 120));
-        $end = $start->copy()->addMinutes($duration);
+        $end = $scheduledStart->copy()->addMinutes($duration);
 
         if ($end->lessThanOrEqualTo($start)) {
             $end = $end->copy()->addDay();
@@ -429,27 +432,29 @@ class ProgramScheduleService
             }
         }
 
-        $emisiones = $program->emisiones()->where('activo', true)->get();
-        if ($emisiones->isNotEmpty()) {
-            $nextStarts = [];
-            foreach ($emisiones as $emision) {
-                $day = $this->dayNumber((string) $emision->dia_semana);
-                $time = $this->parseScheduleTime((string) $emision->hora_inicio);
-                if ($day !== null && $time) {
-                    [$hour, $minute] = $time;
-                    $daysAhead = ($day - (int) $now->dayOfWeekIso + 7) % 7;
-                    $startCandidate = $now->copy()->startOfDay()->addDays($daysAhead)->setTime($hour, $minute, 0);
-                    if ($daysAhead === 0 && $startCandidate->lessThanOrEqualTo($now)) {
-                        $startCandidate->addWeek();
+        if (Schema::hasTable('master_program_emisiones')) {
+            $emisiones = $program->emisiones()->where('activo', true)->get();
+            if ($emisiones->isNotEmpty()) {
+                $nextStarts = [];
+                foreach ($emisiones as $emision) {
+                    $day = $this->dayNumber((string) $emision->dia_semana);
+                    $time = $this->parseScheduleTime((string) $emision->hora_inicio);
+                    if ($day !== null && $time) {
+                        [$hour, $minute] = $time;
+                        $daysAhead = ($day - (int) $now->dayOfWeekIso + 7) % 7;
+                        $startCandidate = $now->copy()->startOfDay()->addDays($daysAhead)->setTime($hour, $minute, 0);
+                        if ($daysAhead === 0 && $startCandidate->lessThanOrEqualTo($now)) {
+                            $startCandidate->addWeek();
+                        }
+                        $nextStarts[] = $startCandidate;
                     }
-                    $nextStarts[] = $startCandidate;
                 }
+                if (!empty($nextStarts)) {
+                    usort($nextStarts, fn($a, $b) => $a->timestamp <=> $b->timestamp);
+                    return $nextStarts[0];
+                }
+                return null;
             }
-            if (!empty($nextStarts)) {
-                usort($nextStarts, fn($a, $b) => $a->timestamp <=> $b->timestamp);
-                return $nextStarts[0];
-            }
-            return null;
         }
 
         $day = $this->dayNumber((string) $program->dia_transmision);
@@ -520,7 +525,7 @@ class ProgramScheduleService
             ->take(5)
             ->map(function (MasterProgram $program) use ($theme): array {
                 return [
-                    ...$this->programPayload($program, $theme, 'On deck'),
+                    ...$this->programPayload($program, $theme, 'A continuación'),
                     'time' => $program->schedule ?: 'Próxima emisión',
                 ];
             })
@@ -674,7 +679,7 @@ class ProgramScheduleService
                 $primaryStart !== '' ? ' (' . $primarySchedule . ')' : ''
             ),
             'image' => $theme->home_video_image_path ?: $theme->hero_slide_primary_path ?: 'assets/lucille/pedalboard-1511069_1920.jpg',
-            'badge' => 'On deck',
+            'badge' => 'A continuación',
             'button' => [
                 'label' => 'Ver programación',
                 'url' => route('programs'),

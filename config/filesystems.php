@@ -117,6 +117,19 @@ return [
             'report'                  => false,
         ],
 
+        'r2_private' => [
+            'driver'                  => 's3',
+            'key'                     => env('R2_PRIVATE_ACCESS_KEY_ID', env('R2_ACCESS_KEY_ID', env('CLOUDFLARE_R2_ACCESS_KEY_ID'))),
+            'secret'                  => env('R2_PRIVATE_SECRET_ACCESS_KEY', env('R2_SECRET_ACCESS_KEY', env('CLOUDFLARE_R2_SECRET_ACCESS_KEY'))),
+            'region'                  => env('R2_PRIVATE_REGION', env('R2_REGION', env('CLOUDFLARE_R2_REGION', 'auto'))),
+            'bucket'                  => env('R2_PRIVATE_BUCKET'),
+            'endpoint'                => env('R2_PRIVATE_ENDPOINT', env('R2_ENDPOINT', env('CLOUDFLARE_R2_ENDPOINT'))),
+            'use_path_style_endpoint' => true,
+            'throw'                   => false,
+            'report'                  => false,
+            'visibility'              => 'private',
+        ],
+
         // ─── STAND BY: Backblaze B2 ──────────────────────────────────────────
         // Desactivado. Para reactivarlo algún día:
         //   1) Rellena las variables BACKBLAZE_* en el .env de producción.

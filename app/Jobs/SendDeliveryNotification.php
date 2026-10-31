@@ -125,8 +125,9 @@ class SendDeliveryNotification implements ShouldQueue
                 if ($deliveryStatus === 'delivery_verified' && ! (bool) data_get($radioProgram->delivery_metadata, 'preserve_local_copy', false)) {
                     $disk = (string) $radioProgram->archivo_mp3_disk;
 
-                    if ($localPath !== '') {
-                        app(FileUploadService::class)->delete($localPath, $disk);
+                    // Nunca eliminar el archivo definitivo alojado en R2
+                    if ($localPath !== '' && $disk === 'public' && str_starts_with(ltrim($localPath, '/'), 'podcast-inbox/')) {
+                        app(FileUploadService::class)->delete($localPath, 'public');
                     }
                 }
             } catch (Throwable $exception) {

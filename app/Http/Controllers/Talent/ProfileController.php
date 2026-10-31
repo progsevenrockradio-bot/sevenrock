@@ -82,6 +82,6 @@ class ProfileController extends Controller
             ]);
         }
 
-        return redirect()->route('talents.profile')->with('status', 'Profile updated.');
+        return redirect()->route('talents.profile')->with('status', 'Perfil actualizado correctamente.');
     }
 }

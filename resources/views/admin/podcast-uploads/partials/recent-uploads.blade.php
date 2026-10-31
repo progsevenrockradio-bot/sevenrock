@@ -62,6 +62,9 @@
                 <div>
                     <div class="font-display text-sm uppercase tracking-[.12em] text-white">{{ $upload->live_title ?: $upload->titulo_programa }}</div>
                     <div class="mt-1 text-sm text-[#9d9d9d]">{{ $upload->masterProgram?->nombre ?? 'Sin programa maestro' }}</div>
+                    <div class="mt-1 text-[11px] text-[#9a9a9a]" data-podcast-readable-filename="{{ $upload->readableDownloadFilename() }}">
+                        {{ $upload->readableDownloadFilename() }}
+                    </div>
                     <div class="mt-3 flex flex-wrap gap-2 text-[10px] uppercase tracking-[.18em]">
                         <span class="inline-flex items-center rounded border px-2.5 py-1 {{ $badgeClassFor($radioStatus) }}">
                             RB · {{ $badgeLabel($radioStatus) }}
@@ -107,7 +110,11 @@
                     <button type="submit" name="target" value="radioboss" class="lucille-button !rounded-none !px-2.5" title="Reprocesar solo RadioBOSS">RB</button>
                     <button type="submit" name="target" value="archive" class="lucille-button !rounded-l-none !px-2.5" title="Reprocesar solo Archive.org">Arc</button>
                 </form>
-                <a href="{{ route('admin.podcast-uploads.download', $upload) }}" class="lucille-button">Descargar MP3</a>
+                <a href="{{ route('admin.podcast-uploads.editorial.show', $upload) }}" class="lucille-button">Revisar Editorial</a>
+                <a href="{{ route('admin.podcast-uploads.download', $upload) }}" class="lucille-button" title="Descargar {{ $upload->readableDownloadFilename() }}">Descargar MP3</a>
+                @if ($upload->audioPlaybackUrl() !== '')
+                    <audio preload="none" controls src="{{ $upload->audioPlaybackUrl() }}" data-podcast-playback-url="{{ $upload->audioPlaybackUrl() }}" class="h-9"></audio>
+                @endif
                 <form
                     action="{{ route('admin.podcast-uploads.destroy', $upload->id) }}"
                     method="POST"

@@ -15,13 +15,13 @@
             <a href="{{ $eventUrl }}" class="lucille-event-link">
                 <div class="lucille-event-date uppercase">
                     @if ($startsAt && $emphasized)
-                        <span class="lucille-event-day">{{ $startsAt->format('d') }}</span>
-                        <span class="lucille-event-month">{{ strtolower($startsAt->format('F')) }}</span>
-                        <span class="lucille-event-year">{{ $startsAt->format('Y') }}</span>
+                        <span class="lucille-event-day">{{ $startsAt->locale('es')->translatedFormat('d') }}</span>
+                        <span class="lucille-event-month">{{ strtolower($startsAt->locale('es')->translatedFormat('F')) }}</span>
+                        <span class="lucille-event-year">{{ $startsAt->locale('es')->translatedFormat('Y') }}</span>
                     @elseif ($startsAt)
-                        <span class="text-sm">{{ $startsAt->format('F j, Y') }}</span>
+                        <span class="text-sm">{{ $startsAt->locale('es')->translatedFormat('d \d\e F, Y') }}</span>
                     @else
-                        <span class="text-sm">Date TBD</span>
+                        <span class="text-sm">Fecha por confirmar</span>
                     @endif
                 </div>
                 <div class="lucille-event-location">{{ data_get($event, 'location') }}</div>
@@ -30,7 +30,7 @@
                     @if(data_get($event, 'is_cancelled'))
                         <span class="text-[var(--lucille-accent)] font-bold text-[10px] tracking-widest border border-[var(--lucille-accent)] px-2 py-1">CANCELADO</span>
                     @else
-                        {{ data_get($event, 'ticket_label', 'Details') }}
+                        {{ data_get($event, 'ticket_label') ?: 'Detalles' }}
                     @endif
                 </div>
             </a>

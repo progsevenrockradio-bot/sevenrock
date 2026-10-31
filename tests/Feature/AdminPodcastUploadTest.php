@@ -82,7 +82,8 @@ class AdminPodcastUploadTest extends TestCase
         $this->assertNotEmpty($episode->imagen_episodio, 'La imagen del episodio no quedó guardada en la base.');
         $this->assertTrue(Storage::disk('public')->exists((string) $episode->imagen_episodio), 'La imagen del episodio no quedó en el disco public.');
 
-        $this->assertTrue(Storage::disk('public')->exists((string) $episode->archivo_mp3), 'El MP3 no quedó en el disco public.');
+        $this->assertTrue(Storage::disk('r2')->exists((string) $episode->archivo_mp3), 'El MP3 definitivo no quedó en el disco r2.');
+        $this->assertFalse(Storage::disk('public')->exists((string) $episode->archivo_mp3), 'No debe conservarse una copia permanente del MP3 en el disco public.');
         $this->assertSame('radioboss_verified', $episode->radioboss_status, 'RadioBOSS no quedó verificado.');
         $this->assertSame('delivery_verified', $episode->delivery_status, 'La entrega completa no quedó verificada.');
 
@@ -185,7 +186,8 @@ class AdminPodcastUploadTest extends TestCase
         $episode = RadioProgram::query()->latest('id')->first();
         $this->assertNotNull($episode, 'No se creó el episodio.');
         $this->assertNotEmpty($episode->archivo_mp3, 'No se guardó el MP3 procesado.');
-        $this->assertTrue(Storage::disk('public')->exists((string) $episode->archivo_mp3), 'La copia local no se preservó para descarga.');
+        $this->assertTrue(Storage::disk('r2')->exists((string) $episode->archivo_mp3), 'El MP3 definitivo debe conservarse en R2.');
+        $this->assertFalse(Storage::disk('public')->exists((string) $episode->archivo_mp3), 'preserveLocalCopy no debe dejar una copia local permanente en public.');
 
         $downloadResponse = $this->actingAs($admin)->get(route('admin.podcast-uploads.download', $episode));
         $downloadResponse->assertOk();
@@ -350,7 +352,14 @@ class AdminPodcastUploadTest extends TestCase
 
     private function configureRadiobossDisk(): void
     {
+        Storage::fake('public');
+        Storage::fake('r2');
+
         config([
+            'filesystems.disks.r2.key' => 'test-r2-key',
+            'filesystems.disks.r2.secret' => 'test-r2-secret',
+            'filesystems.disks.r2.bucket' => 'sevenrock-media',
+            'filesystems.disks.r2.url' => 'https://media.sevenrockradio.test',
             'filesystems.disks.radioboss' => [
                 'driver' => 'local',
                 'root' => sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'sevenrock-radioboss',

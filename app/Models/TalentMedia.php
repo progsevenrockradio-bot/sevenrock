@@ -16,6 +16,7 @@ class TalentMedia extends Model
         'talent_id',
         'type',
         'filename',
+        'disk',
         'backblaze_key',
         'url',
         'title',
@@ -46,6 +47,21 @@ class TalentMedia extends Model
     public function isDocument(): bool
     {
         return $this->type === 'document';
+    }
+
+    public function resolvedDisk(): ?string
+    {
+        if (filled($this->disk)) {
+            return (string) $this->disk;
+        }
+
+        // Si no está registrado explícitamente, el disco es ambiguo / no demostrado
+        return null;
+    }
+
+    public function hasDemonstratedDisk(): bool
+    {
+        return filled($this->disk);
     }
 
     public function talent(): BelongsTo

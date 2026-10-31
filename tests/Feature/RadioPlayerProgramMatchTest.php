@@ -23,6 +23,8 @@ final class RadioPlayerProgramMatchTest extends TestCase
         config([
             'player.radioboss.api_url' => '',
             'player.radioboss.metadata_txt_url' => '',
+            'player.streams.direct' => '',
+            'player.streams.alt_direct' => '',
         ]);
     }
 
@@ -36,6 +38,7 @@ final class RadioPlayerProgramMatchTest extends TestCase
             'dia_transmision' => 'JUEVES',
             'hora_transmision' => '18:00:00',
             'duracion_minutos' => 60,
+            'genero' => 'Rock',
             'timezone' => 'America/Caracas',
             'activo' => true,
         ]);
@@ -77,6 +80,7 @@ final class RadioPlayerProgramMatchTest extends TestCase
             'dia_transmision' => 'JUEVES',
             'hora_transmision' => '18:00:00',
             'duracion_minutos' => 60,
+            'genero' => 'Rock',
             'timezone' => 'America/Caracas',
             'activo' => true,
         ]);
@@ -97,8 +101,8 @@ final class RadioPlayerProgramMatchTest extends TestCase
 
     public function test_schedule_matches_program_within_expanded_window_margin(): void
     {
-        // 20 minutes before transmission starts (within 30 minute margin)
-        Carbon::setTestNow(Carbon::parse('2026-10-15 17:40:00', 'America/Caracas'));
+        // 4 minutes before transmission starts (within 5 minute advance window)
+        Carbon::setTestNow(Carbon::parse('2026-10-15 17:56:00', 'America/Caracas'));
 
         $master = MasterProgram::create([
             'nombre' => 'Polución',
@@ -106,6 +110,7 @@ final class RadioPlayerProgramMatchTest extends TestCase
             'dia_transmision' => 'JUEVES',
             'hora_transmision' => '18:00:00',
             'duracion_minutos' => 60,
+            'genero' => 'Rock',
             'timezone' => 'America/Caracas',
             'activo' => true,
         ]);

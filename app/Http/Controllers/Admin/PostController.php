@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Schema;
@@ -69,6 +70,12 @@ class PostController extends Controller
             $data['featured_image'] = $this->resolveImage($request, null, $data['featured_image'] ?? null);
             $data = $this->persistableAttributes($data);
 
+            // Validar seguridad editorial si el post simulado o manual trae procedencia de correo
+            $tempPost = new Post($data);
+            if ($tempPost->isFromEmailPipeline()) {
+                $this->validateEditorialRestrictions($tempPost, $data);
+            }
+
             $post = Post::query()->create($data);
             $this->syncTaxonomies($post, $categories, $tags);
 
@@ -107,36 +114,119 @@ class PostController extends Controller
 
     public function update(Request $request, Post $post): RedirectResponse
     {
-        try {
-            $data = $this->validated($request, $post->id);
+        return DB::transaction(function () use ($request, $post) {
+            // Bloqueo pesimista para evitar condiciones de carrera en concurrencia
+            $lockedPost = Post::lockForUpdate()->findOrFail($post->id);
+
+            $data = $this->validated($request, $lockedPost->id);
             $categories = $data['categories'];
             $tags = $data['tags'];
             unset($data['categories'], $data['tags']);
             $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
-            $data['featured_image'] = $this->resolveImage($request, $post->featured_image, $data['featured_image'] ?? null);
+            $data['featured_image'] = $this->resolveImage($request, $lockedPost->featured_image, $data['featured_image'] ?? null);
             $data = $this->persistableAttributes($data);
 
-            $post->update($data);
-            $this->syncTaxonomies($post, $categories, $tags);
-
-            return redirect()->route('admin.posts.index')->with('status', 'Post updated.');
-        } catch (\Throwable $exception) {
-            if ($exception instanceof ValidationException) {
-                throw $exception;
+            // Si el post procede de la ingesta editorial de correo, exigir las compuertas editoriales
+            if ($lockedPost->isFromEmailPipeline()) {
+                $this->validateEditorialRestrictions($lockedPost, $data);
             }
 
-            Log::error('Error al actualizar post', [
-                'post_id' => $post->id,
-                'exception' => $exception,
-                'input' => $request->except(['featured_image_file']),
-            ]);
+            $lockedPost->update($data);
+            $this->syncTaxonomies($lockedPost, $categories, $tags);
 
-            return back()
-                ->withInput()
-                ->withErrors(['general' => 'No se pudo actualizar el post: ' . $exception->getMessage()]);
-        }
+            return redirect()->route('admin.posts.index')->with('status', 'Post updated.');
+        });
     }
 
+    /**
+     * Aplica a posts de correo las mismas restricciones de seguridad, embargo e incidencias que la bandeja.
+     *
+     * @param array<string, mixed> $proposedAttributes
+     * @throws ValidationException
+     */
+    protected function validateEditorialRestrictions(Post $post, array $proposedAttributes): void
+    {
+        $targetStatus = $proposedAttributes['status'] ?? $post->status;
+        $targetIsPublished = filter_var($proposedAttributes['is_published'] ?? $post->is_published, FILTER_VALIDATE_BOOLEAN);
+
+        // Si el post ni está publicado ni se propone para publicarse o programarse, no se bloquea como borrador
+        $isAttemptingPublishOrSchedule = $targetIsPublished || in_array($targetStatus, ['published', 'scheduled'], true);
+        if (!$isAttemptingPublishOrSchedule) {
+            return;
+        }
+
+        // 1. Incidencias editoriales pendientes de resolución
+        if ($post->exists && $post->incidents()->where('resolution_status', 'pending_review')->exists()) {
+            throw ValidationException::withMessages([
+                'status' => 'No se puede publicar ni programar: tiene incidencias o rectificaciones editoriales pendientes de resolución.',
+            ]);
+        }
+
+        // 2. Determinar la fecha objetivo de publicación
+        // Regla: Publicación inmediata o mantenimiento de publicación actual evalúa con now().
+        // Programación evalúa con la fecha futura propuesta y validada.
+        $targetEvalDate = now();
+        if ($targetStatus === 'scheduled') {
+            if (empty($proposedAttributes['published_at'])) {
+                throw ValidationException::withMessages([
+                    'published_at' => 'Se requiere una fecha y hora futura para programar la publicación.',
+                ]);
+            }
+            $targetEvalDate = $proposedAttributes['published_at'] instanceof Carbon
+                ? $proposedAttributes['published_at']
+                : Carbon::parse($proposedAttributes['published_at']);
+        }
+
+        // 3. Verificación de Estado de Seguridad en Metadata
+        $meta = $post->sanitizedMeta;
+        if ($meta) {
+            // Retenciones técnicas / incidencias no son embargos temporales y no se liberan por fecha
+            if (in_array($meta->security_status, ['held_security', 'rejected'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => "Publicación bloqueada: el contenido se encuentra retenido cautelarmente por seguridad editorial ({$meta->security_status}). Requiere resolución técnica o editorial expresa.",
+                ]);
+            }
+
+            // Verificación de Embargo Activo
+            if ($meta->is_embargo_active) {
+                // Embargo sin fecha precisa (indefinido/centinela)
+                if ($meta->embargo_until === null) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Publicación bloqueada: el material está bajo embargo indefinido o sin fecha confirmada. Requiere resolución expresa.',
+                    ]);
+                }
+
+                if ($targetStatus === 'published' && now()->lt($meta->embargo_until)) {
+                    $embargoStr = $meta->embargo_until->timezone(config('app.timezone', 'Europe/Madrid'))->format('d/m/Y H:i');
+                    throw ValidationException::withMessages([
+                        'status' => "Publicación bloqueada: el material está bajo embargo hasta el {$embargoStr}. Debe programarse para una fecha posterior.",
+                    ]);
+                }
+
+                if ($targetStatus === 'scheduled' && $targetEvalDate->lt($meta->embargo_until)) {
+                    $embargoStr = $meta->embargo_until->timezone(config('app.timezone', 'Europe/Madrid'))->format('d/m/Y H:i');
+                    throw ValidationException::withMessages([
+                        'published_at' => "La fecha programada no puede ser anterior al levantamiento del embargo ({$embargoStr}).",
+                    ]);
+                }
+            }
+        }
+
+        // 4. Validación del estado propuesto en memoria con EmailSafetyValidator
+        // Creamos una copia en memoria con los atributos propuestos para validar el contenido FINAL
+        $evalPost = clone $post;
+        $evalPost->fill($proposedAttributes);
+
+        $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+        $safetyReport = $safetyValidator->validatePost($evalPost, $targetEvalDate);
+
+        if (!$safetyReport['is_safe']) {
+            $violations = implode('; ', $safetyReport['violations']);
+            throw ValidationException::withMessages([
+                'content_text' => "Publicación rechazada por motivos de seguridad editorial: {$violations}",
+            ]);
+        }
+    }
     public function destroy(Post $post): RedirectResponse
     {
         $this->deleteUploaded($post->featured_image);

@@ -24,6 +24,14 @@ class FileUploadService
      */
     public function upload(UploadedFile $file, string $path, ?string $disk = null): array
     {
+        $normalizedDisk = $disk !== null ? $this->normalizeDisk($disk) : null;
+        if ($normalizedDisk === 'r2_private' && ! $this->isR2PrivateConfigured() && ! app()->environment('testing')) {
+            throw new RuntimeException('El almacenamiento privado R2 no está configurado explícitamente (R2_PRIVATE_BUCKET ausente).');
+        }
+        if ($normalizedDisk === 'r2' && ! $this->isR2Configured() && ! app()->environment('testing')) {
+            throw new RuntimeException('El almacenamiento en la nube R2 no está configurado.');
+        }
+
         $fileSize = (int) ($file->getSize() ?? 0);
 
         if ($fileSize > self::BACKBLAZE_LARGE_FILE_THRESHOLD_BYTES && $this->isB2Configured()) {
@@ -39,11 +47,13 @@ class FileUploadService
                     return $result;
                 }
             } catch (Throwable $exception) {
-                Log::warning('FileUploadService: Large file B2 upload failed, falling back to public disk.', [
+                Log::warning('FileUploadService: Large file B2 upload failed', [
                     'path' => $path,
                     'error' => $exception->getMessage(),
                 ]);
-                // Force public disk — don't retry B2
+                if ($disk === 'backblaze' || $disk === 'r2') {
+                    throw new RuntimeException("Fallo en la subida a almacenamiento en nube ({$disk}): " . $exception->getMessage(), 0, $exception);
+                }
                 return $this->attemptUpload($file, null, $path, 'public') ?? throw new RuntimeException('No se pudo subir el archivo.');
             }
         }
@@ -103,6 +113,10 @@ class FileUploadService
         }
 
         $disk = $this->normalizeDisk($disk);
+
+        if ($disk === 'r2_private') {
+            return '';
+        }
 
         if ($disk === 'backblaze' && $this->isB2Configured()) {
             $b2Url = trim((string) config('filesystems.disks.backblaze.url', ''));
@@ -182,11 +196,28 @@ class FileUploadService
             && trim((string) config('filesystems.disks.r2.url', '')) !== '';
     }
 
-    public function disk(string $preferred = 'backblaze'): FilesystemAdapter
+    public function isR2PrivateConfigured(): bool
     {
-        $preferred = $this->normalizeDisk($preferred);
+        return trim((string) config('filesystems.disks.r2_private.key', '')) !== ''
+            && trim((string) config('filesystems.disks.r2_private.secret', '')) !== ''
+            && trim((string) config('filesystems.disks.r2_private.bucket', '')) !== ''
+            && trim((string) config('filesystems.disks.r2_private.endpoint', '')) !== '';
+    }
 
-        if ($preferred === 'backblaze' && $this->isB2Configured()) {
+    public function disk(?string $preferred = null): FilesystemAdapter
+    {
+        $preferredNormalized = $preferred !== null ? $this->normalizeDisk($preferred) : null;
+        $shouldUseR2 = $preferredNormalized === 'r2' || ($preferredNormalized === null && $this->isR2Configured());
+
+        if ($shouldUseR2) {
+            try {
+                return Storage::disk('r2');
+            } catch (Throwable $e) {
+                throw new RuntimeException('No se pudo inicializar el disco R2: ' . $e->getMessage(), 0, $e);
+            }
+        }
+
+        if ($preferredNormalized === 'backblaze' && $this->isB2Configured()) {
             try {
                 return Storage::disk('backblaze');
             } catch (Throwable) {
@@ -344,6 +375,12 @@ class FileUploadService
                 $path = Storage::disk('public')->path($key);
 
                 return is_file($path) ? (string) file_get_contents($path) : null;
+            }
+
+            if ($resolvedDisk === 'r2' && $this->isR2Configured()) {
+                $contents = Storage::disk('r2')->get($key);
+
+                return is_string($contents) ? $contents : null;
             }
 
             if ($resolvedDisk === 'backblaze' && $this->isB2Configured()) {
@@ -620,7 +657,15 @@ class FileUploadService
             $candidates[] = 'backblaze';
         }
 
-        $candidates[] = 'public';
+        // Si se solicitó o resolvió cloud (R2 o B2), NO caer silenciosamente a public.
+        // Public solo se añade si no hay cloud configurado o si explícitamente se pidió public/local.
+        $preferredNormalized = $preferred !== null ? $this->normalizeDisk($preferred) : null;
+        $isCloudTarget = in_array($preferredNormalized, ['r2', 'r2_private', 'backblaze'], true)
+            || ($preferredNormalized === null && ($this->isR2Configured() || $this->isB2Configured()));
+
+        if (! $isCloudTarget) {
+            $candidates[] = 'public';
+        }
 
         return array_values(array_unique(array_filter($candidates)));
     }

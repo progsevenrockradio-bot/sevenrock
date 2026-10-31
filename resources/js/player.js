@@ -35,6 +35,15 @@ export function registerRadioPlayer(Alpine) {
         }
     };
 
+    const toAbsoluteUrl = (url) => {
+        if (!url) return '';
+        try {
+            return new URL(url, window.location.href).href;
+        } catch (_) {
+            return url;
+        }
+    };
+
     const isPlaceholderImage = (url) => {
         if (!url) return true;
         // Do not treat RadioBOSS artwork as a placeholder, because RadioBOSS Cloud
@@ -118,6 +127,7 @@ export function registerRadioPlayer(Alpine) {
         fixedDuration: 0,
         currentTime: 0,
         syncCounter: 0,
+        timeSample: null,
         progress: {
             elapsed: 0,
             duration: 0,
@@ -147,9 +157,14 @@ export function registerRadioPlayer(Alpine) {
         },
         program: null,
         nextProgram: null,
+        nextTrack: null,
         queue: [],
         notices: [],
         history: [],
+        historyStale: false,
+        historyExpanded: false,
+        lastAppliedStatusTimestamp: 0,
+        lastIsProgramState: null,
         listeners: 0,
         metaSource: 'default',
         metaSources: {},
@@ -223,17 +238,17 @@ export function registerRadioPlayer(Alpine) {
 
             window.MusicPlayer = this;
 
-            // Show/hide dock based on playback state
+            if (this.mode === 'dock') {
+                // En la página de simulación y pruebas, mostrar el dock de inmediato
+                if (typeof window !== 'undefined' && window.location && window.location.pathname.includes('dev/player-scenario')) {
+                    this.dockVisible = true;
+                }
+            }
+
+            // Activar visibilidad al reproducir, pero mantener el dock abierto al pausar o ante errores.
             this.$watch('playing', (isPlaying) => {
-                if (this.mode === 'dock') {
-                    if (isPlaying) {
-                        this.dockVisible = true;
-                    } else {
-                        // Small delay so the pause animation is visible before hiding
-                        setTimeout(() => {
-                            if (!this.playing) this.dockVisible = false;
-                        }, 400);
-                    }
+                if (this.mode === 'dock' && isPlaying) {
+                    this.dockVisible = true;
                 }
             });
 
@@ -247,7 +262,7 @@ export function registerRadioPlayer(Alpine) {
                 if (this.playing) {
                     this.playing = false;
                     this.loading = false;
-                    const audio = this.$refs.audio;
+                    const audio = this.$refs?.audio;
                     if (audio) audio.pause();
                 }
             });
@@ -260,6 +275,22 @@ export function registerRadioPlayer(Alpine) {
 
             this.boundHotkeys = (event) => this.handleHotkeys(event);
             window.addEventListener('keydown', this.boundHotkeys);
+
+            // Sincronización multi-ventana (Popup y Dock) mediante BroadcastChannel y StorageEvent
+            this.syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('sevenrock_player_sync') : null;
+            if (this.syncChannel) {
+                this.syncChannel.onmessage = (e) => {
+                    if (e.data === 'refresh') {
+                        void this.refreshStatus(true, false, true);
+                    }
+                };
+            }
+            this.storageSyncListener = (e) => {
+                if (e.key === 'sevenrock_player_refresh_trigger') {
+                    void this.refreshStatus(true, false, true);
+                }
+            };
+            window.addEventListener('storage', this.storageSyncListener);
 
             // Media Session API integration
             this.$watch('track', (value) => this.updateMediaSession(value));
@@ -293,6 +324,12 @@ export function registerRadioPlayer(Alpine) {
             }
             if (this.boundHotkeys) {
                 window.removeEventListener('keydown', this.boundHotkeys);
+            }
+            if (this.syncChannel) {
+                this.syncChannel.close();
+            }
+            if (this.storageSyncListener) {
+                window.removeEventListener('storage', this.storageSyncListener);
             }
             if (this.toastHandle) {
                 clearTimeout(this.toastHandle);
@@ -408,7 +445,7 @@ export function registerRadioPlayer(Alpine) {
 
         applyAudioPreferences() {
             this.$nextTick(() => {
-                const audio = this.$refs.audio;
+                const audio = this.$refs?.audio;
                 if (!audio) {
                     return;
                 }
@@ -416,7 +453,7 @@ export function registerRadioPlayer(Alpine) {
                 audio.volume = this.volume;
                 audio.muted = this.muted;
                 audio.preload = 'none';
-                this.streamCandidates = [this.streamUrl, this.altStreamUrl].filter(Boolean);
+                this.streamCandidates = [this.streamUrl, this.altStreamUrl, '/assets/dev/audio/sample.mp3'].filter((s) => typeof s === 'string' && s.trim() !== '');
             });
         },
 
@@ -426,12 +463,18 @@ export function registerRadioPlayer(Alpine) {
 
         bindAudioEvents() {
             this.$nextTick(() => {
-                const audio = this.$refs.audio;
+                const audio = this.$refs?.audio;
                 if (!audio) {
                     return;
                 }
 
                 const syncFromAudio = () => {
+                    if (this.track && this.track.is_live) {
+                        // En directo, audio.currentTime mide el tiempo de conexión al stream HTTP,
+                        // NO la posición de la canción. La posición de directo la gobierna RadioBOSS.
+                        return;
+                    }
+
                     const duration = Number.isFinite(audio.duration) && audio.duration > 0
                         ? Math.round(audio.duration)
                         : 0;
@@ -441,11 +484,11 @@ export function registerRadioPlayer(Alpine) {
 
                     if (duration > 0) {
                         this.progress.duration = duration;
-                    } else if (this.track.is_live) {
-                        this.progress.duration = 0;
+                        this.fixedDuration = duration;
                     }
 
                     this.progress.elapsed = elapsed;
+                    this.currentTime = elapsed;
                     this.syncProgress();
                 };
 
@@ -500,7 +543,7 @@ export function registerRadioPlayer(Alpine) {
         },
 
         updateVolume() {
-            const audio = this.$refs.audio;
+            const audio = this.$refs?.audio;
             if (audio) {
                 audio.volume = this.volume;
             }
@@ -519,7 +562,7 @@ export function registerRadioPlayer(Alpine) {
         toggleMute() {
             this.muted = !this.muted;
 
-            const audio = this.$refs.audio;
+            const audio = this.$refs?.audio;
             if (audio) {
                 audio.muted = this.muted;
             }
@@ -527,22 +570,31 @@ export function registerRadioPlayer(Alpine) {
             safeWrite('sr-player-muted', this.muted ? '1' : '0');
         },
 
-        ensureAudioSource() {
-            const audio = this.$refs.audio;
+        ensureAudioSource(forceReload = false) {
+            const audio = this.$refs?.audio;
             if (!audio) {
                 return;
             }
 
-            const source = (this.track.is_live || !this.track.audio_url)
+            const source = (this.track && (this.track.is_live || !this.track.audio_url))
                 ? (this.streamCandidates[this.currentStreamIndex] || this.streamUrl)
-                : (this.playbackSource || this.streamUrl);
-            const currentSource = audio.currentSrc || audio.getAttribute('src') || '';
+                : (this.track?.audio_url || this.playbackSource || this.streamUrl);
+            const currentSource = audio.currentSrc || (typeof audio.getAttribute === 'function' ? audio.getAttribute('src') : (audio.src || '')) || '';
 
-            if (currentSource !== source || audio.error) {
+            const absSource = toAbsoluteUrl(source);
+            const absCurrent = toAbsoluteUrl(currentSource);
+
+            if (forceReload || (absSource && absCurrent !== absSource) || audio.error) {
+                const wasPlaying = this.playing;
                 audio.pause();
                 audio.removeAttribute('src');
                 audio.src = source;
                 audio.load();
+                if (wasPlaying) {
+                    audio.play().catch(() => {
+                        this.playing = false;
+                    });
+                }
             }
 
             audio.volume = this.volume;
@@ -550,72 +602,95 @@ export function registerRadioPlayer(Alpine) {
         },
 
         async attemptPlayWithFallback() {
-            const audio = this.$refs.audio;
+            const audio = this.$refs?.audio;
             if (!audio) {
                 return;
             }
-
-            this.ensureAudioSource();
 
             if (this.playing) {
                 this.playing = false;
                 this.loading = false;
                 audio.pause();
                 this.toastMessage('Reproductor en pausa');
-                this.queueStatusRefresh(0);
                 return;
             }
 
-            try {
-                this.loading = true;
-                this.playing = true;
-                document.querySelectorAll('audio').forEach((el) => {
-                    if (el !== audio) {
-                        try { el.pause(); } catch (_) {}
+            // Al reanudar en directo: conectar al borde en vivo y purgar buffer congelado
+            this.ensureAudioSource(Boolean(this.track && this.track.is_live));
+
+            document.querySelectorAll('audio').forEach((el) => {
+                if (el !== audio) {
+                    try { el.pause(); } catch (_) { }
+                }
+            });
+
+            // Si es un audio bajo demanda (podcast o muestra local), reproducir directamente
+            if (this.track && !this.track.is_live && this.track.audio_url) {
+                try {
+                    this.loading = true;
+                    this.playing = true;
+                    this.dockVisible = true;
+                    await audio.play();
+                    this.loading = false;
+                    this.toastMessage('Reproduciendo archivo');
+                    return;
+                } catch (err) {
+                    this.playing = false;
+                    this.loading = false;
+                    this.dockVisible = true;
+                    let msg = 'No se pudo reproducir el archivo (' + (err?.name || 'Error') + ')';
+                    if (err?.name === 'NotAllowedError') {
+                        msg = 'Haz clic para permitir la reproducción de audio';
                     }
-                });
-                window.dispatchEvent(new CustomEvent('sr-live-playing'));
-                await audio.play();
-                this.loading = false;
-                this.queueStatusRefresh(0);
-                this.toastMessage('Reproduciendo');
-            } catch (error) {
-                if (this.currentStreamIndex + 1 < this.streamCandidates.length) {
-                    this.currentStreamIndex += 1;
-                    this.ensureAudioSource();
-                    try {
-                        this.loading = true;
-                        this.playing = true;
-                        await audio.play();
-                        this.loading = false;
+                    this.toastMessage(msg);
+                    return;
+                }
+            }
+
+            const candidates = (Array.isArray(this.streamCandidates) && this.streamCandidates.length > 0)
+                ? this.streamCandidates
+                : [this.streamUrl, this.altStreamUrl, '/assets/dev/audio/sample.mp3'].filter(Boolean);
+
+            let lastError = null;
+
+            for (let i = 0; i < candidates.length; i++) {
+                this.currentStreamIndex = i;
+                this.ensureAudioSource(true);
+                try {
+                    this.loading = true;
+                    this.playing = true;
+                    this.dockVisible = true;
+                    window.dispatchEvent(new CustomEvent('sr-live-playing'));
+                    await audio.play();
+                    this.loading = false;
+                    if (this.track && this.track.is_live) {
                         this.queueStatusRefresh(0);
-                        this.toastMessage('Reproduciendo');
-                        return;
-                    } catch (fallbackError) {
-                        // fall through
                     }
+                    this.toastMessage('Reproduciendo emisión en directo');
+                    return;
+                } catch (err) {
+                    lastError = err;
                 }
+            }
 
-                this.playing = false;
-                this.loading = false;
-                this.queueStatusRefresh(0);
-                
-                let errorMessage = 'No se pudo iniciar el audio (' + (error.name || 'Error') + ')';
-                if (audio.src && audio.src.includes('archive.org/details/')) {
-                    errorMessage = 'Error: Enlace de archive.org incorrecto';
-                } else if (error.name === 'NotSupportedError') {
-                    errorMessage = 'Formato de audio no soportado o enlace roto';
-                } else if (error.name === 'NotAllowedError') {
-                    errorMessage = 'El navegador bloqueó el audio automático';
-                } else if (error.name === 'AbortError') {
-                    errorMessage = 'Carga abortada por el navegador';
-                } else if (error.message) {
-                    errorMessage = 'Error: ' + error.message;
-                }
+            this.playing = false;
+            this.loading = false;
+            // Mantener el dock abierto ante errores para que el usuario vea el estado y reintente
+            this.dockVisible = true;
 
-                if (typeof this.toastMessage === 'function') {
-                    this.toastMessage(errorMessage);
-                }
+            let errorMessage = 'No se pudo conectar a la emisión (' + (lastError?.name || 'Error') + ')';
+            if (audio.src && audio.src.includes('archive.org/details/')) {
+                errorMessage = 'Error: Enlace de archive.org incorrecto';
+            } else if (lastError?.name === 'NotSupportedError') {
+                errorMessage = 'Formato de audio no soportado o stream fuera de línea';
+            } else if (lastError?.name === 'NotAllowedError') {
+                errorMessage = 'Haz clic para permitir la reproducción de audio';
+            } else if (lastError?.message) {
+                errorMessage = 'Error: ' + lastError.message;
+            }
+
+            if (typeof this.toastMessage === 'function') {
+                this.toastMessage(errorMessage);
             }
         },
 
@@ -626,18 +701,19 @@ export function registerRadioPlayer(Alpine) {
         startLiveFromFAB() {
             this.track.is_live = true;
             this.track.audio_url = '';
-            this.streamCandidates = [this.streamUrl, this.altStreamUrl].filter(Boolean);
+            this.streamCandidates = [this.streamUrl, this.altStreamUrl, 'https://radios.mipanel.stream:6796/;', '/assets/dev/audio/sample.mp3'].filter(Boolean);
             this.currentStreamIndex = 0;
             this.dockVisible = true;
             this.dockMinimized = false;
-            this.ensureAudioSource();
+            this.ensureAudioSource(true);
+            this.queueStatusRefresh(0);
             if (!this.playing) {
                 this.attemptPlayWithFallback();
             }
         },
 
         hideDock() {
-            const audio = this.$refs.audio;
+            const audio = this.$refs?.audio;
             if (audio) {
                 audio.pause();
             }
@@ -655,7 +731,7 @@ export function registerRadioPlayer(Alpine) {
                 this.startLiveFromFAB();
                 return;
             }
-            
+
             const srcStr = String(detail.src || '').trim();
             const hasValidAudio = srcStr !== '' && !srcStr.includes('youtube.com') && !srcStr.includes('youtu.be');
 
@@ -663,7 +739,7 @@ export function registerRadioPlayer(Alpine) {
             this.dockVisible = true;
             this.dockMinimized = false;
 
-            const audio = this.$refs.audio;
+            const audio = this.$refs?.audio;
             if (audio && hasValidAudio) {
                 audio.pause();
             }
@@ -699,12 +775,12 @@ export function registerRadioPlayer(Alpine) {
 
                 this.streamCandidates = [srcStr].filter(Boolean);
                 this.currentStreamIndex = 0;
-                
+
                 // Force play instead of toggling pause if something was already playing
                 this.playing = false;
-                
+
                 this.attemptPlayWithFallback();
-                
+
                 // Open info window automatically to show details
                 setTimeout(() => {
                     if (this.interactionReady) {
@@ -715,11 +791,11 @@ export function registerRadioPlayer(Alpine) {
                 if (audio) audio.pause();
                 this.playing = false;
                 this.loading = false;
-                
+
                 if (typeof this.toastMessage === 'function') {
                     this.toastMessage('Audio no disponible. Mostrando info de banda.');
                 }
-                
+
                 // Open info window automatically to show links/bio
                 setTimeout(() => {
                     if (this.interactionReady) {
@@ -759,9 +835,7 @@ export function registerRadioPlayer(Alpine) {
                 return;
             }
 
-            // Solo abrir el programa si es_bloque_programa y NO hay canción real en el stream;
-            // con canción real, siempre abrir la banda/letra.
-            const esBloqueDePrograma = Boolean(this.track.es_bloque_programa) && !this.hasRealSong();
+            const esBloqueDePrograma = Boolean(this.track.es_bloque_programa);
 
             if (esBloqueDePrograma) {
                 if (this.programWindowOpen) {
@@ -798,7 +872,12 @@ export function registerRadioPlayer(Alpine) {
         },
 
         hasProgramAvailable() {
+            if (this.mode === 'dock') {
+                return Boolean(this.track?.es_bloque_programa || this.track?.es_programa_anticipo);
+            }
             return Boolean(
+                this.track?.es_bloque_programa ||
+                this.track?.es_programa_anticipo ||
                 (this.program && (this.program.id || this.program.name)) ||
                 (this.nextProgram && (this.nextProgram.id || this.nextProgram.name)) ||
                 (this.track && (this.track.program_id || this.track.program_name))
@@ -877,6 +956,7 @@ export function registerRadioPlayer(Alpine) {
                 host: this.track.program_host || '',
                 schedule: this.track.program_schedule || '',
                 cover: this.track.cover || this.fallbackCover,
+                country: this.track.program_country || null,
                 genre: '',
                 social_links: {},
                 episode: null,
@@ -909,6 +989,7 @@ export function registerRadioPlayer(Alpine) {
                     const nextProgramInfo = {
                         ...this.programInfo,
                         ...payload.data,
+                        country: payload.data.country || this.track.program_country || this.programInfo?.country || null,
                         cover: finalCover,
                         social_links: {
                             ...(this.programInfo?.social_links || {}),
@@ -918,9 +999,6 @@ export function registerRadioPlayer(Alpine) {
                     };
 
                     this.programInfo = nextProgramInfo;
-                } else if (payload && !payload.success) {
-                    this.closeProgramWindow();
-                    this.openBandWindow();
                 }
             } catch (error) {
                 // ignore program info lookup failures
@@ -1013,6 +1091,78 @@ export function registerRadioPlayer(Alpine) {
             return this.formatBiographySourceLabel(this.bandWindowView.biographySource || '');
         },
 
+        get hasValidNextTrack() {
+            if (!this.nextTrack || typeof this.nextTrack !== 'object') {
+                return false;
+            }
+            const nextTitle = String(this.nextTrack.title || '').trim();
+            const nextArtist = String(this.nextTrack.artist || '').trim();
+
+            if (!nextTitle || nextTitle === this.defaultTitle) {
+                return false;
+            }
+
+            // Comparar por IDENTIDAD COMPLETA (artista y título, o identificador fiable)
+            // Dos artistas pueden interpretar canciones con el mismo nombre (ej: "Changes" o "Hallowed Be Thy Name")
+            if (this.track) {
+                // 1. Identificador fiable si ambos lo tienen
+                if (this.track.id && this.nextTrack.id && String(this.track.id) === String(this.nextTrack.id)) {
+                    return false;
+                }
+
+                const curTitle = this.normalizeTrackTitle(this.track.title || '').toLowerCase();
+                const curArtist = this.normalizeTrackTitle(this.track.artist || '').toLowerCase();
+                const nxtTitle = this.normalizeTrackTitle(nextTitle).toLowerCase();
+                const nxtArtist = this.normalizeTrackTitle(nextArtist).toLowerCase();
+
+                // Si los títulos coinciden
+                if (curTitle && nxtTitle && curTitle === nxtTitle) {
+                    if (curArtist && nxtArtist) {
+                        // Coinciden título Y artista -> es la misma pista que ya comenzó, retirarla
+                        if (curArtist === nxtArtist) {
+                            return false;
+                        }
+                        // Artistas distintos con el mismo título -> canción diferente, es válida y se conserva
+                    } else {
+                        // Si falta el artista en alguno, se retira como medida de seguridad
+                        return false;
+                    }
+                }
+            }
+
+            // Si coincide con el próximo programa, no confundirla con una canción
+            if (this.nextProgram && this.nextProgram.name) {
+                const nextProg = String(this.nextProgram.name).trim().toLowerCase();
+                if (nextProg && nextProg === nextTitle.toLowerCase()) {
+                    return false;
+                }
+            }
+            return true;
+        },
+
+        get visibleHistory() {
+            const list = Array.isArray(this.history) ? this.history : [];
+            if (this.historyExpanded) {
+                return list.slice(0, this.historyLimit || 10);
+            }
+            return list.slice(0, 3);
+        },
+
+        toggleHistoryExpanded() {
+            this.historyExpanded = !this.historyExpanded;
+        },
+
+        formatPlayedAt(timestamp) {
+            if (!timestamp) return '';
+            try {
+                const d = new Date(timestamp);
+                if (isNaN(d.getTime())) return String(timestamp);
+                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch (_) {
+                return String(timestamp);
+            }
+        },
+
         get nextTrackRemainingSeconds() {
             if (this.track.is_live || this.progress.duration <= 0) {
                 return Number.POSITIVE_INFINITY;
@@ -1022,10 +1172,7 @@ export function registerRadioPlayer(Alpine) {
         },
 
         get showNextTrackWidget() {
-            return !this.track.is_live
-                && this.progress.duration > 0
-                && this.nextTrackRemainingSeconds > 0
-                && this.nextTrackRemainingSeconds <= this.nextTrackThresholdSeconds;
+            return this.hasValidNextTrack;
         },
 
         formatBiographySourceLabel(source) {
@@ -1139,6 +1286,26 @@ export function registerRadioPlayer(Alpine) {
             };
         },
 
+        isWidgetMatchingCurrentTrack(widgetTrack) {
+            if (!widgetTrack || !this.track || this.track.es_bloque_programa || !this.track.is_live) {
+                return false;
+            }
+            const cleanCurrentTitle = this.normalizeTrackTitle(this.track.title || '').toLowerCase();
+            const cleanCurrentArtist = this.normalizeBandArtist(this.track.artist || '').toLowerCase();
+            const cleanWidgetTitle = this.normalizeTrackTitle(widgetTrack.title || '').toLowerCase();
+            const cleanWidgetArtist = this.normalizeBandArtist(widgetTrack.artist || '').toLowerCase();
+
+            if (!cleanCurrentTitle || !cleanWidgetTitle) {
+                return false;
+            }
+
+            // Validación estricta de identidad: no inferir pertenencia por similitud de duración
+            const titleMatches = cleanCurrentTitle === cleanWidgetTitle;
+            const artistMatches = !cleanCurrentArtist || !cleanWidgetArtist || cleanCurrentArtist === cleanWidgetArtist;
+
+            return titleMatches && artistMatches;
+        },
+
         syncTrackFromWidget(force = false) {
             if (this.track && !this.track.is_live) {
                 return false;
@@ -1160,7 +1327,7 @@ export function registerRadioPlayer(Alpine) {
             const nextTitle = this.normalizeTrackTitle(widgetTrack.title || this.defaultTitle || '');
             const nextArtist = this.normalizeBandArtist(widgetTrack.artist || this.defaultArtist || '');
             const tempBuster = nextArtist + '|' + nextTitle;
-            
+
             let nextCoverCandidate = widgetTrack.cover || this.fallbackCover;
             if (this.track && this.track.cover && !isFallbackImage(this.track.cover, this.fallbackCover, this.logoUrl)) {
                 if (nextArtist === this.track.artist && nextTitle === this.track.title) {
@@ -1204,6 +1371,17 @@ export function registerRadioPlayer(Alpine) {
                 this.currentTime = widgetTrack.elapsed > 0 ? widgetTrack.elapsed : 0;
                 this.fixedDuration = widgetTrack.duration > 0 ? widgetTrack.duration : 0;
                 this.syncCounter = 0;
+                if (this.fixedDuration > 0) {
+                    this.timeSample = {
+                        trackSignature: nextSignature,
+                        duration: this.fixedDuration,
+                        sampleElapsed: this.currentTime,
+                        sampledAt: Date.now(),
+                        source: 'widget'
+                    };
+                } else {
+                    this.timeSample = null;
+                }
                 this.bandLookupArtist = '';
                 this.bandPanel = this.bandWindowOpen
                     ? {
@@ -1271,10 +1449,10 @@ export function registerRadioPlayer(Alpine) {
 
                 this.track = {
                     ...this.track,
-                band_info: this.formatBandText(data.summary || this.track.band_info || this.track.comment || ''),
-                band_biography: this.formatBandText(data.biography || this.track.band_biography || ''),
-                band_biography_source: String(data.biography_source || this.track.band_biography_source || ''),
-                band_thumbnail: data.thumbnail || this.track.band_thumbnail || this.track.cover || this.fallbackCover,
+                    band_info: this.formatBandText(data.summary || this.track.band_info || this.track.comment || ''),
+                    band_biography: this.formatBandText(data.biography || this.track.band_biography || ''),
+                    band_biography_source: String(data.biography_source || this.track.band_biography_source || ''),
+                    band_thumbnail: data.thumbnail || this.track.band_thumbnail || this.track.cover || this.fallbackCover,
                     lyrics: data.lyrics || this.track.lyrics || '',
                     social_links: Array.isArray(data.social_links) ? data.social_links : this.track.social_links,
                     band_founded_year: data.formed_year ?? this.track.band_founded_year ?? null,
@@ -1326,19 +1504,20 @@ export function registerRadioPlayer(Alpine) {
             );
         },
 
-        async refreshStatus(silent = false, skipBandEnrichment = false) {
-            if (!this.track.is_live) {
+        async refreshStatus(silent = false, skipBandEnrichment = false, force = false) {
+            if (!this.track.is_live && !force) {
                 return;
             }
 
-            if (this.statusInFlight) {
+            if (this.statusInFlight && !force) {
                 return;
             }
 
             this.statusInFlight = true;
 
             try {
-                const response = await fetch(`${this.statusUrl}?t=${Date.now()}`, {
+                const requestTime = Date.now();
+                const response = await fetch(`${this.statusUrl}?t=${requestTime}`, {
                     headers: {
                         Accept: 'application/json',
                     },
@@ -1347,6 +1526,15 @@ export function registerRadioPlayer(Alpine) {
 
                 if (!payload?.success || !payload?.data) {
                     throw new Error('Invalid status payload');
+                }
+
+                // Discard stale responses that arrived out of order
+                if (payload.data.updated_at || payload.data.meta_updated_at) {
+                    const payloadTime = new Date(payload.data.updated_at || payload.data.meta_updated_at).getTime();
+                    if (this.lastAppliedStatusTimestamp && payloadTime < this.lastAppliedStatusTimestamp) {
+                        return;
+                    }
+                    this.lastAppliedStatusTimestamp = payloadTime;
                 }
 
                 this.applyStatus(payload.data, silent, this.resolveWidgetTrack());
@@ -1362,7 +1550,7 @@ export function registerRadioPlayer(Alpine) {
             }
         },
 
-        applyStatus(data, silent = false, widgetTrack = null) {
+        applyStatus(data, silent = false, widgetTrack = null, skipBandEnrichment = false) {
             const previousSignature = this.track.signature;
             const track = data.track || {};
             const isServerDefault = (data.meta_source === 'default' || track.meta_source === 'default');
@@ -1380,22 +1568,23 @@ export function registerRadioPlayer(Alpine) {
             const nextArtist = this.normalizeBandArtist(track.artist || widgetArtist || currentArtist || this.defaultArtist || 'Seven Rock Radio');
             const tempBuster = nextArtist + '|' + nextTitle;
 
-            // Si es bloque de programa y ya tenemos una portada no-fallback, la conservamos
+            // Si es bloque de programa activo y ya tenemos una portada no-fallback, la conservamos
             const currentIsPrograma = Boolean(this.track?.es_bloque_programa);
+            const nowIsPrograma = Boolean(track.es_bloque_programa ?? data.es_bloque_programa ?? (track.program_id || data.program_id || false));
             const currentCoverIsReal = this.track?.cover && !isFallbackImage(this.track.cover, this.fallbackCover, this.logoUrl);
 
             let nextCoverCandidate = this.fallbackCover;
             if (track.cover && (track.cover_is_fallback === false || !isFallbackImage(track.cover, this.fallbackCover, this.logoUrl))) {
                 nextCoverCandidate = track.cover;
-            } else if (currentIsPrograma && currentCoverIsReal) {
-                // Programa activo: NO degradar la portada al fallback aunque el poll no traiga cover
+            } else if (currentIsPrograma && nowIsPrograma && currentCoverIsReal) {
+                // Programa activo que continúa: NO degradar la portada al fallback aunque el poll no traiga cover
                 nextCoverCandidate = this.track.cover;
             } else if (this.track && this.track.cover && !isFallbackImage(this.track.cover, this.fallbackCover, this.logoUrl) && nextArtist === this.track.artist && nextTitle === this.track.title) {
                 nextCoverCandidate = this.track.cover;
             } else if (widgetCover && !isFallbackImage(widgetCover, this.fallbackCover, this.logoUrl)) {
                 nextCoverCandidate = widgetCover;
             } else {
-                nextCoverCandidate = widgetCover || track.cover || this.track.cover || this.fallbackCover;
+                nextCoverCandidate = widgetCover || track.cover || (nowIsPrograma ? this.track.cover : '') || this.fallbackCover;
             }
             const nextCover = this.cleanCover(nextCoverCandidate, this.fallbackCover, tempBuster);
 
@@ -1418,6 +1607,16 @@ export function registerRadioPlayer(Alpine) {
             this.metaSources = data.meta_sources || track.meta_sources || {};
             this.metaUpdatedAt = data.meta_updated_at || track.meta_updated_at || null;
             this.coverIsFallback = Boolean(data.cover_is_fallback ?? track.cover_is_fallback);
+
+            const isNextBloquePrograma = Boolean(track.es_bloque_programa ?? data.es_bloque_programa ?? (track.program_id || data.program_id || false));
+            const isNextProgramaAnticipo = Boolean(track.es_programa_anticipo ?? data.es_programa_anticipo ?? false);
+
+            if (Array.isArray(data.stream_candidates) && data.stream_candidates.length > 0) {
+                this.streamCandidates = data.stream_candidates;
+            }
+            if (data.stream_url) {
+                this.streamUrl = data.stream_url;
+            }
 
             this.track = {
                 ...this.track,
@@ -1442,41 +1641,72 @@ export function registerRadioPlayer(Alpine) {
                 social_links: nextLinks.length ? nextLinks : [],
                 audio_url: (track.is_live ?? true) ? '' : (track.audio_url || ''),
                 is_live: track.is_live ?? true,
-                program_name: track.program_name || data.program_name || this.track.program_name || '',
-                program_description: track.program_description || data.program_description || data.program?.description || this.track.program_description || '',
-                program_host: track.program_host || '',
-                program_schedule: track.program_schedule || '',
-                program_id: track.program_id || data.program_id || null,
-                es_bloque_programa: Boolean(track.es_bloque_programa ?? data.es_bloque_programa ?? (track.program_id || data.program_id || false)),
+                program_name: track.program_name ?? data.program_name ?? (isNextBloquePrograma ? this.track.program_name : '') ?? '',
+                program_description: track.program_description ?? data.program_description ?? data.program?.description ?? (isNextBloquePrograma ? this.track.program_description : '') ?? '',
+                program_host: track.program_host || (isNextBloquePrograma ? (data.program?.conductor || data.program?.host || '') : ''),
+                program_schedule: track.program_schedule || (isNextBloquePrograma ? (data.program?.horario || data.program?.schedule || '') : ''),
+                program_id: track.program_id ?? data.program_id ?? (isNextBloquePrograma ? (data.program?.id ?? null) : null),
+                program_country: track.program_country ?? data.program_country ?? (isNextBloquePrograma ? (data.program?.country ?? data.program?.pais ?? null) : null),
+                es_bloque_programa: isNextBloquePrograma,
+                es_programa_anticipo: isNextProgramaAnticipo,
             };
 
-            // Auto-cambio de pestaña a programa: solo si es_bloque_programa y no hay canción real en el stream
-            if (this.track.es_bloque_programa && !this.hasRealSong() && this.activeTab === 'lyrics' && !this.userHasChosenTab) {
-                this.activeTab = 'program';
-                if (!this.programInfo) {
-                    void this.openProgramWindow(this.track.program_id);
+            // Gestión reactiva de pestaña activa en el panel/drawer:
+            // 1. Cuando entra un programa: la pestaña debe ser 'program'
+            // 2. Cuando estamos en canción: si la pestaña era 'program' y ya no hay programa disponible, vuelve a 'lyrics'
+            if (this.track.es_bloque_programa) {
+                if (this.activeTab !== 'program' && !this.userHasChosenTab) {
+                    this.activeTab = 'program';
                 }
+            } else if (!this.track.es_programa_anticipo && !this.hasProgramAvailable() && this.activeTab === 'program') {
+                this.activeTab = 'lyrics';
             }
 
             if ((trackChanged || !this.favoriteSyncReady) && this.track.signature) {
                 void this.syncFavorites(this.track.signature || '', !this.favoriteSyncReady);
             }
 
+            // Transición automática de ventanas informativas abiertas al cambiar de canción a programa o viceversa
+            const wasProgram = this.lastIsProgramState !== null ? this.lastIsProgramState : Boolean(previousSignature && Boolean(this.track?.es_bloque_programa));
+            const nowProgram = Boolean(this.track.es_bloque_programa);
+            const programStatusTransitioned = (this.lastIsProgramState !== null && this.lastIsProgramState !== nowProgram);
+            this.lastIsProgramState = nowProgram;
+
+            if (programStatusTransitioned) {
+                if (this.bandWindowOpen && nowProgram) {
+                    // Sonaba canción con ventana de banda abierta y empezó un programa: pasar a ventana de programa
+                    this.closeBandWindow();
+                    this.openProgramWindow(this.track.program_id);
+                } else if (this.programWindowOpen && !nowProgram && !this.track.es_programa_anticipo) {
+                    // Sonaba programa con ventana de programa abierta y terminó: pasar a ventana de banda/canción
+                    this.closeProgramWindow();
+                    this.openBandWindow();
+                }
+            } else if (this.programWindowOpen && nowProgram) {
+                // Programa sigue activo pero pudo cambiar la emisión o show
+                this.programInfo = {
+                    ...(this.programInfo || {}),
+                    id: this.track.program_id,
+                    name: this.track.program_name,
+                    description: this.track.program_description,
+                    host: this.track.program_host,
+                    schedule: this.track.program_schedule,
+                    country: this.track.program_country || this.programInfo?.country || null,
+                    cover: this.track.cover || this.fallbackCover,
+                };
+            }
+
+            if (!nowProgram && !this.track.es_programa_anticipo) {
+                this.programInfo = null;
+            }
+
             if (trackChanged) {
                 this.bandLookupArtist = '';
-                this.bandPanel = this.bandWindowOpen
-                    ? {
-                        ...this.bandPanel,
-                        title: this.track.title || this.bandPanel.title || '',
-                        artist: this.track.artist || this.bandPanel.artist || '',
-                        info: this.track.band_info || this.track.comment || this.bandPanel.info || '',
-                        biography: this.track.band_biography || this.bandPanel.biography || '',
-                        biographySource: this.track.band_biography_source || this.bandPanel.biographySource || '',
-                        cover: this.track.band_thumbnail || this.track.cover || this.bandPanel.cover || this.fallbackCover,
-                        foundedLabel: this.track.band_founded_label || this.bandPanel.foundedLabel || '',
-                        facts: Array.isArray(this.track.band_facts) ? this.track.band_facts : (this.bandPanel.facts || []),
-                    }
-                    : {
+                if (this.bandWindowOpen) {
+                    this.bandWindowSnapshot = this.buildBandWindowSnapshot();
+                    this.bandPanel = { ...this.bandWindowSnapshot };
+                } else {
+                    this.bandPanel = {
                         title: '',
                         artist: '',
                         info: '',
@@ -1486,6 +1716,7 @@ export function registerRadioPlayer(Alpine) {
                         foundedLabel: '',
                         facts: [],
                     };
+                }
             }
 
             this.queueWidgetSync(trackChanged ? 0 : 200);
@@ -1496,14 +1727,107 @@ export function registerRadioPlayer(Alpine) {
 
             this.program = data.program || null;
             this.nextProgram = data.next_program || null;
+
+            // Próxima canción: validar y retirar si ya comenzó a sonar
+            const candidateNext = data.next_track || null;
+            if (candidateNext && candidateNext.title) {
+                const nxtTitle = this.normalizeTrackTitle(candidateNext.title).toLowerCase();
+                const curTitle = this.normalizeTrackTitle(this.track.title || '').toLowerCase();
+                const nxtArtist = this.normalizeTrackTitle(candidateNext.artist || '').toLowerCase();
+                const curArtist = this.normalizeTrackTitle(this.track.artist || '').toLowerCase();
+
+                let isSameTrack = false;
+                if (this.track.id && candidateNext.id && String(this.track.id) === String(candidateNext.id)) {
+                    isSameTrack = true;
+                } else if (nxtTitle && curTitle && nxtTitle === curTitle) {
+                    if (nxtArtist && curArtist) {
+                        isSameTrack = (nxtArtist === curArtist);
+                    } else {
+                        isSameTrack = true;
+                    }
+                }
+
+                if (isSameTrack) {
+                    this.nextTrack = null;
+                } else {
+                    this.nextTrack = candidateNext;
+                }
+            } else {
+                this.nextTrack = null;
+            }
+
             this.queue = (data.queue || []).slice(0, 5);
             this.notices = (data.notices || []).slice(0, 6);
-            this.history = (data.history || []).slice(0, this.historyLimit);
+
+            // Historial: deduplicación de emisiones por identificador o inicio real
+            const deduplicateHistory = (items) => {
+                if (!Array.isArray(items)) return [];
+                const result = [];
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (!item || !item.title) continue;
+                    const prev = result[result.length - 1];
+                    if (prev) {
+                        const sameTitle = String(prev.title).trim().toLowerCase() === String(item.title).trim().toLowerCase();
+                        const sameArtist = String(prev.artist || '').trim().toLowerCase() === String(item.artist || '').trim().toLowerCase();
+                        if (sameTitle && sameArtist) {
+                            // 1. Identificador fiable: si ambos poseen ID y difieren, son emisiones distintas en BD
+                            if (prev.id && item.id && String(prev.id) !== String(item.id)) {
+                                result.push(item);
+                                continue;
+                            }
+                            // Si tienen el mismo ID, es un duplicado inequívoco
+                            if (prev.id && item.id && String(prev.id) === String(item.id)) {
+                                continue;
+                            }
+
+                            // 2. Inicio real de reproducción:
+                            if (prev.played_at && item.played_at) {
+                                const diffSecs = Math.abs(new Date(prev.played_at).getTime() - new Date(item.played_at).getTime()) / 1000;
+                                // Sondeo idéntico inmediato (< 15 segundos)
+                                if (diffSecs < 15) {
+                                    continue;
+                                }
+
+                                // Si la canción tiene duración y la separación la supera, es una repetición auténtica
+                                const dur = Number(item.duration_seconds || prev.duration_seconds || 0);
+                                if (dur > 0 && diffSecs < Math.max(20, dur - 10)) {
+                                    continue; // Pertenece al mismo pase en curso
+                                }
+
+                                // Política conservadora para fuentes sin duración: descartar solo sondeos inmediatos (< 60s)
+                                if (dur <= 0 && diffSecs < 60) {
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+                    result.push(item);
+                }
+                return result;
+            };
+
+            if (Array.isArray(data.history) && data.history.length > 0) {
+                const clean = deduplicateHistory(data.history);
+                this.history = clean.slice(0, this.historyLimit || 10);
+                this.historyStale = Boolean(data.history_stale);
+            } else if (data.history_stale) {
+                this.historyStale = true;
+            } else if (!data.history && this.history.length > 0) {
+                // Conservar el último historial válido si la fuente cae
+                this.historyStale = true;
+            } else if (Array.isArray(data.history) && data.history.length === 0) {
+                this.history = [];
+                this.historyStale = false;
+            }
+
             this.listeners = Number(data.listeners || this.track.listeners || 0);
 
             const widgetDuration = Number(widgetTrack?.duration || 0);
             const widgetElapsed = Number(widgetTrack?.elapsed || 0);
-            const audio = this.$refs.audio;
+            const audio = this.$refs?.audio;
             const audioDuration = audio && Number.isFinite(audio.duration) && audio.duration > 0
                 ? Math.round(audio.duration)
                 : 0;
@@ -1511,20 +1835,100 @@ export function registerRadioPlayer(Alpine) {
                 ? Math.round(audio.currentTime)
                 : 0;
 
+            const serverHasDuration = track.duration_seconds !== null && track.duration_seconds !== undefined && Number(track.duration_seconds) > 0;
+            const serverDuration = serverHasDuration ? Math.round(Number(track.duration_seconds)) : 0;
+            const serverHasElapsed = track.elapsed_seconds !== null && track.elapsed_seconds !== undefined && Number(track.elapsed_seconds) >= 0;
+            const serverElapsed = serverHasElapsed ? Math.max(0, Math.round(Number(track.elapsed_seconds))) : 0;
+
             if (trackChanged) {
-                this.fixedDuration = Number(track.duration_seconds || 0) || widgetDuration || audioDuration;
-                this.currentTime = Number(track.elapsed_seconds || 0) || audioElapsed || widgetElapsed || 0;
+                this.timeSample = null;
+                if (this.track && this.track.is_live) {
+                    if (serverHasDuration) {
+                        this.fixedDuration = serverDuration;
+                        this.currentTime = serverHasElapsed ? serverElapsed : 0;
+                        this.timeSample = {
+                            trackSignature: this.track.signature,
+                            duration: serverDuration,
+                            sampleElapsed: this.currentTime,
+                            sampledAt: Date.now(),
+                            source: 'api',
+                        };
+                    } else if (isServerDefault && widgetTrack && this.isWidgetMatchingCurrentTrack(widgetTrack) && widgetTrack.duration > 0) {
+                        this.fixedDuration = widgetTrack.duration;
+                        this.currentTime = widgetTrack.elapsed >= 0 ? widgetTrack.elapsed : 0;
+                        this.timeSample = {
+                            trackSignature: this.track.signature,
+                            duration: widgetTrack.duration,
+                            sampleElapsed: this.currentTime,
+                            sampledAt: Date.now(),
+                            source: 'widget',
+                        };
+                    } else {
+                        // Limpieza total: sin duración fiable, mostrar «EN DIRECTO»
+                        this.fixedDuration = 0;
+                        this.currentTime = 0;
+                    }
+                } else {
+                    // En podcast bajo demanda o archivo local
+                    this.fixedDuration = serverHasDuration ? serverDuration : (audioDuration || 0);
+                    this.currentTime = serverHasElapsed ? serverElapsed : (audioElapsed || 0);
+                }
                 this.syncCounter = 0;
             } else {
-                if (Number(track.duration_seconds || 0) > 0) {
-                    this.fixedDuration = Number(track.duration_seconds || 0);
-                } else if (widgetDuration > 0 && isServerDefault) {
-                    this.fixedDuration = widgetDuration;
-                }
-                if (Number(track.elapsed_seconds || 0) > 0) {
-                    this.currentTime = Number(track.elapsed_seconds || 0);
-                } else if (widgetElapsed > 0 && isServerDefault) {
-                    this.currentTime = widgetElapsed;
+                if (this.track && this.track.is_live) {
+                    if (serverHasDuration) {
+                        this.fixedDuration = serverDuration;
+                        if (serverHasElapsed) {
+                            const drift = Math.abs(this.currentTime - serverElapsed);
+                            if (drift >= 2 || !this.timeSample) {
+                                this.currentTime = serverElapsed;
+                            }
+                            this.timeSample = {
+                                trackSignature: this.track.signature,
+                                duration: serverDuration,
+                                sampleElapsed: this.currentTime,
+                                sampledAt: Date.now(),
+                                source: 'api',
+                            };
+                        }
+                    } else if (isServerDefault && widgetTrack && this.isWidgetMatchingCurrentTrack(widgetTrack) && widgetTrack.duration > 0) {
+                        this.fixedDuration = widgetTrack.duration;
+                        if (widgetTrack.elapsed >= 0) {
+                            const drift = Math.abs(this.currentTime - widgetTrack.elapsed);
+                            if (drift >= 2 || !this.timeSample) {
+                                this.currentTime = widgetTrack.elapsed;
+                            }
+                            this.timeSample = {
+                                trackSignature: this.track.signature,
+                                duration: widgetTrack.duration,
+                                sampleElapsed: this.currentTime,
+                                sampledAt: Date.now(),
+                                source: 'widget',
+                            };
+                        }
+                    } else {
+                        // La pista actual perdió sus datos de tiempo sin cambiar de canción.
+                        // Si no existe una muestra vigente válida, limpiar tiempo y mostrar «EN DIRECTO».
+                        const hasValidRecentSample = this.timeSample
+                            && this.timeSample.trackSignature === this.track.signature
+                            && this.fixedDuration > 0
+                            && (Date.now() - this.timeSample.sampledAt) < 15000;
+
+                        if (!hasValidRecentSample) {
+                            this.fixedDuration = 0;
+                            this.currentTime = 0;
+                            this.timeSample = null;
+                        }
+                    }
+                } else {
+                    if (serverHasDuration) {
+                        this.fixedDuration = serverDuration;
+                    } else if (audioDuration > 0) {
+                        this.fixedDuration = audioDuration;
+                    }
+                    if (audioElapsed > 0) {
+                        this.currentTime = audioElapsed;
+                    }
                 }
             }
 
@@ -1540,6 +1944,23 @@ export function registerRadioPlayer(Alpine) {
             this.updateDocumentTitle();
             if (trackChanged) {
                 this.updateMediaSession(this.track);
+            }
+
+            // Notificar a observadores locales (panel de depuración / dev-scenario)
+            try {
+                window.dispatchEvent(new CustomEvent('sr-player-status-applied', {
+                    detail: {
+                        mode: this.mode,
+                        track: this.track,
+                        program: this.program,
+                        nextProgram: this.nextProgram,
+                        nextTrack: this.nextTrack,
+                        listeners: this.listeners,
+                        metaSource: this.metaSource,
+                    }
+                }));
+            } catch (e) {
+                // ignore
             }
         },
 
@@ -1590,15 +2011,15 @@ export function registerRadioPlayer(Alpine) {
         readTrackTimerWidget(timerRoot = null, timerElapsed = null, timerRemaining = null) {
             const elapsedText = this.cleanWidgetText(
                 timerElapsed?.innerText
-                    || timerElapsed?.textContent
-                    || timerRoot?.querySelector?.(`#${this.widgetIds.timerElapsed}`)?.innerText
-                    || ''
+                || timerElapsed?.textContent
+                || timerRoot?.querySelector?.(`#${this.widgetIds.timerElapsed}`)?.innerText
+                || ''
             );
             const durationText = this.cleanWidgetText(
                 timerRemaining?.innerText
-                    || timerRemaining?.textContent
-                    || timerRoot?.querySelector?.(`#${this.widgetIds.timerRemaining}`)?.innerText
-                    || ''
+                || timerRemaining?.textContent
+                || timerRoot?.querySelector?.(`#${this.widgetIds.timerRemaining}`)?.innerText
+                || ''
             );
 
             const elapsed = this.parseWidgetDuration(elapsedText);
@@ -1715,8 +2136,9 @@ export function registerRadioPlayer(Alpine) {
 
             const parts = text.includes(' - ') ? text.split(' - ') : [];
             if (parts.length >= 2) {
-                const artist = this.cleanWidgetText(parts[parts.length - 1] || '');
-                const title = this.cleanWidgetText(parts.slice(0, -1).join(' - '));
+                // RadioBOSS stream standard format: "Artist - Title"
+                const artist = this.cleanWidgetText(parts[0] || '');
+                const title = this.cleanWidgetText(parts.slice(1).join(' - '));
                 return { title, artist };
             }
 
@@ -1773,31 +2195,68 @@ export function registerRadioPlayer(Alpine) {
                 return;
             }
 
-            const audio = this.$refs.audio;
+            const audio = this.$refs?.audio;
             if (audio && Number.isFinite(audio.currentTime) && audio.currentTime > 0 && !this.track.is_live) {
                 this.currentTime = Math.round(audio.currentTime);
-            } else if (this.track.is_live) {
-                if (this.fixedDuration > 0 && this.currentTime >= this.fixedDuration) {
-                    this.currentTime = this.fixedDuration;
-                } else {
+            } else if (this.track && this.track.is_live) {
+                if (this.fixedDuration > 0) {
+                    // Caducidad de datos al alcanzar el final:
+                    // 1. Si currentTime sobrepasa fixedDuration + 5s
+                    // 2. O si el avance proyectado en tiempo real desde la muestra sobrepasa fixedDuration + 8s
+                    const secondsSinceSample = (this.timeSample && this.timeSample.sampledAt > 0)
+                        ? Math.floor((Date.now() - this.timeSample.sampledAt) / 1000)
+                        : 0;
+                    const estimatedElapsed = (this.timeSample && this.timeSample.sampledAt > 0)
+                        ? (this.timeSample.sampleElapsed + secondsSinceSample)
+                        : this.currentTime;
+
+                    if (this.currentTime >= (this.fixedDuration + 5) || estimatedElapsed >= (this.fixedDuration + 8)) {
+                        // Limpiar tiempos expirados y mostrar «EN DIRECTO»
+                        this.fixedDuration = 0;
+                        this.currentTime = 0;
+                        this.timeSample = null;
+                        this.syncProgress();
+                        return;
+                    }
+
                     this.currentTime += 1;
+                } else {
+                    this.currentTime = 0;
                 }
+
                 this.syncCounter += 1;
 
-                if (this.syncCounter >= 10) {
+                if (this.syncCounter >= 5) {
                     this.syncCounter = 0;
-                    const timerRoot = document.getElementById(this.widgetIds.timerElapsed)?.closest?.('.rbcloud_tracktimer');
-                    if (timerRoot) {
-                        const timerElapsedEl = document.getElementById(this.widgetIds.timerElapsed);
-                        const timerRemainingEl = document.getElementById(this.widgetIds.timerRemaining);
-                        const timer = this.readTrackTimerWidget(timerRoot, timerElapsedEl, timerRemainingEl);
-                        if (timer.elapsed > 0) {
-                            const diff = Math.abs(this.currentTime - timer.elapsed);
-                            if (diff > 3 && timer.elapsed > this.currentTime) {
-                                this.currentTime = timer.elapsed;
-                            }
-                            if (timer.remaining > 0) {
-                                this.fixedDuration = timer.elapsed + timer.remaining;
+                    // Sincronización con widget RadioBOSS Cloud:
+                    // CONDICIONES ESTRICTAS:
+                    // 1. NO estar en bloque de programa
+                    // 2. El widget debe coincidir estrictamente con el título y artista de la pista actual.
+                    //    Una duración parecida no demuestra pertenencia.
+                    if (!this.track.es_bloque_programa) {
+                        const widgetTrack = this.resolveWidgetTrack();
+                        if (widgetTrack && this.isWidgetMatchingCurrentTrack(widgetTrack)) {
+                            const timerElapsedEl = document.getElementById(this.widgetIds.timerElapsed);
+                            const timerRemainingEl = document.getElementById(this.widgetIds.timerRemaining);
+                            const timerRoot = timerElapsedEl?.closest?.('.rbcloud_tracktimer') || timerRemainingEl?.closest?.('.rbcloud_tracktimer');
+                            if (timerRoot) {
+                                const timer = this.readTrackTimerWidget(timerRoot, timerElapsedEl, timerRemainingEl);
+                                if (timer.elapsed >= 0 && (timer.elapsed > 0 || timer.remaining > 0)) {
+                                    const diff = Math.abs(this.currentTime - timer.elapsed);
+                                    if (diff >= 2) {
+                                        this.currentTime = timer.elapsed;
+                                    }
+                                    if (timer.remaining > 0) {
+                                        this.fixedDuration = timer.elapsed + timer.remaining;
+                                    }
+                                    this.timeSample = {
+                                        trackSignature: this.track.signature,
+                                        duration: this.fixedDuration,
+                                        sampleElapsed: this.currentTime,
+                                        sampledAt: Date.now(),
+                                        source: 'widget',
+                                    };
+                                }
                             }
                         }
                     }
@@ -1822,7 +2281,12 @@ export function registerRadioPlayer(Alpine) {
         },
 
         seek(event) {
-            const audio = this.$refs.audio;
+            // La emisión en directo es estrictamente informativa: no admite salto temporal
+            if (this.track && this.track.is_live) {
+                return;
+            }
+
+            const audio = this.$refs?.audio;
             if (!audio || this.fixedDuration <= 0) {
                 return;
             }
@@ -1836,6 +2300,31 @@ export function registerRadioPlayer(Alpine) {
             if (this.track.audio_url && Number.isFinite(audio.duration) && audio.duration > 0) {
                 audio.currentTime = audio.duration * clamped;
             }
+        },
+
+        hasReliableTime() {
+            if (!this.track) {
+                return false;
+            }
+            if (!this.track.is_live) {
+                return (this.fixedDuration > 0 || this.progress.duration > 0);
+            }
+            if (this.fixedDuration <= 0) {
+                return false;
+            }
+            // 0 es un valor inicial válido (canción recién iniciada)
+            if (this.currentTime < 0 || this.currentTime > (this.fixedDuration + 5)) {
+                return false;
+            }
+            // Caducidad de la muestra en tiempo real
+            if (this.timeSample && this.timeSample.sampledAt > 0) {
+                const elapsedSinceSample = Math.floor((Date.now() - this.timeSample.sampledAt) / 1000);
+                const projectedElapsed = this.timeSample.sampleElapsed + elapsedSinceSample;
+                if (projectedElapsed > (this.fixedDuration + 8)) {
+                    return false;
+                }
+            }
+            return true;
         },
 
         formatTime(seconds) {
@@ -2286,6 +2775,46 @@ export function registerRadioPlayer(Alpine) {
             return [];
         },
 
+        countryFlag(countryName) {
+            if (!countryName || typeof countryName !== 'string') {
+                return '';
+            }
+            const normalized = countryName.trim().toLowerCase();
+            const map = {
+                'argentina': '🇦🇷',
+                'españa': '🇪🇸',
+                'espana': '🇪🇸',
+                'spain': '🇪🇸',
+                'chile': '🇨🇱',
+                'venezuela': '🇻🇪',
+                'méxico': '🇲🇽',
+                'mexico': '🇲🇽',
+                'estados unidos': '🇺🇸',
+                'eeuu': '🇺🇸',
+                'usa': '🇺🇸',
+                'reino unido': '🇬🇧',
+                'uk': '🇬🇧',
+                'gran bretaña': '🇬🇧',
+                'gran bretana': '🇬🇧',
+                'colombia': '🇨🇴',
+                'perú': '🇵🇪',
+                'peru': '🇵🇪',
+                'uruguay': '🇺🇾',
+                'brasil': '🇧🇷',
+                'brazil': '🇧🇷',
+                'alemania': '🇩🇪',
+                'germany': '🇩🇪',
+                'francia': '🇫🇷',
+                'france': '🇫🇷',
+                'italia': '🇮🇹',
+                'italy': '🇮🇹',
+                'australia': '🇦🇺',
+                'canadá': '🇨🇦',
+                'canada': '🇨🇦',
+            };
+            return map[normalized] || '🌍';
+        },
+
         bandLineup() {
             const members = Array.isArray(this.bandWindowView.bandMembers) ? this.bandWindowView.bandMembers : [];
 
@@ -2326,7 +2855,7 @@ export function registerRadioPlayer(Alpine) {
         },
 
         get tituloVisible() {
-            const esPrograma = this.track?.es_bloque_programa || (this.track?.program_name ?? '') !== '';
+            const esPrograma = Boolean(this.track?.es_bloque_programa);
             if (esPrograma) {
                 const t = (this.track?.title ?? '').trim();
                 const def = (this.defaultTitle ?? '').trim().toLowerCase();
@@ -2340,7 +2869,7 @@ export function registerRadioPlayer(Alpine) {
         },
 
         get subtituloVisible() {
-            const esPrograma = this.track?.es_bloque_programa || (this.track?.program_name ?? '') !== '';
+            const esPrograma = Boolean(this.track?.es_bloque_programa);
             if (esPrograma) {
                 return this.track?.program_host || this.track?.program_schedule || this.track?.artist || this.defaultArtist;
             }
@@ -2354,8 +2883,7 @@ export function registerRadioPlayer(Alpine) {
          * con una imagen real disponible.
          */
         get coverVisible() {
-            const esPrograma = Boolean(this.track?.es_bloque_programa)
-                || (this.track?.program_name ?? '') !== '';
+            const esPrograma = Boolean(this.track?.es_bloque_programa);
             const coverPrograma = this.programInfo?.cover
                 || this.track?.program_cover
                 || '';

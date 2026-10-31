@@ -158,21 +158,62 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 'artist_name' => $artistName,
             ]);
 
-            $release = NewRelease::create([
-                'title'        => $title,
-                'slug'         => Str::slug($title . '-' . $artistName),
-                'artist_name'  => $artistName,
-                'description'  => $content,
-                'released_at'  => now(),
-                'is_active'    => false, // En FASE 2: Todo NewRelease procesado por IA queda inactivo (borrador)
-                'cover_image'  => $resolverInfo['url'] ?? null,
-                'youtube_url'  => $parsed['youtube_url'] ?? null,
-                'spotify_url'  => $parsed['spotify_url'] ?? null,
-                'author_email' => null,
-                'origin'       => 'email',
+            // Evaluación determinista del embargo y seguridad original para NewRelease
+            $scheduleManager = app(\App\Services\ReleaseScheduleManager::class);
+            $schedule = $scheduleManager->evaluateSchedule($subject, $body, now());
+            $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+            $safetyReport = $safetyValidator->validateEditorialSafety([
+                'title'   => $title,
+                'excerpt' => $excerpt,
+                'content' => $content,
             ]);
 
-            Log::info("ProcessExternalEmailWithAiJob: Lanzamiento creado vía IA (ID {$release->id}).");
+            $isEmbargoActive = $schedule['is_embargo_active'] || ($pipelineResult['is_under_embargo'] ?? false);
+            $embargoUntil = $schedule['embargo_until'] ?? ($pipelineResult['embargo_until'] ?? null);
+
+            $securityStatus = 'passed';
+            $incidentReason = null;
+            if (!$safetyReport['is_safe']) {
+                $securityStatus = 'needs_review';
+                $incidentReason = implode(' | ', $safetyReport['violations']);
+            } elseif ($isEmbargoActive) {
+                $securityStatus = 'held_embargo';
+                $incidentReason = 'Material bajo embargo editorial detectado en correo original';
+            }
+
+            DB::beginTransaction();
+            try {
+                $release = NewRelease::create([
+                    'title'             => $title,
+                    'slug'              => Str::slug($title . '-' . $artistName),
+                    'artist_name'       => $artistName,
+                    'description'       => $content,
+                    'released_at'       => now(),
+                    'is_active'         => false, // En FASE 2: Todo NewRelease procesado por IA queda inactivo (borrador)
+                    'cover_image'       => $resolverInfo['url'] ?? null,
+                    'youtube_url'       => $parsed['youtube_url'] ?? null,
+                    'spotify_url'       => $parsed['spotify_url'] ?? null,
+                    'author_email'      => null,
+                    'origin'            => 'email',
+                    'is_embargo_active' => (bool) $isEmbargoActive,
+                    'embargo_until'     => $embargoUntil,
+                    'source_subject'    => $subject,
+                    'source_message_id' => $messageId,
+                    'security_status'   => $securityStatus,
+                    'incident_reason'   => $incidentReason,
+                ]);
+                DB::commit();
+                Log::info("ProcessExternalEmailWithAiJob: Lanzamiento creado vía IA con metadatos de seguridad persistidos (ID {$release->id}).");
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                Log::error("ProcessExternalEmailWithAiJob: Fallo al crear NewRelease con metadatos de seguridad.", [
+                    'message_id' => $messageId,
+                    'code'       => $e->getCode(),
+                ]);
+                $this->markProcessed($messageId, $subject, 'failed_metadata', 'Fallo al persistir metadatos obligatorios de lanzamiento');
+                $this->cleanTempMp3($tempMp3Path);
+                throw $e;
+            }
         } else {
             // Post
             $resolverInfo = $imageResolver->resolveForPost([
@@ -197,31 +238,41 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 $slug = $baseSlug . '-' . $suffix++;
             }
 
-            $post = Post::create([
-                'title'             => $title,
-                'slug'              => $slug,
-                'content'           => $content,
-                'excerpt'           => $excerpt,
-                'status'            => $status,
-                'is_published'      => ($status === 'published'),
-                'published_at'      => now(),
-                'featured_image'    => $resolverInfo['url'] ?? null,
-                'source_url'        => $resolverInfo['article_url'] ?? null,
-                'source_name'       => $resolverInfo['credit'] ?? null,
-                'image_source'      => $resolverInfo['source'] ?? null,
-                'image_fetch_error' => $resolverInfo['error_reason'] ?? null,
-                'categories'        => $categories,
-                'author_email'      => $senderEmail,
-                'source_subject'    => $subject,
-            ]);
-
-            $this->syncTaxonomies($post, $categories);
-
-            // Validación de seguridad centralizada (FASE 3)
-            $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
-            $safetyResult = $safetyValidator->validatePost($post);
-
+            DB::beginTransaction();
             try {
+                $post = Post::create([
+                    'title'             => $title,
+                    'slug'              => $slug,
+                    'content'           => $content,
+                    'excerpt'           => $excerpt,
+                    'status'            => $status,
+                    'is_published'      => ($status === 'published'),
+                    'published_at'      => now(),
+                    'featured_image'    => $resolverInfo['url'] ?? null,
+                    'source_url'        => $resolverInfo['article_url'] ?? null,
+                    'source_name'       => $resolverInfo['credit'] ?? null,
+                    'image_source'      => $resolverInfo['source'] ?? null,
+                    'image_fetch_error' => $resolverInfo['error_reason'] ?? null,
+                    'categories'        => $categories,
+                    'author_email'      => $senderEmail,
+                    'source_subject'    => $subject,
+                ]);
+
+                $this->syncTaxonomies($post, $categories);
+
+                // Validación de seguridad centralizada (FASE 3)
+                $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+                $safetyResult = $safetyValidator->validatePost($post);
+
+                // Determinación determinista estricta del embargo y calendario
+                $scheduleManager = app(\App\Services\ReleaseScheduleManager::class);
+                $schedule = $scheduleManager->evaluateSchedule($subject, $body, now());
+
+                $isEmbargoActive = $schedule['is_embargo_active'] || ($pipelineResult['is_under_embargo'] ?? false);
+                $embargoUntil = $schedule['embargo_until'] ?? ($pipelineResult['embargo_until'] ?? null);
+                $publishPermittedAt = $schedule['publish_permitted_at'] ?? ($pipelineResult['publish_permitted_at'] ?? now());
+                $musicalReleaseDate = $schedule['musical_release_date'] ?? ($pipelineResult['musical_release_date'] ?? null);
+
                 $attachmentsList = [];
                 if (!empty($tempMp3Name)) {
                     $attachmentsList[] = $tempMp3Name;
@@ -230,20 +281,33 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 $mediaInventory = $mediaExtractor->extract($body, !empty($tempMp3Name) ? $attachmentsList : null);
 
                 \App\Models\EmailPostSanitizedMeta::create([
-                    'post_id'           => $post->id,
-                    'source_message_id' => $messageId,
-                    'sender_email'      => $senderEmail,
-                    'source_subject'    => $subject,
-                    'received_at'       => now(),
-                    'security_status'   => $safetyResult['is_safe'] ? 'passed' : 'needs_review',
-                    'incident_reason'   => ! empty($safetyResult['violations']) ? implode(' | ', $safetyResult['violations']) : null,
-                    'media_inventory'   => $mediaInventory,
+                    'post_id'              => $post->id,
+                    'source_message_id'    => $messageId,
+                    'sender_email'         => $senderEmail,
+                    'source_subject'       => $subject,
+                    'received_at'          => now(),
+                    'musical_release_date' => $musicalReleaseDate,
+                    'embargo_until'        => $embargoUntil,
+                    'publish_permitted_at' => $publishPermittedAt,
+                    'is_embargo_active'    => (bool) $isEmbargoActive,
+                    'editorial_notes'      => $pipelineResult['stage1_facts']['editorial_notes'] ?? null,
+                    'security_status'      => $safetyResult['is_safe'] ? ($isEmbargoActive ? 'held_embargo' : 'passed') : 'needs_review',
+                    'incident_reason'      => ! empty($safetyResult['violations']) ? implode(' | ', $safetyResult['violations']) : null,
+                    'media_inventory'      => $mediaInventory,
                 ]);
-            } catch (\Throwable $e) {
-                // Silencioso si la tabla aún no se ha migrado
-            }
 
-            Log::info("ProcessExternalEmailWithAiJob: Post creado vía IA (ID {$post->id}).");
+                DB::commit();
+                Log::info("ProcessExternalEmailWithAiJob: Post creado vía IA con metadatos protegidos (ID {$post->id}).");
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                Log::error("ProcessExternalEmailWithAiJob: Fallo crítico al persistir post/metadatos obligatorios en IA.", [
+                    'message_id' => $messageId,
+                    'code'       => $e->getCode(),
+                ]);
+                $this->markProcessed($messageId, $subject, 'failed_metadata', 'Fallo al persistir metadatos obligatorios de seguridad');
+                $this->cleanTempMp3($tempMp3Path);
+                throw $e;
+            }
         }
 
         $this->markProcessed($messageId, $subject, 'processed');
@@ -291,17 +355,50 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 'artist_name' => $artistName,
             ]);
 
-            NewRelease::create([
-                'title'        => $titleName ?: $subject,
-                'slug'         => Str::slug(($titleName ?: $subject) . '-' . $artistName) . '-' . Str::random(4),
-                'artist_name'  => $artistName ?: 'Artista',
-                'description'  => $cleanContent,
-                'released_at'  => now(),
-                'is_active'    => false, // SIEMPRE borrador en fallback
-                'cover_image'  => $resolverInfo['url'] ?? null,
-                'author_email' => null,
-                'origin'       => 'email',
+            // Evaluación de embargo y seguridad para fallback NewRelease
+            $scheduleManager = app(\App\Services\ReleaseScheduleManager::class);
+            $schedule = $scheduleManager->evaluateSchedule($subject, $body, now());
+            $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+            $safetyReport = $safetyValidator->validateEditorialSafety([
+                'title'   => $titleName ?: $subject,
+                'excerpt' => '',
+                'content' => $cleanContent,
             ]);
+
+            $isEmbargoActive = $schedule['is_embargo_active'] ?? false;
+            $embargoUntil = $schedule['embargo_until'] ?? null;
+            $securityStatus = $safetyReport['is_safe'] ? ($isEmbargoActive ? 'held_embargo' : 'passed') : 'needs_review';
+            $incidentReason = !empty($safetyReport['violations']) ? implode(' | ', $safetyReport['violations']) : "Fallback determinista: {$errorReason}";
+
+            DB::beginTransaction();
+            try {
+                $release = NewRelease::create([
+                    'title'             => $titleName ?: $subject,
+                    'slug'              => Str::slug(($titleName ?: $subject) . '-' . $artistName) . '-' . Str::random(4),
+                    'artist_name'       => $artistName ?: 'Artista',
+                    'description'       => $cleanContent,
+                    'released_at'       => now(),
+                    'is_active'         => false, // SIEMPRE borrador en fallback
+                    'cover_image'       => $resolverInfo['url'] ?? null,
+                    'author_email'      => null,
+                    'origin'            => 'email',
+                    'is_embargo_active' => (bool) $isEmbargoActive,
+                    'embargo_until'     => $embargoUntil,
+                    'source_subject'    => $subject,
+                    'source_message_id' => $messageId,
+                    'security_status'   => $securityStatus,
+                    'incident_reason'   => $incidentReason,
+                ]);
+                DB::commit();
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                Log::error("ProcessExternalEmailWithAiJob: Fallo al persistir NewRelease en fallback determinista.", [
+                    'message_id' => $messageId,
+                    'code'       => $e->getCode(),
+                ]);
+                $this->markProcessed($messageId, $subject, 'failed_metadata', 'Fallo al persistir metadatos de lanzamiento en fallback');
+                throw $e;
+            }
         } else {
             $title = TextNormalizer::normalizeTitle($subject) ?: $subject;
             $resolverInfo = $imageResolver->resolveForPost([
@@ -320,25 +417,60 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 $slug = $baseSlug . '-' . $suffix++;
             }
 
-            $post = Post::create([
-                'title'             => $title,
-                'slug'              => $slug,
-                'content'           => $cleanContent,
-                'excerpt'           => \App\Support\ExcerptCleaner::clean($cleanContent),
-                'status'            => 'draft', // SIEMPRE borrador en fallback
-                'is_published'      => false,
-                'published_at'      => now(),
-                'featured_image'    => $resolverInfo['url'] ?? null,
-                'source_url'        => $resolverInfo['article_url'] ?? null,
-                'source_name'       => $resolverInfo['credit'] ?? null,
-                'image_source'      => $resolverInfo['source'] ?? null,
-                'image_fetch_error' => $resolverInfo['error_reason'] ?? null,
-                'categories'        => ['General'],
-                'author_email'      => $senderEmail,
-                'source_subject'    => $subject,
-            ]);
+            DB::beginTransaction();
+            try {
+                $post = Post::create([
+                    'title'             => $title,
+                    'slug'              => $slug,
+                    'content'           => $cleanContent,
+                    'excerpt'           => \App\Support\ExcerptCleaner::clean($cleanContent),
+                    'status'            => 'draft', // SIEMPRE borrador en fallback
+                    'is_published'      => false,
+                    'published_at'      => now(),
+                    'featured_image'    => $resolverInfo['url'] ?? null,
+                    'source_url'        => $resolverInfo['article_url'] ?? null,
+                    'source_name'       => $resolverInfo['credit'] ?? null,
+                    'image_source'      => $resolverInfo['source'] ?? null,
+                    'image_fetch_error' => $resolverInfo['error_reason'] ?? null,
+                    'categories'        => ['General'],
+                    'author_email'      => $senderEmail,
+                    'source_subject'    => $subject,
+                ]);
 
-            $this->syncTaxonomies($post, ['General']);
+                $this->syncTaxonomies($post, ['General']);
+
+                // Evaluación determinista de embargo y metadatos de seguridad para fallback
+                $scheduleManager = app(\App\Services\ReleaseScheduleManager::class);
+                $schedule = $scheduleManager->evaluateSchedule($subject, $body, now());
+                $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+                $safetyResult = $safetyValidator->validatePost($post);
+
+                \App\Models\EmailPostSanitizedMeta::create([
+                    'post_id'              => $post->id,
+                    'source_message_id'    => $messageId,
+                    'sender_email'         => $senderEmail,
+                    'source_subject'       => $subject,
+                    'received_at'          => now(),
+                    'musical_release_date' => $schedule['musical_release_date'] ?? null,
+                    'embargo_until'        => $schedule['embargo_until'] ?? null,
+                    'publish_permitted_at' => $schedule['publish_permitted_at'] ?? now(),
+                    'is_embargo_active'    => (bool) ($schedule['is_embargo_active'] ?? false),
+                    'editorial_notes'      => $schedule['notes'] ?? null,
+                    'security_status'      => $safetyResult['is_safe'] ? (($schedule['is_embargo_active'] ?? false) ? 'held_embargo' : 'passed') : 'needs_review',
+                    'incident_reason'      => ! empty($safetyResult['violations']) ? implode(' | ', $safetyResult['violations']) : "Fallback determinista: {$errorReason}",
+                ]);
+
+                DB::commit();
+                Log::info("ProcessExternalEmailWithAiJob: Post creado vía fallback determinista con metadatos protegidos (ID {$post->id}).");
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                Log::error("ProcessExternalEmailWithAiJob: Fallo crítico al persistir post/metadatos obligatorios en fallback.", [
+                    'message_id' => $messageId,
+                    'code'       => $e->getCode(),
+                ]);
+                $this->markProcessed($messageId, $subject, 'failed_metadata', 'Fallo al persistir metadatos obligatorios en fallback');
+                throw $e;
+            }
         }
 
         $this->markProcessed($messageId, $subject, 'processed_fallback', $errorReason);
@@ -366,7 +498,10 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 ]
             );
         } catch (\Throwable $e) {
-            Log::error("Error al registrar processed_emails en Job: " . $e->getMessage());
+            Log::error("ProcessExternalEmailWithAiJob: Error al registrar processed_emails.", [
+                'message_id' => $messageId,
+                'code'       => $e->getCode(),
+            ]);
         }
     }
 
@@ -381,7 +516,10 @@ class ProcessExternalEmailWithAiJob implements ShouldQueue
                 });
                 Cache::put($cacheKey, true, now()->addHours(24));
             } catch (\Throwable $e) {
-                Log::error("No se pudo enviar alerta de admin en Job: " . $e->getMessage());
+                Log::error("ProcessExternalEmailWithAiJob: No se pudo enviar alerta de admin.", [
+                    'key'  => $key,
+                    'code' => $e->getCode(),
+                ]);
             }
         }
     }

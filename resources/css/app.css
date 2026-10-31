@@ -164,7 +164,7 @@
 .back-to-top-button {
     position: fixed;
     right: 1rem;
-    bottom: calc(var(--radio-player-offset, 108px) + .6rem);
+    bottom: calc(max(var(--radio-player-offset, 108px), 76px) + .6rem);
     z-index: 92;
     display: inline-flex;
     align-items: center;
@@ -4915,6 +4915,20 @@
 
     .radio-modal-tag {
         padding: 0 8px;
+        transition: all .2s ease;
+        outline: none;
+    }
+
+    .radio-modal-tag:hover {
+        background: rgba(255, 255, 255, .08);
+        border-color: rgba(184, 175, 162, .35);
+        color: #fff;
+    }
+
+    .radio-modal-tag:focus-visible {
+        outline: 2px solid var(--lucille-accent, #c32720);
+        outline-offset: 2px;
+        background: rgba(255, 255, 255, .1);
     }
 
     .radio-modal-link,

@@ -6,6 +6,9 @@
 
             <form action="{{ route('talents.login.store') }}" method="POST" class="mt-8 space-y-5">
                 @csrf
+                @if(request()->filled('redirect_to'))
+                    <input type="hidden" name="redirect_to" value="{{ request('redirect_to') }}">
+                @endif
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Email</label>
                     <input type="email" name="email" value="{{ old('email') }}" class="lucille-product-field w-full">

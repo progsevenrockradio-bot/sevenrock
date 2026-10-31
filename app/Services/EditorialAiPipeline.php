@@ -49,9 +49,42 @@ class EditorialAiPipeline
         $messageId = (string) ($emailData['message_id'] ?? Str::uuid()->toString());
 
         // ── 1. PRE-PROCESAMIENTO Y SANEAMIENTO DE SEGURIDAD (FASE 3) ──────────────
-        $sanitizedResult = $this->sanitizer->sanitize($rawBody);
-        $cleanBody = $sanitizedResult['sanitized_content'] ?? strip_tags($rawBody);
-        $cleanText = strip_tags($cleanBody);
+        try {
+            $sanitizedResult = $this->sanitizer->sanitize($rawBody);
+        } catch (\Throwable $e) {
+            Log::error("EditorialAiPipeline: Excepción capturada durante el saneamiento de contenido.", [
+                'message_id' => $messageId,
+                'error_code' => $e->getCode(),
+            ]);
+            return $this->buildFallbackResult(
+                $subject,
+                '', // NO reutilizar cuerpo original
+                $sender,
+                $messageId,
+                hash('sha256', $messageId),
+                'Excepción crítica en el saneamiento de seguridad. Contenido retenido.',
+                'sanitizer_contract_failure'
+            );
+        }
+
+        if (!isset($sanitizedResult['clean_html']) || !isset($sanitizedResult['clean_text'])) {
+            Log::error("EditorialAiPipeline: El saneador de contenido devolvió una respuesta no conforme con el contrato.", [
+                'message_id' => $messageId,
+                'keys'       => array_keys($sanitizedResult),
+            ]);
+            return $this->buildFallbackResult(
+                $subject,
+                '', // NO reutilizar cuerpo original
+                $sender,
+                $messageId,
+                hash('sha256', $messageId),
+                'Fallo en el saneamiento de seguridad: respuesta no conforme. Contenido retenido.',
+                'sanitizer_contract_failure'
+            );
+        }
+
+        $cleanBody = $sanitizedResult['clean_html'];
+        $cleanText = $sanitizedResult['clean_text'];
 
         // Limpiar tokens y credenciales sensibles para no enviarlos a la IA
         $cleanTextForAi = preg_replace('/\[PROTECTED_CREDENTIAL\]/i', '[DATO CONFIDENCIAL PROTEGIDO]', $cleanText);
@@ -307,6 +340,30 @@ class EditorialAiPipeline
         string $reason,
         string $failureType
     ): array {
+        // En fallos de saneador, generar únicamente marcador neutro sin copiar datos potencialmente sensibles
+        if ($failureType === 'sanitizer_contract_failure') {
+            return [
+                'status'            => 'fallback_draft',
+                'action'            => 'create_draft',
+                'content_type'      => 'insufficient_ambiguous',
+                'importance'        => 1,
+                'is_rectification'  => false,
+                'is_under_embargo'  => true, // Retenido por seguridad
+                'content_hash'      => $contentHash,
+                'draft'             => [
+                    'title'             => 'Comunicado retenido por fallo de saneamiento',
+                    'excerpt'           => 'Contenido retenido de forma preventiva por fallo de saneamiento de seguridad.',
+                    'content'           => '<p>[CONTENIDO RETENIDO POR SEGURIDAD EDITORIAL: Fallo en el saneamiento del comunicado. Requiere revisión técnica manual.]</p>',
+                    'status'            => 'draft',
+                    'is_published'      => false,
+                    'origin'            => 'email',
+                    'editorial_warning' => "[AVISO EDITORIAL - FALLBACK]: {$reason}. Requiere revisión manual antes de publicar.",
+                ],
+                'failure_reason'    => $reason,
+                'failure_type'      => $failureType,
+            ];
+        }
+
         $cleanText = strip_tags($cleanBody);
 
         return [
@@ -354,7 +411,11 @@ class EditorialAiPipeline
                 ]);
             }
         } catch (\Throwable $e) {
-            Log::error("EditorialAiPipeline: Error al registrar auditoría de caché: " . $e->getMessage());
+            Log::error("EditorialAiPipeline: Error al registrar auditoría de caché.", [
+                'message_id' => $messageId,
+                'stage'      => $stage,
+                'code'       => $e->getCode(),
+            ]);
         }
     }
 }

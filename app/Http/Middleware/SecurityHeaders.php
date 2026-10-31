@@ -22,8 +22,9 @@ class SecurityHeaders
             $response->headers->set('X-Content-Type-Options', 'nosniff');
 
             // Fuerza HTTPS estricto (HSTS) — solo activo en producción con SSL
-            // En local (HTTP) el navegador ignora este header correctamente
-            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+            if (app()->environment('production') || $request->isSecure()) {
+                $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+            }
 
             // Protección XSS clásica (navegadores legacy)
             $response->headers->set('X-XSS-Protection', '1; mode=block');
@@ -44,13 +45,19 @@ class SecurityHeaders
             // los requieren actualmente. Fase 2 planificada: migrar a CSP con nonces por request,
             // lo que requiere agregar nonce="{{ $cspNonce }}" en cada <script> y <style> de las vistas.
             // Fuentes externas permitidas: Google Fonts, RadioBOSS streams, archive.org y CDNs de uso.
+            $isLocal = app()->environment('local');
+            $imgSrc = $isLocal ? "img-src 'self' data: http: https: blob:;" : "img-src 'self' data: https: blob:;";
+            $mediaSrc = $isLocal
+                ? "media-src 'self' http: https: blob: https://*.radioboss.fm https://*.archive.org;"
+                : "media-src 'self' https: blob: https://*.radioboss.fm https://*.archive.org;";
+
             $csp = implode(' ', [
                 "default-src 'self';",
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;",
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;",
                 "font-src 'self' https://fonts.gstatic.com data:;",
-                "img-src 'self' data: https: blob:;",
-                "media-src 'self' https: blob: https://*.radioboss.fm https://*.archive.org;",
+                $imgSrc,
+                $mediaSrc,
                 "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://open.spotify.com https://embed.spotify.com;",
                 "connect-src 'self' https:;",
                 "object-src 'none';",

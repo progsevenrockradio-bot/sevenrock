@@ -71,7 +71,7 @@ final class ReconcilePodcastPipelineCommand extends Command
                 continue;
             }
 
-            if ($program->radioboss_status !== 'radioboss_verified' && $program->radioboss_status !== 'archive_skipped') {
+            if ($program->isEditorialApproved() && $program->radioboss_status !== 'radioboss_verified' && $program->radioboss_status !== 'archive_skipped') {
                 UploadRadiobossJob::dispatch($program->id);
                 $actions[] = 'RadioBOSS';
             } elseif ($program->radioboss_status === 'radioboss_verified' && $program->radioboss_notification_sent_at === null) {

@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Contracts\ArchiveOrgPodcastServiceContract;
+use App\Services\Gateways\MercadoPago\MercadoPagoWebhookAuthenticator;
+use App\Services\Gateways\MercadoPago\MercadoPagoWebhookAuthenticatorInterface;
 use App\Services\Gateways\MercadoPagoGateway;
 use App\Services\Gateways\PayPalGateway;
 use App\Services\Gateways\StripeGateway;
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ArchiveOrgPodcastServiceContract::class, ArchiveOrgPodcastService::class);
+        $this->app->singleton(MercadoPagoWebhookAuthenticatorInterface::class, MercadoPagoWebhookAuthenticator::class);
 
         $this->app->singleton(PaymentManager::class, function ($app): PaymentManager {
             $manager = new PaymentManager($app);
@@ -100,7 +103,9 @@ class AppServiceProvider extends ServiceProvider
         }
         
         if (config('app.env') !== 'local' || str_contains(config('app.url', ''), 'https://')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
+            if (!app()->environment('local')) {
+    \Illuminate\Support\Facades\URL::forceScheme('https');
+}
         }
     }
 }

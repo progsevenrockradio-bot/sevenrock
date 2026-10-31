@@ -86,11 +86,12 @@
         transition: all 0.95s cubic-bezier(0.16, 1, 0.3, 1);
         transform-origin: left center;
         overflow: visible;
+        flex-shrink: 0;
     }
 
     .brand-mark-container.normal {
-        font-size: clamp(0.9rem, 1.6vw, 1.45rem);
-        width: 10.5em;
+        font-size: clamp(0.9rem, 1.4vw, 1.35rem);
+        width: 10em;
         height: 1.5em;
     }
 
@@ -183,10 +184,10 @@
 >
     <div class="absolute inset-0 z-0 bg-cover bg-center md:hidden" style="background-image: linear-gradient(rgba(16, 16, 18, 0.75), rgba(16, 16, 18, 0.75)), var(--lucille-bg-image);" aria-hidden="true"></div>
     <div 
-        class="mx-auto flex h-full max-w-[1180px] flex-col justify-center px-4 lg:px-6 md:flex-row md:items-center md:justify-between md:py-0 md:gap-4"
+        class="mx-auto flex h-full max-w-[1240px] flex-col justify-center px-4 lg:px-6 md:flex-row md:items-center md:justify-between md:py-0 md:gap-4 xl:gap-6"
     >
         <div class="flex w-full items-center justify-between md:contents">
-            <a href="{{ route('home') }}" class="relative z-10 flex h-full items-center gap-3 py-2 md:py-0" aria-label="{{ $brandMark }} home">
+            <a href="{{ route('home') }}" class="relative z-10 flex h-full items-center gap-3 py-2 md:py-0 shrink-0 min-w-[200px] xl:min-w-[225px] select-none" aria-label="{{ $brandMark }} home">
                 @if ($brandDisplayMode === 'both' && $logoUrl)
                     <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both" loading="lazy">
                     <span class="brand-mark-container" :class="sticky ? 'sticky-active' : 'normal'">
@@ -214,7 +215,7 @@
             </a>
 
             <div class="relative z-[60] flex items-center gap-5 text-white">
-                <button type="button" class="relative h-11 w-11 lg:hidden mr-2 group" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
+                <button type="button" class="relative h-11 w-11 xl:hidden mr-2 group" @click="open = ! open" :aria-expanded="open.toString()" aria-label="Toggle menu">
                     <span class="absolute left-1/2 top-4 h-[1.5px] w-5 -translate-x-1/2 rounded-full bg-white transition-all duration-300 ease-out" :class="open ? 'top-1/2 rotate-45' : 'group-hover:-translate-y-0.5'"></span>
                     <span class="absolute left-1/2 top-1/2 h-[1.5px] w-5 -translate-x-1/2 rounded-full bg-white transition-all duration-300 ease-out" :class="open ? 'opacity-0' : ''"></span>
                     <span class="absolute left-1/2 top-7 h-[1.5px] w-5 -translate-x-1/2 rounded-full bg-white transition-all duration-300 ease-out" :class="open ? 'top-1/2 -rotate-45' : 'group-hover:translate-y-0.5'"></span>
@@ -228,25 +229,26 @@
             </span>
         </div>
 
-        <nav class="hidden h-full items-center lg:flex">
+        <nav class="hidden h-full items-center xl:flex">
             <ul class="flex h-full items-center">
                 @foreach ($items as $item)
                     @if (in_array($item['label'], ['Tienda', 'Programas', 'Programa', 'Iniciar Sesión']))
                         @continue
                     @endif
-                    <li class="group relative flex h-full items-center">
+                    <li class="group relative flex h-full items-center" x-data="{ subOpen: false }" @mouseenter="subOpen = true" @mouseleave="subOpen = false" @focusin="subOpen = true" @focusout="subOpen = false" @keydown.escape="subOpen = false">
                         <a
                             href="{{ $item['url'] ?? route($item['route']) }}"
-                            class="flex h-full items-center px-[clamp(6px,0.6vw,16px)] font-display text-[clamp(9px,0.75vw,12px)] font-medium uppercase tracking-[.1em] text-white/90 transition-all duration-300 ease-in-out whitespace-nowrap hover:text-lucille-accent"
+                            class="flex h-full items-center px-[clamp(8px,0.8vw,16px)] font-display text-[clamp(10px,0.78vw,12px)] font-medium uppercase tracking-[.1em] text-white/90 transition-all duration-300 ease-in-out whitespace-nowrap hover:text-lucille-accent focus:text-lucille-accent focus:outline-none"
+                            @if (! empty($item['children'])) aria-haspopup="true" :aria-expanded="subOpen.toString()" @endif
                         >
                             {{ $item['label'] }}
                         </a>
 
                         @if (! empty($item['children']))
-                            <ul class="invisible absolute left-0 top-full min-w-48 bg-[rgba(16,16,18,.96)] backdrop-blur-md border border-white/5 py-3 opacity-0 shadow-[0_10px_30px_rgba(0,0,0,.22)] transition-all duration-300 group-hover:visible group-hover:opacity-100">
+                            <ul :class="subOpen ? 'visible opacity-100' : 'invisible opacity-0'" class="absolute left-0 top-full min-w-48 bg-[rgba(16,16,18,.96)] backdrop-blur-md border border-white/5 py-3 shadow-[0_10px_30px_rgba(0,0,0,.22)] transition-all duration-300 group-hover:visible group-hover:opacity-100">
                                 @foreach ($item['children'] as $child)
                                     <li>
-                                        <a href="{{ $child['url'] ?? route($child['route']) }}" class="block whitespace-nowrap px-5 py-2 text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent">
+                                        <a href="{{ $child['url'] ?? route($child['route']) }}" class="block whitespace-nowrap px-5 py-2 text-[13px] text-[#dddddd] transition-colors duration-300 hover:text-lucille-accent focus:text-lucille-accent focus:bg-white/5 focus:outline-none">
                                             {{ $child['label'] }}
                                         </a>
                                     </li>
@@ -258,7 +260,7 @@
             </ul>
         </nav>
 
-        <div class="hidden items-center gap-2 xl:gap-6 border-l border-white/10 pl-2 xl:pl-6 lg:flex">
+        <div class="hidden items-center gap-3 xl:gap-5 border-l border-white/10 pl-3 xl:pl-5 shrink-0 xl:flex">
             <!-- Programas Icon -->
             <a href="{{ route('programs') }}" class="group text-white/80 transition-colors duration-300 hover:text-lucille-accent" aria-label="Programas" title="Programas">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-hover:scale-110">
@@ -321,7 +323,7 @@
                 </a>
             @endauth
 
-            <a href="{{ route('app.download') }}" target="_blank" rel="noopener noreferrer" class="ml-2 flex items-center gap-1.5 rounded-full border border-lucille-accent/60 px-[clamp(8px,0.8vw,12px)] py-[clamp(4px,0.4vw,6px)] text-[clamp(8px,0.75vw,11px)] font-display font-medium uppercase tracking-[.1em] text-lucille-accent transition-all duration-300 ease-in-out whitespace-nowrap hover:bg-lucille-accent hover:text-white" aria-label="Descargar la aplicación de la radio" title="Descargar App">
+            <a href="{{ route('app.download') }}" target="_blank" rel="noopener noreferrer" class="ml-2 xl:ml-3 flex items-center gap-1.5 rounded-full border border-lucille-accent/60 px-3 py-1.5 text-[11px] font-display font-medium uppercase tracking-[.1em] text-lucille-accent transition-all duration-300 ease-in-out whitespace-nowrap hover:bg-lucille-accent hover:text-white shrink-0" aria-label="Descargar la aplicación de la radio" title="Descargar App">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7 10 12 15 17 10"></polyline>
@@ -332,7 +334,7 @@
         </div>
     </div>
 
-    <div x-cloak x-show="open" x-transition.opacity class="fixed inset-0 z-40 bg-[rgba(16,16,18,.98)] backdrop-blur-md pt-[100px] px-5 pb-6 lg:hidden overflow-y-auto flex flex-col">
+    <div x-cloak x-show="open" @keydown.escape.window="open = false" x-transition.opacity class="fixed inset-0 z-40 bg-[rgba(16,16,18,.98)] backdrop-blur-md pt-[100px] px-5 pb-6 xl:hidden overflow-y-auto flex flex-col">
         <nav class="flex-1 flex flex-col min-h-[calc(100vh-140px)]">
             <ul class="mx-auto w-full max-w-[1180px] divide-y divide-white/5 flex-1">
                 @foreach ($items as $item)

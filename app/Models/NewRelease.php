@@ -63,6 +63,12 @@ class NewRelease extends Model
         'spotify_url',
         'description',
         'is_active',
+        'is_embargo_active',
+        'embargo_until',
+        'source_subject',
+        'source_message_id',
+        'security_status',
+        'incident_reason',
         'show_in_feed',
         'author_email',
         'notification_sender',
@@ -72,9 +78,11 @@ class NewRelease extends Model
     protected function casts(): array
     {
         return [
-            'released_at' => 'date',
-            'is_active' => 'boolean',
-            'show_in_feed' => 'boolean',
+            'released_at'       => 'date',
+            'embargo_until'     => 'datetime',
+            'is_active'         => 'boolean',
+            'is_embargo_active' => 'boolean',
+            'show_in_feed'      => 'boolean',
         ];
     }
 
@@ -178,5 +186,12 @@ class NewRelease extends Model
         }
 
         return $url;
+    }
+
+    public function isFromEmailPipeline(): bool
+    {
+        return $this->origin === 'email'
+            || !empty($this->source_subject)
+            || !empty($this->source_message_id);
     }
 }

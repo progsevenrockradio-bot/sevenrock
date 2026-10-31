@@ -405,8 +405,8 @@ Schedule::command('talents:expire')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/talents-expire.log'));
 
-// Aviso pre-vencimiento (7 días antes del end_date)
-Schedule::command('talents:send-expiry-warnings --days=7')
+// Avisos de suscripción de talentos (7d y 1d antes del vencimiento, y 3d antes de la purga de gracia)
+Schedule::command('talents:send-expiry-warnings')
     ->dailyAt('09:00')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/talents-expiry-warnings.log'));

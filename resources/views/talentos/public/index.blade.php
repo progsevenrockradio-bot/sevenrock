@@ -1,4 +1,4 @@
-<x-layouts.site :title="'Seven Rock Radio - Talentos'" description="Descubre nuevos talentos musicales en Seven Rock Radio. Bandas independientes, artistas emergentes y musica original.">
+<x-layouts.site :title="'Seven Rock Radio - Muro del Rock'" description="Descubre bandas y artistas independientes en el Muro del Rock de Seven Rock Radio. Bandas emergentes y música original.">
     {{-- Exclusivo Fondo de Pared de Rock con Glassmorphism para Muro del Rock --}}
     <div class="relative min-h-screen bg-[#0a0a0b]">
         {{-- Imagen de Fondo Fijo / Parallax Vívida Limpia (Sin duplicación de tarjetas o texto) --}}
@@ -10,7 +10,7 @@
         <section class="relative z-10 mx-auto max-w-[1180px] px-5 py-16" style="padding-top: 150px;">
         <!-- Section Header Banner (Image Only) -->
         <div class="mb-8 w-full flex justify-center rounded-[var(--radius-box,16px)] overflow-hidden">
-            <img src="{{ \App\Models\ThemeSetting::current()->talents_banner_url }}" alt="Muro del Rock - Talentos de la Comunidad" class="w-full h-auto max-w-full">
+            <img src="{{ \App\Models\ThemeSetting::current()->talents_banner_url }}" alt="Muro del Rock - Seven Rock Radio" class="w-full h-auto max-w-full">
         </div>
 
         @php
@@ -33,7 +33,7 @@
 
         <!-- Filter Form -->
         <form method="GET" action="{{ route('talents.explore') }}" class="relative z-20 grid gap-4 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-6 md:grid-cols-[1.5fr_1fr_auto] shadow-lg" x-data="{ dropdownOpen: false, selectedPlan: '{{ $selectedPlan }}', selectedLabel: '{{ addslashes($activePlanLabel) }}' }">
-            <input type="search" name="search" value="{{ $search }}" placeholder="Buscar talento..." class="lucille-product-field w-full rounded-[8px]">
+            <input type="search" name="search" value="{{ $search }}" placeholder="Buscar banda o artista..." class="lucille-product-field w-full rounded-[8px]">
             
             <div class="relative w-full">
                 <input type="hidden" name="plan" :value="selectedPlan">
@@ -276,7 +276,7 @@
                     </a>
                 @endif
             @empty
-                <div class="col-span-full border border-white/10 bg-[#101014]/90 backdrop-blur-md rounded-[16px] p-8 text-sm text-gray-500 text-center shadow-lg">No hay talentos publicados todavía con estos criterios de búsqueda.</div>
+                <div class="col-span-full border border-white/10 bg-[#101014]/90 backdrop-blur-md rounded-[16px] p-8 text-sm text-gray-400 text-center shadow-lg">No se encontraron bandas o artistas en el Muro del Rock con estos criterios de búsqueda.</div>
             @endforelse
 
             @if(count($talents) < 6)

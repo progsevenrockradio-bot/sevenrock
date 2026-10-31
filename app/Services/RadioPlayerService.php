@@ -24,9 +24,9 @@ use App\Support\Radio\StreamMetadataReader;
 
 class RadioPlayerService
 {
-    public const MARGIN_BEFORE_MINUTES = 2;
-    public const MARGIN_AFTER_MINUTES = 2;
-    public const MARGIN_EPISODE_MINUTES = 30;
+    public const MARGIN_BEFORE_MINUTES = 5;
+    public const MARGIN_AFTER_MINUTES = 0;
+    public const MARGIN_EPISODE_MINUTES = 0;
 
     private const STATUS_CACHE_KEY = 'radio-player-status:v6';
 
@@ -105,26 +105,390 @@ class RadioPlayerService
         return $this->store->read();
     }
 
+    /**
+     * Clasifica si una pista corresponde a un marcador técnico, cuña o jingle.
+     *
+     * REGLA EDITORIAL ESTRICTA:
+     * No se utiliza filtrado amplio por subcadenas sueltas (ej: "promo", "jingle", "cuna")
+     * en títulos o artistas porque descartaría canciones legítimas como "Jingle Bell Rock"
+     * o "Cuna de Caín".
+     *
+     * Solo se descarta ante:
+     * 1. Clasificación explícita de la fuente (metadata o atributos del track: type/itemtype/kind).
+     * 2. Evidencia técnica inequívoca:
+     *    - Rutas absolutas del sistema de archivos (ej. C:\... o /var/...)
+     *    - Nombres de archivos con extensión de audio pura como título sin metadata (.mp3, .wav)
+     *    - Identificadores literales exactos de software de automatización ("RadioBOSS", "Station ID")
+     *    - Prefijos formales del generador (ej: "Station ID -", "[Voice Track]", "[Track Tool]").
+     */
+    public function isTechnicalMarkerOrJingle(string $title, string $artist, array $metadata = []): bool
+    {
+        $cleanTitle = trim($title);
+        $cleanArtist = trim($artist);
+
+        if ($cleanTitle === '' && $cleanArtist === '') {
+            return true;
+        }
+
+        // 1. Clasificación explícita proveniente de la fuente o metadatos
+        $explicitType = mb_strtolower(trim((string) (
+            $metadata['type'] ??
+            $metadata['itemtype'] ??
+            $metadata['track_type'] ??
+            $metadata['kind'] ??
+            ''
+        )));
+
+        $jingleTypes = [
+            'jingle',
+            'sweeper',
+            'station_id',
+            'stationid',
+            'promo',
+            'cuña',
+            'cuna',
+            'identificador',
+            'commercial',
+            'ad',
+            'advertisement',
+            'voicetrack',
+            'voice_track',
+            'silence',
+        ];
+
+        if (in_array($explicitType, $jingleTypes, true)) {
+            return true;
+        }
+
+        // 2. Evidencia técnica inequívoca en título o artista
+        // A) Rutas completas de archivo en disco
+        if (preg_match('#^[a-zA-Z]:[\\\\/]#', $cleanTitle) || preg_match('#^/(?:var|tmp|home|storage|opt|srv|etc)/#i', $cleanTitle)) {
+            return true;
+        }
+
+        // B) Extensiones puras de archivo como título cuando no hay artista o el artista es también un fichero
+        if (preg_match('#\.(?:mp3|wav|ogg|aac|flac|wma|m4a)$#i', $cleanTitle) && ($cleanArtist === '' || preg_match('#\.(?:mp3|wav|ogg|aac|flac|wma|m4a)$#i', $cleanArtist))) {
+            return true;
+        }
+
+        // C) Identificadores exactos de software de automatización o estación
+        $normArtist = mb_strtolower($cleanArtist);
+        $normTitle = mb_strtolower($cleanTitle);
+
+        $exactMarkers = [
+            'radioboss',
+            'station id',
+            'station_id',
+            'identificador',
+            'sweeper',
+            'separador',
+            'jingle',
+            'cuña',
+            'cuna',
+            'promo',
+            'autodj: silence',
+            '[track tool]',
+            '[voice track]',
+        ];
+
+        if (in_array($normArtist, $exactMarkers, true) || in_array($normTitle, $exactMarkers, true)) {
+            return true;
+        }
+
+        // D) Prefijos técnicos inequívocos estructurados como etiqueta de cabecera
+        if (preg_match('#^(station\s*id|identificador|sweeper|cuña|cuna)\s*[-:]#i', $cleanTitle)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Obtiene el historial de reproducciones recientes limpiando duplicados y aplicando contingencia.
+     *
+     * POLÍTICA DE DEDUPLICACIÓN Y LIMITACIÓN TÉCNICA:
+     * - Las emisiones se deduplican por identificador único de base de datos/evento o por
+     *   timestamp de inicio de reproducción real (`played_at` o `started_at`).
+     * - NO se elimina una repetición auténtica por el solo hecho de ocurrir dentro de 5 minutos:
+     *   Si una canción breve (ej. tema punk de 80s) se emite dos veces con pases distintos
+     *   cuya separación supera la duración de la pista o poseen identificadores distintos, se
+     *   conserva legítimamente como dos entradas en el historial.
+     * - Limitación técnica documentada: Cuando la fuente remota de RadioBOSS solo emite texto
+     *   plano sin ID único de evento ni marca de inicio (`started_at`), se aplica una política
+     *   conservadora: únicamente se descartan sondeos idénticos consecutivos con separación
+     *   menor a 60 segundos (o inferior a la duración teórica de la pista si se conoce). Las
+     *   repeticiones con separación mayor o con registros de transición se consideran auténticas.
+     */
     public function latestHistory(int $limit): array
     {
         if (! $this->hasTable('play_history')) {
+            $cached = Cache::get('radio_player_last_valid_history');
+            if (is_array($cached) && ! empty($cached)) {
+                Cache::put('radio_player_history_stale', true, 300);
+                return array_slice($cached, 0, $limit);
+            }
             return [];
         }
 
-        return PlayHistory::query()
-            ->with('program')
-            ->latest('played_at')
-            ->limit($limit)
-            ->get()
-            ->map(fn (PlayHistory $history): array => [
-                'title' => $history->title,
-                'artist' => $history->artist,
-                'cover' => $this->resolveCover($history->cover_image),
-                'source' => $history->source,
-                'played_at' => optional($history->played_at)->toIso8601String(),
-                'program' => $history->program?->name,
-            ])
-            ->all();
+        try {
+            $rawRecords = PlayHistory::query()
+                ->with('program')
+                ->latest('played_at')
+                ->limit($limit * 3)
+                ->get();
+
+            $cleaned = [];
+            $previous = null;
+
+            foreach ($rawRecords as $history) {
+                $title = trim((string) $history->title);
+                $artist = trim((string) $history->artist);
+
+                if ($title === '') {
+                    continue;
+                }
+
+                if ($this->isTechnicalMarkerOrJingle($title, $artist, $history->toArray())) {
+                    continue;
+                }
+
+                // Deduplicación de emisiones por identificador e inicio real de reproducción
+                if ($previous !== null) {
+                    $sameTitle = mb_strtolower($title) === mb_strtolower($previous['title']);
+                    $sameArtist = mb_strtolower($artist) === mb_strtolower($previous['artist']);
+
+                    if ($sameTitle && $sameArtist) {
+                        // 1. Si ambos registros poseen el mismo ID de base de datos -> duplicado exacto
+                        if (! empty($history->id) && ! empty($previous['id']) && (string) $history->id === (string) $previous['id']) {
+                            continue;
+                        }
+
+                        // 2. Si ambos registros tienen timestamp
+                        if ($history->played_at && $previous['played_at_carbon']) {
+                            $diffSecs = abs($previous['played_at_carbon']->diffInSeconds($history->played_at));
+
+                            // Diferencia insignificante (< 15s) producida por sondeo continuo redundante
+                            if ($diffSecs < 15) {
+                                continue;
+                            }
+
+                            // 3. Duración de la canción: Si la diferencia es menor que la duración conocida
+                            // menos un margen de 10s, pertenece al mismo pase que sigue sonando.
+                            // Si la diferencia supera la duración, es una repetición auténtica y se conserva.
+                            $duration = (int) ($history->duration_seconds ?: ($previous['duration_seconds'] ?? 0));
+                            if ($duration > 0 && $diffSecs < max(20, $duration - 10)) {
+                                continue;
+                            }
+
+                            // 4. Política conservadora si la fuente no proporciona duración ni identificador:
+                            // Sólo se descartan sondeos dentro de la ventana de sondeo inmediata (60s).
+                            if ($duration <= 0 && $diffSecs < 60) {
+                                continue;
+                            }
+                        } else {
+                            continue;
+                        }
+                    }
+                }
+
+                $isProgram = (bool) ($history->program_id || $history->source === 'program' || $history->program !== null);
+                $programName = $history->program?->name ?? ($isProgram ? ($history->program_id ? 'Programa Especial' : $title) : null);
+
+                $entry = [
+                    'id' => $history->id,
+                    'title' => $title,
+                    'artist' => $artist,
+                    'cover' => $this->resolveCover($history->cover_image),
+                    'source' => $history->source,
+                    'played_at' => optional($history->played_at)->toIso8601String(),
+                    'is_program' => $isProgram,
+                    'program' => $programName,
+                    'duration_seconds' => (int) ($history->duration_seconds ?? 0),
+                    'played_at_carbon' => $history->played_at,
+                ];
+
+                $cleaned[] = $entry;
+                $previous = $entry;
+
+                if (count($cleaned) >= $limit) {
+                    break;
+                }
+            }
+
+            $result = array_map(function ($item) {
+                unset($item['played_at_carbon']);
+                return $item;
+            }, $cleaned);
+
+            if (! empty($result)) {
+                Cache::put('radio_player_last_valid_history', $result, 86400);
+                Cache::put('radio_player_history_stale', false, 86400);
+                return $result;
+            }
+
+            $fallback = Cache::get('radio_player_last_valid_history');
+            if (is_array($fallback) && ! empty($fallback)) {
+                Cache::put('radio_player_history_stale', true, 300);
+                return array_slice($fallback, 0, $limit);
+            }
+
+            return [];
+        } catch (\Throwable) {
+            $fallback = Cache::get('radio_player_last_valid_history');
+            if (is_array($fallback) && ! empty($fallback)) {
+                Cache::put('radio_player_history_stale', true, 300);
+                return array_slice($fallback, 0, $limit);
+            }
+            return [];
+        }
+    }
+
+    /**
+     * Resuelve la próxima canción («A continuación»), validando procedencia,
+     * vigencia y descartando pistas técnicas, jingles o pistas que ya están al aire.
+     *
+     * POLÍTICA DE VIGENCIA, PROCEDENCIA Y FUENTES SIN FECHA:
+     * 1. Prioridad de Procedencia:
+     *    - Si la API en tiempo real de RadioBOSS ($api) está activa y responde, su dato
+     *      de `next_track` prevalece sobre cualquier estado almacenado histórico ($stored).
+     *    - Si la API está activa y responde con éxito pero no incluye `next_track`, se
+     *      asume que no hay siguiente pista programada y se retorna null (no se permite
+     *      que un stored.next_track antiguo prevalezca sobre la realidad de la emisión).
+     * 2. Vigencia del estado almacenado ($stored):
+     *    - Solo se evalúa $stored['next_track'] si la API en tiempo real no proveyó datos.
+     *    - Si $stored posee fecha ('updated_at', 'timestamp', 'started_at'), se descarta
+     *      si su antigüedad supera 300 segundos (5 minutos) o si la pista actual concluyó.
+     * 3. Política cuando la fuente no proporciona fecha:
+     *    - Si el registro de próxima pista carece de fecha o timestamp, se comprueba el estado
+     *      de la canción actual en emisión: si la canción actual tiene duración conocida
+     *      ($duration > 0) y su tiempo transcurrido la iguala o supera ($elapsed >= $duration),
+     *      o si el estado general tiene más de 180 segundos sin actualización de la fuente,
+     *      se asume caducidad y se oculta «A continuación» (retorna null).
+     * 4. Caída de la fuente o desconexión externa:
+     *    - Ante caída de la fuente o datos caducados, se oculta limpiamente el bloque
+     *      «A continuación» retornando null.
+     */
+    public function resolveNextTrack(array $stored, array $api, array $currentTrack, ?Program $nextProgram): ?array
+    {
+        $raw = null;
+        $sourceOrigin = 'radioboss';
+
+        // 1. Comprobar procedencia: La API en tiempo real tiene prioridad absoluta
+        if (isset($api['next_track']) && is_array($api['next_track'])) {
+            $raw = $api['next_track'];
+            $sourceOrigin = 'api';
+        } elseif (! empty($api) && isset($api['title'])) {
+            // La API está activa y respondió el tema actual, pero no incluyó next_track:
+            // la cola está vacía o RadioBOSS no tiene pista prevista. NO usar stored antiguo.
+            return null;
+        } elseif (isset($stored['next_track']) && is_array($stored['next_track'])) {
+            // 2. La API externa no está disponible; evaluar vigencia del stored.next_track
+            $storedRaw = $stored['next_track'];
+
+            // Comprobar si stored tiene timestamp
+            $timestampString = $storedRaw['updated_at']
+                ?? $storedRaw['timestamp']
+                ?? $stored['updated_at']
+                ?? $stored['meta_updated_at']
+                ?? $stored['started_at']
+                ?? null;
+
+            if ($timestampString) {
+                try {
+                    $storedTime = Carbon::parse($timestampString);
+                    if ($storedTime->isBefore(now()->subSeconds(300)) || $storedTime->isAfter(now()->addMinutes(60))) {
+                        // Datos caducados (> 5 minutos) o timestamp anómalo -> ocultar
+                        return null;
+                    }
+                } catch (\Throwable) {
+                    return null;
+                }
+            } else {
+                // POLÍTICA CUANDO LA FUENTE NO PROPORCIONA FECHA:
+                // Si la canción actual ha concluido su duración teórica, el next_track
+                // asociado ya debió haber entrado al aire o caducado.
+                $curDuration = (int) ($currentTrack['duration_seconds'] ?? 0);
+                $curElapsed = (int) ($currentTrack['elapsed_seconds'] ?? 0);
+                if ($curDuration > 0 && $curElapsed >= $curDuration) {
+                    return null;
+                }
+            }
+
+            $raw = $storedRaw;
+            $sourceOrigin = 'store';
+        }
+
+        if (! $raw || ! is_array($raw)) {
+            return null;
+        }
+
+        $title = trim((string) ($raw['title'] ?? ''));
+        $artist = trim((string) ($raw['artist'] ?? ''));
+
+        if ($title === '') {
+            return null;
+        }
+
+        // Si es marcador técnico o cuña, ocultar
+        if ($this->isTechnicalMarkerOrJingle($title, $artist, $raw)) {
+            return null;
+        }
+
+        // Si coincide en IDENTIDAD COMPLETA con la pista actual, significa que ya comenzó: retirarla de "Próxima canción"
+        $currentTitle = trim((string) ($currentTrack['title'] ?? ''));
+        $currentArtist = trim((string) ($currentTrack['artist'] ?? ''));
+
+        // Comparar por ID fiable si existe
+        if (! empty($currentTrack['id']) && ! empty($raw['id']) && (string) $currentTrack['id'] === (string) $raw['id']) {
+            return null;
+        }
+
+        // Comparar por Identidad Completa (título Y artista)
+        if (mb_strtolower($title) === mb_strtolower($currentTitle)) {
+            if ($artist !== '' && $currentArtist !== '') {
+                // Si ambos tienen artista y coinciden -> misma canción, retirar
+                if (mb_strtolower($artist) === mb_strtolower($currentArtist)) {
+                    return null;
+                }
+                // Si tienen el mismo título pero artistas distintos (ej: cover o tema homónimo) -> NO descartar
+            } else {
+                // Si falta artista en alguno, criterio conservador por título
+                return null;
+            }
+        }
+
+        // No confundir una canción próxima con un programa próximo
+        if ($nextProgram && mb_strtolower($title) === mb_strtolower($nextProgram->name)) {
+            return null;
+        }
+        if (! empty($currentTrack['program_name']) && mb_strtolower($title) === mb_strtolower($currentTrack['program_name'])) {
+            return null;
+        }
+
+        $cover = $raw['cover'] ?? null;
+        if (! $cover && $title !== '') {
+            $song = Song::query()
+                ->where('title', 'like', $title)
+                ->when($artist !== '', fn ($q) => $q->where('artist', 'like', $artist))
+                ->first();
+            if ($song && $song->cover_image) {
+                $cover = $this->resolveCover($song->cover_image);
+            }
+        }
+        if (! $cover) {
+            $stationId = config('player.radioboss.station_id', '569');
+            $cover = "https://c30.radioboss.fm/w/artwork_next/{$stationId}.jpg";
+        }
+
+        return [
+            'id' => $raw['id'] ?? null,
+            'title' => $title,
+            'artist' => $artist,
+            'cover' => $cover,
+            'line' => $raw['line'] ?? ($artist !== '' ? "{$artist} - {$title}" : $title),
+            'source' => $raw['source'] ?? $sourceOrigin,
+            'updated_at' => $raw['updated_at'] ?? now()->toIso8601String(),
+        ];
     }
 
     private function build(): array
@@ -154,6 +518,21 @@ class RadioPlayerService
         // -------------------------------------------------------------
         // Fuente 2: Webhook / estado guardado de RadioBOSS
         $stored = $this->currentState();
+
+        // Check if stored state is stale:
+        // If started_at + duration_seconds (or default 2h) has passed by more than 5 minutes, mark stored as stale
+        if (filled($stored['started_at'] ?? null)) {
+            try {
+                $startedAt = Carbon::parse((string) $stored['started_at']);
+                $durationSecs = (int) ($stored['duration_seconds'] ?? 0);
+                $maxLifespan = $durationSecs > 0 ? ($durationSecs + 300) : 7200;
+                if (now()->diffInSeconds($startedAt) > $maxLifespan) {
+                    $stored = [];
+                }
+            } catch (\Throwable) {
+                // ignore
+            }
+        }
 
         // Fuente 3: API / status-json de RadioBOSS (y StreamNowPlaying para otros servidores)
         $api = array_replace($this->remoteNowPlayingState(), StreamNowPlaying::state());
@@ -264,6 +643,7 @@ class RadioPlayerService
 
         $hasStoredProgram = filled($stored['program_id'] ?? null) || filled($stored['program_name'] ?? null);
         $isProgramBlock = (bool) ($hasStoredProgram || $matchedTrackProgram !== null || (! $hasRealSong && ! empty($scheduleContext['es_bloque_programa'])));
+        $isProgramPreview = (bool) (! $hasStoredProgram && $matchedTrackProgram === null && ! empty($scheduleContext['es_bloque_programa']) && $hasRealSong);
 
         // Log cuando no hay match (nivel info, sin ruido)
         if ($currentProgram === null && ! $isProgramBlock) {
@@ -291,7 +671,7 @@ class RadioPlayerService
         // CAMPO: program_id / program_name / program_host
         // 1ª opción: program_id del estado
         // 2ª opción: vía fichero / carátula / álbum / texto
-        // 3ª opción: horario (±30 min)
+        // 3ª opción: horario (ventana activa)
         // Último recurso: vacío
         $resolvedProgramId = null;
         $resolvedProgramName = null;
@@ -299,7 +679,7 @@ class RadioPlayerService
         $resolvedProgramHost = null;
         $resolvedProgramSchedule = null;
 
-        if ($isProgramBlock) {
+        if ($isProgramBlock || ! empty($scheduleContext['es_bloque_programa'])) {
             $progSource = $matchedTrackProgram ?? $scheduleContext['program'] ?? null;
             $masterSource = $matchedTrackProgram?->masterProgram ?? $scheduleContext['master'] ?? null;
 
@@ -603,6 +983,7 @@ class RadioPlayerService
             'program_host' => $resolvedProgramHost,
             'program_schedule' => $resolvedProgramSchedule,
             'es_bloque_programa' => $isProgramBlock,
+            'es_programa_anticipo' => $isProgramPreview,
             'is_live' => (bool) ($stored['is_live'] ?? $api['is_live'] ?? $song?->is_live ?? true),
             'signature' => $trackSignature,
             'started_at' => $stored['started_at'] ?? null,
@@ -611,13 +992,14 @@ class RadioPlayerService
             'elapsed_seconds' => $elapsed,
         ];
 
-        return [
+        $responsePayload = [
             'stream_url' => config('player.streams.direct'),
             'listen_url' => config('player.streams.listen'),
             'playlist_m3u' => config('player.streams.m3u'),
             'playlist_pls' => config('player.streams.pls'),
             'listeners' => $listeners,
             'es_bloque_programa' => $isProgramBlock,
+            'es_programa_anticipo' => $isProgramPreview,
             'program_id' => $resolvedProgramId,
             'program_name' => $resolvedProgramName,
             'program_description' => $resolvedProgramDescription,
@@ -626,7 +1008,7 @@ class RadioPlayerService
             'meta_updated_at' => $metaUpdatedAt,
             'cover_is_fallback' => $coverIsFallback,
             'track' => $track,
-            'program' => $this->programPayload($currentProgram) ?? ($isProgramBlock ? $this->syntheticProgramPayload(
+            'program' => $this->programPayload($currentProgram) ?? (($isProgramBlock || $isProgramPreview) ? $this->syntheticProgramPayload(
                 $resolvedProgramId,
                 $resolvedProgramName,
                 $resolvedProgramDescription,
@@ -636,6 +1018,7 @@ class RadioPlayerService
                 $scheduleContext['master'] ?? null
             ) : null),
             'next_program' => $this->programPayload($nextProgram),
+            'next_track' => $this->resolveNextTrack($stored, $api, $track, $nextProgram),
             'queue' => $this->resolveQueue($song, $currentProgram),
             'notices' => $notices->map(fn (Notice $notice): array => [
                 'title' => $notice->title,
@@ -643,8 +1026,88 @@ class RadioPlayerService
                 'type' => $notice->type,
             ])->all(),
             'history' => $this->latestHistory(config('player.history_limit', 10)),
+            'history_stale' => (bool) Cache::get('radio_player_history_stale', false),
             'updated_at' => $metaUpdatedAt,
         ];
+
+        $this->recordPlayHistoryIfConfirmedTransition($track, $song, $currentProgram);
+
+        return $responsePayload;
+    }
+
+    private function recordPlayHistoryIfConfirmedTransition(array $track, ?Song $song, mixed $currentProgram): void
+    {
+        if (! $this->hasTable('play_history')) {
+            return;
+        }
+
+        $title = trim((string) ($track['title'] ?? ''));
+        $artist = trim((string) ($track['artist'] ?? ''));
+
+        if ($title === '' || $artist === '') {
+            return;
+        }
+
+        if ($this->isTechnicalMarkerOrJingle($title, $artist, $track)) {
+            return;
+        }
+
+        $defaultTitle = trim((string) config('player.defaults.title', 'Transmisión oficial'));
+        $defaultArtist = trim((string) config('player.defaults.artist', 'Seven Rock Radio'));
+
+        if (mb_strtolower($title) === mb_strtolower($defaultTitle) && mb_strtolower($artist) === mb_strtolower($defaultArtist)) {
+            return;
+        }
+
+        $cacheKey = 'radio_player_last_history_signature';
+        $lastRecorded = Cache::get($cacheKey);
+        $currentSignature = md5($artist . '|||' . $title);
+
+        $duration = (int) ($track['duration_seconds'] ?? 0);
+        $minSeparation = $duration > 30 ? max(20, $duration - 10) : 60;
+
+        if ($lastRecorded !== null && is_array($lastRecorded)) {
+            $lastSig = $lastRecorded['signature'] ?? '';
+            $lastTime = (int) ($lastRecorded['time'] ?? 0);
+            $lastStartedAt = $lastRecorded['started_at'] ?? null;
+            $currentStartedAt = $track['started_at'] ?? null;
+
+            if ($lastSig === $currentSignature) {
+                // Si la fuente indica expresamente un nuevo started_at, es una nueva emisión
+                if ($currentStartedAt && $lastStartedAt && $currentStartedAt !== $lastStartedAt) {
+                    // Nueva emisión confirmada por inicio real de reproducción
+                } elseif ((time() - $lastTime) < $minSeparation) {
+                    // Duplicado de sondeo redundante del mismo tema en curso
+                    return;
+                }
+            }
+        }
+
+        try {
+            PlayHistory::query()->create([
+                'song_id' => $song?->id,
+                'program_id' => $currentProgram?->id,
+                'title' => $title,
+                'artist' => $artist,
+                'cover_image' => $track['cover'] ?? null,
+                'source' => $track['meta_source'] ?? 'player_resolver',
+                'duration_seconds' => (int) ($track['duration_seconds'] ?? 0) ?: null,
+                'is_live' => (bool) ($track['is_live'] ?? true),
+                'metadata' => [
+                    'meta_sources' => $track['meta_sources'] ?? [],
+                    'album' => $track['album'] ?? null,
+                ],
+                'played_at' => now(),
+            ]);
+
+            Cache::put($cacheKey, [
+                'signature' => $currentSignature,
+                'time' => time(),
+                'started_at' => $track['started_at'] ?? null,
+            ], 86400);
+        } catch (\Throwable) {
+            // Keep history recording resilient
+        }
     }
 
     /**
@@ -1211,7 +1674,7 @@ class RadioPlayerService
         $localNow = $now->copy()->setTimezone($timezone);
 
         if ($master->live_starts_at && $master->live_ends_at) {
-            $start = Carbon::parse((string) $master->live_starts_at, $timezone);
+            $start = Carbon::parse((string) $master->live_starts_at, $timezone)->subMinutes(self::MARGIN_BEFORE_MINUTES);
             $end = Carbon::parse((string) $master->live_ends_at, $timezone);
 
             if ($end->lessThan($start)) {
@@ -1222,6 +1685,7 @@ class RadioPlayerService
         }
 
         $currentDay = $this->currentDayKey($localNow);
+        $yesterday = $this->currentDayKey($localNow->copy()->subDay());
 
         $isLegacyActive = false;
         if (strtoupper(trim((string) $master->dia_transmision)) === $currentDay) {
@@ -1234,22 +1698,44 @@ class RadioPlayerService
             );
         }
 
+        // Si el programa inició ayer y cruza la medianoche hacia hoy
+        if (! $isLegacyActive && strtoupper(trim((string) $master->dia_transmision)) === $yesterday) {
+            $isLegacyActive = $this->isWindowActive(
+                $localNow->copy()->subDay(),
+                (string) $master->hora_transmision,
+                '',
+                (int) $master->duracion_minutos,
+                $this->programScheduleService->nextProgramStartFor($master, $localNow),
+                true
+            );
+        }
+
         if ($isLegacyActive) {
             return true;
         }
 
-        $emisiones = $master->emisiones()->where('activo', true)->get();
-        foreach ($emisiones as $emision) {
-            if (strtoupper(trim((string) $emision->dia_semana)) !== $currentDay) {
-                continue;
-            }
-
-            if ($this->isEmisionWindowActive(
-                $localNow,
-                $emision,
-                $this->programScheduleService->nextProgramStartFor($master, $localNow)
-            )) {
-                return true;
+        if ($this->hasTable('master_program_emisiones')) {
+            $emisiones = $master->emisiones()->where('activo', true)->get();
+            foreach ($emisiones as $emision) {
+                $emisionDay = strtoupper(trim((string) $emision->dia_semana));
+                if ($emisionDay === $currentDay) {
+                    if ($this->isEmisionWindowActive(
+                        $localNow,
+                        $emision,
+                        $this->programScheduleService->nextProgramStartFor($master, $localNow)
+                    )) {
+                        return true;
+                    }
+                } elseif ($emisionDay === $yesterday) {
+                    if ($this->isEmisionWindowActive(
+                        $localNow->copy()->subDay(),
+                        $emision,
+                        $this->programScheduleService->nextProgramStartFor($master, $localNow),
+                        true
+                    )) {
+                        return true;
+                    }
+                }
             }
         }
 
@@ -1262,8 +1748,8 @@ class RadioPlayerService
         $localNow = $now->copy()->setTimezone($timezone);
 
         if ($master->live_starts_at && $master->live_ends_at) {
-            $start = Carbon::parse((string) $master->live_starts_at, $timezone)->subMinutes(self::MARGIN_EPISODE_MINUTES);
-            $end = Carbon::parse((string) $master->live_ends_at, $timezone)->addMinutes(self::MARGIN_EPISODE_MINUTES);
+            $start = Carbon::parse((string) $master->live_starts_at, $timezone)->subMinutes(self::MARGIN_BEFORE_MINUTES);
+            $end = Carbon::parse((string) $master->live_ends_at, $timezone);
 
             if ($end->lessThan($start)) {
                 return $localNow->greaterThanOrEqualTo($start) || $localNow->lessThanOrEqualTo($end);
@@ -1282,7 +1768,7 @@ class RadioPlayerService
         return $localNow->betweenIncluded($start, $end);
     }
 
-    public function isEmisionWindowActive(\Carbon\CarbonInterface $moment, MasterProgramEmision $emision, ?\Carbon\CarbonInterface $cutoff = null): bool
+    public function isEmisionWindowActive(\Carbon\CarbonInterface $moment, MasterProgramEmision $emision, ?\Carbon\CarbonInterface $cutoff = null, bool $crossMidnightFromYesterday = false): bool
     {
         $moment = Carbon::instance($moment);
         $scheduledStart = $this->parseTimeToCarbon($moment, (string) $emision->hora_inicio);
@@ -1292,25 +1778,31 @@ class RadioPlayerService
 
         if (!empty($emision->duracion_segundos) && $emision->duracion_segundos > 0) {
             $start = $scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
-            $duracion = (int) ceil($emision->duracion_segundos / 60) + self::MARGIN_AFTER_MINUTES;
+            $duracion = (int) ceil($emision->duracion_segundos / 60);
             $end = $scheduledStart->copy()->addMinutes($duracion);
         } else {
-            $start = $scheduledStart;
+            $start = $scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
             $durationMinutes = max(15, (int) ($emision->duracion_minutos ?? 120));
-            $end = $start->copy()->addMinutes($durationMinutes);
+            $end = $scheduledStart->copy()->addMinutes($durationMinutes);
+        }
+
+        if ($end->lessThanOrEqualTo($scheduledStart)) {
+            $end = $end->copy()->addDay();
         }
 
         if ($cutoff instanceof Carbon && $cutoff->greaterThan($start) && $cutoff->lessThan($end)) {
             $end = $cutoff->copy();
         }
 
-        return $moment->betweenIncluded($start, $end);
+        $testMoment = $crossMidnightFromYesterday ? $moment->copy()->addDay() : $moment;
+
+        return $testMoment->betweenIncluded($start, $end);
     }
 
-    private function isWindowActive(Carbon $moment, string $startTime, string $endTime, int $durationMinutes, ?Carbon $cutoff = null): bool
+    private function isWindowActive(Carbon $moment, string $startTime, string $endTime, int $durationMinutes, ?Carbon $cutoff = null, bool $crossMidnightFromYesterday = false): bool
     {
-        $start = $this->parseTimeToCarbon($moment, $startTime);
-        if ($start === null) {
+        $scheduledStart = $this->parseTimeToCarbon($moment, $startTime);
+        if ($scheduledStart === null) {
             return false;
         }
 
@@ -1320,18 +1812,29 @@ class RadioPlayerService
             if ($durationMinutes <= 0) {
                 return false;
             }
-            $end = $start->copy()->addMinutes($durationMinutes);
+            $end = $scheduledStart->copy()->addMinutes($durationMinutes);
         }
 
-        if ($cleanEndTime !== '' && $end->lessThan($start)) {
+        $testMoment = $crossMidnightFromYesterday ? $moment->copy()->addDay() : $moment;
+
+        if ($cleanEndTime !== '' && $end->lessThanOrEqualTo($scheduledStart)) {
+            $end = $end->copy()->addDay();
+        } elseif ($cleanEndTime === '' && $durationMinutes > 0 && $end->toDateString() !== $scheduledStart->toDateString()) {
+            // Already added minutes and crossed into next day
+        } elseif ($cleanEndTime === '' && $durationMinutes > 0 && $end->lessThanOrEqualTo($scheduledStart)) {
             $end = $end->copy()->addDay();
         }
+
+        // Ventana informativa: 5 minutos antes de la hora prevista de inicio
+        $start = $scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
 
         if ($cutoff instanceof Carbon && $cutoff->greaterThan($start) && $cutoff->lessThan($end)) {
             $end = $cutoff->copy();
         }
 
-        return $moment->betweenIncluded($start, $end);
+        $testMoment = $crossMidnightFromYesterday ? $moment->copy()->addDay() : $moment;
+
+        return $testMoment->betweenIncluded($start, $end);
     }
 
     /**
@@ -1362,10 +1865,13 @@ class RadioPlayerService
         }
 
         $currentDay = $this->currentDayKey($reference);
-        $emision = $master->emisiones()
-            ->where('activo', true)
-            ->where('dia_semana', $currentDay)
-            ->first();
+        $emision = null;
+        if ($this->hasTable('master_program_emisiones')) {
+            $emision = $master->emisiones()
+                ->where('activo', true)
+                ->where('dia_semana', $currentDay)
+                ->first();
+        }
 
         // Prioridad de duración: 1) duration_seconds de radio_programs (episodio real)
         // 2) duracion_segundos de emisión, 3) duracion_minutos de master
@@ -1393,9 +1899,13 @@ class RadioPlayerService
             return null;
         }
 
-        // Añadir margen de ±30 minutos alrededor del inicio y fin
-        $start = $start->copy()->subMinutes(self::MARGIN_EPISODE_MINUTES);
-        $end = $end->copy()->addMinutes(self::MARGIN_EPISODE_MINUTES);
+        if ($end->lessThanOrEqualTo($start)) {
+            $end = $end->copy()->addDay();
+        }
+
+        // Ventana informativa: 5 minutos antes del inicio previsto;
+        // El final se determina mediante la duración calculada de la emisión sin añadir margen posterior simétrico.
+        $start = $start->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
 
         $cutoff = $this->programScheduleService->nextProgramStartFor($master, $reference);
         if ($cutoff instanceof Carbon && $cutoff->greaterThan($start) && $cutoff->lessThan($end)) {
@@ -1696,6 +2206,9 @@ class RadioPlayerService
                 'is_live' => (bool) Arr::get($data, 'live', true),
                 'program_name' => $normalized['program_name'] !== '' ? $normalized['program_name'] : null,
                 'listeners' => $normalized['listeners'] > 0 ? $normalized['listeners'] : null,
+                'next_track' => ! empty($normalized['next_track']) ? $normalized['next_track'] : null,
+                'duration_seconds' => ($normalized['duration_seconds'] ?? 0) > 0 ? (int) $normalized['duration_seconds'] : null,
+                'elapsed_seconds' => ($normalized['elapsed_seconds'] ?? 0) > 0 ? (int) $normalized['elapsed_seconds'] : null,
             ], static fn ($value): bool => $value !== null && $value !== '');
         } catch (\Throwable) {
             return [];
@@ -1907,11 +2420,49 @@ class RadioPlayerService
             trim((string) Arr::get($recentTrack, 'file', '')),
         ]);
 
+        $nextTrackRaw = trim((string) Arr::get($data, 'nexttrack', ''));
+        $nextTrackInfo = Arr::get($data, 'nexttrack_info', []);
+        $nextTrackAttrs = is_array($nextTrackInfo) ? Arr::get($nextTrackInfo, '@attributes', $nextTrackInfo) : [];
+        $nextTrackAttrs = is_array($nextTrackAttrs) ? $nextTrackAttrs : [];
+
+        $nextArtistFromAttrs = trim((string) Arr::get($nextTrackAttrs, 'ARTIST', ''));
+        $nextTitleFromAttrs = trim((string) Arr::get($nextTrackAttrs, 'TITLE', ''));
+
+        $nextTrackData = null;
+        if ($nextArtistFromAttrs !== '' || $nextTitleFromAttrs !== '' || $nextTrackRaw !== '') {
+            if ($nextArtistFromAttrs !== '' && $nextTitleFromAttrs !== '') {
+                $nextArtist = $nextArtistFromAttrs;
+                $nextTitle = $nextTitleFromAttrs;
+            } elseif ($nextTrackRaw !== '') {
+                // RadioBOSS en Seven Rock Radio emite "%title - %artist"
+                if (str_contains($nextTrackRaw, ' - ')) {
+                    [$part1, $part2] = explode(' - ', $nextTrackRaw, 2);
+                    $nextTitle = trim($part1);
+                    $nextArtist = trim($part2);
+                } else {
+                    $nextTitle = $nextTrackRaw;
+                    $nextArtist = '';
+                }
+            } else {
+                $nextArtist = $nextArtistFromAttrs;
+                $nextTitle = $nextTitleFromAttrs;
+            }
+
+            $nextTrackData = [
+                'line' => $nextTrackRaw !== '' ? $nextTrackRaw : "{$nextTitle} - {$nextArtist}",
+                'artist' => $nextArtist,
+                'title' => $nextTitle !== '' ? $nextTitle : $nextTrackRaw,
+                'album' => trim((string) Arr::get($nextTrackAttrs, 'ALBUM', '')),
+                'duration' => trim((string) Arr::get($nextTrackAttrs, 'DURATION', '')),
+            ];
+        }
+
         return [
             'title' => $title,
             'artist' => $artist,
             'filename' => $filename !== '' ? $filename : null,
             'file' => $filename !== '' ? $filename : null,
+            'next_track' => $nextTrackData,
             'album' => $this->firstFilledString([
                 trim((string) Arr::get($trackAttributes, 'ALBUM', '')),
                 trim((string) Arr::get($currentTrack, 'ALBUM', '')),

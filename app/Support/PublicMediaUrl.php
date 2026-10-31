@@ -195,8 +195,11 @@ class PublicMediaUrl
     public static function normalizePublicUrl(mixed $value): string
     {
         $url = self::normalize($value) ?? '';
-        if (str_starts_with($url, 'http://') && (str_contains($url, 'sevenrockradio.com') || str_contains($url, 'localhost') === false)) {
-            $url = str_replace('http://', 'https://', $url);
+        if (str_starts_with($url, 'http://')) {
+            $isLocalDev = str_contains($url, 'localhost') || str_contains($url, '.test') || str_contains($url, '127.0.0.1') || app()->environment('local');
+            if (! $isLocalDev && (str_contains($url, 'sevenrockradio.com') || app()->environment('production'))) {
+                $url = str_replace('http://', 'https://', $url);
+            }
         }
         return $url;
     }

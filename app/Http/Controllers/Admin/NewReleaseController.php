@@ -8,11 +8,14 @@ use App\Http\Controllers\Controller;
 use App\Models\NewRelease;
 use App\Models\RadioArtist;
 use App\Services\FileUploadService;
+use App\Services\EmailSafetyValidator;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class NewReleaseController extends Controller
@@ -91,37 +94,115 @@ class NewReleaseController extends Controller
 
     public function update(Request $request, NewRelease $newRelease): RedirectResponse
     {
-        $data = $this->validated($request, $newRelease->id);
-        $slug = ($data['slug'] ?? null) ?: Str::slug($data['title'] . '-' . $data['artist_name']);
-        $originalSlug = $slug;
-        $counter = 1;
-        while (NewRelease::query()->where('slug', $slug)->where('id', '!=', $newRelease->id)->exists()) {
-            $slug = $originalSlug . '-' . $counter;
-            $counter++;
+        return DB::transaction(function () use ($request, $newRelease) {
+            $lockedRelease = NewRelease::lockForUpdate()->findOrFail($newRelease->id);
+
+            $data = $this->validated($request, $lockedRelease->id);
+            $slug = ($data['slug'] ?? null) ?: Str::slug($data['title'] . '-' . $data['artist_name']);
+            $originalSlug = $slug;
+            $counter = 1;
+            while (NewRelease::query()->where('slug', $slug)->where('id', '!=', $lockedRelease->id)->exists()) {
+                $slug = $originalSlug . '-' . $counter;
+                $counter++;
+            }
+            $data['slug'] = $slug;
+
+            $data['cover_image'] = $this->resolveFile(
+                $request,
+                'cover_image_file',
+                $data['cover_image'] ?? null,
+                $lockedRelease->cover_image,
+                'catalog/releases/covers'
+            );
+
+            $data['audio_path'] = $this->resolveFile(
+                $request,
+                'audio_file',
+                $data['audio_path'] ?? null,
+                $lockedRelease->audio_path,
+                'catalog/releases/audio'
+            );
+
+            // Si el lanzamiento procede de correo y se intenta activar, exigir compuertas de seguridad y embargo
+            if ($lockedRelease->isFromEmailPipeline() && ($data['is_active'] ?? false)) {
+                $this->validateReleaseEditorialRestrictions($lockedRelease, $data);
+            }
+
+            // Preservar estrictamente el origen existente (no sobreescribir 'unknown' ni 'email' a 'manual')
+            unset($data['origin']);
+            $lockedRelease->update($data);
+
+            return redirect()->route('admin.new-releases.index')->with('status', 'Lanzamiento actualizado con éxito.');
+        });
+    }
+
+    /**
+     * Aplica a lanzamientos procedentes de correo las restricciones de seguridad y embargo editorial.
+     *
+     * @param array<string, mixed> $proposedAttributes
+     * @throws ValidationException
+     */
+    protected function validateReleaseEditorialRestrictions(NewRelease $release, array $proposedAttributes): void
+    {
+        $targetDate = !empty($proposedAttributes['released_at'])
+            ? ($proposedAttributes['released_at'] instanceof Carbon ? $proposedAttributes['released_at'] : Carbon::parse($proposedAttributes['released_at']))
+            : now();
+
+        $description = (string) ($proposedAttributes['description'] ?? $release->description ?? '');
+        $title = (string) ($proposedAttributes['title'] ?? $release->title ?? '');
+
+        // 1. Verificación de restricciones persistentes del modelo original si procede de correo
+        $isEmbargoActive = (bool) $release->is_embargo_active;
+        $embargoUntil = $release->embargo_until;
+
+        // Comprobar también el texto del formulario por si se añade una nueva restricción en la edición
+        $embargoDetector = app(\App\Services\ReleaseScheduleManager::class);
+        $schedule = $embargoDetector->evaluateSchedule($title, $description, now());
+
+        if ($schedule['is_embargo_active']) {
+            $isEmbargoActive = true;
+            if ($schedule['embargo_until']) {
+                $embargoUntil = $schedule['embargo_until'];
+            }
         }
-        $data['slug'] = $slug;
 
-        $data['cover_image'] = $this->resolveFile(
-            $request,
-            'cover_image_file',
-            $data['cover_image'] ?? null,
-            $newRelease->cover_image,
-            'catalog/releases/covers'
-        );
+        if ($isEmbargoActive) {
+            if ($embargoUntil === null) {
+                throw ValidationException::withMessages([
+                    'is_active' => 'Activación bloqueada: el lanzamiento está bajo embargo indefinido o sin fecha confirmada. Requiere resolución expresa.',
+                ]);
+            }
 
-        $data['audio_path'] = $this->resolveFile(
-            $request,
-            'audio_file',
-            $data['audio_path'] ?? null,
-            $newRelease->audio_path,
-            'catalog/releases/audio'
-        );
+            $embargoCarbon = $embargoUntil instanceof Carbon ? $embargoUntil : Carbon::parse($embargoUntil);
+            if (now()->lt($embargoCarbon)) {
+                $embargoStr = $embargoCarbon->timezone(config('app.timezone', 'Europe/Madrid'))->format('d/m/Y H:i');
+                throw ValidationException::withMessages([
+                    'is_active' => "Activación bloqueada: el material está bajo embargo hasta el {$embargoStr}.",
+                ]);
+            }
+        }
 
-        // Preservar estrictamente el origen existente (no sobreescribir 'unknown' ni 'email' a 'manual')
-        unset($data['origin']);
-        $newRelease->update($data);
+        // Si el estado de seguridad persistente tiene retenciones activas
+        if (in_array($release->security_status, ['held_security', 'rejected', 'failed_metadata'])) {
+            throw ValidationException::withMessages([
+                'is_active' => "Activación bloqueada: el lanzamiento tiene una retención técnica o de seguridad activa ({$release->incident_reason}).",
+            ]);
+        }
 
-        return redirect()->route('admin.new-releases.index')->with('status', 'Lanzamiento actualizado con éxito.');
+        // 2. Validación de seguridad con EmailSafetyValidator sobre el contenido propuesto
+        $validator = app(EmailSafetyValidator::class);
+        $safetyReport = $validator->validateEditorialSafety([
+            'title'   => $title,
+            'excerpt' => '',
+            'content' => $description,
+        ]);
+
+        if (!$safetyReport['is_safe']) {
+            $violations = implode('; ', $safetyReport['violations']);
+            throw ValidationException::withMessages([
+                'description' => "Activación rechazada por motivos de seguridad editorial: {$violations}",
+            ]);
+        }
     }
 
     public function destroy(NewRelease $newRelease): RedirectResponse

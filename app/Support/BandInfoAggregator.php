@@ -192,6 +192,11 @@ class BandInfoAggregator
                 return null;
             }
 
+            $resultTitle = (string) data_get($search->json(), 'results.0.title', '');
+            if (! $this->isSufficientlySimilar($artist, $resultTitle)) {
+                return null;
+            }
+
             $artistId = (string) data_get($search->json(), 'results.0.id');
             $details = ExternalHttp::client()->withOptions(\App\Support\HttpBrowser::defaultOptions())->withHeaders($headers)
                 ->retry(1, 100)
@@ -284,6 +289,12 @@ class BandInfoAggregator
                 return null;
             }
 
+            // Remove disambiguation suffix before comparing similarity
+            $cleanTitle = preg_replace('/\s*\([^)]+\)$/u', '', $title) ?? $title;
+            if (! $this->isSufficientlySimilar($artist, $cleanTitle)) {
+                return null;
+            }
+
             $summary = ExternalHttp::client()->withOptions(\App\Support\HttpBrowser::defaultOptions())->withHeaders(['User-Agent' => \App\Support\HttpBrowser::BROWSER_UA])->retry(1, 100)
                 ->connectTimeout(4)
                 ->timeout(6)
@@ -343,6 +354,11 @@ class BandInfoAggregator
             }
 
             $data = (array) $response->json('artist');
+            $returnedName = (string) ($data['name'] ?? '');
+            if (! $this->isSufficientlySimilar($artist, $returnedName)) {
+                return null;
+            }
+
             $bio = $this->cleanText((string) data_get($data, 'bio.summary', ''));
 
             return [
@@ -377,6 +393,11 @@ class BandInfoAggregator
                 ]);
 
             if (! $search->successful() || ! data_get($search->json(), 'artists.0.id')) {
+                return null;
+            }
+
+            $returnedName = (string) data_get($search->json(), 'artists.0.name', '');
+            if (! $this->isSufficientlySimilar($artist, $returnedName)) {
                 return null;
             }
 
@@ -431,6 +452,10 @@ class BandInfoAggregator
             }
 
             $data = (array) $response->json('artists.0');
+            $returnedName = (string) ($data['strArtist'] ?? '');
+            if (! $this->isSufficientlySimilar($artist, $returnedName)) {
+                return null;
+            }
 
             return [
                 'summary' => $this->cleanText((string) ($data['strBiographyEN'] ?? '')),
@@ -849,6 +874,24 @@ class BandInfoAggregator
     private function normalizeKey(string $value): string
     {
         return preg_replace('/[^a-z0-9]+/i', '', mb_strtolower(trim($value))) ?: '';
+    }
+
+    private function isSufficientlySimilar(string $expected, string $actual): bool
+    {
+        $expectedKey = $this->normalizeKey($expected);
+        $actualKey = $this->normalizeKey($actual);
+
+        if ($expectedKey === '' || $actualKey === '') {
+            return false;
+        }
+
+        if ($expectedKey === $actualKey) {
+            return true;
+        }
+
+        similar_text($expectedKey, $actualKey, $percent);
+
+        return $percent >= 80.0;
     }
 
     /**

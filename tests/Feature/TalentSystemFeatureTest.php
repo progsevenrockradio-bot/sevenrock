@@ -179,6 +179,7 @@ class TalentSystemFeatureTest extends TestCase
             'type'          => 'mp3',
             'title'         => 'Cancion Demo',
             'filename'      => 'cancion_test.mp3',
+            'disk'          => 'r2',
             'url'           => 'https://example.com/cancion_test.mp3',
             'path'          => 'talents/media/cancion_test.mp3',
             'backblaze_key' => 'cancion_test.mp3',

@@ -91,14 +91,24 @@ class EmailSafetyValidator
             }
         }
 
-        // 5. Verificación de Embargo Activo
+        // 5. Verificación de Estado de Seguridad en Metadata
         $evalDate = $targetPublishDate ?? now();
-
-        // Chequeo en la metadata sanitizada si existe
         $meta = EmailPostSanitizedMeta::where('post_id', $post->id)->first();
-        if ($meta && $meta->is_embargo_active && $meta->embargo_until && $evalDate->lessThan($meta->embargo_until)) {
-            $hasEmbargo = true;
-            $violations[] = "Embargo activo hasta {$meta->embargo_until->toDateTimeString()}. Publicación no permitida.";
+        if ($meta) {
+            // Retenciones técnicas críticas no son embargos temporales y no se liberan por fecha
+            if (in_array($meta->security_status, ['held_security', 'rejected'], true)) {
+                $violations[] = "Material retenido cautelarmente por seguridad editorial (estado: {$meta->security_status}). Requiere resolución expresa del editor.";
+            }
+
+            // 6. Verificación de Embargo Activo
+            if ($meta->is_embargo_active) {
+                // Si está activo pero no hay fecha precisa o la fecha está en el futuro: bloqueo estricto
+                if ($meta->embargo_until === null || $evalDate->lessThan($meta->embargo_until)) {
+                    $hasEmbargo = true;
+                    $embargoLimitStr = $meta->embargo_until ? $meta->embargo_until->toDateTimeString() : 'resolución expresa';
+                    $violations[] = "Embargo activo hasta {$embargoLimitStr}. Publicación no permitida.";
+                }
+            }
         }
 
         // Chequeo sintáctico de embargo en texto por si no existiera registro en metadata
@@ -120,9 +130,9 @@ class EmailSafetyValidator
     /**
      * Comprueba si el post cumple todos los criterios de seguridad para ser publicado.
      */
-    public function isSafeToPublish(Post $post): bool
+    public function isSafeToPublish(Post $post, ?\Carbon\Carbon $targetPublishDate = null): bool
     {
-        $res = $this->validatePost($post);
+        $res = $this->validatePost($post, $targetPublishDate);
         return $res['is_safe'];
     }
 
@@ -132,9 +142,9 @@ class EmailSafetyValidator
      *
      * @throws \RuntimeException
      */
-    public function assertSafeForPublishing(Post $post): void
+    public function assertSafeForPublishing(Post $post, ?\Carbon\Carbon $targetPublishDate = null): void
     {
-        $res = $this->validatePost($post);
+        $res = $this->validatePost($post, $targetPublishDate);
         if (! $res['is_safe']) {
             $reason = implode(' | ', $res['violations']);
             Log::error("EmailSafetyValidator: Publicación bloqueada por violación de seguridad en post ID {$post->id}.", [
@@ -167,8 +177,8 @@ class EmailSafetyValidator
         if (preg_match_all('#https?://[^\s<>"\'()]+#i', $content, $matches)) {
             foreach ($matches[0] as $url) {
                 $class = $this->linkClassifier->classify($url);
-                if (in_array($class['category'], ['restricted_private', 'suspicious'])) {
-                    $violations[] = "Enlace restringido o sospechoso detectado: '{$url}' ({$class['category']})";
+                if (in_array($class['classification'], ['restricted_private', 'suspicious'], true)) {
+                    $violations[] = "Enlace restringido o sospechoso detectado: '{$class['redacted_url']}' ({$class['classification']})";
                 }
             }
         }

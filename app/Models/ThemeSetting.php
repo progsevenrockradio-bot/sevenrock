@@ -45,6 +45,7 @@ class ThemeSetting extends Model
         'moderation_require_event' => 'bool',
         'ai_daily_max_calls' => 'integer',
         'ai_prefilter_enabled' => 'bool',
+        'podcast_editorial_general_guide' => 'array',
     ];
 
     protected $fillable = [
@@ -143,7 +144,46 @@ class ThemeSetting extends Model
         'ai_prefilter_enabled',
         'ai_prefilter_keywords',
         'ai_prefilter_promo_domains',
+        'podcast_editorial_general_guide',
     ];
+
+    public static function defaultPodcastEditorialGuide(): array
+    {
+        return [
+            'identity_and_audience' => 'Seven Rock Radio es una emisora especializada en cultura rock y metal. El público valora datos veraces, contexto musical y respeto por la voz propia de cada conductor.',
+            'tone_and_style' => 'Tono directo, apasionado, riguroso y respetuoso con la autoría del conductor. Evitar clickbait engañoso, mayúsculas abusivas o afirmaciones no verificadas.',
+            'structure_rules' => [
+                'title_min_length' => 5,
+                'title_max_length' => 140,
+                'summary_min_length' => 15,
+                'description_min_length' => 25,
+                'guidelines' => 'El título debe identificar el tema o invitado central del episodio; el resumen sintetiza en 1-2 frases el contenido; la descripción amplía bandas, bloques o contexto.',
+            ],
+            'cover_requirements' => [
+                'allowed_formats' => ['jpg', 'jpeg', 'png', 'webp'],
+                'max_size_kb' => 10240,
+                'allow_master_fallback' => true,
+                'guidelines' => 'Portada cuadrada legible, preferiblemente JPG o PNG hasta 10 MB, o carátula oficial del programa maestro.',
+            ],
+            'particular_rules' => 'Conservar siempre la redacción del conductor si cumple los requisitos mínimos. Las sugerencias editoriales requieren revisión humana.',
+            'optional_examples' => 'Título: Especial Thrash Metal de los 80 | Resumen: Repaso por los discos esenciales del Bay Area Thrash con vinilos de época.',
+        ];
+    }
+
+    public static function currentPodcastEditorialGuide(): array
+    {
+        $defaults = self::defaultPodcastEditorialGuide();
+        try {
+            $current = self::current();
+            $custom = is_array($current->podcast_editorial_general_guide ?? null)
+                ? $current->podcast_editorial_general_guide
+                : [];
+
+            return array_replace_recursive($defaults, array_filter($custom, static fn ($v) => $v !== null && $v !== ''));
+        } catch (\Throwable) {
+            return $defaults;
+        }
+    }
 
     public static function defaults(): array
     {

@@ -1,6 +1,16 @@
-@props(['slides', 'autoSlides' => [], 'interval' => 7000, 'transition' => 'fade'])
+@props(['slides' => [], 'autoSlides' => [], 'interval' => 7000, 'transition' => 'fade'])
 
 @php
+    $slides = is_array($slides) ? array_values(array_filter($slides, fn($s) => !empty($s['image'] ?? null))) : [];
+    $autoSlides = is_array($autoSlides) ? array_values($autoSlides) : [];
+
+    // Fallback defensivo para evitar portada vacía
+    if (empty($slides) && empty($autoSlides)) {
+        $slides = [
+            ['image' => 'assets/lucille/pedalboard-1511069_1920.jpg']
+        ];
+    }
+
     $transitionModifiers = match ($transition) {
         'slide' => 'x-transition:enter="transition ease-out duration-700" x-transition:enter-start="translate-x-full opacity-0" x-transition:enter-end="translate-x-0 opacity-100" x-transition:leave="transition ease-in duration-500" x-transition:leave-start="translate-x-0 opacity-100" x-transition:leave-end="-translate-x-full opacity-0"',
         'zoom' => 'x-transition.scale.duration.1000ms',
@@ -44,6 +54,7 @@
             $slideImage = str_starts_with($slide['image'], 'http://') || str_starts_with($slide['image'], 'https://')
                 ? $slide['image']
                 : asset($slide['image']);
+            $fallbackImage = asset('assets/lucille/pedalboard-1511069_1920.jpg');
         @endphp
         <div
             x-show="active === {{ $index }}"
@@ -53,7 +64,8 @@
             style="background-image: url('{{ $slideImage }}');"
             aria-hidden="{{ $index === 0 ? 'false' : 'true' }}"
         >
-            <img src="{{ $slideImage }}" alt="Slide {{ $index + 1 }}" class="hero-slide-img">
+            <img src="{{ $slideImage }}" alt="Slide {{ $index + 1 }}" class="hero-slide-img"
+                 onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ $fallbackImage }}'; this.parentElement.style.backgroundImage = 'url(\'{{ $fallbackImage }}\')'; }">
         </div>
     @endforeach
 
@@ -122,6 +134,7 @@
                                              style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%221.5%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22 opacity=%220.3%22/%3E%3C/svg%3E');"></div>
 
                                         <img src="{{ $prog['image'] }}" alt="{{ $prog['title'] }}" loading="{{ $pi === 0 ? 'eager' : 'lazy' }}"
+                                             onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ asset('assets/lucille/logo.png') }}'; }"
                                              class="w-full h-full object-cover transition-all duration-300 group-hover:opacity-100 group-hover:filter-none group-hover:mix-blend-normal group-hover:brightness-110"
                                              style="
                                                 opacity: {{ $st['opacity'] }};
@@ -211,11 +224,13 @@
     @endif
 
 
-    <div class="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-3">
-        @for ($i = 0; $i < $totalSlideCount; $i++)
-            <button type="button" class="h-2.5 w-2.5 rounded-full border border-white/70 transition" :class="active === {{ $i }} ? 'bg-lucille-accent border-lucille-accent' : 'bg-transparent'" @click="go({{ $i }})" aria-label="Show slide {{ $i + 1 }}"></button>
-        @endfor
-    </div>
+    @if ($totalSlideCount > 1)
+        <div class="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-3">
+            @for ($i = 0; $i < $totalSlideCount; $i++)
+                <button type="button" class="h-2.5 w-2.5 rounded-full border border-white/70 transition" :class="active === {{ $i }} ? 'bg-lucille-accent border-lucille-accent' : 'bg-transparent'" @click="go({{ $i }})" aria-label="Show slide {{ $i + 1 }}"></button>
+            @endfor
+        </div>
+    @endif
 
     {{-- Scroll Down Indicator --}}
     <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 hidden md:flex flex-col items-center gap-1 pointer-events-none">

@@ -23,33 +23,64 @@
 
     @if (!empty($noticiasRock) && $noticiasRock->count() > 0)
     <x-sections.background-band class="home-section-texture home-section-gray">
-        <div class="pt-[100px] pb-[80px]">
+        <div class="py-12 md:py-16">
             <x-ui.section-heading title="Noticias" accent="Rock" subtitle="Lo último en el mundo del rock y metal" />
             
-            <div class="mx-auto max-w-[1200px] px-6 mt-10">
-                <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="mx-auto max-w-[1200px] px-6 mt-8 md:mt-10">
+                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach($noticiasRock as $post)
-                        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:border-[#c32720]/40 group relative cursor-pointer">
+                        @php
+                            $rawExcerpt = (string) ($post->excerpt ?? '');
+                            if (str_starts_with(trim($rawExcerpt), '{') || str_starts_with(trim($rawExcerpt), '[')) {
+                                $decoded = json_decode($rawExcerpt, true);
+                                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                                    $rawExcerpt = data_get($decoded, 'rendered')
+                                        ?? data_get($decoded, 'raw')
+                                        ?? data_get($decoded, '0.value')
+                                        ?? data_get($decoded, '0.content.html')
+                                        ?? (is_string(reset($decoded)) ? reset($decoded) : '');
+                                }
+                            }
+                            if (trim((string)$rawExcerpt) === '' && !empty($post->content)) {
+                                $c = $post->content;
+                                if (is_array($c)) {
+                                    $rawExcerpt = data_get($c, '0.value') ?? data_get($c, '0.content.html') ?? '';
+                                } elseif (is_string($c)) {
+                                    $rawExcerpt = $c;
+                                }
+                            }
+                            $rawExcerpt = html_entity_decode((string)$rawExcerpt, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                            $rawExcerpt = html_entity_decode($rawExcerpt, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                            $rawExcerpt = strip_tags($rawExcerpt);
+                            $rawExcerpt = str_replace(['\r', '\n', '\t', '\/'], [' ', ' ', ' ', '/'], $rawExcerpt);
+                            $cleanExcerpt = trim(preg_replace('/\s+/u', ' ', $rawExcerpt) ?? '');
+                            $cleanExcerpt = \Illuminate\Support\Str::limit($cleanExcerpt, 160, '...');
+                        @endphp
+                        <div class="border border-lucille-line/30 bg-lucille-surface/80 p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:border-lucille-accent/40 group relative cursor-pointer">
                             <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-30" aria-label="Leer más sobre {{ $post->title }}"></a>
                             <div>
-                                <div class="relative aspect-[4/3] overflow-hidden border border-[#2b2b2b] bg-[#111]">
-                                    <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}" alt="{{ $post->title }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
+                                <div class="relative aspect-[4/3] overflow-hidden border border-lucille-line/30 bg-[#111]">
+                                    <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}"
+                                         alt="{{ $post->title }}"
+                                         onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ asset('assets/lucille/logo.png') }}'; }"
+                                         class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                         loading="lazy" decoding="async">
                                     @if ($post->en_memoria)
                                         <x-luto :nombre="$post->en_memoria_nombre" />
                                     @endif
                                 </div>
-                                <h4 class="mt-4 font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-2 group-hover:text-[#c32720] transition-colors relative z-20">
+                                <h4 class="mt-4 font-display text-[15px] sm:text-[16px] uppercase tracking-[.08em] text-lucille-heading line-clamp-2 group-hover:text-lucille-accent transition-colors relative z-20">
                                     {{ $post->title }}
                                 </h4>
                                 @if($post->published_at)
-                                    <p class="text-[10px] uppercase tracking-[.12em] text-[#555] mt-2 relative z-20">{{ $post->published_at->translatedFormat('d M, Y') }}</p>
+                                    <p class="text-[10px] uppercase tracking-[.12em] text-lucille-body mt-2 relative z-20">{{ $post->published_at->locale('es')->translatedFormat('d M, Y') }}</p>
                                 @endif
-                                @if($post->excerpt)
-                                    <p class="mt-3 text-xs leading-5 text-[#7b7b7b] line-clamp-3 relative z-20">{{ $post->excerpt }}</p>
+                                @if($cleanExcerpt !== '')
+                                    <p class="mt-2.5 text-xs leading-5 text-lucille-body line-clamp-3 relative z-20">{{ $cleanExcerpt }}</p>
                                 @endif
                             </div>
-                            <div class="mt-4 border-t border-[#222] pt-3 text-right relative z-20">
-                                <span class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] group-hover:text-[#c32720] transition-colors">Leer más &rarr;</span>
+                            <div class="mt-4 border-t border-lucille-line/20 pt-3 text-right relative z-20">
+                                <span class="text-[11px] uppercase tracking-[.18em] text-lucille-heading group-hover:text-lucille-accent transition-colors">Leer más &rarr;</span>
                             </div>
                         </div>
                     @endforeach
@@ -62,7 +93,7 @@
 
     @if (data_get($featuredStories, 'enabled', false))
     <x-sections.background-band class="home-section-texture home-section-gray">
-        <div class="pt-[100px] pb-[80px]">
+        <div class="py-12 md:py-16">
             <x-ui.section-heading :title="$homeHeadings['featured_stories']['title']" :subtitle="$homeHeadings['featured_stories']['subtitle']" />
             <x-home.featured-stories :stories="$featuredStories" />
         </div>
@@ -71,7 +102,7 @@
 
     @if ($nextProgram)
     <x-sections.background-band class="home-section-texture home-section-cool">
-        <div class="pt-[100px] pb-[80px]">
+        <div class="py-12 md:py-16">
             <x-ui.section-heading :title="$homeHeadings['next_program']['title']" :subtitle="$homeHeadings['next_program']['subtitle']" />
             <x-home.next-program :program="$nextProgram" />
         </div>
@@ -253,7 +284,7 @@
 
     @if (!empty($latestPodcasts) && !empty($latestPodcasts['episodes']))
     <x-sections.background-band class="home-section-texture home-section-black">
-        <div class="pt-[100px] pb-[80px]">
+        <div class="py-12 md:py-16">
             <x-ui.section-heading :title="$homeHeadings['latest_podcasts']['title']" :subtitle="$homeHeadings['latest_podcasts']['subtitle']" />
             <x-home.latest-podcasts :podcasts="$latestPodcasts" />
         </div>
@@ -262,7 +293,7 @@
 
     @if (!empty($events))
     <x-sections.background-band class="home-section-texture home-section-cool">
-        <div class="pt-[100px] pb-[80px]">
+        <div class="py-12 md:py-16">
             <x-ui.section-heading :title="$homeHeadings['upcoming_shows']['title']" :accent="$homeHeadings['upcoming_shows']['accent']" :subtitle="$homeHeadings['upcoming_shows']['subtitle']" />
             <x-ui.event-list :events="$events" />
         </div>
@@ -271,20 +302,26 @@
 
     @if (!empty($newReleases) && $newReleases->count() > 0)
     <x-sections.background-band class="home-section-texture home-section-black">
-        <div class="pt-[100px] pb-[80px]">
-            <x-ui.section-heading title="Nuevos" accent="Lanzamientos" subtitle="Lo más reciente y destacado en la señal de Seven Rock Radio" />
+        <div class="py-12 md:py-16">
+            <x-ui.section-heading :title="$homeHeadings['new_album_release']['title'] ?? 'Nuevos'" :accent="$homeHeadings['new_album_release']['accent'] ?? 'Lanzamientos'" :subtitle="'Lo más reciente y destacado en la señal de Seven Rock Radio'" />
             
-            <div class="mx-auto max-w-[1200px] px-6 mt-10">
-                <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="mx-auto max-w-[1200px] px-6 mt-8 md:mt-10">
+                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach($newReleases as $release)
-                        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:border-[#c32720]/40 group">
+                        @php
+                            $cleanRelDesc = trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode((string) $release->description, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
+                        @endphp
+                        <div class="border border-lucille-line/30 bg-lucille-surface/80 p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:border-lucille-accent/40 group">
                             <div>
                                 <!-- Portada -->
-                                <div class="relative aspect-square overflow-hidden border border-[#2b2b2b] bg-[#111]">
-                                    <img src="{{ $release->cover_image_url }}" alt="{{ $release->title }}" width="400" height="400" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
+                                <div class="relative aspect-square overflow-hidden border border-lucille-line/30 bg-[#111]">
+                                    <img src="{{ $release->cover_image_url ?: asset('assets/lucille/logo.png') }}"
+                                         alt="{{ $release->title }}" width="400" height="400"
+                                         onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ asset('assets/lucille/logo.png') }}'; }"
+                                         class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
                                     @if($release->youtube_url)
                                         <a href="{{ $release->youtube_url }}" target="_blank" rel="noreferrer" class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                            <svg class="h-12 w-12 text-[#c32720] hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+                                            <svg class="h-12 w-12 text-lucille-accent hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
                                                 <path d="M23.498 6.163a3.003 3.003 0 00-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 00-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 002.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 002.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                                             </svg>
                                         </a>
@@ -292,28 +329,28 @@
                                 </div>
 
                                 <!-- Meta -->
-                                <h4 class="mt-4 font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] line-clamp-1 group-hover:text-[#c32720] transition-colors">{{ $release->title }}</h4>
-                                <p class="text-[12px] uppercase tracking-[.18em] text-[#7b7b7b] line-clamp-1 mt-1">{{ $release->artist_name }}</p>
+                                <h4 class="mt-4 font-display text-[15px] sm:text-[16px] uppercase tracking-[.08em] text-lucille-heading line-clamp-1 group-hover:text-lucille-accent transition-colors">{{ $release->title }}</h4>
+                                <p class="text-[12px] uppercase tracking-[.18em] text-lucille-body line-clamp-1 mt-1">{{ $release->artist_name }}</p>
 
                                 @if($release->released_at)
-                                    <p class="text-[10px] uppercase tracking-[.12em] text-[#555] mt-1">{{ $release->released_at->translatedFormat('d M, Y') }}</p>
+                                    <p class="text-[10px] uppercase tracking-[.12em] text-lucille-body/70 mt-1">{{ $release->released_at->locale('es')->translatedFormat('d M, Y') }}</p>
                                 @endif
 
-                                @if($release->description)
-                                    <p class="mt-3 text-xs leading-5 text-[#7b7b7b] line-clamp-3">{{ $release->description }}</p>
+                                @if($cleanRelDesc !== '')
+                                    <p class="mt-2.5 text-xs leading-5 text-lucille-body line-clamp-3">{{ $cleanRelDesc }}</p>
                                 @endif
                             </div>
 
                             <div>
                                 <!-- Audio Player -->
                                 @if($release->audio_url)
-                                    <div class="mt-4 border-t border-[#222] pt-4">
-                                        <audio src="{{ $release->audio_url }}" controls class="w-full h-8 accent-[#c32720] dark-audio" controlsList="nodownload"></audio>
+                                    <div class="mt-4 border-t border-lucille-line/20 pt-4">
+                                        <audio src="{{ $release->audio_url }}" controls class="w-full h-8 accent-lucille-accent dark-audio" controlsList="nodownload"></audio>
                                     </div>
                                 @endif
 
                                 <!-- Action Links -->
-                                <div class="mt-4 flex items-center justify-between border-t border-[#222] pt-3">
+                                <div class="mt-4 flex items-center justify-between border-t border-lucille-line/20 pt-3">
                                     <div class="flex gap-3">
                                         @if($release->spotify_url)
                                             <a href="{{ $release->spotify_url }}" target="_blank" rel="noreferrer" class="text-[#1DB954] hover:scale-110 transition-transform" title="Escuchar en Spotify">
@@ -330,7 +367,7 @@
                                             </a>
                                         @endif
                                     </div>
-                                    <a href="{{ route('new-releases.single', $release->slug) }}" class="text-[11px] uppercase tracking-[.18em] text-[#dcdcdc] hover:text-[#c32720] transition-colors">Reseña &rarr;</a>
+                                    <a href="{{ route('new-releases.single', $release->slug) }}" class="text-[11px] uppercase tracking-[.18em] text-lucille-heading hover:text-lucille-accent transition-colors">Reseña &rarr;</a>
                                 </div>
                             </div>
                         </div>
@@ -343,7 +380,7 @@
 
     @if ($album)
     <x-sections.background-band class="home-section-texture home-section-gray">
-        <div class="pt-[100px] pb-[80px]">
+        <div class="py-12 md:py-16">
             <x-ui.section-heading :title="$homeHeadings['new_album_release']['title']" :accent="$homeHeadings['new_album_release']['accent']" :subtitle="$homeHeadings['new_album_release']['subtitle'] ?: (data_get($album, 'artist', '') . ' - ' . data_get($album, 'title', ''))" />
             <x-ui.album-feature :album="$album" :cover-image="$themeAppearance['home_album_cover_url']" />
         </div>
@@ -352,10 +389,10 @@
 
     @if (!empty($galleryImages))
     <x-sections.background-band class="home-section-texture home-section-gray">
-        <div class="pt-[100px] pb-[80px]">
+        <div class="py-12 md:py-16">
             <x-ui.section-heading :title="$homeHeadings['featured_gallery_images']['title']" :accent="$homeHeadings['featured_gallery_images']['accent']" :subtitle="$homeHeadings['featured_gallery_images']['subtitle']" />
             <x-ui.gallery-strip :images="$galleryImages" />
-            <div class="mt-9 text-center">
+            <div class="mt-8 text-center">
                 <a href="{{ route('gallery') }}" class="lucille-button">{{ $ui['more_images'] }}</a>
             </div>
         </div>
@@ -366,7 +403,7 @@
 
     @if (!empty($posts))
     <x-sections.background-band class="home-section-texture home-section-gray">
-        <div class="pt-[100px] pb-[80px]">
+        <div class="py-12 md:py-16">
             <x-ui.section-heading :title="$homeHeadings['latest_news']['title']" :accent="$homeHeadings['latest_news']['accent']" :subtitle="$homeHeadings['latest_news']['subtitle']" />
             <x-ui.post-grid :posts="$posts" />
         </div>
@@ -374,25 +411,35 @@
     @endif
 
     <x-sections.background-band class="home-section-texture home-section-black">
-        <div class="pt-[100px] pb-[80px]">
+        <div class="py-12 md:py-16">
             <x-ui.section-heading :title="$homeHeadings['send_message']['title']" :accent="$homeHeadings['send_message']['accent']" :subtitle="$homeHeadings['send_message']['subtitle']" />
-            <div class="mt-[80px]">
-                <form method="POST" action="{{ route('home.contact.send') }}" class="grid gap-x-4 gap-y-8" x-data="{ subject: 'general', dropdownOpen: false, selectedLabel: 'Consulta general / Otro' }">
+            <div class="mt-8 md:mt-12">
+                <form method="POST" action="{{ route('home.contact.send') }}" class="grid gap-x-4 gap-y-6" x-data="{ subject: 'general', dropdownOpen: false, selectedLabel: 'Consulta general / Otro' }">
                 @csrf
                     <div class="hidden" style="display:none !important" aria-hidden="true">
                         <input type="text" name="user_website" tabindex="-1" autocomplete="off">
                     </div>
                     <div class="grid gap-4 md:grid-cols-3">
-                        <input type="text" name="name" placeholder="{{ $ui['your_name'] }}" class="lucille-home-input" required>
-                        <input type="email" name="email" placeholder="{{ $ui['email_address'] }}" class="lucille-home-input" required>
-                        <input type="tel" name="phone" placeholder="{{ $ui['phone'] }}" class="lucille-home-input">
+                        <div>
+                            <label for="contact-name" class="block font-display text-[11px] uppercase tracking-[.14em] text-[#dcdcdc] mb-1.5">{{ $ui['your_name'] ?? 'Tu nombre *' }}</label>
+                            <input type="text" id="contact-name" name="name" placeholder="{{ $ui['your_name'] }}" class="lucille-home-input w-full" required>
+                        </div>
+                        <div>
+                            <label for="contact-email" class="block font-display text-[11px] uppercase tracking-[.14em] text-[#dcdcdc] mb-1.5">{{ $ui['email_address'] ?? 'Correo electrónico *' }}</label>
+                            <input type="email" id="contact-email" name="email" placeholder="{{ $ui['email_address'] }}" class="lucille-home-input w-full" required>
+                        </div>
+                        <div>
+                            <label for="contact-phone" class="block font-display text-[11px] uppercase tracking-[.14em] text-[#dcdcdc] mb-1.5">{{ $ui['phone'] ?? 'Teléfono' }}</label>
+                            <input type="tel" id="contact-phone" name="phone" placeholder="{{ $ui['phone'] }}" class="lucille-home-input w-full">
+                        </div>
                     </div>
                     
                     <div class="grid gap-4" :class="subject === 'join_radio' ? 'md:grid-cols-2' : 'md:grid-cols-1'">
                         <div class="relative w-full">
+                            <label id="contact-subject-label" class="block font-display text-[11px] uppercase tracking-[.14em] text-[#dcdcdc] mb-1.5">Asunto / Motivo</label>
                             <input type="hidden" name="subject" :value="subject">
                             
-                            <button type="button" @click="dropdownOpen = !dropdownOpen" @click.away="dropdownOpen = false" 
+                            <button type="button" aria-labelledby="contact-subject-label" @click="dropdownOpen = !dropdownOpen" @click.away="dropdownOpen = false" 
                                 class="lucille-home-input w-full flex items-center justify-between text-left" 
                                 style="color: #dcdcdc; background-color: #111113; cursor: pointer; height: 50px; border: 1px solid rgba(255,255,255,0.06); padding: 0 16px; font-size: 14px;">
                                 <span x-text="selectedLabel"></span>
@@ -421,11 +468,15 @@
                             </ul>
                         </div>
                         <div x-show="subject === 'join_radio'" x-cloak x-transition.opacity>
-                            <input type="text" name="band_name" placeholder="Nombre de la banda o artista" class="lucille-home-input w-full" :required="subject === 'join_radio'">
+                            <label for="contact-band-name" class="block font-display text-[11px] uppercase tracking-[.14em] text-[#dcdcdc] mb-1.5">Nombre de la banda o artista *</label>
+                            <input type="text" id="contact-band-name" name="band_name" placeholder="Nombre de la banda o artista" class="lucille-home-input w-full" :required="subject === 'join_radio'">
                         </div>
                     </div>
 
-                    <textarea name="message" placeholder="{{ $ui['write_comment'] }}" rows="7" class="lucille-home-input lucille-home-textarea" required></textarea>
+                    <div>
+                        <label for="contact-message" class="block font-display text-[11px] uppercase tracking-[.14em] text-[#dcdcdc] mb-1.5">{{ $ui['write_comment'] ?? 'Tu mensaje *' }}</label>
+                        <textarea id="contact-message" name="message" placeholder="{{ $ui['write_comment'] }}" rows="6" class="lucille-home-input lucille-home-textarea w-full" required></textarea>
+                    </div>
                     <div>
                         <button type="submit" class="lucille-button-solid">{{ $ui['send_email'] }}</button>
                     </div>

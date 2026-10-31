@@ -289,15 +289,35 @@ class AdminEditorialController extends Controller
                     : back()->with('error', $msg);
             }
 
-            // 3. Comprobar embargos activos
+            // 3. Comprobar retenciones de seguridad y embargos activos
             $meta = $lockedPost->sanitizedMeta;
-            if ($meta && $meta->is_embargo_active && $meta->embargo_until?->isFuture()) {
-                DB::rollBack();
-                $embargoStr = $meta->embargo_until->format('d/m/Y H:i');
-                $msg = "Publicación bloqueada: el material está bajo embargo hasta el {$embargoStr}. Debe programarse para una fecha posterior.";
-                return $request->wantsJson()
-                    ? response()->json(['success' => false, 'message' => $msg, 'code' => 'active_embargo'], 422)
-                    : back()->with('error', $msg);
+            if ($meta) {
+                if (in_array($meta->security_status, ['held_security', 'rejected'], true)) {
+                    DB::rollBack();
+                    $msg = "Publicación bloqueada: el contenido se encuentra retenido cautelarmente ({$meta->security_status}). Requiere resolución expresa.";
+                    return $request->wantsJson()
+                        ? response()->json(['success' => false, 'message' => $msg, 'code' => 'security_held'], 422)
+                        : back()->with('error', $msg);
+                }
+
+                if ($meta->is_embargo_active) {
+                    if ($meta->embargo_until === null) {
+                        DB::rollBack();
+                        $msg = 'Publicación bloqueada: el material está bajo embargo indefinido o sin fecha confirmada. Requiere resolución expresa.';
+                        return $request->wantsJson()
+                            ? response()->json(['success' => false, 'message' => $msg, 'code' => 'active_embargo'], 422)
+                            : back()->with('error', $msg);
+                    }
+
+                    if ($meta->embargo_until->isFuture()) {
+                        DB::rollBack();
+                        $embargoStr = $meta->embargo_until->format('d/m/Y H:i');
+                        $msg = "Publicación bloqueada: el material está bajo embargo hasta el {$embargoStr}. Debe programarse para una fecha posterior.";
+                        return $request->wantsJson()
+                            ? response()->json(['success' => false, 'message' => $msg, 'code' => 'active_embargo'], 422)
+                            : back()->with('error', $msg);
+                    }
+                }
             }
 
             // 4. Validación centralizada de seguridad de contenido
@@ -341,10 +361,13 @@ class AdminEditorialController extends Controller
                 : back()->with('success', $msg);
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error("AdminEditorialController: Error al aprobar post ID {$post->id}: " . $e->getMessage());
+            Log::error("AdminEditorialController: Error al aprobar post ID {$post->id}.", [
+                'post_id' => $post->id,
+                'code'    => $e->getCode(),
+            ]);
             return $request->wantsJson()
-                ? response()->json(['success' => false, 'message' => 'Error interno al procesar la aprobación: ' . $e->getMessage()], 500)
-                : back()->with('error', 'Error al procesar la aprobación: ' . $e->getMessage());
+                ? response()->json(['success' => false, 'message' => 'Error interno al procesar la aprobación.'], 500)
+                : back()->with('error', 'Error al procesar la aprobación.');
         }
     }
 
@@ -374,15 +397,35 @@ class AdminEditorialController extends Controller
                     : back()->with('error', $msg);
             }
 
-            // 1. Respeto estricto del embargo: La fecha programada DEBE ser >= fecha de embargo
+            // 1. Respeto estricto de retenciones de seguridad y embargo
             $meta = $lockedPost->sanitizedMeta;
-            if ($meta && $meta->embargo_until && $scheduledAt->lt($meta->embargo_until)) {
-                DB::rollBack();
-                $embargoStr = $meta->embargo_until->format('d/m/Y H:i');
-                $msg = "La fecha programada ({$scheduledAt->format('d/m/Y H:i')}) no puede ser anterior al levantamiento del embargo ({$embargoStr}).";
-                return $request->wantsJson()
-                    ? response()->json(['success' => false, 'message' => $msg, 'code' => 'embargo_conflict'], 422)
-                    : back()->with('error', $msg);
+            if ($meta) {
+                if (in_array($meta->security_status, ['held_security', 'rejected'], true)) {
+                    DB::rollBack();
+                    $msg = "Programación bloqueada: el contenido se encuentra retenido cautelarmente ({$meta->security_status}). Requiere resolución expresa.";
+                    return $request->wantsJson()
+                        ? response()->json(['success' => false, 'message' => $msg, 'code' => 'security_held'], 422)
+                        : back()->with('error', $msg);
+                }
+
+                if ($meta->is_embargo_active) {
+                    if ($meta->embargo_until === null) {
+                        DB::rollBack();
+                        $msg = 'Programación bloqueada: el material está bajo embargo indefinido o sin fecha confirmada. Requiere resolución expresa.';
+                        return $request->wantsJson()
+                            ? response()->json(['success' => false, 'message' => $msg, 'code' => 'embargo_conflict'], 422)
+                            : back()->with('error', $msg);
+                    }
+
+                    if ($scheduledAt->lt($meta->embargo_until)) {
+                        DB::rollBack();
+                        $embargoStr = $meta->embargo_until->format('d/m/Y H:i');
+                        $msg = "La fecha programada ({$scheduledAt->format('d/m/Y H:i')}) no puede ser anterior al levantamiento del embargo ({$embargoStr}).";
+                        return $request->wantsJson()
+                            ? response()->json(['success' => false, 'message' => $msg, 'code' => 'embargo_conflict'], 422)
+                            : back()->with('error', $msg);
+                    }
+                }
             }
 
             // 2. Comprobar incidencias pendientes
@@ -433,9 +476,13 @@ class AdminEditorialController extends Controller
                 : back()->with('success', $msg);
         } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error("AdminEditorialController: Error al programar post ID {$post->id}.", [
+                'post_id' => $post->id,
+                'code'    => $e->getCode(),
+            ]);
             return $request->wantsJson()
-                ? response()->json(['success' => false, 'message' => $e->getMessage()], 500)
-                : back()->with('error', $e->getMessage());
+                ? response()->json(['success' => false, 'message' => 'Error interno al programar la publicación.'], 500)
+                : back()->with('error', 'Error interno al programar la publicación.');
         }
     }
 
@@ -478,9 +525,13 @@ class AdminEditorialController extends Controller
                 : back()->with('success', $msg);
         } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error("AdminEditorialController: Error al programar post ID {$post->id}.", [
+                'post_id' => $post->id,
+                'code'    => $e->getCode(),
+            ]);
             return $request->wantsJson()
-                ? response()->json(['success' => false, 'message' => $e->getMessage()], 500)
-                : back()->with('error', $e->getMessage());
+                ? response()->json(['success' => false, 'message' => 'Error interno al programar la publicación.'], 500)
+                : back()->with('error', 'Error interno al programar la publicación.');
         }
     }
 
@@ -513,9 +564,13 @@ class AdminEditorialController extends Controller
                 : back()->with('success', $msg);
         } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error("AdminEditorialController: Error al programar post ID {$post->id}.", [
+                'post_id' => $post->id,
+                'code'    => $e->getCode(),
+            ]);
             return $request->wantsJson()
-                ? response()->json(['success' => false, 'message' => $e->getMessage()], 500)
-                : back()->with('error', $e->getMessage());
+                ? response()->json(['success' => false, 'message' => 'Error interno al programar la publicación.'], 500)
+                : back()->with('error', 'Error interno al programar la publicación.');
         }
     }
 
@@ -586,12 +641,28 @@ class AdminEditorialController extends Controller
                         continue;
                     }
 
-                    // Validar embargo
+                    // Validar retención cautelar y embargo
                     $meta = $post->sanitizedMeta;
-                    if ($meta && $meta->is_embargo_active && $meta->embargo_until?->isFuture()) {
-                        DB::rollBack();
-                        $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => "Bajo embargo activo hasta {$meta->embargo_until->format('d/m/Y H:i')}."];
-                        continue;
+                    if ($meta) {
+                        if (in_array($meta->security_status, ['held_security', 'rejected'], true)) {
+                            DB::rollBack();
+                            $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => "Retenido cautelarmente por seguridad ({$meta->security_status}). Requiere resolución expresa."];
+                            continue;
+                        }
+
+                        if ($meta->is_embargo_active) {
+                            if ($meta->embargo_until === null) {
+                                DB::rollBack();
+                                $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => 'Bajo embargo indefinido o sin fecha confirmada. Requiere resolución expresa.'];
+                                continue;
+                            }
+
+                            if ($meta->embargo_until->isFuture()) {
+                                DB::rollBack();
+                                $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => "Bajo embargo activo hasta {$meta->embargo_until->format('d/m/Y H:i')}."];
+                                continue;
+                            }
+                        }
                     }
 
                     // Validar seguridad
@@ -621,10 +692,26 @@ class AdminEditorialController extends Controller
                     }
 
                     $meta = $post->sanitizedMeta;
-                    if ($meta && $meta->embargo_until && $scheduledAt->lt($meta->embargo_until)) {
-                        DB::rollBack();
-                        $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => "Fecha programada anterior al fin del embargo ({$meta->embargo_until->format('d/m/Y H:i')})."];
-                        continue;
+                    if ($meta) {
+                        if (in_array($meta->security_status, ['held_security', 'rejected'], true)) {
+                            DB::rollBack();
+                            $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => "Retenido cautelarmente por seguridad ({$meta->security_status}). Requiere resolución expresa."];
+                            continue;
+                        }
+
+                        if ($meta->is_embargo_active) {
+                            if ($meta->embargo_until === null) {
+                                DB::rollBack();
+                                $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => 'Bajo embargo indefinido o sin fecha confirmada. Requiere resolución expresa.'];
+                                continue;
+                            }
+
+                            if ($scheduledAt->lt($meta->embargo_until)) {
+                                DB::rollBack();
+                                $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => "Fecha programada anterior al fin del embargo ({$meta->embargo_until->format('d/m/Y H:i')})."];
+                                continue;
+                            }
+                        }
                     }
 
                     if ($post->incidents()->where('resolution_status', 'pending_review')->exists()) {

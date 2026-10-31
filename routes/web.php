@@ -119,6 +119,10 @@ Route::get("/programas/{identifier}", [SiteController::class, "programDetail"])-
 
 Route::get("/multimedia", [SiteController::class, "multimedia"])->name("multimedia");
 
+// ── Ficha pública de episodio y descarga autorizada ──────────────────────────
+Route::get('/podcasts/{programSlug}/{episodeNumber}', [\App\Http\Controllers\PublicPodcastEpisodeController::class, 'show'])->name('public.podcasts.episode');
+Route::get('/podcasts/{programSlug}/{episodeNumber}/descargar', [\App\Http\Controllers\PublicPodcastEpisodeController::class, 'download'])->name('public.podcasts.download');
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PWA — Progressive Web App (experiencia móvil /app)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -170,6 +174,34 @@ Route::prefix('app')->name('pwa.')->group(function (): void {
 Route::controller(\App\Http\Controllers\GuestProgramController::class)->prefix('invitacion/programa')->name('invitation.program.')->middleware('signed')->group(function (): void {
     Route::get('/{invitation}', 'edit')->name('edit');
     Route::post('/{invitation}', 'update')->name('update');
+});
+
+// Confirmación y aprobación editorial de episodios de podcast desde correo (enlace firmado + versión exacta + administrador autenticado).
+// El GET solo presenta la pantalla de confirmación; la aprobación se ejecuta exclusivamente mediante POST autenticado y autorizado como administrador.
+Route::middleware(['signed', 'auth', 'admin'])->prefix('podcast-editorial/{radioProgram}')->name('podcast-editorial.email.')->group(function (): void {
+    Route::get('/confirmar-aprobacion', [\App\Http\Controllers\Admin\AdminPodcastEditorialController::class, 'confirmEmailApproval'])->name('confirm');
+    Route::post('/confirmar-aprobacion', [\App\Http\Controllers\Admin\AdminPodcastEditorialController::class, 'approveFromEmail'])->name('approve');
+});
+
+// Portal de conductores para entrega de episodios con revisión editorial (sin acceso a /admin).
+Route::prefix('conductores')->name('conductor.')->group(function (): void {
+    Route::middleware('guest')->group(function (): void {
+        Route::get('/login', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'showLogin'])->name('login');
+        Route::post('/login', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'login'])->middleware('throttle:login')->name('login.store');
+    });
+
+    Route::post('/logout', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'logout'])->middleware('auth')->name('logout');
+
+    Route::middleware(['auth', 'conductor'])->prefix('entregas')->name('episodes.')->group(function (): void {
+        Route::get('/', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'index'])->name('index');
+        Route::post('/presign', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'presign'])->name('presign');
+        Route::get('/crear/{masterProgram?}', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'store'])->name('store');
+        Route::get('/{radioProgram}', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'show'])->name('show');
+        Route::get('/{radioProgram}/editar', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'edit'])->name('edit');
+        Route::put('/{radioProgram}', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'update'])->name('update');
+        Route::get('/{radioProgram}/descargar', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'download'])->name('download');
+    });
 });
 
 // Rutas de restablecimiento de contraseña para el panel de administración.
@@ -330,6 +362,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::post('/{radioProgram}/retry', 'retry')->name('retry');
         Route::get('/{radioProgram}/download', 'download')->name('download');
         Route::delete('/{id}', 'destroy')->name('destroy');
+
+        Route::controller(\App\Http\Controllers\Admin\AdminPodcastEditorialController::class)
+            ->prefix('{radioProgram}/editorial')
+            ->name('editorial.')
+            ->group(function (): void {
+                Route::get('/', 'show')->name('show');
+                Route::put('/', 'update')->name('update');
+                Route::post('/ai-proposal', 'requestAiProposal')->name('ai-proposal');
+                Route::post('/proposal-decision', 'decideProposal')->name('proposal-decision');
+                Route::post('/approve', 'approve')->name('approve');
+                Route::post('/social-draft', 'generateSocialDraft')->name('social-draft');
+                Route::post('/authorize-late-submission', 'authorizeLateSubmission')->name('authorize-late-submission');
+                Route::post('/toggle-public-download', 'togglePublicDownload')->name('toggle-public-download');
+            });
     });
 
     Route::controller(\App\Http\Controllers\Admin\PageCountdownController::class)->prefix('page-countdowns')->name('page-countdowns.')->group(function (): void {
@@ -494,8 +540,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 });
 
+// Muro del Rock — Dirección pública principal
+Route::get('/muro-del-rock', [TalentPublicProfileController::class, 'index'])
+    ->middleware('throttle:public-search')
+    ->name('talents.explore');
+Route::get('/muro-del-rock/{bandName}', [TalentPublicProfileController::class, 'show'])
+    ->name('talents.show.muro');
+
+// Redirección compatible de /talentos hacia /muro-del-rock preservando query string
+Route::get('/talentos', function (\Illuminate\Http\Request $request) {
+    $qs = $request->getQueryString();
+    return redirect()->to('/muro-del-rock' . ($qs ? '?' . $qs : ''), 301);
+});
+
 Route::prefix('talentos')->name('talents.')->group(function (): void {
-    Route::get('/', [TalentPublicProfileController::class, 'index'])->middleware('throttle:public-search')->name('explore');
     Route::get('/{talent}/og-image.png', [\App\Http\Controllers\TalentOgImageController::class, 'show'])->name('og-image');
 
     Route::post('/webhook/{gateway}', [TalentSubscriptionController::class, 'webhook'])->name('payment.webhook');
@@ -528,6 +586,7 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
         Route::get('/media', [TalentMediaController::class, 'index'])->name('media.index');
         Route::post('/media/upload', [TalentMediaController::class, 'upload'])->name('media.upload');
         Route::post('/media', [TalentMediaController::class, 'store'])->name('media.store');
+        Route::get('/media/{id}/download', [TalentMediaController::class, 'download'])->name('media.download');
         Route::delete('/media/{id}', [TalentMediaController::class, 'destroy'])->name('media.destroy');
         Route::prefix('albums')->name('albums.')->group(function (): void {
             Route::get('/', [TalentAlbumController::class, 'index'])->name('index');
@@ -634,3 +693,18 @@ Route::controller(AdminAirplayController::class)
         Route::post('/avisos/enviar', 'sendNotices')->name('send-notices');
         Route::post('/token/generate', 'generateToken')->name('generate-token');
     });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Entorno Local / Pruebas: Panel de Simulación del Reproductor
+// ─────────────────────────────────────────────────────────────────────────
+if (app()->environment(['local', 'testing'])) {
+    Route::get('/dev/auto-login-talent', function () {
+        $talent = \App\Models\Talent::firstOrFail();
+        \Illuminate\Support\Facades\Auth::guard('talent')->login($talent);
+        return redirect()->route('talents.media.index');
+    })->name('dev.auto-login-talent');
+    Route::get('/dev/player-scenario', [\App\Http\Controllers\Dev\PlayerScenarioController::class, 'index'])->name('dev.player-scenario');
+    Route::post('/dev/player-scenario/set', [\App\Http\Controllers\Dev\PlayerScenarioController::class, 'setScenario'])->name('dev.player-scenario.set');
+    Route::post('/dev/player-scenario/toggle-next-track', [\App\Http\Controllers\Dev\PlayerScenarioController::class, 'toggleNextTrack'])->name('dev.player-scenario.toggle-next');
+}
+

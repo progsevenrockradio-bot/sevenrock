@@ -95,14 +95,14 @@ class ReleaseScheduleManager
                     $notes = "Embargo activo hasta {$parsedDate->toDateTimeString()}";
                 }
             } catch (\Throwable $e) {
-                // Si hay indicación de embargo pero fecha ambigua, forzar retención
-                $embargoUntil = $receivedAt->copy()->addYears(1); // Fecha centinela de retención
+                // Si hay indicación de embargo pero fecha ambigua o no interpretable, retener indefinidamente
+                $embargoUntil = null;
                 $isEmbargoActive = true;
                 $notes = "Embargo detectado con fecha ambigua: '{$dateString}'. Retenido para revisión.";
             }
         } elseif (\App\Support\EmbargoDetector::detect($subject, $body)['is_embargoed']) {
-            // Embargo genérico sin fecha precisa
-            $embargoUntil = $receivedAt->copy()->addYears(1);
+            // Embargo genérico sin fecha precisa (ej: "bajo embargo hasta nueva confirmación")
+            $embargoUntil = null;
             $isEmbargoActive = true;
             $notes = "Embargo detectado sin fecha exacta. Retenido para revisión humana.";
         }

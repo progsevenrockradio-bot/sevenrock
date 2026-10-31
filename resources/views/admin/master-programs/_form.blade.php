@@ -53,6 +53,12 @@
                 </div>
 
                 <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">País</label>
+                    <input name="pais" value="{{ old('pais', $masterProgram->pais) }}" class="lucille-product-field w-full" placeholder="Ej. Argentina, España, Chile, México...">
+                    @error('pais')<p class="mt-2 text-sm text-red-400">{{ $message }}</p>@enderror
+                </div>
+
+                <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Día de transmisión</label>
                     <select name="dia_transmision" class="lucille-product-field lucille-select-field w-full" required>
                         <option value="">-- seleccionar --</option>
@@ -79,6 +85,13 @@
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Duración estimada (min)</label>
                     <input type="number" min="1" max="1440" name="duracion_minutos" value="{{ old('duracion_minutos', $masterProgram->duracion_minutos ?? 120) }}" class="lucille-product-field w-full" required>
                     @error('duracion_minutos')<p class="mt-2 text-sm text-red-400">{{ $message }}</p>@enderror
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Margen de cierre antes de emisión (minutos)</label>
+                    <input type="number" min="15" max="10080" step="15" name="submission_cutoff_minutes" value="{{ old('submission_cutoff_minutes', $masterProgram->submission_cutoff_minutes ?? 90) }}" class="lucille-product-field w-full" required>
+                    <p class="mt-1 text-[11px] text-[#7b7b7b]">Cierre obligatorio de entrega del audio según acuerdo por programa (ej. 90 min predeterminado, 60 min, o 1440 min para 24 horas).</p>
+                    @error('submission_cutoff_minutes')<p class="mt-2 text-sm text-red-400">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
@@ -174,6 +187,119 @@
                 <div>
                     <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Noticias previas</label>
                     <textarea name="preview_news_ids_text" rows="6" class="lucille-product-field w-full font-mono text-[12px] leading-6" placeholder="Uno por línea">{{ old('preview_news_ids_text', $previewNewsIdsText) }}</textarea>
+                </div>
+            </div>
+        </section>
+
+        <section class="space-y-5">
+            <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Guía Editorial y Portal de Conductores</h2>
+            <input type="hidden" name="conductor_submissions_section_present" value="1">
+            @php
+                $guide = is_array($masterProgram->editorial_guide ?? null) ? $masterProgram->editorial_guide : [];
+                $availableConductors = $availableConductors ?? collect();
+                $authorizedConductorIds = $authorizedConductorIds ?? [];
+            @endphp
+
+            <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.22)] p-4 text-sm text-[#b8b8b8] space-y-2">
+                <p>
+                    Configura la guía editorial específica de este programa para evaluar entregas de conductores y generar propuestas asistidas por IA.
+                    Si dejas un apartado vacío, se utilizará la guía general de Seven Rock Radio.
+                </p>
+                @if ($masterProgram->exists)
+                    <p class="text-xs text-[#9a9a9a]">
+                        Carpeta estable en Cloudflare R2:
+                        <code class="text-[#dcdcdc]">programas_procesados/{{ $masterProgram->resolveStorageFolder() }}/</code>
+                        (identidad vinculada al máster; no cambia aunque cambie el horario o el nombre visible).
+                    </p>
+                @endif
+            </div>
+
+            <div class="grid gap-5 md:grid-cols-2">
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Modo de entrega y continuidad</label>
+                    <select name="editorial_mode" class="lucille-product-field lucille-select-field w-full">
+                        <option value="mandatory_review" @selected(old('editorial_mode', $masterProgram->editorial_mode ?? 'mandatory_review') === 'mandatory_review')>
+                            A. Revisión obligatoria antes de distribuir (predeterminado)
+                        </option>
+                        <option value="autonomous" @selected(old('editorial_mode', $masterProgram->editorial_mode ?? 'mandatory_review') === 'autonomous')>
+                            B. Entrega autónoma expresamente autorizada (retiene ante incidencias)
+                        </option>
+                    </select>
+                    @error('editorial_mode')<p class="mt-2 text-sm text-red-400">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="flex items-center">
+                    <label class="flex items-start gap-3 text-sm text-[#9a9a9a]">
+                        <input type="checkbox" name="confirm_autonomous_mode" value="1"
+                            @checked(old('confirm_autonomous_mode', $masterProgram->isAutonomousDeliveryAuthorized()))
+                            class="mt-1 h-4 w-4">
+                        <span>
+                            Autorizo expresamente la entrega autónoma para este programa cuando el administrador no esté disponible (cualquier incidencia técnica o editorial importante retendrá el episodio para revisión).
+                        </span>
+                    </label>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Descripción, identidad y público del programa</label>
+                    <textarea name="editorial_guide[identity_and_audience]" rows="3" class="lucille-product-field w-full" placeholder="Define el enfoque temático, la identidad sonora y el perfil de oyente de este programa...">{{ old('editorial_guide.identity_and_audience', $guide['identity_and_audience'] ?? '') }}</textarea>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Tono y estilo</label>
+                    <textarea name="editorial_guide[tone_and_style]" rows="3" class="lucille-product-field w-full" placeholder="Ej. Directo, documentado, cercano al rock clásico/underground...">{{ old('editorial_guide.tone_and_style', $guide['tone_and_style'] ?? '') }}</textarea>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Estructura de título, resumen y descripción</label>
+                    <textarea name="editorial_guide[structure_rules]" rows="3" class="lucille-product-field w-full" placeholder="Reglas de estructura para título del episodio, resumen corto y reseña completa...">{{ old('editorial_guide.structure_rules', $guide['structure_rules'] ?? '') }}</textarea>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Requisitos de portada</label>
+                    <textarea name="editorial_guide[cover_requirements]" rows="3" class="lucille-product-field w-full" placeholder="Formato cuadrado, legibilidad, estética acorde al programa...">{{ old('editorial_guide.cover_requirements', $guide['cover_requirements'] ?? '') }}</textarea>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Reglas particulares</label>
+                    <textarea name="editorial_guide[particular_rules]" rows="3" class="lucille-product-field w-full" placeholder="Menciones requeridas, secciones fijas, restricciones específicas...">{{ old('editorial_guide.particular_rules', $guide['particular_rules'] ?? '') }}</textarea>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Ejemplos opcionales de referencia</label>
+                    <textarea name="editorial_guide[optional_examples]" rows="3" class="lucille-product-field w-full" placeholder="Ejemplos de títulos o resúmenes aprobados para este programa...">{{ old('editorial_guide.optional_examples', $guide['optional_examples'] ?? '') }}</textarea>
+                </div>
+            </div>
+
+            <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.6)] p-5 space-y-4">
+                <h3 class="font-display text-base uppercase tracking-[.12em] text-[#dcdcdc]">Conductores autorizados para entregar episodios</h3>
+                @if ($availableConductors->isNotEmpty())
+                    <div class="grid gap-3 md:grid-cols-2">
+                        @foreach ($availableConductors as $conductorUser)
+                            <label class="flex items-center gap-3 text-sm text-[#dcdcdc]">
+                                <input type="checkbox" name="conductor_user_ids[]" value="{{ $conductorUser->id }}"
+                                    @checked(in_array((int) $conductorUser->id, old('conductor_user_ids', $authorizedConductorIds), true))
+                                    class="h-4 w-4">
+                                <span>{{ $conductorUser->name }} <span class="text-xs text-[#9a9a9a]">({{ $conductorUser->email }})</span></span>
+                            </label>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-xs text-[#9a9a9a]">Aún no hay cuentas de conductor registradas. Puedes crear y vincular una a continuación.</p>
+                @endif
+
+                <div class="grid gap-4 md:grid-cols-3 pt-2 border-t border-[#2b2b2b]">
+                    <div>
+                        <label class="mb-1 block text-xs uppercase tracking-[.15em] text-[#9a9a9a]">Nuevo conductor (Nombre)</label>
+                        <input name="new_conductor_name" value="{{ old('new_conductor_name') }}" class="lucille-product-field w-full" placeholder="Nombre del conductor">
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs uppercase tracking-[.15em] text-[#9a9a9a]">Nuevo conductor (Email)</label>
+                        <input type="email" name="new_conductor_email" value="{{ old('new_conductor_email') }}" class="lucille-product-field w-full" placeholder="conductor@ejemplo.com">
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs uppercase tracking-[.15em] text-[#9a9a9a]">Contraseña inicial</label>
+                        <input type="password" name="new_conductor_password" class="lucille-product-field w-full" placeholder="Mínimo 8 caracteres">
+                    </div>
                 </div>
             </div>
         </section>

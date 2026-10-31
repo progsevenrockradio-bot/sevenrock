@@ -45,20 +45,70 @@ class RadioBossService
         ]);
 
         $connection = $this->connect();
+        $tempPath = '';
 
         try {
             $this->ensureRemoteDirectory($connection, $folder);
 
-            $this->clearRemoteMp3Files($connection, $folder);
+            // Destinos versionados sin colisión: NUNCA borrar destino existente antes de renombrar
+            if ($this->remoteFileExists($connection, $remotePath)) {
+                $filename = pathinfo($remotePath, PATHINFO_FILENAME);
+                $ext = pathinfo($remotePath, PATHINFO_EXTENSION);
+                $dir = dirname($remotePath);
+                $prefix = ($dir === '.' || $dir === '/' || $dir === '') ? '' : rtrim($dir, '/') . '/';
+                $versionedPath = $prefix . "{$filename}_v2.{$ext}";
 
-            $this->uploadStream($connection, $remotePath, $localPath, $localSize);
+                if ($this->remoteFileExists($connection, $versionedPath)) {
+                    throw new RuntimeException("Destino existente en RadioBOSS ('{$versionedPath}'). Entrega detenida para no sobrescribir un archivo existente o potencialmente en uso.");
+                }
 
-            Log::info('RadioBossService: subida FTP completada.', [
+                $remotePath = $versionedPath;
+            }
+
+            // Temporal único por transferencia
+            $uniqueId = bin2hex(random_bytes(6));
+            $dir = dirname($remotePath);
+            $prefix = ($dir === '.' || $dir === '/' || $dir === '') ? '' : rtrim($dir, '/') . '/';
+            $tempPath = $prefix . '.tmp_' . $uniqueId . '_' . basename($remotePath) . '.part';
+
+            // Subir a un archivo temporal único para que RadioBOSS no lea un stream parcial
+            $this->uploadStream($connection, $tempPath, $localPath, $localSize);
+
+            // Verificar tamaño remoto transferido estrictamente
+            $remoteSize = @ftp_size($connection, $tempPath);
+            if ($remoteSize <= 0 || ($localSize > 0 && $remoteSize !== $localSize)) {
+                @ftp_delete($connection, $tempPath);
+                throw new RuntimeException("El tamaño en RadioBOSS ({$remoteSize} bytes) no coincide con el local ({$localSize} bytes).");
+            }
+
+            // Renombrado estricto sin sobrescritura previa
+            if (! @ftp_rename($connection, $tempPath, $remotePath)) {
+                @ftp_delete($connection, $tempPath);
+                throw new RuntimeException("No se pudo renombrar {$tempPath} a {$remotePath} en RadioBOSS.");
+            }
+
+            // Verificación post-renombrado del archivo definitivo
+            $finalSize = @ftp_size($connection, $remotePath);
+            if ($finalSize <= 0 || ($localSize > 0 && $finalSize !== $localSize)) {
+                throw new RuntimeException("Verificación post-renombrado fallida para {$remotePath} en RadioBOSS (tamaño: {$finalSize}, esperado: {$localSize}).");
+            }
+
+            // Se preservan TODOS los archivos anteriores en el servidor. Limpieza automática desactivada.
+            if ($clearBeforeUpload) {
+                $this->cleanObsoleteRemoteFiles($connection, $folder, $remotePath);
+            }
+
+            Log::info('RadioBossService: subida FTP completada de forma atómica y verificada.', [
                 'folder' => $folder,
                 'remote_path' => $remotePath,
                 'local_path' => $localPath,
                 'local_size' => $localSize,
             ]);
+        } catch (Throwable $e) {
+            if (isset($connection) && is_resource($connection) && $tempPath !== '') {
+                @ftp_delete($connection, $tempPath);
+            }
+            throw $e;
         } finally {
             ftp_close($connection);
         }
@@ -260,39 +310,46 @@ class RadioBossService
         }
     }
 
-    private function clearRemoteMp3Files($connection, string $folder): void
+    private function cleanObsoleteRemoteFiles($connection, string $folder, string $currentRemotePath): void
     {
-        try {
-            $files = $this->listRemoteFiles($connection, $folder);
-            if ($files === []) {
-                return;
-            }
+        // Desactivado: Por política de seguridad y preservación de emisión, NUNCA se eliminan
+        // archivos MP3 ni temporales ajenos automáticamente. El episodio anterior actúa como respaldo.
+        Log::info('RadioBossService: limpieza automática de archivos remotos desactivada para preservar respaldos y emisión.', [
+            'folder' => $folder,
+            'current' => $currentRemotePath,
+        ]);
+    }
 
-            foreach ($files as $file) {
-                if (strtolower(pathinfo($file, PATHINFO_EXTENSION)) !== 'mp3') {
-                    continue;
-                }
-
-                $deleted = @ftp_delete($connection, $file);
-                if ($deleted) {
-                    Log::info('RadioBossService: archivo MP3 remoto eliminado antes de la subida.', [
-                        'folder' => $folder,
-                        'file' => $file,
-                    ]);
-                    continue;
-                }
-
-                Log::warning('RadioBossService: no se pudo eliminar un archivo MP3 remoto antes de la subida.', [
-                    'folder' => $folder,
-                    'file' => $file,
-                ]);
-            }
-        } catch (Throwable $exception) {
-            Log::warning('RadioBossService: no se pudieron limpiar los archivos remotos', [
-                'folder' => $folder,
-                'exception' => $exception->getMessage(),
-            ]);
+    private function remoteFileExists($connection, string $remotePath): bool
+    {
+        $remotePath = $this->normalizeRemotePath($remotePath);
+        if ($remotePath === '') {
+            return false;
         }
+
+        $size = @ftp_size($connection, $remotePath);
+        if ($size >= 0) {
+            return true;
+        }
+
+        $directory = dirname($remotePath);
+        $filename = basename($remotePath);
+        if ($directory === '.' || $directory === '') {
+            $directory = '/';
+        }
+
+        $listing = @ftp_rawlist($connection, $directory);
+        if (is_array($listing)) {
+            foreach ($listing as $line) {
+                $parts = preg_split('/\s+/', trim((string) $line), 9);
+                $name = $parts[8] ?? '';
+                if ($name === $filename) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

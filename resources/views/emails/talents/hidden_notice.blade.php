@@ -18,12 +18,15 @@
                     <tr>
                         <td style="padding: 35px 30px;">
                             <h2 style="margin: 0 0 15px; font-size: 20px; color: #ffffff;">Hola, {{ $talent->band_name }}</h2>
+                            <p style="margin: 0 0 10px; font-size: 12px; font-weight: 700; color: #f87171; text-transform: uppercase; letter-spacing: 1.5px;">
+                                Estado actual: Perfil OCULTO en Muro del Rock
+                            </p>
                             <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #a0aab5;">
-                                Tu periodo de difusión ha vencido y tu perfil ha pasado a estar <strong>OCULTO</strong> en el portal de Seven Rock Radio. Ningún visitante público podrá ver tu ficha ni escuchar tus canciones mientras permanezca oculto.
+                                Tu periodo de difusión ha vencido el <strong style="color: #ffffff;">{{ isset($expiredDate) ? $expiredDate->format('d/m/Y') : '' }}</strong> y tu perfil ha pasado automáticamente a estar <strong>OCULTO</strong> en el Muro del Rock de Seven Rock Radio. Ningún visitante público podrá ver tu ficha ni escuchar tus canciones mientras permanezca oculto.
                             </p>
                             <div style="background-color: rgba(195, 39, 32, 0.1); border-left: 4px solid #c32720; padding: 15px; margin: 25px 0; border-radius: 4px;">
                                 <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #ffb4b0;">
-                                    <strong>Periodo de gracia:</strong> Tienes <strong>{{ $graceDays }} días</strong> a partir de hoy para renovar tu suscripción. Si no renuevas dentro de este plazo, todo el material multimedia (canciones, fotos y documentos) será <strong>eliminado definitivamente</strong> de nuestros servidores, tal como establece el contrato de difusión.
+                                    <strong>Periodo de gracia iniciado:</strong> Tienes <strong>{{ $graceDays }} días</strong> a partir de hoy (hasta el <strong>{{ isset($purgeDate) ? $purgeDate->format('d/m/Y') : '' }}</strong>) para renovar tu suscripción. Si no renuevas dentro de este plazo, todo el material multimedia (canciones, fotos y documentos) será <strong>eliminado definitivamente</strong> de nuestros servidores, tal como establece el contrato de difusión.
                                 </p>
                             </div>
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0 10px;">
@@ -35,6 +38,11 @@
                                     </td>
                                 </tr>
                             </table>
+
+                            <p style="margin: 25px 0 0; font-size: 12px; line-height: 1.5; color: #5f6b78; text-align: center;">
+                                Al hacer clic serás dirigido directamente a la pantalla de renovación tras iniciar sesión.<br>
+                                <a href="{{ $dashboardUrl ?? route('talents.dashboard') }}" style="color: #c32720; text-decoration: none;">Accede a tu panel de banda →</a>
+                            </p>
                         </td>
                     </tr>
                     <tr>

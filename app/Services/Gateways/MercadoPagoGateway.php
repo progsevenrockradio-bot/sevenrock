@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace App\Services\Gateways;
 
 use App\Contracts\PaymentGateway;
+use App\Exceptions\Payment\MercadoPago\MercadoPagoPayloadValidationException;
 use App\Models\Talent;
 use App\Models\TalentSubscription;
+use App\Services\Gateways\MercadoPago\MercadoPagoWebhookAuthenticatorInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class MercadoPagoGateway implements PaymentGateway
 {
-    public function __construct()
-    {
+    public function __construct(
+        private readonly ?MercadoPagoWebhookAuthenticatorInterface $authenticator = null
+    ) {
         if (class_exists(\MercadoPago\SDK::class)) {
             \MercadoPago\SDK::setAccessToken((string) config('mercadopago.access_token'));
         }
@@ -60,11 +63,28 @@ class MercadoPagoGateway implements PaymentGateway
 
     public function handleWebhook(Request $request): void
     {
+        // 1. Barrera de autenticación previa y obligatoria (Fail-closed)
+        // Se ejecuta antes y fuera de cualquier consulta Eloquent o bloque try-catch.
+        $authenticator = $this->authenticator ?? app(MercadoPagoWebhookAuthenticatorInterface::class);
+        $verifiedResourceId = $authenticator->authenticate($request);
+
+        // R01/V01: Exigir identificador de recurso válido. Lanzar excepción si es inválido (elimina HTTP 200 silencioso)
+        if (trim($verifiedResourceId) === '') {
+            throw new MercadoPagoPayloadValidationException(
+                'INVALID_RESOURCE_IDENTIFIER',
+                null,
+                'Verified resource identifier cannot be empty'
+            );
+        }
+
+        // R01: Asignación directa y exclusiva del ID firmado; sin fallback a cuerpo JSON
+        $paymentId = $verifiedResourceId;
+
+        // 2. Procesamiento de negocio (protegido contra eventos no autenticados)
         try {
             $payload = json_decode($request->getContent(), true) ?: $request->all();
             $eventType = (string) data_get($payload, 'type', data_get($payload, 'action', ''));
             $resource = (array) data_get($payload, 'data', data_get($payload, 'resource', []));
-            $paymentId = (string) data_get($resource, 'id', data_get($payload, 'id', ''));
             $talentId = (int) data_get($payload, 'external_reference', data_get($resource, 'external_reference', 0));
 
             if ($talentId <= 0 && $paymentId !== '') {
@@ -85,7 +105,7 @@ class MercadoPagoGateway implements PaymentGateway
                 $talent->subscriptions()->latest()->first()?->update([
                     'status' => 'cancelled',
                     'payment_provider' => 'mercadopago',
-                    'payment_id' => $paymentId ?: null,
+                    'payment_id' => $paymentId,
                     'end_date' => today(),
                 ]);
 
@@ -101,7 +121,7 @@ class MercadoPagoGateway implements PaymentGateway
                         'amount' => (float) config("payment.plans.{$talent->plan}.amount", 0),
                         'currency' => (string) config("payment.plans.{$talent->plan}.currency", 'EUR'),
                         'payment_provider' => 'mercadopago',
-                        'payment_id' => $paymentId ?: null,
+                        'payment_id' => $paymentId,
                         'start_date' => today(),
                         'end_date' => today()->addMonth(),
                         'status' => 'pending',
@@ -111,17 +131,22 @@ class MercadoPagoGateway implements PaymentGateway
                 $subscription->update([
                     'status' => 'active',
                     'payment_provider' => 'mercadopago',
-                    'payment_id' => $paymentId ?: $subscription->payment_id,
+                    'payment_id' => $paymentId,
                     'end_date' => today()->addMonth(),
                 ]);
 
                 $talent->update(['subscription_status' => 'active', 'payment_provider' => 'mercadopago']);
             }
         } catch (\Throwable $exception) {
-            Log::error('MercadoPago webhook handling failed', [
-                'message' => $exception->getMessage(),
-                'payload' => $request->getContent(),
+            // R06: Logging seguro sin mensajes arbitrarios de excepción ni volcados
+            Log::error('MercadoPago webhook processing failed', [
+                'event'       => 'mercadopago.webhook.processing_failed',
+                'gateway'     => 'mercadopago',
+                'error_class' => get_class($exception),
+                'resource_id' => substr(preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $verifiedResourceId), 0, 64),
             ]);
+
+            throw $exception;
         }
     }
 

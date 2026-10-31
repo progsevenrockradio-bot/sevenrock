@@ -117,4 +117,11 @@ return [
         'entity_min_shared' => (int) env('DEDUPE_ENTITY_MIN_SHARED', 2),
     ],
 
+    'radioboss' => [
+        'archive_to_respaldo' => (bool) env('RADIOBOSS_ARCHIVE_TO_RESPALDO', true),
+        'backup_root' => env('RADIOBOSS_BACKUP_ROOT', 'respaldos_programas'),
+        'staging_root' => env('RADIOBOSS_STAGING_ROOT', 'staging_programas'),
+        'default_folder' => env('RADIOBOSS_DEFAULT_FOLDER', 'Programas'),
+    ],
+
 ];

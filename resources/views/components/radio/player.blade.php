@@ -468,9 +468,9 @@
 
                 <section class="radio-player-popup-drawer overflow-hidden rounded-[22px] border border-white/10" x-show="panelOpen" x-transition.opacity>
                     <div class="radio-player-popup-drawer-grid">
-                        <button type="button" class="radio-player-popup-tab" :class="{ 'is-active': activeTab === 'lyrics' }" @click="setTab('lyrics')">Letra</button>
-                        <button type="button" class="radio-player-popup-tab" :class="{ 'is-active': activeTab === 'band' }" @click="setTab('band')">Banda</button>
-                        <button type="button" class="radio-player-popup-tab" :class="{ 'is-active': activeTab === 'program' }" @click="setTab('program')">Programa</button>
+                        <button type="button" class="radio-player-popup-tab" x-show="!track.es_bloque_programa" :class="{ 'is-active': activeTab === 'lyrics' }" @click="setTab('lyrics')">Letra</button>
+                        <button type="button" class="radio-player-popup-tab" x-show="!track.es_bloque_programa" :class="{ 'is-active': activeTab === 'band' }" @click="setTab('band')">Banda</button>
+                        <button type="button" class="radio-player-popup-tab" x-show="track.es_bloque_programa || track.es_programa_anticipo || hasProgramAvailable()" :class="{ 'is-active': activeTab === 'program' }" @click="setTab('program')">Programa</button>
                         <button type="button" class="radio-player-popup-tab" :class="{ 'is-active': activeTab === 'notices' }" @click="setTab('notices')">Noticias</button>
                         <button type="button" class="radio-player-popup-tab" :class="{ 'is-active': activeTab === 'history' }" @click="setTab('history')">Historial</button>
                     </div>
@@ -491,13 +491,25 @@
 
                         <div x-show="activeTab === 'program'">
                             <h4 class="radio-player-popup-section-title">Programa</h4>
-                            <p x-show="track.es_bloque_programa || program" class="radio-player-popup-section-text" x-text="programText()"></p>
-                            <p x-show="!track.es_bloque_programa && !program" class="radio-player-popup-section-text">No hay programa activo.</p>
+                            <template x-if="track.es_programa_anticipo">
+                                <div class="radio-player-popup-card mb-3 border border-amber-500/30 bg-amber-500/10 p-2 rounded">
+                                    <span class="text-xs font-semibold text-amber-400 uppercase tracking-wide">Aviso de emisión próxima (Inicia en breve)</span>
+                                </div>
+                            </template>
+                            <p x-show="track.es_bloque_programa || track.es_programa_anticipo || program" class="radio-player-popup-section-text" x-text="programText()"></p>
+                            <p x-show="!track.es_bloque_programa && !track.es_programa_anticipo && !program" class="radio-player-popup-section-text">No hay programa activo.</p>
                             <template x-if="nextProgram">
                                 <div class="radio-player-popup-card">
                                     <span class="radio-player-popup-card-label">Próximo programa</span>
                                     <strong class="radio-player-popup-card-title" x-text="nextProgram.name"></strong>
                                     <small class="radio-player-popup-card-meta" x-text="nextProgram.schedule || ''"></small>
+                                </div>
+                            </template>
+                            <template x-if="nextTrack && nextTrack.title">
+                                <div class="radio-player-popup-card mt-3">
+                                    <span class="radio-player-popup-card-label">Programación prevista</span>
+                                    <strong class="radio-player-popup-card-title" x-text="nextTrack.title"></strong>
+                                    <small class="radio-player-popup-card-meta" x-show="nextTrack.artist" x-text="nextTrack.artist"></small>
                                 </div>
                             </template>
                         </div>
@@ -518,16 +530,7 @@
                         </div>
 
                         <div x-show="activeTab === 'history'">
-                            <h4 class="radio-player-popup-section-title">Historial</h4>
-                            <!-- RadioBOSS Cloud Recent Tracks Widget (Start) -->
-                            <div class='rbcloud_recenttracks' id='rbcloud_recent378' data-cnt='7'>
-                                <div class='rbcloud_recent_track' style='display: flex; align-items: center; margin-bottom: 5pt;'>
-                                    <div class='rbcloud_recent_track_cover' data-size='65'></div>
-                                    <div style='margin-left: 5pt;'><div class='rbcloud_recent_artist' style='font-weight: bold'></div><div class='rbcloud_recent_title'>...</div></div>
-                                </div>
-                            </div>
-                            <script src='https://c30.radioboss.fm/w/recent.js?u=569&amp;wid=378&amp;v=2&amp;tf=1'></script>
-                            <!-- RadioBOSS Cloud Recent Tracks Widget (End) -->
+                            <x-radio.history-and-next variant="popup" />
                         </div>
                     </div>
                 </section>
@@ -564,7 +567,11 @@
                         <div class="min-w-0">
                             <div class="truncate font-display text-[12px] uppercase tracking-[.08em] text-[#dcdcdc] leading-tight" x-text="tituloVisible"></div>
                             <div class="truncate text-[10px] text-[#888] mt-0.5" x-text="subtituloVisible"></div>
-                            <small x-show="track.program_name && track.title && track.title !== track.program_name" class="block truncate text-[9px] text-[#555] font-display tracking-wider mt-0.5" x-text="track.program_name"></small>
+                            <small x-show="track.es_bloque_programa && track.program_name && track.title && track.title !== track.program_name" class="block truncate text-[9px] text-[#555] font-display tracking-wider mt-0.5" x-text="track.program_name"></small>
+                            <div x-show="track.es_programa_anticipo" x-cloak class="mt-1 flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 text-[9px] font-semibold tracking-wide cursor-pointer hover:bg-amber-500/25 transition" @click="toggleProgramWindow()" title="Ver detalles del programa próximo">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                                <span class="truncate">Próximo en 5m: <strong x-text="track.program_name || nextProgram?.name || 'Programa'"></strong></span>
+                            </div>
                         </div>
                     </div>
 
@@ -581,15 +588,30 @@
                             </span>
                         </button>
                         <div class="hidden sm:flex items-center gap-2.5 w-full">
-                            <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-right" x-text="formatTime(progress.elapsed)"></span>
-                            <div class="flex-1 py-2 flex items-center cursor-pointer group relative" @click="!track.is_live && seek($event)" :title="track.is_live ? '' : 'Adelantar/Atrasar'">
-                                <div class="w-full h-1 bg-white/10 rounded-full relative">
-                                    <div class="absolute left-0 top-0 bottom-0 bg-lucille-accent rounded-full transition-all duration-100" :style="'width: ' + progress.ratio + '%'">
-                                        <div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-lucille-accent rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"></div>
+                            {{-- Controles de tiempo cuando hay datos fiables o es podcast bajo demanda --}}
+                            <div x-show="hasReliableTime()" class="flex items-center gap-2.5 w-full">
+                                <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-right select-none" x-text="formatTime(progress.elapsed)"></span>
+                                <div class="flex-1 py-2 flex items-center relative"
+                                    :class="track.is_live ? 'cursor-default pointer-events-none' : 'cursor-pointer group'"
+                                    @click="!track.is_live && seek($event)"
+                                    :title="track.is_live ? '' : 'Adelantar/Atrasar'">
+                                    <div class="w-full h-1 bg-white/10 rounded-full relative" :class="track.is_live ? 'overflow-hidden' : ''">
+                                        <div class="absolute left-0 top-0 bottom-0 bg-lucille-accent rounded-full transition-all duration-100" :style="'width: ' + progress.ratio + '%'">
+                                            <div x-show="!track.is_live" class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-lucille-accent rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md pointer-events-none"></div>
+                                        </div>
                                     </div>
                                 </div>
+                                <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-left select-none" x-text="formatTime(progress.duration)"></span>
                             </div>
-                            <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-left" x-text="formatTime(progress.duration)"></span>
+
+                            {{-- Indicador EN DIRECTO cuando la emisión en vivo no dispone de tiempos fiables --}}
+                            <div x-show="!hasReliableTime() && track.is_live" class="flex items-center justify-center gap-2 w-full py-1">
+                                <span class="relative flex h-2 w-2">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lucille-accent opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-lucille-accent"></span>
+                                </span>
+                                <span class="text-[10px] font-mono font-bold tracking-widest text-lucille-accent uppercase select-none">EN DIRECTO</span>
+                            </div>
                         </div>
                         
                         <!-- RadioBOSS Cloud Track Timer Widget (Hidden, used as data source) -->
@@ -685,6 +707,10 @@
                             <div class="w-full overflow-hidden whitespace-nowrap mt-0.5">
                                 <div class="text-[9.5px] text-[#777] animate-marquee-text" x-text="subtituloVisible"></div>
                             </div>
+                            <div x-show="track.es_programa_anticipo" x-cloak class="mt-1 flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 text-[8.5px] font-semibold tracking-wide cursor-pointer" @click.stop="toggleProgramWindow()">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                                <span class="truncate">Próximo en 5m: <strong x-text="track.program_name || nextProgram?.name || 'Programa'"></strong></span>
+                            </div>
                         </div>
                     </div>
 
@@ -764,8 +790,8 @@
                 </div>
 
                 {{-- Barra de Progreso Fina Inferior (Móvil) --}}
-                <div class="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5 md:hidden">
-                    <div class="h-full bg-white transition-all duration-100" :style="'width: ' + progress.ratio + '%'"></div>
+                <div x-show="hasReliableTime()" class="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5 md:hidden pointer-events-none">
+                    <div class="h-full bg-lucille-accent transition-all duration-100" :style="'width: ' + progress.ratio + '%'"></div>
                 </div>
 
                 {{-- Share Panel Overlay inside Dock --}}
@@ -913,6 +939,15 @@
                                 >
                                     Letras
                                 </button>
+                                <button
+                                    type="button"
+                                    @click="setBandWindowTab('history')"
+                                    :aria-pressed="bandWindowTab === 'history'"
+                                    :class="bandWindowTab === 'history' ? 'border-b-2 border-white text-white' : 'border-b-2 border-transparent text-[#a7a093] hover:text-white'"
+                                    class="radio-modal-tab"
+                                >
+                                    Historial
+                                </button>
                             </div>
 
                             <div class="radio-modal-body radio-modal-body--band">
@@ -968,6 +1003,17 @@
                                     </section>
                                 </div>
                             </div>
+
+                                <div
+                                    :class="bandWindowTab === 'history' ? 'is-active' : ''"
+                                    :aria-hidden="bandWindowTab !== 'history'"
+                                    x-cloak
+                                    class="radio-modal-pane"
+                                >
+                                    <div class="radio-modal-scroll p-1">
+                                        <x-radio.history-and-next variant="dock" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </template>
@@ -1017,10 +1063,13 @@
                             <div class="radio-modal-header radio-modal-header--program">
                                 <img class="radio-modal-cover radio-modal-cover--program" :src="coverVisible + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="programInfo.name || ''" x-on:error="if (!$el.dataset.retried) { $el.dataset.retried = '1'; $el.src = $el.src.split('?')[0] + '?r=' + Date.now(); } else if (!$el.dataset.programa) { $el.src = '{{ $fallbackCover }}'; }" x-bind:data-programa="(track.es_bloque_programa || track.program_name) ? '1' : ''" loading="lazy">
                                 <div class="radio-modal-copy radio-modal-copy--program">
-                                    <span x-show="track.is_live" class="radio-modal-live-badge">
-                                        <span class="radio-modal-live-dot sr-pulse"></span>
-                                        EN VIVO
-                                    </span>
+                                    <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                                        <span x-show="track.is_live" class="radio-modal-live-badge">
+                                            <span class="radio-modal-live-dot sr-pulse"></span>
+                                            EN VIVO
+                                        </span>
+                                        <span x-show="programInfo.country" class="radio-modal-tag" tabindex="0" :title="'País: ' + programInfo.country" x-text="(countryFlag(programInfo.country) ? (countryFlag(programInfo.country) + ' ') : '🌍 ') + programInfo.country"></span>
+                                    </div>
                                     <span class="radio-modal-program-genre" x-text="programInfo.genre || ''"></span>
                                     <h2 class="radio-modal-program-title" x-text="track.program_name || programInfo.name || ''"></h2>
                                     <p class="radio-modal-program-host" x-text="programInfo.host ? 'Conduce: ' + programInfo.host : ''"></p>
@@ -1102,7 +1151,7 @@
                             <h3 x-text="track.title || defaultTitle"></h3>
                             <p x-text="track.artist || defaultArtist"></p>
                             <small x-show="track.program_name" x-text="track.program_name"></small>
-                            <small x-show="!track.program_name && nextProgram" x-text="'Próximo: ' + (nextProgram.name || '') + (nextProgram.schedule_time ? ' a las ' + nextProgram.schedule_time : '')"></small>
+                            <small x-show="!track.program_name && nextProgram" x-text="nextProgram ? ('Próximo: ' + (nextProgram.name || '') + (nextProgram.schedule_time ? ' a las ' + nextProgram.schedule_time : '')) : ''"></small>
                             <small x-text="listeners > 0 ? `${listeners} oyentes` : ''"></small>
 
                             <div class="radio-player-progress-wrap radio-player-progress-wrap--dock">
@@ -1180,13 +1229,25 @@
                         </div>
                         <div x-show="activeTab === 'program'">
                             <h4>Programa</h4>
-                            <p x-show="track.es_bloque_programa || program" x-text="programText()"></p>
-                            <p x-show="!track.es_bloque_programa && !program">No hay programa activo.</p>
+                            <template x-if="track.es_programa_anticipo">
+                                <div class="mb-2 border border-amber-500/30 bg-amber-500/10 p-2 rounded text-xs text-amber-400 font-semibold">
+                                    Aviso de emisión próxima (Inicia en breve)
+                                </div>
+                            </template>
+                            <p x-show="track.es_bloque_programa || track.es_programa_anticipo || program" x-text="programText()"></p>
+                            <p x-show="!track.es_bloque_programa && !track.es_programa_anticipo && !program">No hay programa activo.</p>
                             <template x-if="nextProgram">
                                 <div class="radio-player-next">
                                     <span>Próximo programa</span>
                                     <strong x-text="nextProgram.name"></strong>
                                     <small x-text="nextProgram.schedule || ''"></small>
+                                </div>
+                            </template>
+                            <template x-if="nextTrack && nextTrack.title">
+                                <div class="radio-player-next mt-2">
+                                    <span>Programación prevista</span>
+                                    <strong x-text="nextTrack.title"></strong>
+                                    <small x-show="nextTrack.artist" x-text="nextTrack.artist"></small>
                                 </div>
                             </template>
                             <template x-if="queue.length">
@@ -1207,16 +1268,7 @@
                             </template>
                         </div>
                         <div x-show="activeTab === 'history'">
-                            <h4>Historial</h4>
-                            <!-- RadioBOSS Cloud Recent Tracks Widget (Start) -->
-                            <div class='rbcloud_recenttracks' id='rbcloud_recent378' data-cnt='7'>
-                                <div class='rbcloud_recent_track' style='display: flex; align-items: center; margin-bottom: 5pt;'>
-                                    <div class='rbcloud_recent_track_cover' data-size='65'></div>
-                                    <div style='margin-left: 5pt;'><div class='rbcloud_recent_artist' style='font-weight: bold'></div><div class='rbcloud_recent_title'>...</div></div>
-                                </div>
-                            </div>
-                            <script src='https://c30.radioboss.fm/w/recent.js?u=569&amp;wid=378&amp;v=2&amp;tf=1'></script>
-                            <!-- RadioBOSS Cloud Recent Tracks Widget (End) -->
+                            <x-radio.history-and-next variant="dock" />
                         </div>
                     </div>
                 </aside>

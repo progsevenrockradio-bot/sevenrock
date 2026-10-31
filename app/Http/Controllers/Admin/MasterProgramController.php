@@ -6,10 +6,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MasterProgram;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -148,6 +151,7 @@ final class MasterProgramController extends Controller
                 'vistas_archive' => 0,
                 'escuchas_locales' => 0,
                 'vistas_totales' => 0,
+                'editorial_mode' => 'mandatory_review',
             ]);
 
         return view('admin.master-programs.create', [
@@ -157,6 +161,8 @@ final class MasterProgramController extends Controller
             'previewNewsIdsText' => '',
             'generateCodeAction' => null,
             'emisiones'          => collect(),
+            'availableConductors' => $this->loadAvailableConductors(),
+            'authorizedConductorIds' => [],
         ]);
     }
 
@@ -164,6 +170,7 @@ final class MasterProgramController extends Controller
     {
         $masterProgram = MasterProgram::query()->create($this->validated($request));
         $this->saveEmisiones($masterProgram, $request);
+        $this->syncConductors($masterProgram, $request);
         $masterProgram->syncEmisionNormal();
 
         return redirect()
@@ -180,13 +187,18 @@ final class MasterProgramController extends Controller
             'previewNewsIdsText' => $this->idListToText($masterProgram->preview_news_ids),
             'generateCodeAction' => route('admin.programs.generate-code', $masterProgram),
             'emisiones'          => $masterProgram->emisiones()->get(),
+            'availableConductors' => $this->loadAvailableConductors(),
+            'authorizedConductorIds' => Schema::hasTable('master_program_conductor')
+                ? $masterProgram->authorizedConductors()->pluck('users.id')->map(fn ($id) => (int) $id)->all()
+                : [],
         ]);
     }
 
     public function update(Request $request, MasterProgram $masterProgram): RedirectResponse
     {
-        $masterProgram->update($this->validated($request, $masterProgram->id));
+        $masterProgram->update($this->validated($request, $masterProgram->id, $masterProgram));
         $this->saveEmisiones($masterProgram, $request);
+        $this->syncConductors($masterProgram, $request);
         $masterProgram->syncEmisionNormal();
 
         return redirect()
@@ -206,15 +218,17 @@ final class MasterProgramController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function validated(Request $request, ?int $ignoreId = null): array
+    private function validated(Request $request, ?int $ignoreId = null, ?MasterProgram $existing = null): array
     {
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:255'],
             'conductor' => ['required', 'string', 'max:255'],
+            'pais' => ['nullable', 'string', 'max:100'],
             'dia_transmision' => ['required', Rule::in(['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'])],
             'hora_transmision' => ['nullable', 'string', 'max:8'],
             'timezone' => ['required', 'string', 'max:255'],
             'duracion_minutos' => ['required', 'integer', 'min:1', 'max:1440'],
+            'submission_cutoff_minutes' => ['nullable', 'integer', 'min:15', 'max:10080'],
             'genero' => ['required', 'string', 'max:255'],
             'program_code' => ['nullable', 'string', 'max:12', 'unique:master_programs,program_code' . ($ignoreId ? ',' . $ignoreId : '')],
             'code_prefix' => ['nullable', 'string', 'max:12'],
@@ -240,6 +254,15 @@ final class MasterProgramController extends Controller
             'ruta_ftp' => ['nullable', 'string', 'max:255'],
             'email_notificacion' => ['nullable', 'email', 'max:255'],
             'email_copia_notificacion' => ['nullable', 'email', 'max:255'],
+            'editorial_mode' => ['nullable', Rule::in(['mandatory_review', 'autonomous'])],
+            'confirm_autonomous_mode' => ['nullable', 'boolean'],
+            'editorial_guide' => ['nullable', 'array'],
+            'editorial_guide.identity_and_audience' => ['nullable', 'string', 'max:4000'],
+            'editorial_guide.tone_and_style' => ['nullable', 'string', 'max:4000'],
+            'editorial_guide.structure_rules' => ['nullable', 'string', 'max:4000'],
+            'editorial_guide.cover_requirements' => ['nullable', 'string', 'max:4000'],
+            'editorial_guide.particular_rules' => ['nullable', 'string', 'max:4000'],
+            'editorial_guide.optional_examples' => ['nullable', 'string', 'max:4000'],
         ]);
 
         $validated['hora_transmision'] = $this->normalizeTime((string) ($validated['hora_transmision'] ?? ''), $ignoreId);
@@ -265,9 +288,140 @@ final class MasterProgramController extends Controller
         $validated['email_notificacion'] = trim((string) ($validated['email_notificacion'] ?? '')) ?: null;
         $validated['email_copia_notificacion'] = trim((string) ($validated['email_copia_notificacion'] ?? '')) ?: null;
 
-        unset($validated['default_news_ids_text'], $validated['live_news_ids_text'], $validated['preview_news_ids_text']);
+        if (Schema::hasColumn('master_programs', 'editorial_mode')) {
+            $requestedMode = (string) ($validated['editorial_mode'] ?? ($existing?->editorial_mode ?? 'mandatory_review'));
+
+            if ($requestedMode === 'autonomous') {
+                $alreadyAuthorized = $existing !== null && $existing->isAutonomousDeliveryAuthorized();
+                $confirmAutonomous = $request->boolean('confirm_autonomous_mode');
+
+                if (! $alreadyAuthorized && ! $confirmAutonomous) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'editorial_mode' => 'La entrega autónoma requiere autorización expresa del administrador (marque la casilla de autorización).',
+                    ]);
+                }
+
+                $validated['editorial_mode'] = 'autonomous';
+                $validated['autonomous_authorized_by'] = $existing?->autonomous_authorized_by ?? $request->user()?->id;
+                $validated['autonomous_authorized_at'] = $existing?->autonomous_authorized_at ?? now();
+            } else {
+                $validated['editorial_mode'] = 'mandatory_review';
+                $validated['autonomous_authorized_by'] = null;
+                $validated['autonomous_authorized_at'] = null;
+            }
+        } else {
+            unset($validated['editorial_mode']);
+        }
+
+        if (Schema::hasColumn('master_programs', 'editorial_guide') && is_array($request->input('editorial_guide'))) {
+            $guide = [];
+            foreach ([
+                'identity_and_audience',
+                'tone_and_style',
+                'structure_rules',
+                'cover_requirements',
+                'particular_rules',
+                'optional_examples',
+            ] as $key) {
+                $val = trim((string) ($validated['editorial_guide'][$key] ?? ''));
+                if ($val !== '') {
+                    $guide[$key] = $val;
+                }
+            }
+            $validated['editorial_guide'] = $guide !== [] ? $guide : null;
+        } elseif (! $request->has('editorial_guide')) {
+            unset($validated['editorial_guide']);
+        }
+
+        unset(
+            $validated['default_news_ids_text'],
+            $validated['live_news_ids_text'],
+            $validated['preview_news_ids_text'],
+            $validated['confirm_autonomous_mode']
+        );
 
         return $validated;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    private function loadAvailableConductors(): \Illuminate\Support\Collection
+    {
+        if (! Schema::hasTable('users')) {
+            return collect();
+        }
+
+        return User::query()
+            ->where(function ($q): void {
+                $q->where('is_admin', false)->orWhereNull('is_admin');
+            })
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function syncConductors(MasterProgram $masterProgram, Request $request): void
+    {
+        if (! Schema::hasTable('master_program_conductor')) {
+            return;
+        }
+
+        $request->validate([
+            'conductor_user_ids' => ['nullable', 'array'],
+            'conductor_user_ids.*' => ['integer', 'exists:users,id'],
+            'new_conductor_name' => ['nullable', 'string', 'max:255'],
+            'new_conductor_email' => ['nullable', 'email', 'max:255'],
+            'new_conductor_password' => ['nullable', 'string', 'min:8', 'max:255'],
+        ]);
+
+        $selectedIds = collect((array) $request->input('conductor_user_ids', []))
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $newEmail = trim((string) $request->input('new_conductor_email', ''));
+        $newName = trim((string) $request->input('new_conductor_name', ''));
+        $newPass = (string) $request->input('new_conductor_password', '');
+
+        if ($newEmail !== '') {
+            $conductorUser = User::query()->where('email', $newEmail)->first();
+            if (! $conductorUser) {
+                $conductorUser = User::query()->create([
+                    'name' => $newName !== '' ? $newName : $masterProgram->conductor,
+                    'email' => $newEmail,
+                    'password' => Hash::make($newPass !== '' ? $newPass : \Illuminate\Support\Str::random(16)),
+                    'is_admin' => false,
+                    'is_conductor' => true,
+                ]);
+            } else {
+                $conductorUser->forceFill(['is_conductor' => true])->save();
+            }
+
+            $selectedIds[] = (int) $conductorUser->id;
+            $selectedIds = array_values(array_unique($selectedIds));
+        }
+
+        if ($request->has('conductor_submissions_section_present') || $selectedIds !== [] || $newEmail !== '') {
+            $syncPayload = [];
+            foreach ($selectedIds as $userId) {
+                $user = User::query()->find($userId);
+                if (! $user || $user->is_admin) {
+                    continue;
+                }
+                if (! $user->is_conductor) {
+                    $user->forceFill(['is_conductor' => true])->save();
+                }
+                $syncPayload[$userId] = [
+                    'authorized' => true,
+                    'authorized_by' => $request->user()?->id,
+                    'authorized_at' => now(),
+                ];
+            }
+
+            $masterProgram->conductors()->sync($syncPayload);
+        }
     }
 
     /**

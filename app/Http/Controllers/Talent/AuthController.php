@@ -49,8 +49,32 @@ class AuthController extends Controller
             'referral_code'        => ['nullable', 'string', 'max:32'],
             'country'              => ['nullable', 'string', 'max:100'],
             'contact_phone'        => ['nullable', 'string', 'max:50'],
-            'facebook_screenshot'  => ['nullable'],
-            'instagram_screenshot' => ['nullable'],
+            'facebook_screenshot'  => ['nullable', function (string $attribute, mixed $value, \Closure $fail): void {
+                if ($value instanceof \Illuminate\Http\UploadedFile) {
+                    $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+                    if (! in_array($value->getMimeType(), $allowedMimes, true)) {
+                        $fail('La captura de Facebook debe ser una imagen JPG, PNG, WebP o PDF.');
+                    }
+                    if ($value->getSize() > 5120 * 1024) {
+                        $fail('La captura de Facebook no puede superar los 5 MB.');
+                    }
+                } elseif (! is_string($value)) {
+                    $fail('El formato de la captura no es válido.');
+                }
+            }],
+            'instagram_screenshot' => ['nullable', function (string $attribute, mixed $value, \Closure $fail): void {
+                if ($value instanceof \Illuminate\Http\UploadedFile) {
+                    $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+                    if (! in_array($value->getMimeType(), $allowedMimes, true)) {
+                        $fail('La captura de Instagram debe ser una imagen JPG, PNG, WebP o PDF.');
+                    }
+                    if ($value->getSize() > 5120 * 1024) {
+                        $fail('La captura de Instagram no puede superar los 5 MB.');
+                    }
+                } elseif (! is_string($value)) {
+                    $fail('El formato de la captura no es válido.');
+                }
+            }],
         ], [
             'band_name.required' => 'El nombre de la banda es obligatorio.',
             'band_name.unique'   => 'Este nombre de banda ya está registrado en Seven Rock Radio. Por favor, elige otro nombre o contacta con soporte.',
@@ -63,17 +87,29 @@ class AuthController extends Controller
         $bandName = $validated['band_name'];
         $referralCode = trim((string) ($validated['referral_code'] ?? ''));
 
-        // Procesar capturas de Facebook e Instagram
+        // Procesar capturas de verificación exclusivamente en el almacenamiento privado de R2
+        $fileUploadService = app(\App\Services\FileUploadService::class);
+        $targetDisk = 'r2_private';
+
+        $hasScreenshotFiles = $request->hasFile('facebook_screenshot') || $request->hasFile('instagram_screenshot');
+        if ($hasScreenshotFiles && ! $fileUploadService->isR2PrivateConfigured() && ! app()->environment('testing')) {
+            return back()->withInput()->withErrors([
+                'facebook_screenshot' => 'El almacenamiento privado R2 no está configurado explícitamente (R2_PRIVATE_BUCKET ausente).',
+            ]);
+        }
+
         $facebookScreenshot = null;
         if ($request->hasFile('facebook_screenshot')) {
-            $facebookScreenshot = $request->file('facebook_screenshot')->store('talents/screenshots', 'public');
+            $upload = $fileUploadService->upload($request->file('facebook_screenshot'), 'talents/verification', $targetDisk);
+            $facebookScreenshot = $upload['key'];
         } elseif ($request->filled('facebook_screenshot') && is_string($request->input('facebook_screenshot'))) {
             $facebookScreenshot = $request->input('facebook_screenshot');
         }
 
         $instagramScreenshot = null;
         if ($request->hasFile('instagram_screenshot')) {
-            $instagramScreenshot = $request->file('instagram_screenshot')->store('talents/screenshots', 'public');
+            $upload = $fileUploadService->upload($request->file('instagram_screenshot'), 'talents/verification', $targetDisk);
+            $instagramScreenshot = $upload['key'];
         } elseif ($request->filled('instagram_screenshot') && is_string($request->input('instagram_screenshot'))) {
             $instagramScreenshot = $request->input('instagram_screenshot');
         }
@@ -163,14 +199,18 @@ class AuthController extends Controller
             : 'Cuenta creada. Completa el pago para activar tu suscripción.');
     }
 
-    public function showLoginForm(): View
+    public function showLoginForm(Request $request): View
     {
+        if ($request->filled('redirect_to')) {
+            session()->put('url.intended', $request->input('redirect_to'));
+        }
+
         return view('talentos.auth.login');
     }
 
-    public function showLogin(): View
+    public function showLogin(Request $request): View
     {
-        return $this->showLoginForm();
+        return $this->showLoginForm($request);
     }
 
     public function login(Request $request): RedirectResponse
@@ -187,6 +227,13 @@ class AuthController extends Controller
         }
 
         $request->session()->regenerate();
+
+        if ($request->filled('redirect_to')) {
+            $intended = (string) $request->input('redirect_to');
+            if (str_starts_with($intended, '/') || parse_url($intended, PHP_URL_HOST) === $request->getHost()) {
+                return redirect()->to($intended);
+            }
+        }
 
         return redirect()->intended(route('talents.dashboard'));
     }

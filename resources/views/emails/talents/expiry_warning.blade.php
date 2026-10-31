@@ -18,33 +18,67 @@
                     <tr>
                         <td style="padding: 35px 30px;">
                             <h2 style="margin: 0 0 15px; font-size: 20px; color: #ffffff;">⏰ Hola, {{ $talent->band_name }}</h2>
-                            <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #a0aab5;">
-                                Te avisamos que tu espacio de difusión en Seven Rock Radio
-                                <strong style="color: #facc15;">vence en {{ $daysLeft }} {{ $daysLeft === 1 ? 'día' : 'días' }}</strong>.
-                                Cuando expire, tu perfil pasará a <strong>OCULTO</strong> durante un periodo de gracia de {{ $graceDays }} días,
-                                tras el cual todo tu material será <strong>eliminado definitivamente</strong>.
-                            </p>
 
-                            <div style="background-color: rgba(250, 204, 21, 0.08); border-left: 4px solid #facc15; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                                <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #a0aab5;">
-                                    <strong style="color: #facc15;">¿Qué puedes hacer ahora?</strong><br>
-                                    Renueva o actualiza tu plan antes de que venza y mantén tu música sonando en Seven Rock Radio sin interrupciones. Tenemos planes económicos desde 0€.
+                            @if(($stage ?? '') === '3_days_before_purge')
+                                <p style="margin: 0 0 10px; font-size: 12px; font-weight: 700; color: #f87171; text-transform: uppercase; letter-spacing: 1.5px;">
+                                    Estado actual: Perfil OCULTO (Periodo de gracia por finalizar)
                                 </p>
-                            </div>
+                                <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #a0aab5;">
+                                    Te enviamos este <strong style="color: #ef4444;">último aviso</strong>: tu periodo de gracia finalizará en 
+                                    <strong style="color: #ef4444;">3 días (el {{ isset($purgeDate) ? $purgeDate->format('d/m/Y') : '' }})</strong>.
+                                    Al cumplirse esta fecha, <strong style="color: #ffffff;">todo tu material multimedia (canciones MP3, fotografías, documentos y portadas) será eliminado de forma permanente e irrecuperable</strong> de nuestros servidores.
+                                </p>
+                                <div style="background-color: rgba(239, 68, 68, 0.12); border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                                    <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #fca5a5;">
+                                        <strong>¿Cómo conservar tu música y recuperar tu perfil?</strong><br>
+                                        Renueva tu plan antes del <strong>{{ isset($purgeDate) ? $purgeDate->format('d/m/Y') : '' }}</strong>. Al renovar, tu perfil volverá a estar publicado en el Muro del Rock inmediatamente y todo tu catálogo se conservará intacto.
+                                    </p>
+                                </div>
+                            @elseif(($stage ?? '') === '1_day_before')
+                                <p style="margin: 0 0 10px; font-size: 12px; font-weight: 700; color: #facc15; text-transform: uppercase; letter-spacing: 1.5px;">
+                                    Estado actual: Perfil ACTIVO (Últimas 24 horas)
+                                </p>
+                                <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #a0aab5;">
+                                    Te recordamos que tu espacio en Seven Rock Radio <strong style="color: #facc15;">vence mañana ({{ isset($endDate) ? $endDate->format('d/m/Y') : '' }})</strong>.
+                                    Al vencer, tu perfil pasará automáticamente a estado <strong>OCULTO</strong> y comenzará un periodo de gracia improrrogable de {{ $graceDays }} días (hasta el {{ isset($purgeDate) ? $purgeDate->format('d/m/Y') : '' }}), tras el cual el material no renovado será eliminado definitivamente.
+                                </p>
+                                <div style="background-color: rgba(250, 204, 21, 0.08); border-left: 4px solid #facc15; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                                    <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #a0aab5;">
+                                        <strong style="color: #facc15;">Evita que tu perfil sea ocultado:</strong><br>
+                                        Renueva hoy mismo tu suscripción para que tu banda continúe sonando sin interrupción en el Muro del Rock.
+                                    </p>
+                                </div>
+                            @else
+                                <p style="margin: 0 0 10px; font-size: 12px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1.5px;">
+                                    Estado actual: Perfil ACTIVO en Muro del Rock
+                                </p>
+                                <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #a0aab5;">
+                                    Te avisamos que tu espacio de difusión en Seven Rock Radio
+                                    <strong style="color: #facc15;">vence en {{ $daysLeft }} días (el {{ isset($endDate) ? $endDate->format('d/m/Y') : '' }})</strong>.
+                                    Cuando expire esa fecha, tu perfil pasará a modo <strong>OCULTO</strong> durante un periodo de gracia de {{ $graceDays }} días (hasta el {{ isset($purgeDate) ? $purgeDate->format('d/m/Y') : '' }}),
+                                    tras el cual todo tu material será <strong>eliminado definitivamente</strong>.
+                                </p>
+                                <div style="background-color: rgba(250, 204, 21, 0.08); border-left: 4px solid #facc15; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                                    <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #a0aab5;">
+                                        <strong style="color: #facc15;">¿Qué puedes hacer ahora?</strong><br>
+                                        Renueva o actualiza tu plan antes del vencimiento y mantén tu música sonando en Seven Rock Radio sin interrupciones.
+                                    </p>
+                                </div>
+                            @endif
 
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0 10px;">
                                 <tr>
                                     <td align="center">
                                         <a href="{{ $renewalUrl }}" style="display: inline-block; background-color: #c32720; color: #ffffff; text-decoration: none; padding: 14px 32px; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; border-radius: 6px;">
-                                            Ver planes y renovar ahora
+                                            {{ ($stage ?? '') === '3_days_before_purge' ? 'Reactivar mi perfil y conservar material' : 'Ver planes y renovar ahora' }}
                                         </a>
                                     </td>
                                 </tr>
                             </table>
 
                             <p style="margin: 25px 0 0; font-size: 12px; line-height: 1.5; color: #5f6b78; text-align: center;">
-                                Si ya no deseas continuar, no es necesario que hagas nada. Tu perfil simplemente pasará a oculto al vencer el plazo.<br>
-                                <a href="{{ $dashboardUrl }}" style="color: #c32720; text-decoration: none;">Accede a tu panel →</a>
+                                Al hacer clic serás dirigido directamente a la pantalla de renovación tras iniciar sesión.<br>
+                                <a href="{{ $dashboardUrl }}" style="color: #c32720; text-decoration: none;">Accede a tu panel de banda →</a>
                             </p>
                         </td>
                     </tr>

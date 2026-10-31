@@ -21,6 +21,18 @@ class PlayerStatusController extends Controller
 
     public function show(): JsonResponse
     {
+        // En entorno local de pruebas, si hay un escenario activo fijado en la sesión o en caché,
+        // devolverlo directamente para permitir recorrer los 6 estados de forma determinista y sin dependencias externas.
+        if (app()->environment(['local', 'testing']) && \Illuminate\Support\Facades\Cache::has('dev_player_simulated_status')) {
+            $simulated = \Illuminate\Support\Facades\Cache::get('dev_player_simulated_status');
+            if (is_array($simulated)) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $simulated,
+                ]);
+            }
+        }
+
         $status = $this->playerService->resolve();
 
         return response()->json([

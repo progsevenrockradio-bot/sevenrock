@@ -227,7 +227,7 @@ input:checked + .cookie-slider:before {
 @media (max-width: 767px) {
     .back-to-top-button {
         right: 10px;
-        bottom: 78px;
+        bottom: calc(max(var(--radio-player-offset, 64px), 64px) + 12px);
         width: auto;
         min-width: 40px;
         min-height: 40px;

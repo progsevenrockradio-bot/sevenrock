@@ -36,6 +36,8 @@ class ProcessMp3Job implements ShouldQueue
 
     public int $tries = 3;
 
+    public const LOCAL_RETENTION_DAYS = 7;
+
     /** @var array<int, int> */
     public array $backoff = [30, 120, 300];
 
@@ -57,6 +59,9 @@ class ProcessMp3Job implements ShouldQueue
         ini_set('memory_limit', '512M');
         set_time_limit(600);
 
+        $sourceAbsolutePath = null;
+        $workingPath = null;
+
         try {
             $radioProgram = $this->radioProgram->fresh(['masterProgram']) ?? $this->radioProgram;
             $master = $radioProgram->masterProgram
@@ -70,7 +75,7 @@ class ProcessMp3Job implements ShouldQueue
                 throw new \RuntimeException("No se pudo leer el MP3 local: {$this->rawPath}");
             }
 
-            $sourcePath = $this->rawPath;
+            $sourcePath = ltrim(str_replace('\\', '/', trim($this->rawPath)), '/');
             $workingPath = $this->buildWorkingPath($sourcePath);
 
             $this->prepareWorkingCopy($sourceAbsolutePath, $workingPath);
@@ -98,24 +103,67 @@ class ProcessMp3Job implements ShouldQueue
             $anio = $radioProgram->fecha_emision ? $radioProgram->fecha_emision->format('Y') : now()->format('Y');
             $invitado = trim(strip_tags((string) $radioProgram->biografia_invitado));
             $durationSeconds = $this->extractDurationSeconds($workingPath);
-            $finalPath = $this->buildProcessedPath($sourcePath, $episodeNumber, $programName, $fecha);
+            $storageFolder = $radioProgram->storageFolderSlug();
+            $finalPath = $this->buildProcessedPath($radioProgram, $sourcePath);
 
             $this->writeMetadata($workingPath, $master, $radioProgram, $programName, $invitado, $fecha, $fechaTitulo, $anio);
 
-            $this->publishWorkingCopy($workingPath, $finalPath);
+            if (! $fileUploadService->isR2Configured()) {
+                throw new \RuntimeException('Cloudflare R2 no está configurado como destino definitivo para podcasts.');
+            }
+            $targetDisk = 'r2';
 
-            if ($finalPath !== $sourcePath) {
-                $this->cleanupSourceCopy($sourceAbsolutePath, $sourcePath, $finalPath, $sourceDisk, $this->preserveLocalCopy);
+            // 1. Subir y verificar el archivo definitivo procesado en Cloudflare R2 (sin crear copia local permanente)
+            $this->publishWorkingCopy($workingPath, $finalPath, $targetDisk);
+
+            $finishedAt = now();
+            $processedSize = is_file($workingPath) ? (int) filesize($workingPath) : 0;
+            $processedSha256 = is_file($workingPath) ? (hash_file('sha256', $workingPath) ?: null) : null;
+
+            // 2. Persistir la referencia del definitivo en la base de datos ANTES de eliminar el original de podcast-inbox.
+            // Si la actualización de base de datos falla, se lanza excepción antes de borrar el original para que sea recuperable.
+            $existingMetadata = (array) ($radioProgram->delivery_metadata ?? []);
+            $updatedMetadata = array_merge($existingMetadata, [
+                'definitive_disk' => $targetDisk,
+                'definitive_path' => $finalPath,
+                'storage_folder' => $storageFolder,
+                'r2_verified' => true,
+                'r2_verified_at' => $finishedAt->toIso8601String(),
+                'r2_size_bytes' => $processedSize,
+                'r2_sha256' => $processedSha256,
+                'preserve_local_copy' => false,
+                'cover_embedded_in_mp3_outdated' => false,
+                'raw_inbox_path' => $sourcePath !== $finalPath ? $sourcePath : ($existingMetadata['raw_inbox_path'] ?? null),
+                'raw_inbox_disk' => $sourcePath !== $finalPath ? $sourceDisk : ($existingMetadata['raw_inbox_disk'] ?? null),
+                'raw_inbox_cleaned' => false,
+            ]);
+
+            $persisted = $radioProgram->forceFill([
+                'archivo_mp3' => $finalPath,
+                'archivo_mp3_disk' => $targetDisk,
+                'processing_finished_at' => $finishedAt,
+                'status_message' => 'MP3 procesado y subido a almacenamiento definitivo (R2). Preparando entregas.',
+                'delivery_metadata' => $updatedMetadata,
+            ])->save();
+
+            $freshCheck = RadioProgram::query()->whereKey($radioProgram->id)->value('archivo_mp3');
+            if (! $persisted || trim((string) $freshCheck) !== $finalPath) {
+                throw new \RuntimeException('No se pudo persistir la referencia del archivo definitivo en la base de datos; se conserva el original para reintento.');
             }
 
-            RadioProgram::withoutEvents(function () use ($radioProgram, $finalPath): void {
-                $radioProgram->forceFill([
-                    'archivo_mp3' => $finalPath,
-                    'archivo_mp3_disk' => 'public',
-                    'processing_finished_at' => now(),
-                    'status_message' => 'MP3 procesado localmente. Preparando entregas.',
-                ])->saveQuietly();
-            });
+            // 3. Limpiar el original temporal de podcast-inbox SOLO después de haber guardado y verificado la referencia en BD
+            $rawInboxCleaned = false;
+            if ($finalPath !== $sourcePath) {
+                $rawInboxCleaned = $this->cleanupSourceCopy($sourcePath, $finalPath, $sourceDisk);
+                if ($rawInboxCleaned) {
+                    $updatedMetadata['raw_inbox_cleaned'] = true;
+                    RadioProgram::withoutEvents(function () use ($radioProgram, $updatedMetadata): void {
+                        $radioProgram->forceFill([
+                            'delivery_metadata' => $updatedMetadata,
+                        ])->saveQuietly();
+                    });
+                }
+            }
 
             if ($durationSeconds > 0) {
                 RadioProgram::withoutEvents(function () use ($radioProgram, $durationSeconds): void {
@@ -135,15 +183,22 @@ class ProcessMp3Job implements ShouldQueue
 
             app(PodcastPipelineAuditService::class)->record($radioProgram, 'PROCESSING_COMPLETED', 'El MP3 quedó listo para distribución.', [
                 'processed_path' => $finalPath,
+                'processed_disk' => $targetDisk,
+                'r2_sha256' => $processedSha256,
                 'duration_seconds' => $durationSeconds,
+                'size_bytes' => $processedSize,
             ]);
 
             if ($this->dispatchNextJobs) {
                 PodcastProcessed::dispatch($radioProgram->id);
             }
         } finally {
-            if (isset($workingPath)) {
+            if (is_string($workingPath) && $workingPath !== '') {
                 $this->cleanupWorkingCopy($workingPath);
+            }
+
+            if (is_string($sourceAbsolutePath) && $sourceAbsolutePath !== '' && $this->isTemporaryDownloadPath($sourceAbsolutePath)) {
+                $this->cleanupWorkingCopy($sourceAbsolutePath);
             }
         }
     }
@@ -175,34 +230,20 @@ class ProcessMp3Job implements ShouldQueue
     }
 
     private function buildProcessedPath(
+        RadioProgram $radioProgram,
         string $sourcePath,
-        int $episodeNumber,
-        string $programName,
-        string $fecha
     ): string
     {
         $sourcePath = ltrim(str_replace('\\', '/', trim($sourcePath)), '/');
         if ($sourcePath === '') {
-            return 'programas_procesados/episode.mp3';
+            return $radioProgram->canonicalProcessedPath();
         }
 
-        if (str_starts_with($sourcePath, 'programas_procesados/')) {
-            $base = basename($sourcePath);
-            if (preg_match('/^\d{3}\.-/', $base)) {
-                return $sourcePath;
-            }
+        if (RadioProgram::isProcessedStoragePath($sourcePath)) {
+            return $sourcePath;
         }
 
-        $safeName = preg_replace('/[\/\\:*?"<>|]/u', '-', $programName);
-        $safeName = trim((string) $safeName);
-        if ($safeName === '') {
-            $safeName = 'PODCAST';
-        }
-
-        $paddedEpisode = str_pad((string) $episodeNumber, 3, '0', STR_PAD_LEFT);
-        $filename = "{$paddedEpisode}.- {$safeName} {$fecha}.mp3";
-
-        return 'programas_procesados/' . $filename;
+        return $radioProgram->canonicalProcessedPath();
     }
 
     private function extractDurationSeconds(string $absolutePath): int
@@ -253,35 +294,76 @@ class ProcessMp3Job implements ShouldQueue
         }
     }
 
-    private function publishWorkingCopy(string $workingPath, string $finalPath): void
+    private function publishWorkingCopy(string $workingPath, string $finalPath, string $disk = 'r2'): void
     {
-        $copyContents = @file_get_contents($workingPath);
-        if (! is_string($copyContents) || $copyContents === '') {
-            throw new \RuntimeException("No se pudo leer la copia de trabajo para {$finalPath}");
+        $stream = @fopen($workingPath, 'rb');
+        if (! is_resource($stream)) {
+            throw new \RuntimeException("No se pudo abrir la copia de trabajo para streaming: {$workingPath}");
         }
 
-        if (! Storage::disk('public')->put($finalPath, $copyContents)) {
-            throw new \RuntimeException("No se pudo guardar el archivo procesado en {$finalPath}");
+        try {
+            if (! Storage::disk($disk)->writeStream($finalPath, $stream)) {
+                rewind($stream);
+                $copyContents = stream_get_contents($stream);
+                if (! Storage::disk($disk)->put($finalPath, (string) $copyContents)) {
+                    throw new \RuntimeException("No se pudo guardar el archivo procesado en {$disk}: {$finalPath}");
+                }
+            }
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }
+
+        $localSize = (int) filesize($workingPath);
+        $remoteSize = (int) (Storage::disk($disk)->size($finalPath) ?? 0);
+        if ($localSize <= 0 || $remoteSize !== $localSize) {
+            throw new \RuntimeException("La verificación de integridad falló para {$disk}: {$finalPath} (esperado {$localSize} bytes, subido {$remoteSize} bytes)");
         }
     }
 
-    private function cleanupSourceCopy(string $sourceAbsolutePath, string $sourcePath, string $finalPath, string $sourceDisk, bool $preserveLocalCopy): void
+    private function cleanupSourceCopy(string $sourcePath, string $finalPath, string $sourceDisk): bool
     {
-        if ($preserveLocalCopy) {
-            return;
+        $sourcePath = ltrim(str_replace('\\', '/', trim($sourcePath)), '/');
+        $finalPath = ltrim(str_replace('\\', '/', trim($finalPath)), '/');
+
+        if ($sourcePath === '' || $sourcePath === $finalPath) {
+            return false;
         }
 
-        if ($sourceDisk === 'public') {
-            if ($sourcePath !== $finalPath && Storage::disk('public')->exists($sourcePath)) {
-                Storage::disk('public')->delete($sourcePath);
+        $targetDisk = trim($sourceDisk) !== '' ? trim($sourceDisk) : 'public';
+        if ($targetDisk !== 'public' && ! str_starts_with($sourcePath, 'podcast-inbox/')) {
+            return false;
+        }
+
+        $deleted = false;
+
+        foreach (array_values(array_unique([$targetDisk, 'public'])) as $candidateDisk) {
+            if ($candidateDisk !== 'public' && ! str_starts_with($sourcePath, 'podcast-inbox/')) {
+                continue;
             }
 
-            return;
+            try {
+                if (Storage::disk($candidateDisk)->exists($sourcePath)) {
+                    $deleted = Storage::disk($candidateDisk)->delete($sourcePath) || $deleted;
+                }
+            } catch (Throwable $exception) {
+                Log::warning('ProcessMp3Job: no se pudo eliminar el archivo original tras verificar R2.', [
+                    'source_path' => $sourcePath,
+                    'source_disk' => $candidateDisk,
+                    'exception' => $exception->getMessage(),
+                ]);
+            }
         }
 
-        if (is_file($sourceAbsolutePath)) {
-            @unlink($sourceAbsolutePath);
-        }
+        return $deleted;
+    }
+
+    private function isTemporaryDownloadPath(string $absolutePath): bool
+    {
+        return str_starts_with($absolutePath, storage_path('app/tmp/r2'))
+            || str_starts_with($absolutePath, storage_path('app/tmp/backblaze'))
+            || str_starts_with($absolutePath, storage_path('app/tmp/podcast-processing'));
     }
 
     private function cleanupWorkingCopy(string $workingPath): void
