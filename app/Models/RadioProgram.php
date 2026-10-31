@@ -94,6 +94,18 @@ class RadioProgram extends Model
         'email_notificacion',
     ];
 
+    protected static function booted(): void
+    {
+        $bustCatalog = static function (): void {
+            \Illuminate\Support\Facades\Cache::forget('archive-org:home-podcasts:v5:10');
+            \Illuminate\Support\Facades\Cache::forget('archive-org:home-podcasts:v5:12');
+            \Illuminate\Support\Facades\Cache::forget('archive-org:home-podcasts:v5:20');
+        };
+
+        static::saved($bustCatalog);
+        static::deleted($bustCatalog);
+    }
+
     protected function casts(): array
     {
         return [

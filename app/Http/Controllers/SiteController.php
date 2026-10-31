@@ -105,6 +105,7 @@ class SiteController extends Controller
             fn () => NewRelease::query()
                 ->where('is_active', true)
                 ->where('show_in_feed', true)
+                ->where(fn ($q) => $q->whereNull('released_at')->orWhere('released_at', '<=', now()))
                 ->orderByDesc('released_at')
                 ->latest()
                 ->take(4)
@@ -854,12 +855,16 @@ class SiteController extends Controller
             }
         );
 
-        $videos = $this->safeValue(fn () => Video::query()->latest()->take(12)->get(), collect());
+        $videos = $this->safeValue(
+            fn () => Video::query()->latest()->take(12)->get(),
+            collect()
+        );
 
         $songs = $this->safeValue(
             fn () => NewRelease::query()
                 ->with('radioArtist')
                 ->where('is_active', true)
+                ->where(fn ($q) => $q->whereNull('released_at')->orWhere('released_at', '<=', now()))
                 ->orderByDesc('released_at')
                 ->orderByDesc('id')
                 ->take(50)

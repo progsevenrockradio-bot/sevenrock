@@ -50,7 +50,7 @@ class ProgramScheduleServiceTest extends TestCase
         $payload = app(ProgramScheduleService::class)->resolve();
 
         $this->assertSame('Night Shift', $payload['show']);
-        $this->assertSame('On air', $payload['badge']);
+        $this->assertSame('En vivo', $payload['badge']);
     }
 
     public function test_it_adjusts_the_next_start_when_an_episode_is_linked_to_the_program(): void

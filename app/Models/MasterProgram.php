@@ -89,6 +89,14 @@ class MasterProgram extends Model
 
     protected static function booted(): void
     {
+        $bumpScheduleVersion = static function (): void {
+            \Illuminate\Support\Facades\Cache::forever('cache.version.program_schedule', now()->timestamp);
+            \Illuminate\Support\Facades\Cache::forget('site.programs.catalog');
+        };
+
+        static::saved($bumpScheduleVersion);
+        static::deleted($bumpScheduleVersion);
+
         static::saving(function (self $program): void {
             if (! filled($program->program_code)) {
                 $program->program_code = static::generateUniqueProgramCode(

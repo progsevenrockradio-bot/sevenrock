@@ -32,6 +32,17 @@ class MasterProgramEmision extends Model
         'duracion_segundos' => 'integer',
     ];
 
+    protected static function booted(): void
+    {
+        $bumpScheduleVersion = static function (): void {
+            \Illuminate\Support\Facades\Cache::forever('cache.version.program_schedule', now()->timestamp);
+            \Illuminate\Support\Facades\Cache::forget('site.programs.catalog');
+        };
+
+        static::saved($bumpScheduleVersion);
+        static::deleted($bumpScheduleVersion);
+    }
+
     /** Tipos válidos de emisión. */
     public const TIPOS = [
         'normal'         => 'Normal',

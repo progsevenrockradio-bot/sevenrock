@@ -84,6 +84,16 @@ Artisan::command('sevenrock:audit-archive-identifiers {--limit=200}', function (
     return 1;
 })->purpose('Audit Archive.org identifiers and podcast metadata');
 
+Artisan::command('podcast:refresh-catalog {--limit=20}', function (\App\Services\ArchiveOrgService $archiveOrgService) {
+    $limit = max(1, min(60, (int) $this->option('limit')));
+    $this->info("Refrescando catalogo de podcasts en segundo plano (limite: {$limit})...");
+    $payload = $archiveOrgService->refreshCatalog($limit);
+    $count = count($payload['episodes'] ?? []);
+    $this->info("Catalogo actualizado correctamente. Total episodios: {$count}");
+
+    return 0;
+})->purpose('Actualiza en segundo plano el catalogo de podcasts desde Archive.org sin bloquear peticiones web');
+
 Artisan::command('radioboss:test {--folder= : Carpeta remota destino (relativa al root del disco)} {--ext=mp3 : Extension del archivo de prueba} {--keep : No borra el archivo de prueba}', function () {
     $diskConfig = (array) config('filesystems.disks.radioboss', []);
     $host = trim((string) ($diskConfig['host'] ?? ''));
@@ -360,6 +370,13 @@ Schedule::command('podcast:publish-archive')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/publish-archive.log'));
+
+// Actualizar catalogo de podcasts en segundo plano cada 30 minutos
+Schedule::command('podcast:refresh-catalog')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/podcast-catalog-refresh.log'));
 
 // Reconcile stuck or partially completed podcast pipelines
 Schedule::command('podcast:reconcile-pipeline', [

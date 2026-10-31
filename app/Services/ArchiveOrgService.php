@@ -29,30 +29,108 @@ final class ArchiveOrgService
     public function homePodcastPayload(int $limit = 10): array
     {
         $limit = max(1, min(20, $limit));
+        $cacheKey = self::HOME_CACHE_KEY . ':' . $limit;
+        $fallbackKey = self::HOME_CACHE_KEY . ':last_valid:' . $limit;
 
-        return Cache::remember(self::HOME_CACHE_KEY . ':' . $limit, now()->addMinutes(20), function () use ($limit): array {
-            $episodes = $this->latestPodcastEpisodes($limit);
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached) && ! empty($cached['episodes'] ?? [])) {
+            return $cached;
+        }
 
-            if ($episodes === []) {
-                return $this->fallbackPayload();
-            }
+        $episodes = $this->latestPodcastEpisodes($limit, allowNetwork: false);
 
+        if ($episodes !== []) {
             $featured = $this->mapFeaturedEpisode($episodes[0]);
-
-            return [
+            $payload = [
                 'featured' => $featured,
                 'episodes' => array_map(
                     fn (array $episode): array => $this->mapEpisodeRow($episode),
                     $episodes
                 ),
             ];
-        });
+
+            Cache::put($cacheKey, $payload, now()->addMinutes(20));
+            Cache::forever($fallbackKey, $payload);
+
+            return $payload;
+        }
+
+        $lastValid = Cache::get($fallbackKey);
+        if (is_array($lastValid) && ! empty($lastValid['episodes'] ?? [])) {
+            Cache::put($cacheKey, $lastValid, now()->addMinutes(2));
+            $this->dispatchBackgroundRefresh($limit);
+
+            return $lastValid;
+        }
+
+        $this->dispatchBackgroundRefresh($limit);
+
+        return $this->fallbackPayload();
+    }
+
+    public function refreshCatalog(int $limit = 20): array
+    {
+        $limit = max(1, min(20, $limit));
+        $cacheKey = self::HOME_CACHE_KEY . ':' . $limit;
+        $fallbackKey = self::HOME_CACHE_KEY . ':last_valid:' . $limit;
+        $lockKey = 'archive-org:refresh-catalog-lock:' . $limit;
+
+        $lock = Cache::lock($lockKey, 120);
+        if (! $lock->get()) {
+            $cached = Cache::get($cacheKey) ?? Cache::get($fallbackKey);
+            return is_array($cached) ? $cached : $this->fallbackPayload();
+        }
+
+        try {
+            $episodes = $this->latestPodcastEpisodes($limit, allowNetwork: true);
+
+            if ($episodes === []) {
+                $lastValid = Cache::get($fallbackKey);
+                if (is_array($lastValid) && ! empty($lastValid['episodes'] ?? [])) {
+                    return $lastValid;
+                }
+
+                return $this->fallbackPayload();
+            }
+
+            $featured = $this->mapFeaturedEpisode($episodes[0]);
+            $payload = [
+                'featured' => $featured,
+                'episodes' => array_map(
+                    fn (array $episode): array => $this->mapEpisodeRow($episode),
+                    $episodes
+                ),
+            ];
+
+            Cache::put($cacheKey, $payload, now()->addMinutes(20));
+            Cache::forever($fallbackKey, $payload);
+
+            return $payload;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    public function dispatchBackgroundRefresh(int $limit = 20): void
+    {
+        $throttleKey = 'archive-org:refresh-dispatched:' . $limit;
+        if (! Cache::add($throttleKey, true, now()->addMinutes(5))) {
+            return;
+        }
+
+        try {
+            if (config('queue.default') !== 'sync' || app()->runningInConsole()) {
+                \App\Jobs\RefreshArchivePodcastCatalogJob::dispatch($limit);
+            }
+        } catch (Throwable) {
+            // Keep resilient
+        }
     }
 
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function latestPodcastEpisodes(int $limit = 10): array
+    public function latestPodcastEpisodes(int $limit = 10, bool $allowNetwork = false): array
     {
         $limit = max(1, min(60, $limit));
 
@@ -109,17 +187,17 @@ final class ArchiveOrgService
                     }
 
                     $cover = PublicMediaUrl::normalizePublicUrl((string) ($program->caratula_url ?: ''));
-                    $allowNetwork = $forceNetwork || $networkBudget > 0;
+                    $canUseNetwork = $allowNetwork && ($forceNetwork || $networkBudget > 0);
 
                     try {
                         $episode = $this->getLatestEpisodeCached(
                             (string) $program->archive_identifier,
                             (string) $program->nombre,
                             $cover,
-                            allowNetwork: $allowNetwork
+                            allowNetwork: $canUseNetwork
                         );
 
-                        if ($allowNetwork && $networkBudget > 0) {
+                        if ($canUseNetwork && $networkBudget > 0) {
                             $networkBudget--;
                         }
 

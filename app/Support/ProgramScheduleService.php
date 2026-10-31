@@ -26,22 +26,210 @@ class ProgramScheduleService
         'DOMINGO' => 7,
     ];
 
-    public function resolve(int $limit = 5): array
+    private static ?bool $hasMasterProgramsTable = null;
+    private static ?bool $hasMasterProgramsActivoCol = null;
+    private static ?bool $hasEmisionesTable = null;
+    private static ?bool $hasRadioProgramsTable = null;
+
+    /** @var array<int, array<string, mixed>> */
+    private array $memoizedResolutions = [];
+    private ?string $lastMemoizedVersion = null;
+
+    public function flushMemoization(): void
     {
+        $this->memoizedResolutions = [];
+        $this->lastMemoizedVersion = null;
+    }
+
+    public function resolve(int $limit = 5, bool $fresh = false): array
+    {
+        $limit = max(1, min(10, $limit));
+        $version = (string) Cache::get('cache.version.program_schedule', '1');
+
+        if ($this->lastMemoizedVersion !== $version) {
+            $this->memoizedResolutions = [];
+            $this->lastMemoizedVersion = $version;
+        }
+
+        if (! $fresh && isset($this->memoizedResolutions[$limit])) {
+            return $this->memoizedResolutions[$limit];
+        }
+
+        $cacheKey = "program_schedule:resolve:v{$version}:{$limit}";
+
+        if (! $fresh) {
+            $cached = Cache::get($cacheKey);
+            if (is_array($cached) && isset($cached['payload'])) {
+                $this->memoizedResolutions[$limit] = $cached['payload'];
+                return $cached['payload'];
+            }
+        }
+
         $theme = ThemeSetting::current();
         $scheduledPrograms = $this->programsWithNextStart();
 
         if ($scheduledPrograms->isNotEmpty()) {
+            $now = now('America/Caracas');
             $current = $this->currentProgramFromSchedule($scheduledPrograms) ?? $scheduledPrograms->first()['program'];
             $upcoming = $this->upcomingProgramsFromSchedule($scheduledPrograms, $current, $limit);
 
-            return [
-                ...$this->programPayload($current, $theme, $this->programIsLiveNow($current) ? 'En vivo' : 'A continuación'),
+            $badge = $this->resolveProgramBadge($current, $now);
+
+            $payload = [
+                ...$this->programPayload($current, $theme, $badge),
                 'upcoming' => $this->mapUpcoming($upcoming, $theme),
             ];
+
+            $ttlSeconds = $this->calculateNextTransitionTtl($current, $upcoming);
+            Cache::put($cacheKey, ['payload' => $payload], now()->addSeconds($ttlSeconds));
+
+            $this->memoizedResolutions[$limit] = $payload;
+            return $payload;
         }
 
-        return $this->fallback();
+        $fallback = $this->fallback();
+        $this->memoizedResolutions[$limit] = $fallback;
+        return $fallback;
+    }
+
+    private function calculateNextTransitionTtl(MasterProgram $current, Collection $upcoming): int
+    {
+        $now = now('America/Caracas');
+        $transitionPoints = [];
+
+        // 1. Programas por empezar: fecha de inicio y pre-alerta de 5 minutos
+        $programsToCheck = collect([$current])->concat($upcoming)->unique(fn (MasterProgram $p) => $p->getKey());
+
+        foreach ($programsToCheck as $prog) {
+            $start = $this->nextProgramStart($prog, $now);
+            if ($start instanceof Carbon && $start->greaterThan($now)) {
+                $transitionPoints[] = $start;
+                $preAlert = $start->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
+                if ($preAlert->greaterThan($now)) {
+                    $transitionPoints[] = $preAlert;
+                }
+            }
+
+            // 2. Final de emisión si el programa está actualmente en vivo
+            if ($this->programIsLiveNow($prog, $now)) {
+                $liveEnd = $this->currentLiveEmissionEnd($prog, $now);
+                if ($liveEnd instanceof Carbon && $liveEnd->greaterThan($now)) {
+                    $transitionPoints[] = $liveEnd;
+                }
+            }
+        }
+
+        if (empty($transitionPoints)) {
+            return 60;
+        }
+
+        usort($transitionPoints, fn ($a, $b) => $a->timestamp <=> $b->timestamp);
+        $next = $transitionPoints[0];
+
+        $diff = $next->timestamp - $now->timestamp;
+
+        if ($diff <= 0) {
+            return 1;
+        }
+
+        return min(120, max(1, $diff));
+    }
+
+    public function currentLiveEmissionEnd(MasterProgram $program, ?Carbon $now = null): ?Carbon
+    {
+        $timezone = $this->programTimezone($program);
+        $now = ($now ?? now($timezone))->copy()->setTimezone($timezone);
+
+        if ($program->live_starts_at && $program->live_ends_at) {
+            $endsAt = $program->live_ends_at->copy()->setTimezone($timezone);
+            if ($endsAt->greaterThan($now)) {
+                return $endsAt;
+            }
+        }
+
+        $episode = $this->episodeForProgramOnDate($program, $now->toDateString());
+        if ($episode) {
+            $startTime = trim((string) ($episode->hora_inicio ?: $program->hora_transmision ?: ''));
+            $start = $this->parseScheduleTimeToCarbon($now, $startTime);
+            if ($start) {
+                $endTime = trim((string) ($episode->hora_fin ?: ''));
+                if ($endTime !== '') {
+                    $end = $this->parseScheduleTimeToCarbon($now, $endTime);
+                } else {
+                    $dayKey = match ($now->dayOfWeekIso) {
+                        1 => 'LUNES', 2 => 'MARTES', 3 => 'MIERCOLES', 4 => 'JUEVES',
+                        5 => 'VIERNES', 6 => 'SABADO', 7 => 'DOMINGO',
+                    };
+                    $emision = $this->activeEmisionesFor($program)
+                        ->first(fn ($e) => $e->dia_semana === $dayKey);
+
+                    $segundos = $emision?->duracion_segundos ?? ((int) ($episode->duration_seconds ?? 0) > 0 ? (int) $episode->duration_seconds : null);
+                    $duration = ($segundos && $segundos > 0)
+                        ? (int) ceil($segundos / 60)
+                        : max(15, (int) ($program->duracion_minutos ?? 120));
+                    $end = $start->copy()->addMinutes($duration);
+                }
+                if ($end instanceof Carbon) {
+                    if ($end->lessThanOrEqualTo($start)) {
+                        $end = $end->copy()->addDay();
+                    }
+                    if ($end->greaterThan($now)) {
+                        return $end;
+                    }
+                }
+            }
+        }
+
+        $emisiones = $this->activeEmisionesFor($program);
+        if ($emisiones->isNotEmpty()) {
+            foreach ($emisiones as $emision) {
+                $dayNumber = $this->dayNumber((string) $emision->dia_semana);
+                if ($dayNumber === null) {
+                    continue;
+                }
+                $hm = $this->parseScheduleTime((string) $emision->hora_inicio);
+                if (! $hm) {
+                    continue;
+                }
+
+                [$hour, $minute] = $hm;
+                $daysSinceSchedule = ((int) $now->dayOfWeekIso - $dayNumber + 7) % 7;
+                $scheduledStart = $now->copy()->startOfDay()->subDays($daysSinceSchedule)->setTime($hour, $minute, 0);
+
+                $duration = (! empty($emision->duracion_segundos) && $emision->duracion_segundos > 0)
+                    ? (int) ceil($emision->duracion_segundos / 60)
+                    : max(15, (int) ($emision->duracion_minutos ?? $program->duracion_minutos ?? 120));
+
+                $end = $scheduledStart->copy()->addMinutes($duration);
+                if ($end->lessThanOrEqualTo($scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES))) {
+                    $end = $end->copy()->addDay();
+                }
+
+                if ($end->greaterThan($now) && $now->between($scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES), $end)) {
+                    return $end;
+                }
+            }
+        }
+
+        $dayNumber = $this->dayNumber((string) $program->dia_transmision);
+        if ($dayNumber !== null) {
+            $hm = $this->parseScheduleTime((string) $program->hora_transmision);
+            if ($hm) {
+                [$hour, $minute] = $hm;
+                $daysSinceSchedule = ((int) $now->dayOfWeekIso - $dayNumber + 7) % 7;
+                $scheduledStart = $now->copy()->startOfDay()->subDays($daysSinceSchedule)->setTime($hour, $minute, 0);
+                $duration = max(15, (int) ($program->duracion_minutos ?? 120));
+                $end = $scheduledStart->copy()->addMinutes($duration);
+                if ($end->lessThanOrEqualTo($scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES))) {
+                    $end = $end->copy()->addDay();
+                }
+                if ($end->greaterThan($now) && $now->between($scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES), $end)) {
+                    return $end;
+                }
+            }
+        }
+
+        return null;
     }
 
     public function fallback(): array
@@ -89,17 +277,55 @@ class ProgramScheduleService
      */
     private function masterPrograms(): Collection
     {
-        if (! Schema::hasTable('master_programs')) {
+        if (self::$hasMasterProgramsTable === null) {
+            self::$hasMasterProgramsTable = Schema::hasTable('master_programs');
+        }
+
+        if (! self::$hasMasterProgramsTable) {
             return collect();
         }
 
-        return MasterProgram::query()
-            ->when(Schema::hasColumn('master_programs', 'activo'), fn ($query) => $query->where('activo', true))
+        if (self::$hasEmisionesTable === null) {
+            self::$hasEmisionesTable = Schema::hasTable('master_program_emisiones');
+        }
+
+        $query = MasterProgram::query();
+
+        if (self::$hasEmisionesTable) {
+            $query->with(['emisiones' => fn ($q) => $q->where('activo', true)]);
+        }
+
+        if (self::$hasMasterProgramsActivoCol === null) {
+            self::$hasMasterProgramsActivoCol = Schema::hasColumn('master_programs', 'activo');
+        }
+
+        return $query
+            ->when(self::$hasMasterProgramsActivoCol, fn ($q) => $q->where('activo', true))
             ->get()
             ->sort(function (MasterProgram $left, MasterProgram $right): int {
                 return $this->sortTuple($left) <=> $this->sortTuple($right);
             })
             ->values();
+    }
+
+    /**
+     * @return Collection<int, MasterProgramEmision>
+     */
+    private function activeEmisionesFor(MasterProgram $program): Collection
+    {
+        if ($program->relationLoaded('emisiones')) {
+            return $program->emisiones->filter(fn ($e) => (bool) $e->activo)->values();
+        }
+
+        if (self::$hasEmisionesTable === null) {
+            self::$hasEmisionesTable = Schema::hasTable('master_program_emisiones');
+        }
+
+        if (! self::$hasEmisionesTable) {
+            return collect();
+        }
+
+        return $program->emisiones()->where('activo', true)->get();
     }
 
     private function sortTuple(MasterProgram $program): array
@@ -248,11 +474,19 @@ class ProgramScheduleService
 
         $now = now('America/Caracas');
 
+        // 1. Programa efectivamente en emisión en vivo
         $live = $programs->first(fn (array $item): bool => $this->programIsLiveNow($item['program'], $now));
         if (is_array($live) && $live['program'] instanceof MasterProgram) {
             return $live['program'];
         }
 
+        // 2. Programa en ventana de anticipo (5 minutos antes del inicio)
+        $soon = $programs->first(fn (array $item): bool => $this->programIsUpcomingSoon($item['program'], $now));
+        if (is_array($soon) && $soon['program'] instanceof MasterProgram) {
+            return $soon['program'];
+        }
+
+        // 3. Siguiente emisión en parrilla
         $upcoming = $programs->first(fn (array $item): bool => $item['next_start'] instanceof Carbon && $item['next_start']->greaterThan($now));
         if (is_array($upcoming) && $upcoming['program'] instanceof MasterProgram) {
             return $upcoming['program'];
@@ -292,6 +526,43 @@ class ProgramScheduleService
             ->values();
     }
 
+    public function resolveProgramBadge(MasterProgram $program, ?Carbon $now = null): string
+    {
+        if ($this->programIsLiveNow($program, $now)) {
+            return 'En vivo';
+        }
+
+        if ($this->programIsUpcomingSoon($program, $now)) {
+            return 'En breve';
+        }
+
+        return 'A continuación';
+    }
+
+    public function programIsUpcomingSoon(MasterProgram $program, ?Carbon $now = null): bool
+    {
+        $timezone = $this->programTimezone($program);
+        $now = ($now ?? now($timezone))->copy()->setTimezone($timezone);
+
+        if ($program->live_starts_at) {
+            $startsAt = $program->live_starts_at->copy()->setTimezone($timezone);
+            $preAlert = $startsAt->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
+            if ($now->greaterThanOrEqualTo($preAlert) && $now->lessThan($startsAt)) {
+                return true;
+            }
+        }
+
+        $nextStart = $this->nextProgramStart($program, $now);
+        if ($nextStart instanceof Carbon) {
+            $preAlert = $nextStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
+            if ($now->greaterThanOrEqualTo($preAlert) && $now->lessThan($nextStart)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function programIsLiveNow(MasterProgram $program, ?Carbon $now = null): bool
     {
         $now ??= now($this->programTimezone($program));
@@ -299,7 +570,7 @@ class ProgramScheduleService
         $now = $now->copy()->setTimezone($timezone);
 
         if ($program->live_starts_at && $program->live_ends_at) {
-            $startsAt = $program->live_starts_at->copy()->setTimezone($timezone)->subMinutes(self::MARGIN_BEFORE_MINUTES);
+            $startsAt = $program->live_starts_at->copy()->setTimezone($timezone);
             $endsAt = $program->live_ends_at->copy()->setTimezone($timezone);
             if ($endsAt->lessThanOrEqualTo($startsAt)) {
                 $endsAt = $endsAt->copy()->addDay();
@@ -321,23 +592,17 @@ class ProgramScheduleService
                         1 => 'LUNES', 2 => 'MARTES', 3 => 'MIERCOLES', 4 => 'JUEVES',
                         5 => 'VIERNES', 6 => 'SABADO', 7 => 'DOMINGO',
                     };
-                    $emision = $program->emisiones()
-                        ->where('activo', true)
-                        ->where('dia_semana', $dayKey)
-                        ->first();
+                    $emision = $this->activeEmisionesFor($program)
+                        ->first(fn ($e) => $e->dia_semana === $dayKey);
 
                     $segundos = $emision?->duracion_segundos ?? ((int) ($episode->duration_seconds ?? 0) > 0 ? (int) $episode->duration_seconds : null);
 
                     if ($segundos && $segundos > 0) {
-                        $scheduledStart = $start->copy();
-                        $start = $start->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
                         $duracion = (int) ceil($segundos / 60);
-                        $end = $scheduledStart->copy()->addMinutes($duracion);
+                        $end = $start->copy()->addMinutes($duracion);
                     } else {
-                        $scheduledStart = $start->copy();
-                        $start = $start->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
                         $duration = max(15, (int) ($program->duracion_minutos ?? 120));
-                        $end = $scheduledStart->copy()->addMinutes($duration);
+                        $end = $start->copy()->addMinutes($duration);
                     }
                 }
 
@@ -351,33 +616,35 @@ class ProgramScheduleService
             }
         }
 
-        $emisiones = $program->emisiones()->where('activo', true)->get();
+        $emisiones = $this->activeEmisionesFor($program);
         if ($emisiones->isNotEmpty()) {
             foreach ($emisiones as $emision) {
                 $dayNumber = $this->dayNumber((string) $emision->dia_semana);
-                if ($dayNumber === null) continue;
+                if ($dayNumber === null) {
+                    continue;
+                }
                 $hm = $this->parseScheduleTime((string) $emision->hora_inicio);
-                if (! $hm) continue;
-                
+                if (! $hm) {
+                    continue;
+                }
+
                 [$hour, $minute] = $hm;
                 $daysSinceSchedule = ((int) $now->dayOfWeekIso - $dayNumber + 7) % 7;
                 $scheduledStart = $now->copy()->startOfDay()->subDays($daysSinceSchedule)->setTime($hour, $minute, 0);
 
-                if (!empty($emision->duracion_segundos) && $emision->duracion_segundos > 0) {
-                    $start = $scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
+                if (! empty($emision->duracion_segundos) && $emision->duracion_segundos > 0) {
                     $duracion = (int) ceil($emision->duracion_segundos / 60);
                     $end = $scheduledStart->copy()->addMinutes($duracion);
                 } else {
-                    $start = $scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
                     $duration = max(15, (int) ($emision->duracion_minutos ?? $program->duracion_minutos ?? 120));
                     $end = $scheduledStart->copy()->addMinutes($duration);
                 }
 
-                if ($end->lessThanOrEqualTo($start)) {
+                if ($end->lessThanOrEqualTo($scheduledStart)) {
                     $end = $end->copy()->addDay();
                 }
 
-                if ($now->between($start, $end)) {
+                if ($now->between($scheduledStart, $end)) {
                     return true;
                 }
             }
@@ -391,21 +658,20 @@ class ProgramScheduleService
 
         $hm = $this->parseScheduleTime((string) $program->hora_transmision);
         if (! $hm) {
-            return true;
+            return false;
         }
 
         [$hour, $minute] = $hm;
         $daysSinceSchedule = ((int) $now->dayOfWeekIso - $dayNumber + 7) % 7;
         $scheduledStart = $now->copy()->startOfDay()->subDays($daysSinceSchedule)->setTime($hour, $minute, 0);
-        $start = $scheduledStart->copy()->subMinutes(self::MARGIN_BEFORE_MINUTES);
         $duration = max(15, (int) ($program->duracion_minutos ?? 120));
         $end = $scheduledStart->copy()->addMinutes($duration);
 
-        if ($end->lessThanOrEqualTo($start)) {
+        if ($end->lessThanOrEqualTo($scheduledStart)) {
             $end = $end->copy()->addDay();
         }
 
-        return $now->between($start, $end);
+        return $now->between($scheduledStart, $end);
     }
 
     private function parseScheduleTimeToCarbon(Carbon $base, string $value): ?Carbon
@@ -432,9 +698,8 @@ class ProgramScheduleService
             }
         }
 
-        if (Schema::hasTable('master_program_emisiones')) {
-            $emisiones = $program->emisiones()->where('activo', true)->get();
-            if ($emisiones->isNotEmpty()) {
+        $emisiones = $this->activeEmisionesFor($program);
+        if ($emisiones->isNotEmpty()) {
                 $nextStarts = [];
                 foreach ($emisiones as $emision) {
                     $day = $this->dayNumber((string) $emision->dia_semana);
@@ -455,7 +720,6 @@ class ProgramScheduleService
                 }
                 return null;
             }
-        }
 
         $day = $this->dayNumber((string) $program->dia_transmision);
         $time = $this->parseScheduleTime((string) $program->hora_transmision);
@@ -540,7 +804,7 @@ class ProgramScheduleService
         $enlace = null;
 
         $now = now($this->programTimezone($program));
-        $emisiones = $program->emisiones()->where('activo', true)->get();
+        $emisiones = $this->activeEmisionesFor($program);
         if ($emisiones->isNotEmpty()) {
             foreach ($emisiones as $em) {
                 // Find next emission matching or currently active
@@ -753,7 +1017,11 @@ class ProgramScheduleService
 
     private function episodeForProgramOnDate(MasterProgram $program, ?string $date = null): ?RadioProgram
     {
-        if (! class_exists(RadioProgram::class) || ! Schema::hasTable('radio_programs')) {
+        if (self::$hasRadioProgramsTable === null) {
+            self::$hasRadioProgramsTable = Schema::hasTable('radio_programs');
+        }
+
+        if (! self::$hasRadioProgramsTable || ! class_exists(RadioProgram::class)) {
             return null;
         }
 
