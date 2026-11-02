@@ -237,4 +237,32 @@ class AdminMasterProgramCrudTest extends TestCase
         $this->assertSame('Retransmisión Fin de Semana Modificada', $retransmisionActualizada->etiqueta);
         $this->assertSame('https://archive.org/details/metal-sat-v2', $retransmisionActualizada->url_podcast);
     }
+
+    public function test_admin_can_open_create_form_even_without_is_admin_column(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.master-programs.create'));
+
+        $response->assertOk()
+            ->assertSee('Nuevo programa de radio')
+            ->assertSee('Crear programa');
+    }
+
+    public function test_admin_can_open_grid_view_with_png_export_button(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.master-programs.grid'));
+
+        $response->assertOk()
+            ->assertSee('Parrilla de programación')
+            ->assertSee('Exportar a PNG')
+            ->assertSee('btn-export-png')
+            ->assertSee('cdn.jsdelivr.net/npm/html2canvas');
+    }
 }

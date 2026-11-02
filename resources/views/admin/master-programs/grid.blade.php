@@ -1,7 +1,7 @@
 <x-layouts.admin :title="'Parrilla de programación - '.(optional($themeSettings)->site_name ?? config('app.name'))">
     @php $admin = $themeAppearance['admin_texts'] ?? []; @endphp
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
     <div class="space-y-6 no-print-section">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -14,11 +14,11 @@
                 <a href="{{ route('admin.master-programs.index') }}" class="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3.5 text-xs font-medium text-zinc-300 transition hover:bg-white/10 hover:text-white">
                     ← Volver a programas
                 </a>
-                <button type="button" onclick="exportarAPNG()" class="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3.5 text-xs font-medium text-zinc-200 transition hover:bg-white/10 hover:text-white">
-                    <svg class="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <button type="button" id="btn-export-png" onclick="exportarAPNG()" class="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3.5 text-xs font-medium text-zinc-200 transition hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg id="icon-export-png" class="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
-                    <span>Exportar a PNG</span>
+                    <span id="text-export-png">Exportar a PNG</span>
                 </button>
                 <button type="button" onclick="window.print()" class="inline-flex h-9 items-center gap-2 rounded-lg bg-[#c32720] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#d62d26]">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -92,21 +92,100 @@
     </div>
 
     <script>
-        function exportarAPNG() {
+        async function exportarAPNG() {
+            const btn = document.getElementById('btn-export-png');
+            const textSpan = document.getElementById('text-export-png');
             const container = document.getElementById('parrilla-container');
-            html2canvas(container, {
-                backgroundColor: '#101012',
-                scale: 2,
-                useCORS: true
-            }).then(canvas => {
+
+            if (!container) {
+                alert('No se encontró el contenedor de la parrilla.');
+                return;
+            }
+
+            if (btn && btn.disabled) {
+                return;
+            }
+
+            const originalText = textSpan ? textSpan.innerText : 'Exportar a PNG';
+
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                }
+                if (textSpan) {
+                    textSpan.innerText = 'Generando PNG…';
+                }
+
+                if (typeof html2canvas !== 'function') {
+                    throw new Error('La biblioteca de captura de pantalla (html2canvas) no está disponible o fue bloqueada.');
+                }
+
+                const fullWidth = Math.max(container.scrollWidth, container.offsetWidth, 1200);
+                const fullHeight = Math.max(container.scrollHeight, container.offsetHeight);
+
+                function toRgb(colorStr, ctx) {
+                    if (!colorStr || (!colorStr.includes('oklab') && !colorStr.includes('oklch'))) {
+                        return colorStr;
+                    }
+                    try {
+                        ctx.clearRect(0, 0, 1, 1);
+                        ctx.fillStyle = colorStr;
+                        ctx.fillRect(0, 0, 1, 1);
+                        const d = ctx.getImageData(0, 0, 1, 1).data;
+                        const a = d[3] / 255;
+                        return a === 1 ? 'rgb(' + d[0] + ',' + d[1] + ',' + d[2] + ')' : 'rgba(' + d[0] + ',' + d[1] + ',' + d[2] + ',' + a.toFixed(3) + ')';
+                    } catch (e) {
+                        return colorStr;
+                    }
+                }
+
+                const canvas = await html2canvas(container, {
+                    backgroundColor: '#101012',
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: false,
+                    width: fullWidth,
+                    height: fullHeight,
+                    windowWidth: fullWidth + 100,
+                    scrollX: 0,
+                    scrollY: 0,
+                    onclone: (clonedDoc) => {
+                        const testCv = document.createElement('canvas');
+                        testCv.width = 1;
+                        testCv.height = 1;
+                        const ctx = testCv.getContext('2d', { willReadFrequently: true });
+                        const all = clonedDoc.querySelectorAll('*');
+                        const props = ['color', 'backgroundColor', 'borderColor', 'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor', 'outlineColor'];
+                        for (let el of all) {
+                            const cs = window.getComputedStyle(el);
+                            for (let p of props) {
+                                const val = cs[p];
+                                if (val && (val.includes('oklab') || val.includes('oklch'))) {
+                                    el.style[p] = toRgb(val, ctx);
+                                }
+                            }
+                        }
+                    }
+                });
+
                 const link = document.createElement('a');
-                link.download = 'Parrilla_SevenRockRadio.png';
+                link.download = 'Parrilla_SevenRockRadio_' + new Date().toISOString().slice(0, 10) + '.png';
                 link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
                 link.click();
-            }).catch(err => {
+                document.body.removeChild(link);
+            } catch (err) {
                 console.error('Error al generar la imagen:', err);
-                alert('Hubo un error al generar la imagen.');
-            });
+                const msg = err && err.message ? err.message : 'Error desconocido';
+                alert('Hubo un error al generar la imagen PNG: ' + msg);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                }
+                if (textSpan) {
+                    textSpan.innerText = originalText;
+                }
+            }
         }
     </script>
 

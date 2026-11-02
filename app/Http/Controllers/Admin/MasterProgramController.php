@@ -352,12 +352,30 @@ final class MasterProgramController extends Controller
             return collect();
         }
 
-        return User::query()
-            ->where(function ($q): void {
+        $query = User::query();
+
+        $hasRoleColumn = Schema::hasColumn('users', 'role');
+        $hasIsAdminColumn = Schema::hasColumn('users', 'is_admin');
+
+        if ($hasRoleColumn && $hasIsAdminColumn) {
+            $query->where(function ($q): void {
+                $q->where(function ($inner): void {
+                    $inner->where('role', '!=', 'admin')->orWhereNull('role');
+                })->where(function ($inner): void {
+                    $inner->where('is_admin', false)->orWhereNull('is_admin');
+                });
+            });
+        } elseif ($hasRoleColumn) {
+            $query->where(function ($q): void {
+                $q->where('role', '!=', 'admin')->orWhereNull('role');
+            });
+        } elseif ($hasIsAdminColumn) {
+            $query->where(function ($q): void {
                 $q->where('is_admin', false)->orWhereNull('is_admin');
-            })
-            ->orderBy('name')
-            ->get();
+            });
+        }
+
+        return $query->orderBy('name')->get();
     }
 
     private function syncConductors(MasterProgram $masterProgram, Request $request): void
@@ -388,13 +406,19 @@ final class MasterProgramController extends Controller
         if ($newEmail !== '') {
             $conductorUser = User::query()->where('email', $newEmail)->first();
             if (! $conductorUser) {
-                $conductorUser = User::query()->create([
+                $userPayload = [
                     'name' => $newName !== '' ? $newName : $masterProgram->conductor,
                     'email' => $newEmail,
                     'password' => Hash::make($newPass !== '' ? $newPass : \Illuminate\Support\Str::random(16)),
-                    'is_admin' => false,
                     'is_conductor' => true,
-                ]);
+                ];
+                if (Schema::hasColumn('users', 'is_admin')) {
+                    $userPayload['is_admin'] = false;
+                }
+                if (Schema::hasColumn('users', 'role')) {
+                    $userPayload['role'] = 'conductor';
+                }
+                $conductorUser = User::query()->create($userPayload);
             } else {
                 $conductorUser->forceFill(['is_conductor' => true])->save();
             }
@@ -407,7 +431,7 @@ final class MasterProgramController extends Controller
             $syncPayload = [];
             foreach ($selectedIds as $userId) {
                 $user = User::query()->find($userId);
-                if (! $user || $user->is_admin) {
+                if (! $user || $user->hasAdminAccess()) {
                     continue;
                 }
                 if (! $user->is_conductor) {

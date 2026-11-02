@@ -68,7 +68,7 @@
 
         <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
             <strong class="font-semibold text-amber-300">Precaución técnica:</strong>
-            estás editando una vista Blade del sistema. Conserva intactas las directivas (<code class="text-[11px]">@if</code>, <code class="text-[11px]">@foreach</code>) y las variables PHP (<code class="text-[11px]">&#123;&#123; $variable &#125;&#125;</code>) que recibe el correo para evitar errores durante el despacho.
+            estás editando una vista Blade del sistema. Conserva intactas las directivas (<code class="text-[11px]">@@if</code>, <code class="text-[11px]">@@foreach</code>) y las variables PHP (<code class="text-[11px]">&#123;&#123; $variable &#125;&#125;</code>) que recibe el correo para evitar errores durante el despacho.
         </div>
 
         <form id="template-edit-form" action="{{ route('admin.email-templates.update', $encodedPath) }}" method="POST" class="rounded-xl border border-white/10 bg-[#101012] p-5 space-y-4">
