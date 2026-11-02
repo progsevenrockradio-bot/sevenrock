@@ -479,6 +479,12 @@ final class MasterProgramController extends Controller
             'emisiones.*.borrar_duracion_real' => ['nullable'],
             'emisiones.*.enlace'            => ['nullable', 'url', 'max:500'],
             'emisiones.*.url_podcast'       => ['nullable', 'url', 'max:500'],
+        ], [
+            'emisiones.*.hora_inicio.max' => 'La hora de inicio no debe superar los 8 caracteres.',
+            'emisiones.*.duracion_minutos.min' => 'La duración en minutos debe ser de al menos 1.',
+            'emisiones.*.duracion_minutos.max' => 'La duración en minutos no debe superar los 600.',
+            'emisiones.*.enlace.url' => 'El enlace en vivo de la emisión debe ser una URL válida (con http:// o https://).',
+            'emisiones.*.url_podcast.url' => 'La URL del podcast de la emisión debe ser una URL válida (con http:// o https://).',
         ]);
 
         $seenIds = [];

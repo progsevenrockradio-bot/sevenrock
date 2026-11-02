@@ -310,25 +310,69 @@
         {{-- 4. Emisiones semanales --}}
         <section class="rounded-xl border border-white/10 bg-[#101012] p-6 space-y-5"
             @php
-                $emisionesArray = $emisiones->map(function($e) {
-                    $seg = $e->duracion_segundos;
-                    return [
-                        'id' => $e->id,
-                        'tipo' => $e->tipo,
-                        'etiqueta' => (string) $e->etiqueta,
-                        'dia_semana' => $e->dia_semana,
-                        'hora_inicio' => substr((string) $e->hora_inicio, 0, 5),
-                        'duracion_minutos' => $e->duracion_minutos,
-                        'duracion_segundos' => $seg,
-                        'duracion_real_min' => $seg !== null ? intdiv($seg, 60) : '',
-                        'duracion_real_sec' => $seg !== null ? ($seg % 60) : '',
-                        'enlace' => (string) $e->enlace,
-                        'url_podcast' => (string) $e->url_podcast,
-                        'notas' => (string) $e->notas,
-                        'activo' => (bool) $e->activo,
-                    ];
-                })->values()->all();
-                $emisionesJson = json_encode($emisionesArray, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+                if (old('emisiones') !== null && is_array(old('emisiones'))) {
+                    $emisionesArray = collect(old('emisiones'))->values()->map(function($e) {
+                        $min = isset($e['duracion_real_min']) && $e['duracion_real_min'] !== '' ? (int) $e['duracion_real_min'] : null;
+                        $sec = isset($e['duracion_real_sec']) && $e['duracion_real_sec'] !== '' ? (int) $e['duracion_real_sec'] : null;
+                        $calcSeg = ($min !== null || $sec !== null) ? (($min ?? 0) * 60 + ($sec ?? 0)) : null;
+                        $durSeg = isset($e['duracion_segundos']) && $e['duracion_segundos'] !== '' ? (int) $e['duracion_segundos'] : $calcSeg;
+
+                        return [
+                            'id' => (int) ($e['id'] ?? 0),
+                            'tipo' => (string) ($e['tipo'] ?? 'normal'),
+                            'etiqueta' => (string) ($e['etiqueta'] ?? ''),
+                            'dia_semana' => strtoupper((string) ($e['dia_semana'] ?? 'LUNES')),
+                            'hora_inicio' => substr((string) ($e['hora_inicio'] ?? ''), 0, 5),
+                            'duracion_minutos' => isset($e['duracion_minutos']) ? (int) $e['duracion_minutos'] : 120,
+                            'duracion_segundos' => $durSeg,
+                            'duracion_real_min' => $min ?? ($durSeg !== null ? intdiv($durSeg, 60) : ''),
+                            'duracion_real_sec' => $sec ?? ($durSeg !== null ? ($durSeg % 60) : ''),
+                            'enlace' => (string) ($e['enlace'] ?? ''),
+                            'url_podcast' => (string) ($e['url_podcast'] ?? ''),
+                            'notas' => (string) ($e['notas'] ?? ''),
+                            'activo' => !empty($e['activo']),
+                        ];
+                    })->all();
+                } else {
+                    $emisionesArray = $emisiones->map(function($e) {
+                        $seg = $e->duracion_segundos;
+                        return [
+                            'id' => $e->id,
+                            'tipo' => $e->tipo,
+                            'etiqueta' => (string) $e->etiqueta,
+                            'dia_semana' => $e->dia_semana,
+                            'hora_inicio' => substr((string) $e->hora_inicio, 0, 5),
+                            'duracion_minutos' => $e->duracion_minutos,
+                            'duracion_segundos' => $seg,
+                            'duracion_real_min' => $seg !== null ? intdiv($seg, 60) : '',
+                            'duracion_real_sec' => $seg !== null ? ($seg % 60) : '',
+                            'enlace' => (string) $e->enlace,
+                            'url_podcast' => (string) $e->url_podcast,
+                            'notas' => (string) $e->notas,
+                            'activo' => (bool) $e->activo,
+                        ];
+                    })->values()->all();
+
+                    // Pre-poblar el pase base si no hay emisiones en BD pero el programa tiene día y hora base
+                    if (empty($emisionesArray) && filled($masterProgram->dia_transmision) && filled($masterProgram->hora_transmision)) {
+                        $emisionesArray[] = [
+                            'id' => 0,
+                            'tipo' => 'normal',
+                            'etiqueta' => '',
+                            'dia_semana' => strtoupper((string) $masterProgram->dia_transmision),
+                            'hora_inicio' => substr((string) $masterProgram->hora_transmision, 0, 5),
+                            'duracion_minutos' => $masterProgram->duracion_minutos ?? 120,
+                            'duracion_segundos' => null,
+                            'duracion_real_min' => '',
+                            'duracion_real_sec' => '',
+                            'enlace' => '',
+                            'url_podcast' => '',
+                            'notas' => '',
+                            'activo' => true,
+                        ];
+                    }
+                }
+                $emisionesJson = json_encode($emisionesArray, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
             @endphp
             x-data="{
                 emisiones: {{ $emisionesJson }},
@@ -354,6 +398,22 @@
                     <span>+ Añadir emisión</span>
                 </button>
             </div>
+
+            @php
+                $emissionErrors = collect($errors->getMessages())
+                    ->filter(fn ($messages, $key) => str_starts_with($key, 'emisiones'))
+                    ->flatten();
+            @endphp
+            @if ($emissionErrors->isNotEmpty())
+                <div class="rounded-lg border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-300">
+                    <p class="font-semibold text-red-200">Por favor corrige los siguientes errores en las emisiones semanales:</p>
+                    <ul class="mt-1.5 list-disc list-inside space-y-1">
+                        @foreach ($emissionErrors as $errorMsg)
+                            <li>{{ $errorMsg }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             <template x-if="emisiones.length === 0">
                 <p class="py-4 text-center text-xs text-zinc-500">Sin emisiones configuradas. Pulsa «+ Añadir emisión» para registrar el primer pase.</p>

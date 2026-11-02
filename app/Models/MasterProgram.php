@@ -186,15 +186,24 @@ class MasterProgram extends Model
             return;
         }
 
-        $this->emisiones()->updateOrCreate(
-            ['tipo' => 'normal'],
-            [
+        $existing = $this->emisiones()->where('tipo', 'normal')->first();
+
+        if ($existing) {
+            // Si ya existe una emisión normal, solo actualizamos los datos de horario base si están desfasados
+            $existing->update([
+                'dia_semana'       => $dia,
+                'hora_inicio'      => $hora,
+                'duracion_minutos' => $this->duracion_minutos ?? 120,
+            ]);
+        } else {
+            $this->emisiones()->create([
+                'tipo'             => 'normal',
                 'dia_semana'       => $dia,
                 'hora_inicio'      => $hora,
                 'duracion_minutos' => $this->duracion_minutos ?? 120,
                 'activo'           => true,
-            ]
-        );
+            ]);
+        }
     }
 
     public function invitations(): HasMany
