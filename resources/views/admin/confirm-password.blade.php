@@ -1,24 +1,41 @@
-<x-layouts.admin :title="'Confirmar Contraseña - '.$themeSettings->site_name">
-    <div class="mx-auto mt-10 max-w-xl">
-        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8 md:p-10 rounded">
-            <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Confirmar Contraseña</h1>
-            <p class="mt-3 text-sm text-[#9a9a9a]">Por seguridad, confirma tu contraseña de administrador antes de continuar a esta sección.</p>
+<x-layouts.admin title="Confirmar contraseña - {{ $themeSettings->site_name ?? 'Seven Rock Radio' }}">
+    <div class="mx-auto mt-8 max-w-md font-sans">
+        <div class="rounded-xl border border-white/10 bg-[#101012] p-6 space-y-5">
+            <header class="border-b border-white/10 pb-4">
+                <div class="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-[#c32720]">
+                    <span>Verificación de seguridad</span>
+                </div>
+                <h1 class="mt-1 font-display text-xl font-bold uppercase tracking-wide text-[#dcdcdc]">Confirmar contraseña de administrador</h1>
+                <p class="mt-1 text-xs text-gray-400 leading-relaxed">
+                    Esta sección modifica ajustes sensibles del sistema. Introduce tu contraseña actual para continuar.
+                </p>
+            </header>
 
             @if ($errors->any())
-                <div class="mt-6 border border-[#5a1d1a] bg-[rgba(195,39,32,.08)] px-4 py-3 text-sm text-[#f3b6b1] rounded">
+                <div class="rounded-lg border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-xs text-red-200" role="alert">
                     {{ $errors->first() }}
                 </div>
             @endif
 
-            <form action="{{ route('password.confirm') }}" method="POST" class="mt-8 space-y-6">
+            <form action="{{ route('password.confirm') }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
-                    <label class="mb-2 block font-display text-xs uppercase tracking-[.18em] text-[#dcdcdc]">Contraseña del Administrador</label>
-                    <input type="password" name="password" class="lucille-product-field w-full" required autofocus>
+                    <label for="confirm-admin-password" class="mb-1.5 block text-xs font-medium text-[#dcdcdc]">
+                        Contraseña actual
+                    </label>
+                    <input type="password" id="confirm-admin-password" name="password" required autofocus
+                           class="h-9 w-full rounded-lg border border-white/10 bg-[#151518] px-3 font-mono text-xs text-white focus:border-[#c32720] focus:outline-none focus:ring-1 focus:ring-[#c32720]">
                 </div>
-                <div class="flex items-center gap-3">
-                    <button type="submit" class="lucille-button-solid py-2 px-6">Confirmar</button>
-                    <a href="{{ route('admin.dashboard') }}" class="lucille-button py-2 px-6 text-xs uppercase tracking-wider text-gray-400 hover:text-white transition-colors">Cancelar</a>
+
+                <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-white/10">
+                    <a href="{{ route('admin.dashboard') }}"
+                       class="inline-flex h-9 items-center rounded-lg border border-white/10 bg-white/5 px-4 text-xs font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white">
+                        Cancelar
+                    </a>
+                    <button type="submit"
+                            class="inline-flex h-9 items-center rounded-lg bg-[#c32720] px-5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#a61f19] focus:outline-none focus:ring-2 focus:ring-[#c32720]">
+                        Confirmar acceso
+                    </button>
                 </div>
             </form>
         </div>

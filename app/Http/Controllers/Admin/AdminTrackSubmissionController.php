@@ -15,21 +15,44 @@ class AdminTrackSubmissionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): View
+    public function index(?Request $request = null): View
     {
-        // Get all submissions ordered by latest first
-        $submissions = TrackSubmission::query()
-            ->orderByDesc('created_at')
-            ->paginate(20, ['*'], 'maquetas_page');
+        $request ??= request();
+
+        $query = TrackSubmission::query()->orderByDesc('created_at');
+
+        if ($search = trim((string) $request->input('search', ''))) {
+            $query->where(function ($inner) use ($search): void {
+                $inner->where('band_name', 'like', '%' . $search . '%')
+                    ->orWhere('song_title', 'like', '%' . $search . '%')
+                    ->orWhere('contact_email', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($status = trim((string) $request->input('status', ''))) {
+            if (in_array($status, ['pending', 'approved', 'rejected'], true)) {
+                $query->where('status', $status);
+            }
+        }
+
+        $submissions = $query->paginate(20, ['*'], 'maquetas_page')->withQueryString();
 
         // Get all email logs associated with track submissions
         $emailLogs = \App\Models\EmailLog::query()
             ->whereNotNull('track_submission_id')
             ->with('trackSubmission')
             ->orderByDesc('created_at')
-            ->paginate(20, ['*'], 'logs_page');
+            ->paginate(20, ['*'], 'logs_page')
+            ->withQueryString();
 
-        return view('admin.submissions.index', compact('submissions', 'emailLogs'));
+        return view('admin.submissions.index', [
+            'submissions' => $submissions,
+            'emailLogs' => $emailLogs,
+            'filters' => [
+                'search' => (string) $request->input('search', ''),
+                'status' => (string) $request->input('status', ''),
+            ],
+        ]);
     }
 
     /**

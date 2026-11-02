@@ -211,6 +211,12 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
 
+    @php
+        $rawBgUrl = (string) ($theme['media']['background_url'] ?? asset('assets/lucille/dark-background.jpg'));
+        $isDefaultLucilleBg = str_ends_with(strtolower(parse_url($rawBgUrl, PHP_URL_PATH) ?: ''), '/assets/lucille/dark-background.jpg');
+        $webpBgUrl = asset('assets/lucille/dark-background.webp');
+        $isLucilleFlatScope = request()->routeIs('home', 'multimedia') || request()->is('/', 'multimedia');
+    @endphp
     <style>
         :root {
             --lucille-accent: {{ $theme['visual']['accent_color'] }};
@@ -223,12 +229,17 @@
             --lucille-body-font: '{{ $theme['brand_font'] }}';
             --lucille-heading-font: '{{ $theme['heading_font'] }}';
             --lucille-brand-font: '{{ $theme['brand_mark_font'] }}';
-            --lucille-bg-image: url('{{ $theme['media']['background_url'] }}');
+            --lucille-bg-image-fallback: url('{{ $rawBgUrl }}');
+            @if ($isDefaultLucilleBg)
+            --lucille-bg-image: image-set(url('{{ $webpBgUrl }}') type('image/webp'), url('{{ $rawBgUrl }}') type('image/jpeg'));
+            @else
+            --lucille-bg-image: url('{{ $rawBgUrl }}');
+            @endif
         }
     </style>
     @stack('styles')
 </head>
-<body class="antialiased">
+<body class="antialiased{{ $isLucilleFlatScope ? ' lucille-theme-v2' : '' }}">
     {{-- Enlace accesible para saltar al contenido principal --}}
     <a href="#site-main" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-5 focus:py-2.5 focus:bg-[#c32720] focus:text-white focus:font-display focus:text-xs focus:uppercase focus:tracking-[0.15em] focus:rounded-sm focus:shadow-[0_4px_25px_rgba(0,0,0,0.9)] focus:outline-none focus:ring-2 focus:ring-white">
         Saltar al contenido

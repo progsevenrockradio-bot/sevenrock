@@ -417,9 +417,9 @@
                             </div>
 
                             <div class="radio-player-popup-meta">
-                                <span class="radio-player-live-pill" :class="{ 'is-live': track.is_live }" x-text="track.is_live ? 'EN VIVO' : 'PLAYBACK'"></span>
+                                <span x-show="track.is_live" class="radio-player-live-pill is-live">EN VIVO</span>
                                 <h1 class="radio-player-popup-title" x-text="tituloVisible"></h1>
-                                <p class="band-name-animated radio-player-popup-artist" x-text="subtituloVisible"></p>
+                                <p class="radio-player-popup-artist" x-text="subtituloVisible"></p>
                                 <p class="radio-player-popup-state" x-text="track.is_live ? 'Transmitiendo ahora' : (track.program_name || '')"></p>
                                 <p class="radio-player-popup-listeners" x-text="listeners > 0 ? `${listeners} oyentes` : ''"></p>
                             </div>
@@ -429,10 +429,10 @@
                     <div class="radio-player-popup-controls">
                         <div class="radio-player-popup-time-row">
                             <div class="radio-player-popup-tracktimer-wrap">
-                                <div class="rbcloud_tracktimer radio-player-popup-tracktimer">
-                                    <span id="rbcloud_tracktimer_e11096"></span>
-                                    <span id="rbcloud_tracktimer_sep11096" hidden> &frasl; </span>
-                                    <span id="rbcloud_tracktimer_r11096"></span>
+                                <div class="radio-player-popup-tracktimer">
+                                    <span x-text="formatTime(progress.elapsed)"></span>
+                                    <span class="opacity-40">/</span>
+                                    <span x-text="formatTime(progress.duration)"></span>
                                 </div>
                             </div>
                             <button type="button" class="radio-player-popup-control radio-player-popup-play-button" @click="togglePlay()" :aria-label="playing ? 'Pausar' : 'Reproducir'">
@@ -447,7 +447,9 @@
                         </div>
 
                         <div class="radio-player-popup-progress">
-                            <progress class="radio-player-popup-progress-meter" :value="progress.ratio" max="100" @click="seek($event)" aria-label="Progreso"></progress>
+                            <div class="w-full h-1.5 bg-white/10 rounded-sm relative overflow-hidden" :class="track.is_live ? 'cursor-default pointer-events-none' : 'cursor-pointer'" @click="!track.is_live && seek($event)" :title="track.is_live ? 'Emisión en directo' : 'Adelantar / Atrasar'">
+                                <div class="h-full bg-[var(--lucille-accent)] transition-all duration-100" :style="'width: ' + progress.ratio + '%'"></div>
+                            </div>
                         </div>
 
                         <div x-cloak x-show="showNextTrackWidget">
@@ -457,14 +459,12 @@
                 </main>
 
                 <div class="radio-player-popup-volume">
-                    <button type="button" class="radio-player-popup-control radio-player-popup-mute" @click="toggleMute()" aria-label="Mute">
+                    <button type="button" class="radio-player-popup-control radio-player-popup-mute" @click="toggleMute()" aria-label="Silenciar / Activar sonido">
                         <span x-text="muted ? '🔇' : '🔊'"></span>
                     </button>
-                    <input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" class="radio-player-popup-volume-range">
-                    <span class="radio-player-popup-volume-value" x-text="Math.round(volume * 100) + '%'">80%</span>
+                    <input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" class="lucille-range-slider flex-1">
+                    <span class="radio-player-popup-volume-value font-mono text-xs text-[#dcdcdc]" x-text="Math.round(volume * 100) + '%'">80%</span>
                 </div>
-
-                <script src="https://c30.radioboss.fm/w/tracktimer.js?u=569&amp;t=0&amp;wid=11096"></script>
 
                 <section class="radio-player-popup-drawer overflow-hidden rounded-[22px] border border-white/10" x-show="panelOpen" x-transition.opacity>
                     <div class="radio-player-popup-drawer-grid">
@@ -543,14 +543,14 @@
             x-transition:leave="transition-all duration-300 ease-in"  x-transition:leave-start="translate-y-0 opacity-100"  x-transition:leave-end="translate-y-20 opacity-0"
             class="fixed bottom-0 left-0 right-0 z-[100] flex justify-center p-3 sm:p-4 pointer-events-none"
         >
-            <div class="w-full max-w-6xl pointer-events-auto relative bg-[#0b0b0c]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] overflow-hidden p-3 sm:p-4">
+            <div class="w-full max-w-6xl pointer-events-auto relative bg-[#141417]/98 backdrop-blur-md border border-white/12 rounded-sm shadow-[0_16px_40px_rgba(0,0,0,0.55)] overflow-hidden p-3 sm:p-4 transition-colors duration-200" :class="{ 'border-white/15 ring-1 ring-lucille-accent/25': playing }">
 
 
                 {{-- Layout de Escritorio (Desktop) --}}
                 <div class="hidden md:flex md:flex-row items-center justify-between gap-3">
                     {{-- Cover + info --}}
                     <div class="flex items-center gap-3 min-w-0 flex-[2] sm:flex-[1.5] lg:flex-[1.2] w-full sm:w-auto">
-                        <div class="group h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#2b2b2b] bg-[#111] shadow-md relative cursor-pointer" @click="toggleInfoWindow($event)" title="Ver Info">
+                        <div class="group h-11 w-11 shrink-0 overflow-hidden rounded-sm border border-white/10 bg-[#101012] shadow-md relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" tabindex="0" @keydown.enter="toggleInfoWindow($event)" @click="toggleInfoWindow($event)" title="Ver Info">
                             <img :src="coverVisible + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="tituloVisible" width="256" height="256" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" x-on:error="if (!$el.dataset.retried) { $el.dataset.retried = '1'; $el.src = $el.src.split('?')[0] + '?r=' + Date.now(); } else if (!$el.dataset.programa) { $el.src = '{{ $fallbackCover }}'; }" x-bind:data-programa="(track.es_bloque_programa || track.program_name) ? '1' : ''">
                             <div x-show="track.is_live" class="absolute inset-0 flex items-center justify-center bg-black/60">
                                 <span class="text-[8px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
@@ -565,10 +565,10 @@
                             </div>
                         </div>
                         <div class="min-w-0">
-                            <div class="truncate font-display text-[12px] uppercase tracking-[.08em] text-[#dcdcdc] leading-tight" x-text="tituloVisible"></div>
-                            <div class="truncate text-[10px] text-[#888] mt-0.5" x-text="subtituloVisible"></div>
-                            <small x-show="track.es_bloque_programa && track.program_name && track.title && track.title !== track.program_name" class="block truncate text-[9px] text-[#555] font-display tracking-wider mt-0.5" x-text="track.program_name"></small>
-                            <div x-show="track.es_programa_anticipo" x-cloak class="mt-1 flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 text-[9px] font-semibold tracking-wide cursor-pointer hover:bg-amber-500/25 transition" @click="toggleProgramWindow()" title="Ver detalles del programa próximo">
+                            <div class="truncate font-display text-[12px] uppercase tracking-[.08em] text-[#f0f0f0] leading-tight" x-text="tituloVisible"></div>
+                            <div class="truncate text-[10.5px] text-[#b5b5b5] mt-0.5" x-text="subtituloVisible"></div>
+                            <small x-show="track.es_bloque_programa && track.program_name && track.title && track.title !== track.program_name" class="block truncate text-[9.5px] text-[#8a8a8a] font-display tracking-wider mt-0.5" x-text="track.program_name"></small>
+                            <div x-show="track.es_programa_anticipo" x-cloak class="mt-1 flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[9px] font-semibold tracking-wide cursor-pointer hover:bg-amber-500/25 transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-400" tabindex="0" @click="toggleProgramWindow()" @keydown.enter="toggleProgramWindow()" title="Ver detalles del programa próximo">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
                                 <span class="truncate">Próximo en 5m: <strong x-text="track.program_name || nextProgram?.name || 'Programa'"></strong></span>
                             </div>
@@ -578,7 +578,7 @@
                     {{-- Controls + seek --}}
                     <div class="flex items-center gap-4 w-full sm:w-auto flex-[2] max-w-sm mx-auto">
                         <button type="button"
-                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_15px_rgba(195,39,32,0.4)] hover:bg-lucille-accent/90 hover:scale-105 active:scale-95 transition-all duration-200"
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-lucille-accent text-white shadow-[0_0_15px_rgba(195,39,32,0.4)] hover:brightness-110 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[#141417]"
                             @click="togglePlay()" aria-label="Reproducir o pausar">
                             <span x-show="!playing" class="flex items-center justify-center">
                                 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" class="ml-0.5"><path d="M8 5v14l11-7z"/></svg>
@@ -590,18 +590,18 @@
                         <div class="hidden sm:flex items-center gap-2.5 w-full">
                             {{-- Controles de tiempo cuando hay datos fiables o es podcast bajo demanda --}}
                             <div x-show="hasReliableTime()" class="flex items-center gap-2.5 w-full">
-                                <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-right select-none" x-text="formatTime(progress.elapsed)"></span>
-                                <div class="flex-1 py-2 flex items-center relative"
+                                <span class="text-[10px] font-mono tracking-wider text-[#d0d0d0] min-w-[36px] text-right select-none" x-text="formatTime(progress.elapsed)"></span>
+                                <div class="flex-1 py-2 flex items-center relative focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-lucille-accent rounded-sm"
                                     :class="track.is_live ? 'cursor-default pointer-events-none' : 'cursor-pointer group'"
                                     @click="!track.is_live && seek($event)"
                                     :title="track.is_live ? '' : 'Adelantar/Atrasar'">
-                                    <div class="w-full h-1 bg-white/10 rounded-full relative" :class="track.is_live ? 'overflow-hidden' : ''">
+                                    <div class="w-full h-1 bg-white/15 rounded-full relative" :class="track.is_live ? 'overflow-hidden' : ''">
                                         <div class="absolute left-0 top-0 bottom-0 bg-lucille-accent rounded-full transition-all duration-100" :style="'width: ' + progress.ratio + '%'">
-                                            <div x-show="!track.is_live" class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-lucille-accent rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md pointer-events-none"></div>
+                                            <div x-show="!track.is_live" class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md pointer-events-none"></div>
                                         </div>
                                     </div>
                                 </div>
-                                <span class="text-[9px] font-mono tracking-wider text-[#666] min-w-[36px] text-left select-none" x-text="formatTime(progress.duration)"></span>
+                                <span class="text-[10px] font-mono tracking-wider text-[#d0d0d0] min-w-[36px] text-left select-none" x-text="formatTime(progress.duration)"></span>
                             </div>
 
                             {{-- Indicador EN DIRECTO cuando la emisión en vivo no dispone de tiempos fiables --}}
@@ -610,7 +610,7 @@
                                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lucille-accent opacity-75"></span>
                                     <span class="relative inline-flex rounded-full h-2 w-2 bg-lucille-accent"></span>
                                 </span>
-                                <span class="text-[10px] font-mono font-bold tracking-widest text-lucille-accent uppercase select-none">EN DIRECTO</span>
+                                <span class="text-[11px] font-display font-medium tracking-[.18em] text-[var(--lucille-accent-readable,#ff5b52)] uppercase select-none">EN DIRECTO</span>
                             </div>
                         </div>
                         
@@ -627,7 +627,8 @@
                     <div class="flex items-center justify-end gap-2 w-full sm:w-auto flex-1 shrink-0">
                         {{-- Info Panel Trigger --}}
                         <button type="button"
-                            class="flex h-8 px-3 items-center gap-1.5 rounded border border-[#242424] bg-transparent text-[#777] hover:text-white hover:border-[#444] transition-colors text-[10px] uppercase tracking-[.06em] font-display"
+                            class="flex h-8 px-3 items-center gap-1.5 rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] hover:border-lucille-accent/50 hover:bg-white/[0.06] hover:text-white transition-colors text-[10px] uppercase tracking-[.06em] font-display focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                            :class="{ 'border-lucille-accent bg-lucille-accent/15 text-white': bandWindowOpen }"
                             @click="toggleInfoWindow($event)" aria-label="Letras e info de banda">
                             <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg></span><span class="hidden sm:inline">Info</span>
                         </button>
@@ -635,8 +636,8 @@
                         {{-- Program Button Trigger --}}
                         <template x-if="hasProgramAvailable()">
                             <button type="button"
-                                class="flex h-8 px-2.5 items-center gap-1.5 rounded border border-[#242424] bg-transparent text-[#aaa] hover:text-white hover:border-[#444] transition-colors text-[10px] uppercase tracking-[.06em] font-display"
-                                :class="{ 'border-[#c32720] text-white bg-[#c32720]/10': programWindowOpen }"
+                                class="flex h-8 px-2.5 items-center gap-1.5 rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] hover:border-lucille-accent/50 hover:bg-white/[0.06] hover:text-white transition-colors text-[10px] uppercase tracking-[.06em] font-display focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                :class="{ 'border-lucille-accent text-white bg-lucille-accent/15': programWindowOpen }"
                                 @click="toggleProgramWindow()" aria-label="Información del programa" title="Ver programa">
                                 <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg></span>
                                 <span class="hidden sm:inline">Programa</span>
@@ -645,14 +646,27 @@
 
                         {{-- Favorite --}}
                         <button type="button"
-                            class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#aaa] transition-colors hover:text-white hover:border-[#444]"
+                            class="flex h-8 w-8 items-center justify-center rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] transition-colors hover:border-lucille-accent/50 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                            :class="{ 'border-lucille-accent text-lucille-accent': isFavoriteCurrent() }"
                             @click="toggleFavorite()" :aria-pressed="isFavoriteCurrent()" aria-label="Favorito">
                             <span x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
                         </button>
 
+                        {{-- Pop-up Window Trigger --}}
+                        <button type="button"
+                            class="flex h-8 w-8 items-center justify-center rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] transition-colors hover:border-lucille-accent/50 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                            @click="openPopout()" aria-label="Abrir reproductor emergente" title="Reproductor Pop-up">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                        </button>
+
                         {{-- Share --}}
                         <button type="button"
-                            class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#aaa] transition-colors hover:text-white hover:border-[#444]"
+                            class="flex h-8 w-8 items-center justify-center rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] transition-colors hover:border-lucille-accent/50 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                            :class="{ 'border-lucille-accent bg-lucille-accent/15 text-white': sharePanelOpen }"
                             @click="toggleSharePanel()" :aria-expanded="sharePanelOpen" aria-label="Compartir">
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="18" cy="5" r="3"></circle>
@@ -665,7 +679,8 @@
 
                         {{-- Mute --}}
                         <button type="button"
-                            class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#aaa] transition-colors hover:text-white hover:border-[#444]"
+                            class="flex h-8 w-8 items-center justify-center rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] transition-colors hover:border-lucille-accent/50 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                            :class="{ 'text-lucille-accent': muted }"
                             @click="toggleMute()" aria-label="Silenciar">
                             <span x-show="!muted">
                                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
@@ -677,13 +692,13 @@
 
                         {{-- Volume Slider --}}
                         <div class="w-16 sm:w-20 hidden sm:flex items-center gap-1.5">
-                            <input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" class="lucille-range-slider" aria-label="Volumen">
-                            <span class="text-[9px] font-mono text-[#666] min-w-[24px]" x-text="Math.round(volume * 100) + '%'">80%</span>
+                            <input type="range" min="0" max="1" step="0.01" x-model.number="volume" @input="updateVolume()" class="lucille-range-slider focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" aria-label="Volumen">
+                            <span class="text-[10px] font-mono text-[#b5b5b5] min-w-[24px]" x-text="Math.round(volume * 100) + '%'">80%</span>
                         </div>
 
                         {{-- Close --}}
                         <button type="button"
-                            class="flex h-8 w-8 items-center justify-center rounded border border-[#242424] bg-transparent text-[#666] transition-colors hover:text-white hover:border-[#444]"
+                            class="flex h-8 w-8 items-center justify-center rounded-sm border border-white/10 bg-[#1b1b20] text-[#8e8e8e] transition-colors hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
                             @click="hideDock()" aria-label="Cerrar">
                             <span class="text-sm leading-none">✕</span>
                         </button>
@@ -694,7 +709,7 @@
                 <div class="flex md:hidden flex-col gap-2 w-full">
                     {{-- Fila 1: Cover + info --}}
                     <div class="flex items-center gap-2.5 min-w-0 w-full cursor-pointer" @click="toggleInfoWindow($event)" title="Ver Info">
-                        <div class="group h-10 w-10 shrink-0 overflow-hidden rounded border border-white/10 bg-[#111] shadow relative">
+                        <div class="group h-10 w-10 shrink-0 overflow-hidden rounded-sm border border-white/10 bg-[#101012] shadow relative">
                             <img :src="coverVisible + ((track.signature || '') ? ('?v=' + encodeURIComponent(track.signature)) : '')" :alt="tituloVisible" width="128" height="128" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" x-on:error="if (!$el.dataset.retried) { $el.dataset.retried = '1'; $el.src = $el.src.split('?')[0] + '?r=' + Date.now(); } else if (!$el.dataset.programa) { $el.src = '{{ $fallbackCover }}'; }" x-bind:data-programa="(track.es_bloque_programa || track.program_name) ? '1' : ''">
                             <div x-show="track.is_live" class="absolute inset-0 flex items-center justify-center bg-black/60">
                                 <span class="text-[7px] text-lucille-accent font-display uppercase tracking-widest">LIVE</span>
@@ -702,12 +717,12 @@
                         </div>
                         <div class="min-w-0 flex-1 overflow-hidden relative">
                             <div class="w-full overflow-hidden whitespace-nowrap">
-                                <div class="font-display text-[12px] uppercase tracking-wider text-[#dcdcdc] leading-tight animate-marquee-text" x-text="tituloVisible"></div>
+                                <div class="font-display text-[12px] uppercase tracking-wider text-[#f0f0f0] leading-tight animate-marquee-text" x-text="tituloVisible"></div>
                             </div>
                             <div class="w-full overflow-hidden whitespace-nowrap mt-0.5">
-                                <div class="text-[9.5px] text-[#777] animate-marquee-text" x-text="subtituloVisible"></div>
+                                <div class="text-[10px] text-[#b5b5b5] animate-marquee-text" x-text="subtituloVisible"></div>
                             </div>
-                            <div x-show="track.es_programa_anticipo" x-cloak class="mt-1 flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 text-[8.5px] font-semibold tracking-wide cursor-pointer" @click.stop="toggleProgramWindow()">
+                            <div x-show="track.es_programa_anticipo" x-cloak class="mt-1 flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[8.5px] font-semibold tracking-wide cursor-pointer" @click.stop="toggleProgramWindow()">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
                                 <span class="truncate">Próximo en 5m: <strong x-text="track.program_name || nextProgram?.name || 'Programa'"></strong></span>
                             </div>
@@ -717,10 +732,11 @@
                     {{-- Fila 2: Controles compactos --}}
                     <div class="flex items-center justify-between border-t border-white/5 pt-2 w-full">
                         {{-- Botones de acción izquierdos --}}
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1.5">
                             {{-- Info --}}
                             <button type="button"
-                                class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                                class="flex h-8 w-8 items-center justify-center rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                :class="{ 'border-lucille-accent bg-lucille-accent/15 text-white': bandWindowOpen }"
                                 @click="toggleInfoWindow($event)" aria-label="Letras e info de banda">
                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                             </button>
@@ -728,8 +744,8 @@
                             {{-- Program --}}
                             <template x-if="hasProgramAvailable()">
                                 <button type="button"
-                                    class="flex h-8 px-2 items-center gap-1 rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white text-[10px] uppercase tracking-[.06em] font-display"
-                                    :class="{ 'border-[#c32720] text-white bg-[#c32720]/10': programWindowOpen }"
+                                    class="flex h-8 px-2 items-center gap-1 rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] transition-colors hover:text-white text-[10px] uppercase tracking-[.06em] font-display focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                    :class="{ 'border-lucille-accent text-white bg-lucille-accent/15': programWindowOpen }"
                                     @click="toggleProgramWindow()" aria-label="Programa" title="Ver programa">
                                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
                                     <span>Prog</span>
@@ -738,14 +754,27 @@
 
                             {{-- Favorite --}}
                             <button type="button"
-                                class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                                class="flex h-8 w-8 items-center justify-center rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                :class="{ 'border-lucille-accent text-lucille-accent': isFavoriteCurrent() }"
                                 @click="toggleFavorite()" :aria-pressed="isFavoriteCurrent()" aria-label="Favorito">
                                 <span class="text-sm" x-text="isFavoriteCurrent() ? '♥' : '♡'">♡</span>
                             </button>
 
+                            {{-- Pop-up Window Trigger (Mobile) --}}
+                            <button type="button"
+                                class="flex h-8 w-8 items-center justify-center rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                @click="openPopout()" aria-label="Reproductor emergente" title="Pop-up">
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                    <polyline points="15 3 21 3 21 9"></polyline>
+                                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                                </svg>
+                            </button>
+
                             {{-- Share --}}
                             <button type="button"
-                                class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                                class="flex h-8 w-8 items-center justify-center rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                :class="{ 'border-lucille-accent bg-lucille-accent/15 text-white': sharePanelOpen }"
                                 @click="toggleSharePanel()" :aria-expanded="sharePanelOpen" aria-label="Compartir">
                                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="18" cy="5" r="3"></circle>
@@ -758,7 +787,8 @@
 
                             {{-- Mute --}}
                             <button type="button"
-                                class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#aaa] transition-colors hover:text-white"
+                                class="flex h-8 w-8 items-center justify-center rounded-sm border border-white/10 bg-[#1b1b20] text-[#c5c5c5] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                :class="{ 'text-lucille-accent': muted }"
                                 @click="toggleMute()" aria-label="Silenciar">
                                 <span x-show="!muted" class="text-xs">🔊</span>
                                 <span x-show="muted" class="text-xs">🔇</span>
@@ -766,10 +796,10 @@
                         </div>
 
                         {{-- Botones de reproducción derechos --}}
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1.5">
                             {{-- Play/Pause --}}
                             <button type="button"
-                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lucille-accent text-white shadow-[0_0_12px_rgba(195,39,32,0.4)] hover:bg-lucille-accent/90 hover:scale-105 active:scale-95 transition-all duration-200"
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-lucille-accent text-white shadow-[0_0_12px_rgba(195,39,32,0.4)] hover:brightness-110 active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
                                 @click="togglePlay()" aria-label="Reproducir o pausar">
                                 <span x-show="!playing" class="flex items-center justify-center">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" class="ml-0.5"><path d="M8 5v14l11-7z"/></svg>
@@ -781,7 +811,7 @@
 
                             {{-- Close --}}
                             <button type="button"
-                                class="flex h-8 w-8 items-center justify-center rounded border border-white/5 bg-transparent text-[#555] transition-colors hover:text-white"
+                                class="flex h-8 w-8 items-center justify-center rounded-sm border border-white/10 bg-[#1b1b20] text-[#8e8e8e] transition-colors hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
                                 @click="hideDock()" aria-label="Cerrar">
                                 <span class="text-xs leading-none">✕</span>
                             </button>
@@ -795,8 +825,8 @@
                 </div>
 
                 {{-- Share Panel Overlay inside Dock --}}
-                <div x-show="sharePanelOpen" x-cloak class="radio-player-share-panel radio-player-share-panel--dock border-t border-white/5 mt-2.5 pt-2.5">
-                    <span class="radio-player-share-panel-label text-[9px] text-[#555] uppercase tracking-wider block mb-1.5 md:mb-2">Compartir emisión</span>
+                <div x-show="sharePanelOpen" x-cloak class="radio-player-share-panel radio-player-share-panel--dock border-t border-white/10 mt-2.5 pt-2.5">
+                    <span class="radio-player-share-panel-label text-[10px] text-[#b0b0b0] uppercase tracking-wider block mb-1.5 md:mb-2 font-display">Compartir emisión</span>
                     <div class="flex gap-1.5 md:gap-2">
                         <a :href="shareTargets().facebook" target="_blank" rel="noopener noreferrer" class="radio-player-share-link" aria-label="Compartir en Facebook">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -842,14 +872,14 @@
             x-transition:enter="transition-all duration-300 ease-out" x-transition:enter-start="translate-y-10 opacity-0 scale-90" x-transition:enter-end="translate-y-0 opacity-100 scale-100"
             x-transition:leave="transition-all duration-200 ease-in"  x-transition:leave-start="translate-y-0 opacity-100 scale-100"  x-transition:leave-end="translate-y-10 opacity-0 scale-90"
             @click="startLiveFromFAB()"
-            class="fixed bottom-6 right-6 z-[95] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-lucille-accent text-white shadow-[0_2px_12px_rgba(195,39,32,0.45)] hover:bg-lucille-accent/90 hover:scale-105 active:scale-95 transition-all duration-200 pointer-events-auto"
+            class="fixed bottom-6 right-6 z-[95] flex items-center gap-2 px-3.5 py-2 rounded-sm border border-lucille-accent/80 bg-[#141417]/95 text-white shadow-[0_8px_24px_rgba(0,0,0,0.5)] hover:bg-lucille-accent transition-all duration-200 pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
             aria-label="Escuchar en vivo"
         >
-            <span class="relative flex h-1.5 w-1.5">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lucille-accent opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-lucille-accent"></span>
             </span>
-            <span class="font-display text-[8px] uppercase tracking-[.15em] font-semibold">Escuchar en Vivo</span>
+            <span class="font-display text-[10px] uppercase tracking-[.14em] font-medium">Escuchar en Vivo</span>
         </button>
 
         <template x-if="bandWindowOpen">

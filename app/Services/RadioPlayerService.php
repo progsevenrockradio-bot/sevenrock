@@ -294,11 +294,22 @@ class RadioPlayerService
                 $isProgram = (bool) ($history->program_id || $history->source === 'program' || $history->program !== null);
                 $programName = $history->program?->name ?? ($isProgram ? ($history->program_id ? 'Programa Especial' : $title) : null);
 
+                // Carátula propia del historial: si es la genérica/fallback de la estación o artwork dinámico compartido de RadioBOSS,
+                // no asociarla a la pista histórica para evitar que herede la carátula de la canción que suena actualmente en directo.
+                $historyCoverCandidate = $history->cover_image;
+                if ($historyCoverCandidate && (str_contains($historyCoverCandidate, '/w/artwork/') || $this->isFallbackCover($historyCoverCandidate))) {
+                    $historyCoverCandidate = null;
+                }
+                $resolvedHistoryCover = $historyCoverCandidate ? $this->resolveCover($historyCoverCandidate) : null;
+                if ($resolvedHistoryCover && $this->isFallbackCover($resolvedHistoryCover)) {
+                    $resolvedHistoryCover = null;
+                }
+
                 $entry = [
                     'id' => $history->id,
                     'title' => $title,
                     'artist' => $artist,
-                    'cover' => $this->resolveCover($history->cover_image),
+                    'cover' => $resolvedHistoryCover,
                     'source' => $history->source,
                     'played_at' => optional($history->played_at)->toIso8601String(),
                     'is_program' => $isProgram,

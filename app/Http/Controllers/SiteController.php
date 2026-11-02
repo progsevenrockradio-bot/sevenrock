@@ -892,6 +892,8 @@ class SiteController extends Controller
         try {
             $masterProgram = MasterProgram::query()
                 ->where('archive_identifier', $identifier)
+                ->orWhere('id', is_numeric($identifier) ? (int)$identifier : 0)
+                ->orWhere('storage_folder', $identifier)
                 ->first();
 
             try {
@@ -1161,7 +1163,7 @@ class SiteController extends Controller
                 'post' => [
                     'id' => $post->id,
                     'title' => $post->title,
-                    'date' => $post->published_at?->format('F j, Y') ?? trim("{$year}-{$month}-{$day}"),
+                    'date' => $post->published_at ? $post->published_at->locale('es')->translatedFormat('d \d\e F, Y') : trim("{$year}-{$month}-{$day}"),
                     'author' => $post->author,
                     'categories' => $post->categoryNames(),
                     'image' => $post->featured_image_url,
@@ -1982,13 +1984,16 @@ class SiteController extends Controller
         }
 
         $startsAt = $event->starts_at ?? now();
+        $dateEs = $startsAt->locale('es')->translatedFormat('d \d\e F, Y');
+        $timeEs = $startsAt->locale('es')->translatedFormat('H:i');
+        $timezoneName = config('app.timezone', 'UTC');
 
         return [
             'slug'         => $event->slug,
             'title'        => $event->title,
             'categories'   => $event->categories ?? [],
-            'date'         => $startsAt->format('F j, Y'),
-            'time'         => $startsAt->format('g:i a'),
+            'date'         => $dateEs,
+            'time'         => $timeEs . ' (' . $timezoneName . ')',
             'starts_at_iso'=> $startsAt->toIso8601String(),
             'is_cancelled' => (bool) $event->is_cancelled,
             'location'     => $event->location,

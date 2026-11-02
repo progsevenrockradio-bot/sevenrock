@@ -1,330 +1,580 @@
-@php $admin = $themeAppearance['admin_texts'] ?? []; @endphp
-<x-layouts.admin :title="'Maquetas Recibidas - '.$themeSettings->site_name">
-    <div x-data="{ activeTab: 'maquetas', showEmailModal: false, currentEmailContent: '', selectedMaquetas: [], openEmailModal(content) { this.currentEmailContent = content; this.showEmailModal = true; }, toggleAll() { const checkboxes = document.querySelectorAll('.maqueta-checkbox'); if (this.selectedMaquetas.length === checkboxes.length && checkboxes.length > 0) { this.selectedMaquetas = []; } else { this.selectedMaquetas = Array.from(checkboxes).map(cb => cb.value); } }, toggleFeed(submissionId, checkboxElement) { const isChecked = checkboxElement.checked; fetch(`/admin/submissions/${submissionId}/toggle-feed`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, body: JSON.stringify({ show_in_feed: isChecked ? 1 : 0 }) }).then(res => res.json()).then(data => { if (!data.success) { alert('Error: ' + data.message); checkboxElement.checked = !isChecked; } else { const span = checkboxElement.nextElementSibling; if (span) { const oldText = span.innerText; span.innerText = 'Guardado'; span.style.color = '#fff'; setTimeout(() => { span.innerText = oldText; span.style.color = ''; }, 2000); } } }).catch(err => { console.error(err); checkboxElement.checked = !isChecked; }); } }">
+<x-layouts.admin :title="'Buzón de maquetas'">
+    @php
+        $statusLabels = [
+            'pending' => 'Pendiente',
+            'approved' => 'Aprobada',
+            'rejected' => 'Rechazada',
+        ];
+        $statusStyles = [
+            'pending' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+            'approved' => 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+            'rejected' => 'border-red-500/30 bg-red-500/10 text-red-300',
+        ];
+        $searchFilter = $filters['search'] ?? request('search', '');
+        $statusFilter = $filters['status'] ?? request('status', '');
+        $hasActiveFilters = filled($searchFilter) || filled($statusFilter);
+    @endphp
+
+    <div
+        x-data="{
+            activeTab: '{{ request()->has('logs_page') ? 'correos' : 'maquetas' }}',
+            showEmailModal: false,
+            currentEmailContent: '',
+            selectedMaquetas: [],
+            openEmailModal(content) {
+                this.currentEmailContent = content;
+                this.showEmailModal = true;
+            },
+            toggleAll() {
+                const checkboxes = document.querySelectorAll('.maqueta-checkbox');
+                if (this.selectedMaquetas.length === checkboxes.length && checkboxes.length > 0) {
+                    this.selectedMaquetas = [];
+                } else {
+                    this.selectedMaquetas = Array.from(checkboxes).map(cb => cb.value);
+                }
+            },
+            toggleFeed(submissionId, checkboxElement) {
+                const isChecked = checkboxElement.checked;
+                fetch(`/admin/submissions/${submissionId}/toggle-feed`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ show_in_feed: isChecked ? 1 : 0 })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert('Error: ' + data.message);
+                        checkboxElement.checked = !isChecked;
+                    } else {
+                        const span = checkboxElement.nextElementSibling;
+                        if (span) {
+                            const oldText = span.innerText;
+                            span.innerText = 'Guardado';
+                            span.classList.add('text-emerald-300');
+                            setTimeout(() => {
+                                span.innerText = oldText;
+                                span.classList.remove('text-emerald-300');
+                            }, 2000);
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    checkboxElement.checked = !isChecked;
+                });
+            }
+        }"
+        class="mx-auto max-w-6xl space-y-5 font-sans"
+    >
+        {{-- Cabecera compacta y pestañas --}}
+        <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-4">
+            <div>
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-[#c32720]">Bandas y comunidad · Recepción musical</div>
+                <h1 class="mt-0.5 font-display text-2xl uppercase tracking-[.08em] text-white">Buzón de maquetas</h1>
+                <p class="mt-1 text-xs text-gray-400">Escucha, evaluación, publicación en el catálogo de novedades e historial de notificaciones enviadas.</p>
+            </div>
+
+            <div class="inline-flex items-center rounded-xl border border-white/10 bg-[#101012] p-1 self-start sm:self-auto" role="tablist" aria-label="Secciones del buzón de maquetas">
+                <button
+                    type="button"
+                    role="tab"
+                    :aria-selected="activeTab === 'maquetas'"
+                    @click="activeTab = 'maquetas'"
+                    :class="activeTab === 'maquetas' ? 'bg-[#c32720] text-white font-semibold shadow-sm' : 'text-gray-400 hover:text-white'"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-[#c32720]"
+                >
+                    <span>Maquetas recibidas</span>
+                    <span class="rounded bg-black/30 px-1.5 py-0.5 text-[10px]">{{ $submissions->total() }}</span>
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    :aria-selected="activeTab === 'correos'"
+                    @click="activeTab = 'correos'"
+                    :class="activeTab === 'correos' ? 'bg-[#c32720] text-white font-semibold shadow-sm' : 'text-gray-400 hover:text-white'"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-[#c32720]"
+                >
+                    <span>Historial de correos</span>
+                    <span class="rounded bg-black/30 px-1.5 py-0.5 text-[10px]">{{ $emailLogs->total() }}</span>
+                </button>
+            </div>
+        </header>
+
         @if (session('success'))
-            <div class="mb-6 border border-[#1e4d2b] bg-[rgba(16,64,30,.2)] px-4 py-3 text-sm text-[#b8e6c3]">
+            <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-200" role="status">
                 {{ session('success') }}
             </div>
         @endif
-        
+
         @if (session('error'))
-            <div class="mb-6 border border-[#4d1e1e] bg-[rgba(64,16,16,.2)] px-4 py-3 text-sm text-[#e6b8b8]">
+            <div class="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200" role="alert">
                 {{ session('error') }}
             </div>
         @endif
 
-        <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-                <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Gestión de Maquetas</h1>
-                <p class="mt-2 text-[#9a9a9a]">Buzón de recepción de maquetas enviadas e historial de correos.</p>
-            </div>
+        {{-- PESTAÑA 1: Maquetas recibidas --}}
+        <div x-show="activeTab === 'maquetas'" x-cloak class="space-y-4">
+            {{-- Filtros --}}
+            <form method="GET" action="{{ route('admin.submissions.index') }}" class="rounded-xl border border-white/10 bg-[#101012] p-3.5">
+                <div class="grid gap-3 sm:grid-cols-[1.4fr_1fr_auto] items-end">
+                    <div>
+                        <label for="filter-submission-search" class="mb-1 block text-xs font-medium text-gray-300">Buscar banda, tema o correo</label>
+                        <input
+                            id="filter-submission-search"
+                            type="search"
+                            name="search"
+                            value="{{ $searchFilter }}"
+                            placeholder="Nombre de la banda, canción o contacto..."
+                            class="h-9 w-full rounded-lg border border-white/10 bg-[#151518] px-3 text-xs text-white placeholder-gray-500 focus:border-[#c32720] focus:outline-none focus:ring-1 focus:ring-[#c32720]"
+                        >
+                    </div>
+                    <div>
+                        <label for="filter-submission-status" class="mb-1 block text-xs font-medium text-gray-300">Estado de evaluación</label>
+                        <select
+                            id="filter-submission-status"
+                            name="status"
+                            class="h-9 w-full rounded-lg border border-white/10 bg-[#151518] px-3 text-xs text-white focus:border-[#c32720] focus:outline-none focus:ring-1 focus:ring-[#c32720]"
+                        >
+                            <option value="">Todos los estados</option>
+                            @foreach ($statusLabels as $key => $label)
+                                <option value="{{ $key }}" @selected($statusFilter === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="submit" class="inline-flex h-9 flex-1 sm:flex-initial items-center justify-center rounded-lg bg-[#c32720] px-4 text-xs font-semibold text-white hover:bg-[#a8201a] focus:outline-none focus:ring-2 focus:ring-[#c32720]">
+                            Filtrar
+                        </button>
+                        @if ($hasActiveFilters)
+                            <a href="{{ route('admin.submissions.index') }}" class="inline-flex h-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-300 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#c32720]">
+                                Restablecer filtros
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </form>
 
-            <!-- Tabs Navigation -->
-            <div class="flex gap-2 border-b border-[#2b2b2b] pb-[-1px]">
-                <button 
-                    @click="activeTab = 'maquetas'" 
-                    :class="{'text-white border-b-2 border-lucille-accent': activeTab === 'maquetas', 'text-[#9a9a9a] border-b-2 border-transparent hover:text-[#dcdcdc]': activeTab !== 'maquetas'}"
-                    class="px-4 py-2 font-semibold uppercase tracking-wider text-sm transition-colors"
-                >
-                    Recibidas
-                </button>
-                <button 
-                    @click="activeTab = 'correos'" 
-                    :class="{'text-white border-b-2 border-lucille-accent': activeTab === 'correos', 'text-[#9a9a9a] border-b-2 border-transparent hover:text-[#dcdcdc]': activeTab !== 'correos'}"
-                    class="px-4 py-2 font-semibold uppercase tracking-wider text-sm transition-colors"
-                >
-                    Historial de Correos
-                </button>
-            </div>
-        </div>
-
-        <!-- Tab 1: Maquetas Recibidas -->
-        <div x-show="activeTab === 'maquetas'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" class="overflow-hidden border border-[#2b2b2b] bg-[rgba(16,16,18,.88)]" x-cloak>
-            
-            <!-- Bulk Action Form -->
-            <form action="{{ route('admin.submissions.bulkPublish') }}" method="POST" x-show="selectedMaquetas.length > 0" x-cloak class="flex gap-4 items-center p-4 bg-[rgba(255,255,255,0.03)] border-b border-[#2b2b2b]">
+            {{-- Barra de acción masiva (cuando hay aprobadas seleccionadas) --}}
+            <form
+                action="{{ route('admin.submissions.bulkPublish') }}"
+                method="POST"
+                x-show="selectedMaquetas.length > 0"
+                x-cloak
+                class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#c32720]/40 bg-[#101012] px-4 py-3"
+            >
                 @csrf
                 <template x-for="id in selectedMaquetas" :key="id">
                     <input type="hidden" name="submissions[]" :value="id">
                 </template>
-                <span class="text-sm text-[#dcdcdc] font-semibold"><span x-text="selectedMaquetas.length"></span> seleccionadas</span>
-                <div class="flex gap-2 ml-auto">
-                    <button type="submit" name="action" value="publish_hidden" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-[#1a1a1a] hover:bg-[#333]" style="border-color: #555; color: #ccc;" title="Publicar al catálogo de música pero sin mostrar en el feed público">Publicar (Ocultos)</button>
-                    <button type="submit" name="action" value="publish_visible" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-lucille-accent/20 hover:bg-lucille-accent/60" style="border-color: var(--lucille-accent); color: #fff;" title="Publicar al catálogo y mostrar en portada">Publicar (En Feed)</button>
+                <span class="text-xs font-semibold text-white">
+                    <span x-text="selectedMaquetas.length"></span> maqueta(s) aprobada(s) seleccionada(s)
+                </span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="submit" name="action" value="publish_hidden" class="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white">
+                        Publicar en catálogo (ocultas en portada)
+                    </button>
+                    <button type="submit" name="action" value="publish_visible" class="inline-flex h-8 items-center rounded-lg bg-[#c32720] px-3 text-xs font-semibold text-white hover:bg-[#a8201a]">
+                        Publicar y mostrar en portada
+                    </button>
                 </div>
             </form>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="border-b border-[#2b2b2b] text-[#dcdcdc] whitespace-nowrap">
-                        <tr>
-                            @if($submissions->where('status', 'approved')->where('published_to_hub', false)->count() > 0)
-                            <th class="px-5 py-4 w-10 text-center">
-                                <input type="checkbox" @change="toggleAll()" :checked="selectedMaquetas.length > 0 && selectedMaquetas.length === document.querySelectorAll('.maqueta-checkbox').length" class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012] cursor-pointer" title="Seleccionar todas las aprobadas">
-                            </th>
-                            @else
-                            <th class="px-5 py-4 w-10"></th>
+            {{-- Vista Móvil (390 px) --}}
+            <div class="space-y-3 md:hidden">
+                @forelse ($submissions as $submission)
+                    @php
+                        $statusLabel = $statusLabels[$submission->status] ?? 'Pendiente';
+                        $statusStyle = $statusStyles[$submission->status] ?? $statusStyles['pending'];
+                    @endphp
+                    <article class="rounded-xl border border-white/10 bg-[#101012] p-4 space-y-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <h2 class="text-sm font-semibold text-white truncate">{{ $submission->band_name }}</h2>
+                                <p class="text-xs text-gray-300 truncate">Tema: <strong class="text-white">{{ $submission->song_title }}</strong></p>
+                            </div>
+                            <span class="shrink-0 inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium {{ $statusStyle }}">
+                                {{ $statusLabel }}
+                            </span>
+                        </div>
+
+                        {{-- Reproductor y descarga --}}
+                        @if ($submission->file_path)
+                            <div class="rounded-lg border border-white/5 bg-[#151518] p-2.5 space-y-2">
+                                <audio controls preload="none" class="h-9 w-full">
+                                    <source src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($submission->file_path) }}" type="audio/mpeg">
+                                    Tu navegador no soporta la reproducción de audio.
+                                </audio>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[11px] text-gray-400">Recibida: {{ $submission->created_at?->format('d/m/Y') ?? 'N/D' }}</span>
+                                    <a href="{{ route('admin.submissions.download', $submission) }}" class="inline-flex items-center gap-1 text-xs font-medium text-emerald-300 hover:text-emerald-200">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                        <span>Descargar MP3</span>
+                                    </a>
+                                </div>
+                            </div>
+                        @else
+                            <div class="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-300">
+                                Sin archivo de audio adjunto
+                            </div>
+                        @endif
+
+                        {{-- Contacto --}}
+                        <div class="text-xs text-gray-300 space-y-1">
+                            <div class="break-all">
+                                <span class="text-gray-400">Correo:</span>
+                                <a href="mailto:{{ $submission->contact_email }}" class="text-white hover:underline">{{ $submission->contact_email }}</a>
+                            </div>
+                            @if ($submission->phone_number)
+                                <div><span class="text-gray-400">Teléfono:</span> {{ $submission->phone_number }}</div>
                             @endif
-                            <th class="px-5 py-4">Información</th>
-                            <th class="px-5 py-4 w-1/3 min-w-[280px]">Audio</th>
-                            <th class="px-5 py-4">Contacto</th>
-                            <th class="px-5 py-4">Estado</th>
-                            <th class="px-5 py-4 text-right">Acciones</th>
+                            @if ($submission->social_link)
+                                <div>
+                                    <a href="{{ $submission->social_link }}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-1 text-[#c32720] hover:underline">
+                                        <span>Abrir enlace externo de la banda</span>
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
+
+                        @if ($submission->message)
+                            <details class="rounded-lg border border-white/5 bg-[#151518]/70 px-3 py-2 text-xs">
+                                <summary class="cursor-pointer font-medium text-gray-300">Ver mensaje de la banda</summary>
+                                <p class="mt-1.5 text-gray-400 leading-relaxed">{{ $submission->message }}</p>
+                            </details>
+                        @endif
+
+                        {{-- Acciones --}}
+                        <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-white/5">
+                            @if ($submission->status !== 'approved')
+                                <form action="{{ route('admin.submissions.updateStatus', $submission) }}" method="POST" class="flex-1">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="approved">
+                                    <button type="submit" class="inline-flex h-9 w-full items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">
+                                        Aprobar
+                                    </button>
+                                </form>
+                            @endif
+
+                            @if ($submission->status !== 'rejected')
+                                <form action="{{ route('admin.submissions.updateStatus', $submission) }}" method="POST" class="flex-1">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="rejected">
+                                    <button type="submit" class="inline-flex h-9 w-full items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-300 hover:bg-white/[0.08] hover:text-white">
+                                        Rechazar
+                                    </button>
+                                </form>
+                            @endif
+
+                            <form
+                                action="{{ route('admin.submissions.destroy', $submission) }}"
+                                method="POST"
+                                data-confirm="¿Seguro que quieres eliminar esta maqueta? Esto borrará el MP3 permanentemente."
+                                data-confirm-title="Eliminar maqueta"
+                                data-confirm-action="Eliminar"
+                                data-confirm-tone="danger"
+                            >
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="inline-flex h-9 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 px-3 text-xs font-medium text-red-300 hover:bg-red-500/20">
+                                    Eliminar
+                                </button>
+                            </form>
+                        </div>
+                    </article>
+                @empty
+                    <div class="rounded-xl border border-white/10 bg-[#101012] p-8 text-center text-xs text-gray-400">
+                        No hay maquetas recibidas con los criterios seleccionados.
+                    </div>
+                @endforelse
+            </div>
+
+            {{-- Vista Escritorio --}}
+            <div class="hidden md:block rounded-xl border border-white/10 bg-[#101012] overflow-visible">
+                <table class="min-w-full divide-y divide-white/10 text-left text-xs">
+                    <thead class="bg-white/[0.02] text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                        <tr>
+                            <th scope="col" class="w-10 px-3 py-3 text-center">
+                                @if ($submissions->where('status', 'approved')->where('published_to_hub', false)->count() > 0)
+                                    <input
+                                        type="checkbox"
+                                        @change="toggleAll()"
+                                        :checked="selectedMaquetas.length > 0 && selectedMaquetas.length === document.querySelectorAll('.maqueta-checkbox').length"
+                                        aria-label="Seleccionar todas las maquetas aprobadas"
+                                        class="h-4 w-4 rounded border-white/20 bg-[#151518] text-[#c32720] focus:ring-[#c32720] cursor-pointer"
+                                    >
+                                @endif
+                            </th>
+                            <th scope="col" class="px-3 py-3">Banda y tema</th>
+                            <th scope="col" class="px-3 py-3">Audio y descarga</th>
+                            <th scope="col" class="px-3 py-3">Contacto</th>
+                            <th scope="col" class="px-3 py-3">Estado</th>
+                            <th scope="col" class="px-4 py-3 text-right">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-[#2b2b2b] text-[#9a9a9a]">
+                    <tbody class="divide-y divide-white/5">
                         @forelse ($submissions as $submission)
-                            <tr class="hover:bg-[rgba(255,255,255,.02)] transition-colors">
-                                <td class="px-5 py-5 align-top text-center">
-                                    @if($submission->status === 'approved' && !$submission->published_to_hub)
-                                        <input type="checkbox" value="{{ $submission->id }}" x-model="selectedMaquetas" class="maqueta-checkbox rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012] cursor-pointer">
+                            @php
+                                $statusLabel = $statusLabels[$submission->status] ?? 'Pendiente';
+                                $statusStyle = $statusStyles[$submission->status] ?? $statusStyles['pending'];
+                            @endphp
+                            <tr class="hover:bg-white/[0.02] transition-colors align-top">
+                                <td class="px-3 py-3.5 text-center">
+                                    @if ($submission->status === 'approved' && !$submission->published_to_hub)
+                                        <input
+                                            type="checkbox"
+                                            value="{{ $submission->id }}"
+                                            x-model="selectedMaquetas"
+                                            aria-label="Seleccionar maqueta de {{ $submission->band_name }}"
+                                            class="maqueta-checkbox h-4 w-4 rounded border-white/20 bg-[#151518] text-[#c32720] focus:ring-[#c32720] cursor-pointer"
+                                        >
                                     @endif
                                 </td>
-                                <td class="px-5 py-5 align-top">
-                                    <div class="font-display text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] mb-1">
-                                        {{ $submission->band_name }}
-                                    </div>
-                                    <div class="text-[#a7a093]">
-                                        🎵 {{ $submission->song_title }}
-                                    </div>
+                                <td class="px-3 py-3.5">
+                                    <div class="font-semibold text-white text-sm">{{ $submission->band_name }}</div>
+                                    <div class="mt-0.5 text-xs text-gray-300">{{ $submission->song_title }}</div>
+                                    <div class="mt-1 text-[11px] text-gray-400">Recibida: {{ $submission->created_at?->format('d/m/Y') ?? 'N/D' }}</div>
+                                    @if ($submission->message)
+                                        <details class="mt-1.5 text-[11px]">
+                                            <summary class="cursor-pointer text-gray-400 hover:text-white">Ver nota de la banda</summary>
+                                            <p class="mt-1 max-w-xs rounded border border-white/5 bg-[#151518] p-2 text-gray-300 leading-relaxed">{{ $submission->message }}</p>
+                                        </details>
+                                    @endif
                                 </td>
-                                <td class="px-5 py-5 align-top">
-                                    @if($submission->file_path)
-                                        <div class="bg-[#1a1a1c] p-2 rounded-md border border-[#2b2b2b] min-w-[260px]">
-                                            <audio controls class="h-10 w-full mb-2">
+                                <td class="px-3 py-3.5">
+                                    @if ($submission->file_path)
+                                        <div class="w-60 space-y-1.5 rounded-lg border border-white/5 bg-[#151518] p-2">
+                                            <audio controls preload="none" class="h-8 w-full">
                                                 <source src="{{ \App\Support\PublicMediaUrl::normalizePublicUrl($submission->file_path) }}" type="audio/mpeg">
-                                                Tu navegador no soporta el audio.
                                             </audio>
-                                            <a href="{{ route('admin.submissions.download', $submission) }}" class="text-xs font-semibold uppercase tracking-wider text-[#b8e6c3] hover:text-white transition-colors flex items-center gap-1">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                                Descargar MP3
+                                            <a href="{{ route('admin.submissions.download', $submission) }}" class="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-300 hover:text-emerald-200">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                                <span>Descargar MP3</span>
                                             </a>
                                         </div>
                                     @else
-                                        <span class="inline-block rounded border border-[#4d1e1e] bg-[rgba(64,16,16,.2)] px-3 py-1 text-xs text-[#e6b8b8]">Sin archivo adjunto</span>
+                                        <span class="inline-flex items-center rounded-md border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[11px] text-red-300">
+                                            Sin archivo adjunto
+                                        </span>
                                     @endif
                                 </td>
-                                <td class="px-5 py-5 align-top text-xs leading-relaxed">
-                                    <div class="mb-2">
-                                        <a href="mailto:{{ $submission->contact_email }}" class="text-[#b8e6c3] hover:underline break-all block">{{ $submission->contact_email }}</a>
-                                        @if($submission->phone_number)
-                                            <span class="text-[#9a9a9a] block">{{ $submission->phone_number }}</span>
+                                <td class="px-3 py-3.5">
+                                    <a href="mailto:{{ $submission->contact_email }}" class="text-gray-200 hover:text-white hover:underline break-all block max-w-[200px]">{{ $submission->contact_email }}</a>
+                                    @if ($submission->phone_number)
+                                        <div class="mt-0.5 text-[11px] text-gray-400">{{ $submission->phone_number }}</div>
+                                    @endif
+                                    @if ($submission->social_link)
+                                        <a href="{{ $submission->social_link }}" target="_blank" rel="noreferrer" class="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-[#c32720] hover:underline">
+                                            <span>Enlace externo</span>
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                        </a>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-3.5 whitespace-nowrap">
+                                    <div class="flex flex-col items-start gap-1.5">
+                                        <span class="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium {{ $statusStyle }}">
+                                            {{ $statusLabel }}
+                                        </span>
+                                        @if ($submission->published_to_hub)
+                                            <span class="inline-flex items-center rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-gray-300">
+                                                Publicada en catálogo
+                                            </span>
                                         @endif
                                     </div>
-                                    
-                                    <div class="flex items-center gap-3">
-                                        @if($submission->social_link)
-                                            <a href="{{ $submission->social_link }}" target="_blank" class="text-lucille-accent hover:underline flex items-center gap-1">
-                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-2 16h-2v-6h2v6zm-1-6.891c-.607 0-1.1-.496-1.1-1.109 0-.612.492-1.109 1.1-1.109s1.1.497 1.1 1.109c0 .613-.493 1.109-1.1 1.109zm8 6.891h-1.998v-2.861c0-1.881-2.002-1.722-2.002 0v2.861h-2v-6h2v1.093c.872-1.616 4-1.736 4 1.548v3.359z"/></svg>
-                                                Enlace
-                                            </a>
-                                        @endif
-                                        <span class="text-[#555] whitespace-nowrap">📅 {{ $submission->created_at?->format('d M Y') }}</span>
-                                    </div>
                                 </td>
-                                <td class="px-5 py-5 align-top">
-                                    @php
-                                        $statusColors = [
-                                            'pending' => 'text-[#e6d8b8] bg-[#4d451e]/30 border-[#4d451e]',
-                                            'approved' => 'text-[#b8e6c3] bg-[#1e4d2b]/30 border-[#1e4d2b]',
-                                            'rejected' => 'text-[#e6b8b8] bg-[#4d1e1e]/30 border-[#4d1e1e]',
-                                        ];
-                                        $statusLabels = [
-                                            'pending' => 'Pendiente',
-                                            'approved' => 'Aprobado',
-                                            'rejected' => 'Rechazado',
-                                        ];
-                                        $color = $statusColors[$submission->status] ?? $statusColors['pending'];
-                                        $label = $statusLabels[$submission->status] ?? 'Pendiente';
-                                    @endphp
-                                    <span class="inline-block px-2 py-1 text-[11px] font-medium uppercase tracking-wider border {{ $color }} rounded-sm shadow-sm">
-                                        {{ $label }}
-                                    </span>
-                                </td>
-                                <td class="px-5 py-5 align-top">
-                                    <div class="flex flex-col gap-2 items-end">
-                                        <div class="flex gap-2">
-                                            @if($submission->status !== 'approved')
+                                <td class="px-4 py-3.5 whitespace-nowrap text-right">
+                                    <div class="inline-flex flex-wrap items-center justify-end gap-1.5">
+                                        @if ($submission->status !== 'approved')
                                             <form action="{{ route('admin.submissions.updateStatus', $submission) }}" method="POST">
                                                 @csrf
                                                 @method('PATCH')
                                                 <input type="hidden" name="status" value="approved">
-                                                <button type="submit" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-[#1e4d2b]/20 hover:bg-[#1e4d2b]/60" style="border-color: #1e4d2b; color: #b8e6c3;">Aprobar</button>
+                                                <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">
+                                                    Aprobar
+                                                </button>
                                             </form>
-                                            @endif
+                                        @endif
 
-                                            @if($submission->status !== 'rejected')
+                                        @if ($submission->status !== 'rejected')
                                             <form action="{{ route('admin.submissions.updateStatus', $submission) }}" method="POST">
                                                 @csrf
                                                 @method('PATCH')
                                                 <input type="hidden" name="status" value="rejected">
-                                                <button type="submit" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-[#4d1e1e]/20 hover:bg-[#4d1e1e]/60" style="border-color: #4d1e1e; color: #e6b8b8;">Rechazar</button>
+                                                <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-gray-300 hover:bg-white/[0.08] hover:text-white">
+                                                    Rechazar
+                                                </button>
                                             </form>
-                                            @endif
+                                        @endif
 
-                                            @if($submission->status === 'approved')
-                                                <div class="flex flex-col gap-2 items-end">
-                                                    <label class="flex items-center gap-1.5 cursor-pointer" title="Mostrar u ocultar en el feed público">
-                                                        @if(!$submission->published_to_hub)
-                                                            <input type="checkbox" form="publish-form-{{ $submission->id }}" name="show_in_feed" value="1" class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012]">
-                                                        @else
-                                                            @php
-                                                                $hasActiveFeed = \App\Models\NewRelease::where('title', $submission->song_title)
-                                                                    ->where('artist_name', $submission->band_name)
-                                                                    ->where('show_in_feed', true)
-                                                                    ->exists();
-                                                            @endphp
-                                                            <input type="checkbox" @change="toggleFeed({{ $submission->id }}, $event.target)" {{ $hasActiveFeed ? 'checked' : '' }} class="rounded border-[#2b2b2b] bg-[#1a1a1a] text-lucille-accent focus:ring-lucille-accent focus:ring-offset-[#101012]">
-                                                        @endif
-                                                        <span class="text-[10px] text-[#9a9a9a] uppercase tracking-wider font-semibold">Feed</span>
+                                        @if ($submission->status === 'approved')
+                                            @if (!$submission->published_to_hub)
+                                                <form id="publish-form-{{ $submission->id }}" action="{{ route('admin.submissions.publish', $submission) }}" method="POST" class="inline-flex items-center gap-1.5">
+                                                    @csrf
+                                                    <label class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-[#151518] px-2 text-[11px] text-gray-300 cursor-pointer" title="Mostrar en portada al publicar">
+                                                        <input type="checkbox" name="show_in_feed" value="1" class="h-3.5 w-3.5 rounded border-white/20 bg-[#101012] text-[#c32720] focus:ring-[#c32720]">
+                                                        <span>Portada</span>
                                                     </label>
-
-                                                    @if(!$submission->published_to_hub)
-                                                        <form id="publish-form-{{ $submission->id }}" action="{{ route('admin.submissions.publish', $submission) }}" method="POST">
-                                                            @csrf
-                                                            <button type="submit" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border transition-colors bg-lucille-accent/20 hover:bg-lucille-accent/60 w-full" style="border-color: var(--lucille-accent); color: #fff;" title="Publicar en Catálogo Musical (Hub)">Publicar al Hub</button>
-                                                        </form>
-                                                    @else
-                                                        <span class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded border border-transparent bg-white/10 text-[#dcdcdc] opacity-75 cursor-default select-none" title="Ya fue publicada en el Hub">Publicado en Hub</span>
-                                                    @endif
-                                                </div>
+                                                    <button type="submit" class="inline-flex h-8 items-center rounded-lg bg-[#c32720] px-2.5 text-xs font-semibold text-white hover:bg-[#a8201a]">
+                                                        Publicar
+                                                    </button>
+                                                </form>
+                                            @else
+                                                @php
+                                                    $hasActiveFeed = \App\Models\NewRelease::where('title', $submission->song_title)
+                                                        ->where('artist_name', $submission->band_name)
+                                                        ->where('show_in_feed', true)
+                                                        ->exists();
+                                                @endphp
+                                                <label class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-[#151518] px-2.5 text-[11px] text-gray-300 cursor-pointer">
+                                                    <input type="checkbox" @change="toggleFeed({{ $submission->id }}, $event.target)" {{ $hasActiveFeed ? 'checked' : '' }} class="h-3.5 w-3.5 rounded border-white/20 bg-[#101012] text-[#c32720] focus:ring-[#c32720]">
+                                                    <span>En portada</span>
+                                                </label>
                                             @endif
-                                        </div>
+                                        @endif
 
                                         <form
                                             action="{{ route('admin.submissions.destroy', $submission) }}"
                                             method="POST"
-                                            class="mt-1"
                                             data-confirm="¿Seguro que quieres eliminar esta maqueta? Esto borrará el MP3 permanentemente."
-                                            data-confirm-title="Eliminar Maqueta"
+                                            data-confirm-title="Eliminar maqueta"
                                             data-confirm-action="Eliminar"
                                             data-confirm-tone="danger"
                                         >
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="px-3 py-1 text-xs font-medium uppercase tracking-wider text-[#999] hover:text-[#ff4444] transition-colors underline decoration-dotted underline-offset-4">Borrar</button>
+                                            <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 text-xs font-medium text-red-300 hover:bg-red-500/20">
+                                                Eliminar
+                                            </button>
                                         </form>
                                     </div>
                                 </td>
                             </tr>
-                            @if($submission->message)
-                            <tr class="border-b border-[#2b2b2b]/50 bg-[rgba(20,20,22,0.6)]">
-                                <td colspan="5" class="px-5 py-4 text-sm text-[#999]">
-                                    <div class="flex gap-3">
-                                        <svg class="w-5 h-5 text-[#555] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                                        <div>
-                                            <span class="text-[#555] font-semibold uppercase tracking-wider text-[11px] block mb-1">Mensaje de la banda:</span>
-                                            <p class="italic text-[#888] leading-relaxed">{{ $submission->message }}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                            @endif
                         @empty
                             <tr>
-                                <td colspan="5" class="px-5 py-12 text-center">
-                                    <svg class="w-12 h-12 text-[#333] mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-                                    <span class="text-[#555] font-medium">No hay maquetas recibidas todavía.</span>
+                                <td colspan="6" class="px-4 py-10 text-center text-xs text-gray-400">
+                                    No hay maquetas recibidas con los criterios seleccionados.
                                 </td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+
             @if ($submissions->hasPages())
-                <div class="border-t border-[#2b2b2b] px-5 py-4">
+                <div class="pt-2">
                     {{ $submissions->links() }}
                 </div>
             @endif
         </div>
 
-        <!-- Tab 2: Correos Enviados -->
-        <div x-show="activeTab === 'correos'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" class="overflow-hidden border border-[#2b2b2b] bg-[rgba(16,16,18,.88)]" x-cloak>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="border-b border-[#2b2b2b] text-[#dcdcdc] whitespace-nowrap">
+        {{-- PESTAÑA 2: Historial de correos --}}
+        <div x-show="activeTab === 'correos'" x-cloak class="space-y-4">
+            {{-- Móvil (390 px) --}}
+            <div class="space-y-3 md:hidden">
+                @forelse ($emailLogs as $log)
+                    <article class="rounded-xl border border-white/10 bg-[#101012] p-4 space-y-2.5">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-semibold text-white">{{ $log->trackSubmission?->band_name ?? 'Banda' }}</span>
+                            <span class="text-[11px] text-gray-400">{{ $log->created_at->format('d/m/Y H:i') }}</span>
+                        </div>
+                        <div class="text-xs text-gray-300 break-all">{{ $log->to_email }}</div>
+                        <div class="text-xs text-gray-400">{{ $log->subject ?: 'Sin asunto' }}</div>
+                        <div class="pt-1">
+                            <button
+                                type="button"
+                                @click='openEmailModal(@json($log->body))'
+                                class="inline-flex h-9 w-full items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white"
+                            >
+                                Ver correo enviado
+                            </button>
+                        </div>
+                    </article>
+                @empty
+                    <div class="rounded-xl border border-white/10 bg-[#101012] p-8 text-center text-xs text-gray-400">
+                        No se han registrado correos enviados sobre maquetas.
+                    </div>
+                @endforelse
+            </div>
+
+            {{-- Escritorio --}}
+            <div class="hidden md:block rounded-xl border border-white/10 bg-[#101012] overflow-hidden">
+                <table class="min-w-full divide-y divide-white/10 text-left text-xs">
+                    <thead class="bg-white/[0.02] text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                         <tr>
-                            <th class="px-5 py-4">Fecha de Envío</th>
-                            <th class="px-5 py-4">Destinatario</th>
-                            <th class="px-5 py-4">Asunto</th>
-                            <th class="px-5 py-4 text-right">Acción</th>
+                            <th scope="col" class="px-4 py-3">Fecha de envío</th>
+                            <th scope="col" class="px-3 py-3">Banda y destinatario</th>
+                            <th scope="col" class="px-3 py-3">Asunto</th>
+                            <th scope="col" class="px-4 py-3 text-right">Acción</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-[#2b2b2b] text-[#9a9a9a]">
+                    <tbody class="divide-y divide-white/5">
                         @forelse ($emailLogs as $log)
-                            <tr class="hover:bg-[rgba(255,255,255,.02)] transition-colors">
-                                <td class="px-5 py-4 whitespace-nowrap">
-                                    <span class="text-[#dcdcdc] block">{{ $log->created_at->format('d/m/Y') }}</span>
-                                    <span class="text-xs text-[#555]">{{ $log->created_at->format('h:i A') }}</span>
+                            <tr class="hover:bg-white/[0.02] transition-colors">
+                                <td class="px-4 py-3 whitespace-nowrap text-gray-300">
+                                    <div>{{ $log->created_at->format('d/m/Y') }}</div>
+                                    <div class="text-[11px] text-gray-500">{{ $log->created_at->format('H:i') }}</div>
                                 </td>
-                                <td class="px-5 py-4">
-                                    @if($log->trackSubmission)
-                                        <div class="font-semibold text-[#b8e6c3] uppercase tracking-wider text-xs mb-1">{{ $log->trackSubmission->band_name }}</div>
+                                <td class="px-3 py-3">
+                                    @if ($log->trackSubmission)
+                                        <div class="font-semibold text-white">{{ $log->trackSubmission->band_name }}</div>
                                     @endif
-                                    <span class="text-[#a7a093]">{{ $log->to_email }}</span>
+                                    <div class="text-[11px] text-gray-400">{{ $log->to_email }}</div>
                                 </td>
-                                <td class="px-5 py-4">
-                                    <span class="text-[#dcdcdc]">{{ $log->subject ?: 'Sin Asunto' }}</span>
+                                <td class="px-3 py-3 text-gray-200">
+                                    {{ $log->subject ?: 'Sin asunto' }}
                                 </td>
-                                <td class="px-5 py-4 text-right">
-                                    <button 
-                                        type="button" 
+                                <td class="px-4 py-3 whitespace-nowrap text-right">
+                                    <button
+                                        type="button"
                                         @click='openEmailModal(@json($log->body))'
-                                        class="px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded border border-[#2b2b2b] text-[#dcdcdc] hover:text-white hover:border-lucille-accent hover:bg-[rgba(235,59,90,0.1)] transition-colors"
+                                        class="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#c32720]"
                                     >
-                                        Ver Correo
+                                        Ver correo
                                     </button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-5 py-12 text-center">
-                                    <svg class="w-12 h-12 text-[#333] mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                    <span class="text-[#555] font-medium">No se han registrado correos enviados de maquetas aún.</span>
+                                <td colspan="4" class="px-4 py-10 text-center text-xs text-gray-400">
+                                    No se han registrado correos enviados sobre maquetas.
                                 </td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+
             @if ($emailLogs->hasPages())
-                <div class="border-t border-[#2b2b2b] px-5 py-4">
+                <div class="pt-2">
                     {{ $emailLogs->links() }}
                 </div>
             @endif
         </div>
 
-        <!-- Modal para ver el correo -->
+        {{-- Modal de vista previa de correo --}}
         <div x-show="showEmailModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" x-cloak>
-            <div 
-                x-show="showEmailModal" 
+            <div
+                x-show="showEmailModal"
                 @click.away="showEmailModal = false"
-                x-transition:enter="transition ease-out duration-300"
-                x-transition:enter-start="opacity-0 scale-95"
-                x-transition:enter-end="opacity-100 scale-100"
-                x-transition:leave="transition ease-in duration-200"
-                x-transition:leave-start="opacity-100 scale-100"
-                x-transition:leave-end="opacity-0 scale-95"
-                class="bg-[#121212] border border-[#333] rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden relative"
+                class="w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden rounded-xl border border-white/10 bg-[#101012] shadow-2xl"
             >
-                <div class="flex items-center justify-between px-6 py-4 border-b border-[#2b2b2b] bg-[#1a1a1c]">
-                    <h3 class="text-lg font-semibold text-white uppercase tracking-wider">Contenido del Correo</h3>
-                    <button @click="showEmailModal = false" class="text-[#777] hover:text-white transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                <div class="flex items-center justify-between border-b border-white/10 px-5 py-3.5">
+                    <h3 class="font-display text-sm uppercase tracking-wider text-white">Contenido del correo enviado</h3>
+                    <button type="button" @click="showEmailModal = false" class="text-gray-400 hover:text-white" aria-label="Cerrar vista previa">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
-                
-                <div class="flex-1 p-0 overflow-hidden bg-white">
-                    <!-- Usamos un iframe con srcdoc usando la variable reactiva -->
-                    <iframe 
-                        class="w-full h-[70vh] border-0" 
-                        :srcdoc="currentEmailContent"
-                        title="Visualizador de Correo"
-                    ></iframe>
+                <div class="flex-1 bg-white">
+                    <iframe class="w-full h-[65vh] border-0" :srcdoc="currentEmailContent" title="Vista previa del correo"></iframe>
                 </div>
-                
-                <div class="px-6 py-4 border-t border-[#2b2b2b] bg-[#1a1a1c] text-right">
-                    <button @click="showEmailModal = false" class="lucille-button py-2 px-6 text-sm uppercase tracking-wider text-white">Cerrar</button>
+                <div class="flex justify-end border-t border-white/10 px-5 py-3">
+                    <button type="button" @click="showEmailModal = false" class="inline-flex h-9 items-center rounded-lg border border-white/10 bg-white/[0.04] px-4 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white">
+                        Cerrar
+                    </button>
                 </div>
             </div>
         </div>

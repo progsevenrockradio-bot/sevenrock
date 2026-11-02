@@ -19,24 +19,6 @@
 
     <x-sections.hero-rocks :slides="$themeAppearance['hero_slides']" :auto-slides="$heroAutoSlides ?? []" :interval="$themeAppearance['hero_slides_interval']" :transition="$themeAppearance['hero_slides_transition']" />
 
-    {{-- CTA Móvil Principal: Escuchar en Vivo (Reutiliza el reproductor existente sin duplicar audio) --}}
-    <div class="relative z-30 mx-auto -mt-4 mb-4 flex justify-center px-4 md:hidden">
-        <button
-            type="button"
-            onclick="window.dispatchEvent(new CustomEvent('play-multimedia-track', { detail: { src: 'live', type: 'live' } }))"
-            class="group inline-flex items-center gap-3 rounded-full bg-[#c32720] px-6 py-3 font-display text-xs uppercase tracking-[0.16em] text-white shadow-[0_4px_25px_rgba(195,39,32,0.5)] transition-all duration-300 hover:bg-[#d62d25] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            aria-label="Escuchar Seven Rock Radio en vivo"
-        >
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-black/30 text-white transition-transform duration-300 group-hover:scale-110">
-                <svg class="h-3.5 w-3.5 fill-current ml-0.5" viewBox="0 0 24 24" aria-hidden="true">
-                    <polygon points="5,3 19,12 5,21"></polygon>
-                </svg>
-            </span>
-            <span class="font-bold">Escuchar en vivo</span>
-            <span class="flex h-2 w-2 rounded-full bg-white animate-pulse" aria-hidden="true"></span>
-        </button>
-    </div>
-
     <x-home.headline-ticker :ticker="$headlineTicker" />
 
     @if (!empty($noticiasRock) && $noticiasRock->count() > 0)
@@ -50,10 +32,10 @@
                         @php
                             $cleanExcerpt = $post->clean_excerpt;
                         @endphp
-                        <div class="border border-lucille-line/30 bg-lucille-surface/80 p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:border-lucille-accent/40 group relative cursor-pointer">
+                        <div class="lucille-flat-surface p-4 flex flex-col justify-between transition-colors duration-200 hover:border-lucille-accent/40 group relative cursor-pointer">
                             <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-30" aria-label="Leer más sobre {{ $post->title }}"></a>
                             <div>
-                                <div class="relative aspect-[4/3] overflow-hidden border border-lucille-line/30 bg-[#111]">
+                                <div class="relative aspect-[4/3] overflow-hidden bg-[#111]">
                                     <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}"
                                          alt="{{ $post->title }}"
                                          onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ asset('assets/lucille/logo.png') }}'; }"
@@ -404,7 +386,9 @@
     <x-sections.background-band class="home-section-texture home-section-cool">
         <div class="py-12 md:py-16">
             <x-ui.section-heading :title="$homeHeadings['upcoming_shows']['title']" :accent="$homeHeadings['upcoming_shows']['accent']" :subtitle="$homeHeadings['upcoming_shows']['subtitle']" />
-            <x-ui.event-list :events="$events" />
+            <div class="mt-6 sm:mt-8">
+                <x-ui.event-list :events="$events" :emphasize-first="true" />
+            </div>
         </div>
     </x-sections.background-band>
     @endif
@@ -420,10 +404,10 @@
                         @php
                             $cleanRelDesc = trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode((string) $release->description, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
                         @endphp
-                        <div class="border border-lucille-line/30 bg-lucille-surface/80 p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:border-lucille-accent/40 group">
+                        <div class="lucille-flat-surface p-4 flex flex-col justify-between transition-colors duration-200 hover:border-lucille-accent/40 group">
                             <div>
                                 <!-- Portada -->
-                                <div class="relative aspect-square overflow-hidden border border-lucille-line/30 bg-[#111]">
+                                <div class="relative aspect-square overflow-hidden bg-[#111]">
                                     <img src="{{ $release->cover_image_url ?: asset('assets/lucille/logo.png') }}"
                                          alt="{{ $release->title }}" width="400" height="400"
                                          onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ asset('assets/lucille/logo.png') }}'; }"

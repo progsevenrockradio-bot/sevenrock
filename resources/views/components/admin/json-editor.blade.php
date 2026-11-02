@@ -89,26 +89,32 @@
         },
     }"
     x-init="init()"
-    class="space-y-3"
+    class="space-y-2 font-sans"
 >
-    <div>
-        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]" for="{{ $inputId }}">{{ $label }}</label>
-        @if ($help)
-            <p class="mb-2 text-xs leading-5 text-[#7b7b7b]">{{ $help }}</p>
-        @endif
+    <div class="flex items-center justify-between gap-2">
+        <label class="block text-xs font-medium text-[#dcdcdc]" for="{{ $inputId }}">{{ $label }}</label>
+        <div class="flex items-center gap-2">
+            <span class="text-[11px]" :class="error ? 'text-red-400' : 'text-emerald-300'" x-text="error ?? 'JSON válido'"></span>
+            <button type="button"
+                    class="inline-flex h-7 items-center rounded-md border border-white/10 bg-white/5 px-2.5 text-[11px] font-medium text-gray-200 hover:bg-white/10 hover:text-white"
+                    @click="format()">
+                Formatear JSON
+            </button>
+        </div>
     </div>
+    @if ($help)
+        <p class="text-[11px] text-gray-400">{{ $help }}</p>
+    @endif
 
-    <div class="relative overflow-hidden border bg-[#0b0b0c]" :class="error ? 'border-[#7a2b2b]' : 'border-[#2b2b2b]'">
+    <div class="relative overflow-hidden rounded-lg border bg-[#0b0b0c]" :class="error ? 'border-red-500/50' : 'border-white/10'">
         <pre
             aria-hidden="true"
             class="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre font-mono text-[12px] leading-6 text-[#d8d8d8]"
-        >
-            <code
-                x-html="highlighted"
-                :style="`transform: translate(${-scrollLeft}px, ${-scrollTop}px); display: block; padding: 1rem;`"
-                class="block min-h-full"
-            ></code>
-        </pre>
+        ><code
+            x-html="highlighted"
+            :style="`transform: translate(${-scrollLeft}px, ${-scrollTop}px); display: block; padding: 0.75rem;`"
+            class="block min-h-full"
+        ></code></pre>
 
         <textarea
             id="{{ $inputId }}"
@@ -124,16 +130,11 @@
             autocomplete="off"
             autocorrect="off"
             placeholder="{{ $placeholder ?? 'Pega o escribe JSON válido' }}"
-            class="relative z-10 block w-full resize-y border-0 bg-transparent p-4 font-mono text-[12px] leading-6 text-transparent caret-[#f0f0f0] outline-none placeholder:text-[#555] focus:ring-0"
+            class="relative z-10 block w-full resize-y border-0 bg-transparent p-3 font-mono text-[12px] leading-6 text-transparent caret-[#f0f0f0] outline-none placeholder:text-[#555] focus:ring-1 focus:ring-[#c32720]"
         ></textarea>
     </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
-        <p :class="error ? 'text-[#ff9e9e]' : 'text-[#b8e6c3]'" x-text="error ?? 'JSON válido'"></p>
-        <button type="button" class="lucille-button" @click="format()">Formatear JSON</button>
-    </div>
-
     @error($name)
-        <p class="text-xs text-[#ff9e9e]">{{ $message }}</p>
+        <p class="text-xs text-red-400">{{ $message }}</p>
     @enderror
 </div>

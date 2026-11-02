@@ -1,51 +1,99 @@
-<x-layouts.admin title="Contacto outreach">
-    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-        <div class="flex flex-wrap items-start justify-between gap-4">
+<x-layouts.admin title="Ficha de contacto de banda">
+    @php
+        $statusLabels = [
+            'pending' => 'Pendiente',
+            'contacted' => 'Contactada',
+            'responded' => 'Con respuesta',
+            'registered' => 'Registrada',
+            'not_interested' => 'Sin interés',
+            'invalid' => 'Correo inválido',
+        ];
+        $sourceLabels = [
+            'producer' => 'Productor / Programa',
+            'self' => 'Solicitud propia',
+            'other' => 'Otro origen',
+        ];
+    @endphp
+
+    <div class="mx-auto max-w-6xl space-y-5 font-sans">
+        <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-4">
             <div>
-                <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $contact->displayName() }}</h1>
-                <p class="mt-3 text-sm text-[#9a9a9a]">{{ $contact->programLabel() }} · {{ $contact->status }}</p>
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-[#c32720]">Contactos e invitaciones · Ficha de seguimiento</div>
+                <h1 class="mt-0.5 font-display text-2xl uppercase tracking-[.08em] text-white">{{ $contact->displayName() }}</h1>
+                <p class="mt-1 text-xs text-gray-400">
+                    {{ $contact->programLabel() }} · Estado: <strong class="text-white">{{ $statusLabels[$contact->status] ?? $contact->status }}</strong>
+                </p>
             </div>
-            <div class="flex flex-wrap gap-3">
-                <a href="{{ route('admin.outreach.contacts.edit', $contact) }}" class="lucille-button">Editar</a>
-                <a href="{{ route('admin.outreach.contacts.index') }}" class="lucille-button-solid">Volver</a>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.outreach.contacts.edit', $contact) }}" class="inline-flex h-9 items-center rounded-lg bg-[#c32720] px-3.5 text-xs font-semibold text-white hover:bg-[#a8201a]">
+                    Editar contacto
+                </a>
+                <a href="{{ route('admin.outreach.contacts.index') }}" class="inline-flex h-9 items-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white">
+                    Volver a contactos
+                </a>
             </div>
-        </div>
-    </div>
+        </header>
 
-    <section class="mt-8 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
-            <div class="space-y-3 text-sm text-[#9f9f9f]">
-                <p><span class="text-[#dcdcdc]">Programa:</span> {{ $contact->program_code ?: 'Sin código' }}</p>
-                <p><span class="text-[#dcdcdc]">Origen:</span> {{ $contact->referral_source ?: 'producer' }}</p>
-                <p><span class="text-[#dcdcdc]">Email:</span> {{ $contact->email ?: 'Sin email' }}</p>
-                <p><span class="text-[#dcdcdc]">Teléfono:</span> {{ $contact->phone ?: 'Sin teléfono' }}</p>
-                <p><span class="text-[#dcdcdc]">Contacto:</span> {{ $contact->contact_person ?: 'Sin contacto' }}</p>
-                <p><span class="text-[#dcdcdc]">Specs:</span> {{ $contact->specsBadge() }}</p>
-                <p><span class="text-[#dcdcdc]">Último contacto:</span> {{ $contact->last_contacted_at?->format('Y-m-d H:i') ?? 'Nunca' }}</p>
-                <p><span class="text-[#dcdcdc]">Material recibido:</span> {{ $contact->materials_received_at?->format('Y-m-d H:i') ?? 'Pendiente' }}</p>
-                <p><span class="text-[#dcdcdc]">Backblaze:</span> {{ $contact->backblaze_path ?: 'Sin ruta' }}</p>
-            </div>
-            <div class="mt-6 border border-[#2b2b2b] bg-[#151515] p-4 text-sm text-[#cfcfcf]">
-                {!! nl2br(e((string) $contact->notes)) ?: '<span class="text-[#9a9a9a]">Sin notas.</span>' !!}
-            </div>
-        </div>
-
-        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
-            <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Historial de envíos</h2>
-            <div class="mt-5 space-y-3">
-                @forelse ($contact->logs as $log)
-                    <div class="border border-[#2b2b2b] bg-[#151515] p-4">
-                        <div class="flex items-center justify-between gap-4">
-                            <div class="text-sm text-[#dcdcdc]">{{ $log->campaign?->name ?? 'Campaña' }}</div>
-                            <div class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $log->status }}</div>
-                        </div>
-                        <div class="mt-2 text-xs text-[#9a9a9a]">{{ $log->sent_at?->format('Y-m-d H:i') ?? 'Sin fecha' }}</div>
-                        <div class="mt-2 text-sm text-[#9f9f9f]">{{ $log->subject }}</div>
+        <section class="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+            <div class="rounded-xl border border-white/10 bg-[#101012] p-5 space-y-4">
+                <h2 class="font-display text-sm uppercase tracking-wider text-white border-b border-white/5 pb-2.5">Datos de la banda y requisitos</h2>
+                <dl class="grid grid-cols-1 gap-2.5 text-xs sm:grid-cols-2">
+                    <div class="rounded-lg border border-white/5 bg-[#151518] p-2.5">
+                        <dt class="text-[11px] text-gray-400">Programa asignado</dt>
+                        <dd class="mt-0.5 font-medium text-white">{{ $contact->program_code ?: 'Sin código' }} ({{ $contact->programLabel() }})</dd>
                     </div>
-                @empty
-                    <p class="text-sm text-[#9a9a9a]">No hay envíos registrados.</p>
-                @endforelse
+                    <div class="rounded-lg border border-white/5 bg-[#151518] p-2.5">
+                        <dt class="text-[11px] text-gray-400">Origen</dt>
+                        <dd class="mt-0.5 font-medium text-white">{{ $sourceLabels[$contact->referral_source ?: 'producer'] ?? $contact->referral_source }}</dd>
+                    </div>
+                    <div class="rounded-lg border border-white/5 bg-[#151518] p-2.5">
+                        <dt class="text-[11px] text-gray-400">Correo electrónico</dt>
+                        <dd class="mt-0.5 font-medium text-white break-all">{{ $contact->email ?: 'Sin correo' }}</dd>
+                    </div>
+                    <div class="rounded-lg border border-white/5 bg-[#151518] p-2.5">
+                        <dt class="text-[11px] text-gray-400">Persona / Teléfono</dt>
+                        <dd class="mt-0.5 font-medium text-white">{{ $contact->contact_person ?: 'Sin contacto' }} · {{ $contact->phone ?: 'Sin teléfono' }}</dd>
+                    </div>
+                    <div class="rounded-lg border border-white/5 bg-[#151518] p-2.5">
+                        <dt class="text-[11px] text-gray-400">Requisitos técnicos</dt>
+                        <dd class="mt-0.5 font-medium text-white">{{ $contact->specsBadge() }}</dd>
+                    </div>
+                    <div class="rounded-lg border border-white/5 bg-[#151518] p-2.5">
+                        <dt class="text-[11px] text-gray-400">Último contacto / Material</dt>
+                        <dd class="mt-0.5 font-medium text-white">{{ $contact->last_contacted_at?->format('d/m/Y H:i') ?? 'Nunca' }} · {{ $contact->materials_received_at?->format('d/m/Y H:i') ?? 'Pendiente' }}</dd>
+                    </div>
+                </dl>
+
+                <div class="rounded-lg border border-white/5 bg-[#151518] p-3 text-xs text-gray-300">
+                    <div class="mb-1 text-[11px] font-semibold text-gray-400">Notas de seguimiento</div>
+                    {!! nl2br(e((string) $contact->notes)) ?: '<span class="text-gray-500">Sin notas registradas.</span>' !!}
+                </div>
             </div>
-        </div>
-    </section>
+
+            <div class="rounded-xl border border-white/10 bg-[#101012] p-5 space-y-3.5">
+                <div class="flex items-center justify-between border-b border-white/5 pb-2.5">
+                    <h2 class="font-display text-sm uppercase tracking-wider text-white">Historial de invitaciones de esta banda</h2>
+                    <span class="text-[11px] text-gray-400">{{ $contact->logs->count() }} registros</span>
+                </div>
+                <div class="space-y-2.5">
+                    @forelse ($contact->logs as $log)
+                        <div class="rounded-lg border border-white/5 bg-[#151518] p-3 text-xs space-y-1">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-semibold text-white">{{ $log->campaign?->name ?? 'Campaña de invitación' }}</span>
+                                <span class="inline-flex items-center rounded border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-gray-300">
+                                    {{ $log->status === 'sent' ? 'Enviado (SMTP)' : $log->status }}
+                                </span>
+                            </div>
+                            <div class="text-[11px] text-gray-400">{{ $log->sent_at?->format('d/m/Y H:i') ?? 'Sin fecha' }}</div>
+                            <div class="text-xs text-gray-300">{{ $log->subject }}</div>
+                        </div>
+                    @empty
+                        <div class="rounded-lg border border-white/5 bg-[#151518]/50 p-6 text-center text-xs text-gray-400">
+                            No hay envíos de invitación registrados para este contacto.
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </section>
+    </div>
 </x-layouts.admin>

@@ -1,14 +1,23 @@
-<x-layouts.admin :title="'Edit Radio Artist - '.$themeSettings->site_name">
-    <div class="mb-6">
-        <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">Edit Radio Artist</h1>
-        <p class="mt-2 text-[#9a9a9a]">Update the local profile used before external lookup.</p>
+<x-layouts.admin :title="'Editar perfil: ' . $bandProfile->name">
+    <div class="mx-auto max-w-5xl space-y-5 font-sans">
+        <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-4">
+            <div>
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-[#c32720]">Bandas y comunidad · Catálogo editorial del reproductor</div>
+                <h1 class="mt-0.5 font-display text-2xl uppercase tracking-[.08em] text-white">Editar perfil: {{ $bandProfile->name }}</h1>
+                <p class="mt-1 text-xs text-gray-400">Actualiza la biografía completa, el resumen editorial y los metadatos utilizados por el reproductor.</p>
+            </div>
+            <a href="{{ route('admin.radio-artists.index') }}" class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#c32720]">
+                <span>Volver a perfiles</span>
+            </a>
+        </header>
+
+        <form action="{{ route('admin.radio-artists.update', $bandProfile) }}" method="POST" class="space-y-5">
+            @csrf
+            @method('PUT')
+            @include('admin.radio-artists._form')
+        </form>
     </div>
 
-    <form action="{{ route('admin.radio-artists.update', $bandProfile) }}" method="POST" class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
-        @csrf
-        @method('PUT')
-        @include('admin.radio-artists._form')
-    </form>
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -20,12 +29,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const artistName = document.querySelector('[name="name"]')?.value || '';
         if (!artistName.trim()) {
-            alert('Primero guarda el nombre del artista.');
+            alert('Primero escribe o guarda el nombre del artista.');
             return;
         }
 
         btn.disabled = true;
-        btn.textContent = '✍️ Generando...';
+        btn.textContent = 'Generando desde fuentes...';
         btn.style.opacity = '0.6';
 
         const url = btn.getAttribute('data-url');
@@ -73,23 +82,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (f) f.value = d.labels;
                 }
                 if (d.formed_label) {
-                    // Try to fill founded_date from formed_year
                     const f = document.querySelector('[name="founded_date"]');
                     if (f && d.formed_year) {
                         f.value = d.formed_year + '-01-01';
                     }
                 }
-                alert('✅ Información generada de ' + Object.keys(d).length + ' campos. Revisa y guarda.');
+                alert('Información generada correctamente. Revisa los campos y guarda los cambios.');
             } else {
-                alert('❌ ' + (data.message || 'No se encontró información'));
+                alert(data.message || 'No se encontró información en las fuentes consultadas.');
             }
         })
         .catch(err => {
-            alert('❌ Error: ' + err.message);
+            alert('Error: ' + err.message);
         })
         .finally(() => {
             btn.disabled = false;
-            btn.textContent = '✨ Auto-generar desde fuentes';
+            btn.textContent = 'Autocompletar desde fuentes externas';
             btn.style.opacity = '1';
         });
     });

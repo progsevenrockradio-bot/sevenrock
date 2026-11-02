@@ -130,32 +130,36 @@
 @endonce
     <x-sections.page-heading :title="$post['title']" overlay="rgba(0,0,0,0)">
         <span>{{ $post['date'] }}</span>
-        <span class="mx-1">by</span>
-        <a href="#" class="transition hover:text-lucille-accent">{{ $post['author'] }}</a>
-        <span class="mx-1">in&nbsp;</span>
-        @foreach ($post['categories'] as $category)
-            <a href="{{ route('blog.category', ['slug' => \Illuminate\Support\Str::slug($category)]) }}" class="transition hover:text-lucille-accent">{{ $category }}</a>@if (! $loop->last)<span class="mx-1">·</span>@endif
-        @endforeach
+        <span class="mx-1">por</span>
+        <a href="#" class="transition hover:text-lucille-accent">{{ $post['author'] ?: 'Redacción Seven Rock Radio' }}</a>
+        @if (!empty($post['categories']))
+            <span class="mx-1">en&nbsp;</span>
+            @foreach ($post['categories'] as $category)
+                <a href="{{ route('blog.category', ['slug' => \Illuminate\Support\Str::slug($category)]) }}" class="transition hover:text-lucille-accent">{{ $category }}</a>@if (! $loop->last)<span class="mx-1">·</span>@endif
+            @endforeach
+        @endif
     </x-sections.page-heading>
 
     <section>
-        <div class="lucille-blog-standard-wrap">
-            <div class="flex flex-col lg:flex-row">
-                <main class="lucille-blog-standard-main">
+        <div class="lucille-blog-standard-wrap max-w-[1200px] mx-auto px-4 sm:px-6 pb-12">
+            <div class="flex flex-col lg:flex-row gap-8">
+                <main class="lucille-blog-standard-main flex-1 w-full lg:w-3/4 pr-0 lg:pr-4">
                     <article>
-                        <div class="relative embedded-wall-socket">
-                            <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ $post['title'] }}" width="1200" height="630" class="mb-0 w-full" loading="eager" decoding="async">
-                            @if (data_get($post, 'en_memoria'))
-                                <x-luto :nombre="data_get($post, 'en_memoria_nombre')" />
-                            @endif
-                        </div>
+                        @if (!empty($post['image']))
+                            <div class="relative embedded-wall-socket mb-6 overflow-hidden rounded-xl border border-white/5 aspect-video bg-[#0c0c0c]">
+                                <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ $post['title'] }}" width="1200" height="675" class="mb-0 w-full h-full object-cover" loading="eager" decoding="async">
+                                @if (data_get($post, 'en_memoria'))
+                                    <x-luto :nombre="data_get($post, 'en_memoria_nombre')" />
+                                @endif
+                            </div>
+                        @endif
 
-                        <div class="lucille-single-post-body mt-0 space-y-5">
+                        <div class="lucille-single-post-body mt-0 space-y-5 text-[#dcdcdc] font-sans leading-relaxed text-base md:text-lg">
                             @foreach ($post['content'] as $block)
                                 {!! $block !!}
                             @endforeach
                             @if (! empty($post['quote']))
-                                <blockquote class="lucille-single-blockquote">
+                                <blockquote class="lucille-single-blockquote border-l-2 border-lucille-accent pl-4 py-2 italic text-[#a0a0a0] bg-white/[0.02]">
                                     <p>{{ $post['quote'] }}</p>
                                 </blockquote>
                             @endif

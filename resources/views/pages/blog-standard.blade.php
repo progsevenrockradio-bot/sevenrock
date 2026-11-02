@@ -21,7 +21,7 @@
                             if (is_string($publishedAt)) {
                                 $publishedAt = \Carbon\Carbon::parse($publishedAt);
                             }
-                            $date = $publishedAt?->format('F j, Y');
+                            $date = $publishedAt ? $publishedAt->locale('es')->translatedFormat('d \d\e F, Y') : '';
                             $categories = data_get($post, 'categories', []);
                             $excerpt = data_get($post, 'excerpt');
                             $slug = data_get($post, 'slug', 'inspiration');

@@ -1,170 +1,244 @@
-<x-layouts.admin :title="'Códigos de Promotor'">
-    <section class="space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<x-layouts.admin :title="'Códigos de promotor'">
+    @php
+        $hasActiveFilters = filled(request('search')) || filled(request('status'));
+        $ownerTypeLabels = [
+            'conductor' => 'Conductor',
+            'persona' => 'Persona',
+            'banda' => 'Banda',
+        ];
+    @endphp
+
+    <div class="mx-auto max-w-6xl space-y-5 font-sans">
+        <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-4">
             <div>
-                <div class="font-display text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Marketing</div>
-                <h1 class="mt-2 font-display text-2xl sm:text-3xl uppercase tracking-[.12em] text-white">Códigos de Promotor</h1>
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-[#c32720]">Bandas y comunidad · Referidos</div>
+                <h1 class="mt-0.5 font-display text-2xl uppercase tracking-[.08em] text-white">Códigos de promotor</h1>
+                <p class="mt-1 text-xs text-gray-400">Gestión de códigos de invitación y cupos de referidos para conductores, personas y bandas.</p>
             </div>
-            <a href="{{ route('admin.talents.promoters.create') }}" class="lucille-button-solid text-center">Nuevo Código</a>
-        </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.talents.index') }}" class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#c32720]">
+                    <span>Volver a bandas</span>
+                </a>
+                <a href="{{ route('admin.talents.promoters.create') }}" class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#c32720] px-3.5 text-xs font-semibold text-white hover:bg-[#a8201a] focus:outline-none focus:ring-2 focus:ring-[#c32720]">
+                    <span>Nuevo código</span>
+                </a>
+            </div>
+        </header>
 
         @if (session('success'))
-            <div class="border border-[#1e4d2b] bg-[rgba(16,64,30,.18)] px-4 py-3 text-sm text-[#b8e6c3]">
+            <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-200" role="status">
                 {{ session('success') }}
             </div>
         @endif
 
         @if (session('error'))
-            <div class="border border-[#721c24] bg-[rgba(114,28,36,.18)] px-4 py-3 text-sm text-[#f5c6cb]">
+            <div class="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200" role="alert">
                 {{ session('error') }}
             </div>
         @endif
 
-        <div class="border border-white/10 bg-[#10161b] p-4 sm:p-6">
-            <form method="GET" action="{{ route('admin.talents.promoters.index') }}" class="grid gap-3 md:grid-cols-[1fr_auto_auto]">
-                <input type="search" name="search" value="{{ request('search') }}" placeholder="Buscar por código, nombre o email" class="lucille-product-field w-full">
-                <select name="status" class="lucille-product-field w-full md:w-auto">
-                    <option value="">Todos los estados</option>
-                    <option value="active" @selected(request('status') === 'active')>Activos</option>
-                    <option value="archived" @selected(request('status') === 'archived')>Archivados</option>
-                </select>
-                <button type="submit" class="lucille-button-solid w-full md:w-auto text-center">Filtrar</button>
-            </form>
-        </div>
+        {{-- Filtros --}}
+        <form method="GET" action="{{ route('admin.talents.promoters.index') }}" class="rounded-xl border border-white/10 bg-[#101012] p-3.5">
+            <div class="grid gap-3 sm:grid-cols-[1.4fr_1fr_auto] items-end">
+                <div>
+                    <label for="filter-promoter-search" class="mb-1 block text-xs font-medium text-gray-300">Buscar código, titular o correo</label>
+                    <input
+                        id="filter-promoter-search"
+                        type="search"
+                        name="search"
+                        value="{{ request('search') }}"
+                        placeholder="Código, nombre o correo electrónico..."
+                        class="h-9 w-full rounded-lg border border-white/10 bg-[#151518] px-3 text-xs text-white placeholder-gray-500 focus:border-[#c32720] focus:outline-none focus:ring-1 focus:ring-[#c32720]"
+                    >
+                </div>
+                <div>
+                    <label for="filter-promoter-status" class="mb-1 block text-xs font-medium text-gray-300">Estado del código</label>
+                    <select
+                        id="filter-promoter-status"
+                        name="status"
+                        class="h-9 w-full rounded-lg border border-white/10 bg-[#151518] px-3 text-xs text-white focus:border-[#c32720] focus:outline-none focus:ring-1 focus:ring-[#c32720]"
+                    >
+                        <option value="">Todos los estados</option>
+                        <option value="active" @selected(request('status') === 'active')>Activos</option>
+                        <option value="archived" @selected(request('status') === 'archived')>Archivados</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="submit" class="inline-flex h-9 flex-1 sm:flex-initial items-center justify-center rounded-lg bg-[#c32720] px-4 text-xs font-semibold text-white hover:bg-[#a8201a] focus:outline-none focus:ring-2 focus:ring-[#c32720]">
+                        Filtrar
+                    </button>
+                    @if ($hasActiveFilters)
+                        <a href="{{ route('admin.talents.promoters.index') }}" class="inline-flex h-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-300 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#c32720]">
+                            Restablecer filtros
+                        </a>
+                    @endif
+                </div>
+            </div>
+        </form>
 
-        <!-- Vista Móvil (Tarjetas) -->
-        <div class="space-y-3 sm:hidden">
-            @foreach ($promoters as $promoter)
+        {{-- Vista Móvil (390 px) --}}
+        <div class="space-y-3 md:hidden">
+            @forelse ($promoters as $promoter)
                 @php
                     $activeCount = $promoter->activeBandsCount();
                     $hasReachedLimit = $promoter->hasReachedLimit();
                 @endphp
-                <div class="border border-white/10 bg-[#10161b] p-4 text-sm text-[#d8d8d8]">
-                    <div class="flex items-center justify-between">
-                        <div class="font-display text-xl text-white">{{ $promoter->code }}</div>
+                <article class="rounded-xl border border-white/10 bg-[#101012] p-4 space-y-3 {{ $promoter->is_archived ? 'opacity-65' : '' }}">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="font-mono text-sm font-semibold text-white rounded-md border border-white/10 bg-[#151518] px-2.5 py-1">{{ $promoter->code }}</span>
                         @if ($promoter->is_archived)
-                            <span class="px-2 py-1 bg-gray-800 text-gray-400 text-xs rounded uppercase tracking-wider">Archivado</span>
+                            <span class="inline-flex items-center rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] font-medium text-gray-400">Archivado</span>
                         @elseif ($hasReachedLimit)
-                            <span class="px-2 py-1 bg-red-900/50 text-red-400 text-xs rounded uppercase tracking-wider border border-red-500/30">Tope Alcanzado</span>
+                            <span class="inline-flex items-center rounded-md border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-300">Tope Alcanzado</span>
                         @else
-                            <span class="px-2 py-1 bg-green-900/50 text-green-400 text-xs rounded uppercase tracking-wider border border-green-500/30">Activo</span>
+                            <span class="inline-flex items-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-300">Activo</span>
                         @endif
                     </div>
-                    <div class="mt-3">
-                        <span class="text-xs text-[#8b8b8b]">Dueño:</span> <span class="text-white font-semibold">{{ $promoter->owner_name }}</span>
-                        <br><span class="text-xs text-[#8b8b8b] break-all">{{ $promoter->owner_email }}</span>
+
+                    <div class="text-xs">
+                        <div class="font-semibold text-white">{{ $promoter->owner_name }}</div>
+                        <div class="text-gray-400 break-all">{{ $promoter->owner_email }}</div>
                     </div>
-                    <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
-                        <div><span class="text-[#8b8b8b]">Tipo:</span> {{ ucfirst($promoter->owner_type) }}</div>
-                        <div><span class="text-[#8b8b8b]">Referidos:</span> {{ $promoter->referrals()->count() }}</div>
-                        <div class="col-span-2">
-                            <span class="text-[#8b8b8b]">Activadas:</span> 
-                            <span class="{{ $hasReachedLimit ? 'text-red-400 font-bold' : 'text-white' }}">
-                                {{ $activeCount }} / {{ $promoter->max_bands ?? '∞' }}
-                            </span>
+
+                    <dl class="grid grid-cols-3 gap-2 rounded-lg border border-white/5 bg-[#151518]/70 p-2.5 text-xs">
+                        <div>
+                            <dt class="text-[10px] text-gray-400">Tipo</dt>
+                            <dd class="font-medium text-white">{{ $ownerTypeLabels[$promoter->owner_type] ?? ucfirst((string) $promoter->owner_type) }}</dd>
                         </div>
-                    </div>
+                        <div>
+                            <dt class="text-[10px] text-gray-400">Activadas / Tope</dt>
+                            <dd class="font-semibold {{ $hasReachedLimit ? 'text-red-300' : 'text-white' }}">{{ $activeCount }} / {{ $promoter->max_bands ?? '∞' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] text-gray-400">Referidos</dt>
+                            <dd class="font-medium text-white">{{ $promoter->referrals()->count() }}</dd>
+                        </div>
+                    </dl>
 
                     @if (!$promoter->is_archived)
-                        <div class="mt-4 flex flex-col gap-2">
+                        <div class="space-y-2 pt-2 border-t border-white/5">
                             <form method="POST" action="{{ route('admin.talents.promoters.send-email', $promoter) }}">
                                 @csrf
-                                <button type="submit" class="lucille-button w-full text-center">Enviar Código por Correo</button>
+                                <button type="submit" class="inline-flex h-9 w-full items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white">
+                                    Enviar código por correo
+                                </button>
                             </form>
 
-                            <form method="POST" action="{{ route('admin.talents.promoters.expand', $promoter) }}" class="flex gap-2">
+                            <form method="POST" action="{{ route('admin.talents.promoters.expand', $promoter) }}" class="flex items-center gap-2">
                                 @csrf
-                                <input type="number" name="new_limit" value="{{ ($promoter->max_bands ?? 18) + 1 }}" min="{{ max($activeCount, 1) }}" class="lucille-product-field w-20 text-center !p-2" required>
-                                <button type="submit" class="lucille-button flex-1 text-center">Ampliar Tope</button>
+                                <input type="number" name="new_limit" value="{{ ($promoter->max_bands ?? 18) + 1 }}" min="{{ max($activeCount, 1) }}" aria-label="Nuevo tope de bandas" class="h-9 w-20 rounded-lg border border-white/10 bg-[#151518] px-2 text-center text-xs text-white" required>
+                                <button type="submit" class="inline-flex h-9 flex-1 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white">
+                                    Ampliar tope
+                                </button>
                             </form>
 
                             <form method="POST" action="{{ route('admin.talents.promoters.renew', $promoter) }}">
                                 @csrf
-                                <button type="submit" class="lucille-button-solid w-full text-center" data-confirm="¿Renovar código? El anterior quedará archivado y el contador se reiniciará con un nuevo código." data-confirm-action="Renovar" data-confirm-tone="warning">Renovar Código</button>
+                                <button type="submit" class="inline-flex h-9 w-full items-center justify-center rounded-lg bg-[#c32720] px-3 text-xs font-semibold text-white hover:bg-[#a8201a]" data-confirm="¿Renovar código? El anterior quedará archivado y el contador se reiniciará con un nuevo código." data-confirm-action="Renovar" data-confirm-tone="warning">
+                                    Renovar código
+                                </button>
                             </form>
                         </div>
                     @endif
+                </article>
+            @empty
+                <div class="rounded-xl border border-white/10 bg-[#101012] p-8 text-center text-xs text-gray-400">
+                    No hay códigos de promotor registrados.
                 </div>
-            @endforeach
+            @endforelse
         </div>
 
-        <!-- Vista Escritorio (Tabla) -->
-        <div class="hidden sm:block overflow-x-auto border border-white/10 bg-[#10161b]">
-            <table class="min-w-full divide-y divide-white/10 text-left text-sm">
-                <thead class="bg-black/20 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
+        {{-- Vista Escritorio --}}
+        <div class="hidden md:block rounded-xl border border-white/10 bg-[#101012] overflow-hidden">
+            <table class="min-w-full divide-y divide-white/10 text-left text-xs">
+                <thead class="bg-white/[0.02] text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                     <tr>
-                        <th class="px-4 py-3">Código</th>
-                        <th class="px-4 py-3">Dueño</th>
-                        <th class="px-4 py-3">Tipo</th>
-                        <th class="px-4 py-3 text-center">Activadas / Tope</th>
-                        <th class="px-4 py-3 text-center">Referidos</th>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3">Acciones</th>
+                        <th scope="col" class="px-4 py-3">Código</th>
+                        <th scope="col" class="px-3 py-3">Titular y correo</th>
+                        <th scope="col" class="px-3 py-3">Tipo</th>
+                        <th scope="col" class="px-3 py-3 text-center">Activadas / Tope</th>
+                        <th scope="col" class="px-3 py-3 text-center">Referidos</th>
+                        <th scope="col" class="px-3 py-3">Estado</th>
+                        <th scope="col" class="px-4 py-3 text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-white/10">
-                    @foreach ($promoters as $promoter)
+                <tbody class="divide-y divide-white/5">
+                    @forelse ($promoters as $promoter)
                         @php
                             $activeCount = $promoter->activeBandsCount();
                             $hasReachedLimit = $promoter->hasReachedLimit();
                         @endphp
-                        <tr class="text-[#d8d8d8] {{ $promoter->is_archived ? 'opacity-60' : '' }}">
-                            <td class="px-4 py-4 font-display text-lg text-white whitespace-nowrap">{{ $promoter->code }}</td>
-                            <td class="px-4 py-4">
-                                <div class="font-semibold text-white">{{ $promoter->owner_name }}</div>
-                                <div class="text-xs text-[#8b8b8b]">{{ $promoter->owner_email }}</div>
+                        <tr class="hover:bg-white/[0.02] transition-colors {{ $promoter->is_archived ? 'opacity-60' : '' }}">
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="font-mono text-xs font-semibold text-white rounded border border-white/10 bg-[#151518] px-2 py-1">{{ $promoter->code }}</span>
                             </td>
-                            <td class="px-4 py-4 whitespace-nowrap">{{ ucfirst($promoter->owner_type) }}</td>
-                            <td class="px-4 py-4 text-center whitespace-nowrap">
-                                <span class="{{ $hasReachedLimit && !$promoter->is_archived ? 'text-red-400 font-bold' : 'text-white' }}">
+                            <td class="px-3 py-3">
+                                <div class="font-semibold text-white">{{ $promoter->owner_name }}</div>
+                                <div class="text-[11px] text-gray-400">{{ $promoter->owner_email }}</div>
+                            </td>
+                            <td class="px-3 py-3 whitespace-nowrap text-gray-300">
+                                {{ $ownerTypeLabels[$promoter->owner_type] ?? ucfirst((string) $promoter->owner_type) }}
+                            </td>
+                            <td class="px-3 py-3 text-center whitespace-nowrap">
+                                <span class="font-semibold {{ $hasReachedLimit && !$promoter->is_archived ? 'text-red-300' : 'text-white' }}">
                                     {{ $activeCount }} / {{ $promoter->max_bands ?? '∞' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-4 text-center">{{ $promoter->referrals()->count() }}</td>
-                            <td class="px-4 py-4 whitespace-nowrap">
+                            <td class="px-3 py-3 text-center text-gray-300">{{ $promoter->referrals()->count() }}</td>
+                            <td class="px-3 py-3 whitespace-nowrap">
                                 @if ($promoter->is_archived)
-                                    <span class="px-2 py-1 bg-gray-800 text-gray-400 text-xs rounded uppercase tracking-wider">Archivado</span>
+                                    <span class="inline-flex items-center rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] font-medium text-gray-400">Archivado</span>
                                 @elseif ($hasReachedLimit)
-                                    <span class="px-2 py-1 bg-red-900/50 text-red-400 text-xs rounded uppercase tracking-wider border border-red-500/30">Tope Alcanzado</span>
+                                    <span class="inline-flex items-center rounded-md border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-300">Tope Alcanzado</span>
                                 @else
-                                    <span class="px-2 py-1 bg-green-900/50 text-green-400 text-xs rounded uppercase tracking-wider border border-green-500/30">Activo</span>
+                                    <span class="inline-flex items-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-300">Activo</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-4">
+                            <td class="px-4 py-3 whitespace-nowrap text-right">
                                 @if (!$promoter->is_archived)
-                                    <div class="flex items-center gap-2">
-                                        <form method="POST" action="{{ route('admin.talents.promoters.send-email', $promoter) }}" title="Enviar Código por Correo">
+                                    <div class="inline-flex items-center justify-end gap-1.5">
+                                        <form method="POST" action="{{ route('admin.talents.promoters.send-email', $promoter) }}">
                                             @csrf
-                                            <button type="submit" class="lucille-button !p-2">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                            <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white" title="Enviar código por correo">
+                                                Enviar correo
                                             </button>
                                         </form>
 
-                                        <form method="POST" action="{{ route('admin.talents.promoters.expand', $promoter) }}" class="flex items-center">
+                                        <form method="POST" action="{{ route('admin.talents.promoters.expand', $promoter) }}" class="inline-flex items-center">
                                             @csrf
-                                            <input type="number" name="new_limit" value="{{ ($promoter->max_bands ?? 18) + 1 }}" min="{{ max($activeCount, 1) }}" class="lucille-product-field w-16 text-center !p-1 !h-auto text-sm border-r-0 rounded-r-none" required title="Nuevo Tope">
-                                            <button type="submit" class="lucille-button rounded-l-none !p-2" title="Ampliar Tope">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                                            <input type="number" name="new_limit" value="{{ ($promoter->max_bands ?? 18) + 1 }}" min="{{ max($activeCount, 1) }}" aria-label="Nuevo tope" class="h-8 w-14 rounded-l-lg border border-white/10 bg-[#151518] px-1.5 text-center text-xs text-white focus:border-[#c32720] focus:outline-none" required>
+                                            <button type="submit" class="inline-flex h-8 items-center rounded-r-lg border border-l-0 border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white">
+                                                Ampliar
                                             </button>
                                         </form>
 
-                                        <form method="POST" action="{{ route('admin.talents.promoters.renew', $promoter) }}" title="Renovar Código">
+                                        <form method="POST" action="{{ route('admin.talents.promoters.renew', $promoter) }}">
                                             @csrf
-                                            <button type="submit" class="lucille-button-solid !p-2" data-confirm="¿Renovar código? El anterior quedará archivado y el contador se reiniciará con un nuevo código." data-confirm-action="Renovar" data-confirm-tone="warning">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                            <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-200 hover:bg-amber-500/20" data-confirm="¿Renovar código? El anterior quedará archivado y el contador se reiniciará con un nuevo código." data-confirm-action="Renovar" data-confirm-tone="warning">
+                                                Renovar
                                             </button>
                                         </form>
                                     </div>
+                                @else
+                                    <span class="text-[11px] text-gray-500">Sin acciones</span>
                                 @endif
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="7" class="px-4 py-10 text-center text-xs text-gray-400">
+                                No hay códigos de promotor registrados.
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
 
-        <div>
-            {{ $promoters->links() }}
-        </div>
-    </section>
+        @if ($promoters->hasPages())
+            <div class="pt-2">
+                {{ $promoters->links() }}
+            </div>
+        @endif
+    </div>
 </x-layouts.admin>

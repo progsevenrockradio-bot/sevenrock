@@ -701,6 +701,14 @@ Route::controller(AdminAirplayController::class)
 // Entorno Local / Pruebas: Panel de Simulación del Reproductor
 // ─────────────────────────────────────────────────────────────────────────
 if (app()->environment(['local', 'testing'])) {
+    Route::get('/dev/auto-login-admin', function () {
+        $admin = \App\Models\User::where('is_admin', true)->first() ?? \App\Models\User::first();
+        if ($admin) {
+            \Illuminate\Support\Facades\Auth::login($admin);
+            return redirect()->route('admin.dashboard');
+        }
+        return 'No admin user found';
+    })->name('dev.auto-login-admin');
     Route::get('/dev/auto-login-talent', function () {
         $talent = \App\Models\Talent::firstOrFail();
         \Illuminate\Support\Facades\Auth::guard('talent')->login($talent);

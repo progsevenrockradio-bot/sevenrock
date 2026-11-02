@@ -140,9 +140,9 @@
                 {{-- Contenido Collage --}}
                 <div class="relative w-full h-full max-w-[1200px] mx-auto overflow-hidden flex flex-col justify-center items-center">
                     {{-- Encabezado Centrado --}}
-                    <div class="absolute top-8 w-full text-center z-50 pointer-events-none">
+                    <div class="absolute top-6 md:top-8 w-full text-center z-40 pointer-events-none px-4">
                         <span class="font-display text-[10px] uppercase tracking-[0.24em] text-[#c32720] block mb-1">📻 {{ $auto['label'] ?? 'Hoy en 7RR' }}</span>
-                        <h2 class="font-display text-[clamp(18px,2.4vw,30px)] uppercase tracking-[0.06em] text-[#f0f0f0] drop-shadow-[0_2px_24px_rgba(0,0,0,0.9)] m-0 leading-none">
+                        <h2 class="font-display text-[clamp(16px,2.2vw,30px)] uppercase tracking-[0.06em] text-[#f0f0f0] drop-shadow-[0_2px_24px_rgba(0,0,0,0.9)] m-0 leading-tight">
                             {{ \Carbon\Carbon::now()->locale('es')->isoFormat('dddd D [de] MMMM') }}
                         </h2>
                     </div>
@@ -241,7 +241,7 @@
                 }
                 @media (max-width: 768px) {
                     .split-col-izq {
-                        bottom: 80px !important;
+                        bottom: 50px !important;
                         align-items: center !important;
                     }
                 }
@@ -267,24 +267,25 @@
 
 
     @if ($totalSlideCount > 1)
-        <div class="absolute bottom-8 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/10" role="region" aria-label="Controles del carrusel de portada">
+        <div class="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5" role="region" aria-label="Controles del carrusel de portada">
             <button type="button"
                 @click="togglePlayPause()"
                 :aria-label="isPlaying ? 'Pausar pase automático de diapositivas' : 'Reanudar pase automático de diapositivas'"
                 :aria-pressed="(!isPlaying).toString()"
-                class="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-white/70 hover:text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent">
-                <svg x-show="isPlaying" class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                <svg x-show="!isPlaying" class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
+                class="w-7 h-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-full text-white/60 hover:text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                :title="isPlaying ? 'Pausar pase de diapositivas' : 'Reanudar pase de diapositivas'">
+                <svg x-show="isPlaying" class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                <svg x-show="!isPlaying" class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
                 <span class="sr-only" x-text="isPlaying ? 'Pausar pase de diapositivas' : 'Reanudar pase de diapositivas'"></span>
             </button>
 
             @for ($i = 0; $i < $totalSlideCount; $i++)
                 <button type="button" 
-                    class="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center p-0 bg-transparent rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" 
+                    class="w-7 h-7 min-w-[28px] min-h-[28px] flex items-center justify-center p-0 bg-transparent rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent" 
                     @click="go({{ $i }})" 
                     :aria-current="active === {{ $i }} ? 'true' : 'false'"
                     aria-label="Ir a la diapositiva {{ $i + 1 }} de {{ $totalSlideCount }}">
-                    <span class="h-2.5 w-2.5 rounded-full border border-white/70 transition pointer-events-none" :class="active === {{ $i }} ? 'bg-lucille-accent border-lucille-accent scale-125' : 'bg-transparent'"></span>
+                    <span class="h-2 w-2 rounded-full border border-white/60 transition pointer-events-none" :class="active === {{ $i }} ? 'bg-lucille-accent border-lucille-accent scale-110' : 'bg-transparent'"></span>
                 </button>
             @endfor
         </div>

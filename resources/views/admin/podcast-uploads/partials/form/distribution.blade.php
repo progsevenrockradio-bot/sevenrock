@@ -1,59 +1,73 @@
-<section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
-    <div class="flex flex-col gap-3">
+<div class="space-y-6">
+    {{-- Encabezado de sección limpio --}}
+    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-white/5">
         <div>
-            <p class="text-[10px] uppercase tracking-[.28em] text-[#8b8b8b]">Bloque 3</p>
-            <h2 class="mt-2 font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">Distribución y Estados</h2>
-            <p class="mt-3 text-sm leading-7 text-[#9a9a9a]">
-                Opciones técnicas del pipeline: qué se conserva, qué se sincroniza y qué se envía al resto de sistemas.
+            <h2 class="font-display text-lg sm:text-xl font-bold uppercase tracking-wide text-white">
+                Opciones de entrega y distribución
+            </h2>
+            <p class="text-xs text-gray-400 font-sans">
+                Configuración para la preservación de archivos y el despacho a plataformas de emisión.
             </p>
         </div>
-        <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] px-4 py-3 text-xs uppercase tracking-[.18em] text-[#f3c26b]">
-            Sin estado manual: el pipeline lo actualiza automáticamente
-        </div>
+        <span class="text-[11px] font-mono text-gray-500 uppercase tracking-wider">
+            Paso 3 de 3
+        </span>
     </div>
 
-    <div class="mt-5 space-y-4">
-        <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] p-4">
-            <h3 class="text-xs uppercase tracking-[.18em] text-[#b8e6c3]">Estado operativo</h3>
-            <p class="mt-3 text-sm leading-6 text-[#c7c7c7]">
-                Este formulario no expone un selector manual de <span class="text-white">Borrador / Publicado / Procesando</span>.
-                El estado real se deriva del pipeline, de la carga del MP3 y de los jobs de RadioBOSS, Archive.org y notificación.
-            </p>
-            <div class="mt-4 grid gap-3">
-                <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-3">
-                    <div class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Procesando</div>
-                    <div class="mt-1 text-sm text-[#e0e0e0]">La carga está en curso o el pipeline trabaja en segundo plano.</div>
-                </div>
-                <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-3">
-                    <div class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Publicado</div>
-                    <div class="mt-1 text-sm text-[#e0e0e0]">Se considera listo cuando RadioBOSS, Archive.org y notificación terminan correctamente.</div>
-                </div>
-                <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-3">
-                    <div class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Borrador</div>
-                    <div class="mt-1 text-sm text-[#e0e0e0]">Es el estado implícito antes de completar una subida exitosa.</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="border border-[#2b2b2b] bg-[rgba(0,0,0,.18)] p-4">
-            <h3 class="text-xs uppercase tracking-[.18em] text-[#b8e6c3]">Distribución</h3>
-            <label class="mt-4 flex items-start gap-3 text-sm text-[#dcdcdc]">
-                <input type="checkbox" name="download_processed_mp3" value="1" @checked(old('download_processed_mp3')) class="mt-1 h-4 w-4">
-                <span>
-                    <span class="block font-medium text-white">Conservar una copia local del MP3 procesado</span>
-                    <span class="mt-1 block text-xs leading-5 text-[#9a9a9a]">La descarga quedará disponible cuando termine el procesamiento.</span>
+    {{-- Opción de Copia Local --}}
+    <div class="rounded-xl border border-white/5 bg-black/40 p-4 sm:p-5">
+        <label class="flex items-start gap-3.5 cursor-pointer select-none">
+            <input
+                type="checkbox"
+                name="download_processed_mp3"
+                value="1"
+                @checked(old('download_processed_mp3'))
+                class="mt-1 h-4 w-4 rounded border-white/20 bg-black/50 text-[#c32720] focus:ring-0 focus:ring-offset-0 cursor-pointer"
+            >
+            <div>
+                <span class="block text-xs sm:text-sm font-semibold text-white font-sans">
+                    Conservar una copia local del MP3 procesado
                 </span>
-            </label>
+                <span class="mt-0.5 block text-xs text-gray-400 font-sans leading-relaxed">
+                    Almacena el archivo en el almacenamiento del servidor para habilitar su descarga directa inmediata desde el panel tras finalizar el procesamiento.
+                </span>
+            </div>
+        </label>
+    </div>
 
+    {{-- Resumen de las acciones de envío disponibles --}}
+    <div>
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 font-sans">
+            Acciones disponibles en este paso
+        </h3>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div class="rounded-xl border border-white/5 bg-black/30 p-4">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex h-2 w-2 rounded-full bg-gray-400"></span>
+                    <span class="text-xs font-semibold text-white font-sans">Crear episodio</span>
+                </div>
+                <p class="mt-1.5 text-xs text-gray-400 font-sans leading-relaxed">
+                    Almacena la emisión y el audio cargado sin despachar tareas a RadioBOSS ni Archive.org. Ideal para guardar la ficha con antelación o revisión previa.
+                </p>
+            </div>
 
-
-            <div class="mt-4 border border-[#2b2b2b] bg-[rgba(16,16,18,.7)] p-4">
-                <h4 class="text-[11px] uppercase tracking-[.18em] text-[#9a9a9a]">Notas técnicas</h4>
-                <p class="mt-2 text-sm leading-6 text-[#c7c7c7]">
-                    Si más adelante necesitas tags, categorías o un selector manual de estado, conviene crear columnas y validación explícita en `RadioProgram`
-                    antes de mostrarlos aquí.
+            <div class="rounded-xl border border-[#c32720]/20 bg-[#c32720]/5 p-4">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex h-2 w-2 rounded-full bg-[#c32720]"></span>
+                    <span class="text-xs font-semibold text-[#c32720] font-sans">Crear y procesar</span>
+                </div>
+                <p class="mt-1.5 text-xs text-gray-300 font-sans leading-relaxed">
+                    Registra la emisión y lanza de inmediato la cola automática: optimización R2, subida FTP a RadioBOSS, archivo en Archive.org y notificación por email.
                 </p>
             </div>
         </div>
     </div>
-</section>
+
+    {{-- Notas técnicas --}}
+    <div class="rounded-xl border border-white/5 bg-black/20 p-4 text-xs text-gray-400 font-sans flex items-start gap-2.5">
+        <span class="text-base text-gray-400 shrink-0">ℹ️</span>
+        <p class="leading-relaxed">
+            Los estados del pipeline se actualizan automáticamente en tiempo real mediante workers en segundo plano. Puedes supervisar el avance de cada tarea en la sección de emisiones recientes.
+        </p>
+    </div>
+</div>

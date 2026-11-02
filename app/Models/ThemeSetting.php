@@ -374,7 +374,7 @@ class ThemeSetting extends Model
             'ui_texts' => [
                 'search_placeholder' => 'buscar...',
                 'search_button_label' => 'Buscar',
-                'recent_posts' => 'Posts recientes',
+                'recent_posts' => 'Publicaciones recientes',
                 'recent_comments' => 'Comentarios recientes',
                 'archives' => 'Archivos',
                 'categories' => 'Categorías',

@@ -49,6 +49,12 @@ class AppServiceProvider extends ServiceProvider
             return $user && $user->hasRole('Super Admin');
         });
 
+        config([
+            'log-viewer.back_to_system_url' => url('/admin'),
+            'log-viewer.back_to_system_label' => 'Volver al panel de administración',
+            'log-viewer.defaults.theme' => \Opcodes\LogViewer\Enums\Theme::Dark,
+        ]);
+
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(10)->by($request->input('email') ?: $request->ip());
         });

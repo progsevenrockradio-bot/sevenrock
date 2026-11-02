@@ -1,16 +1,103 @@
 @props(['podcasts'])
 
 @php
+    use App\Models\MasterProgram;
+    use App\Models\RadioProgram;
     use App\Support\PublicMediaUrl;
+    use Illuminate\Support\Facades\Schema;
 
-    $fallbackImage = asset('assets/lucille/logo.png');
+    $fallbackImage = data_get($themeAppearance ?? [], 'media.logo_url') ?: asset('assets/lucille/pedalboard-1511069_1920.jpg');
 
-    $normalizeEpisode = static function (array $episode) use ($fallbackImage): array {
+    $cleanEditorialText = static function (string $text): string {
+        $cleaned = trim(strip_tags(html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        $cleaned = (string) preg_replace('/\*{1,2}([^*]+)\*{1,2}/u', '$1', $cleaned);
+        $cleaned = trim((string) preg_replace('/\s+/u', ' ', $cleaned));
+
+        if (
+            $cleaned === '' ||
+            strcasecmp($cleaned, 'Episodio listo para escuchar desde la portada.') === 0 ||
+            str_starts_with(mb_strtolower($cleaned), 'no hay podcasts listos todavía')
+        ) {
+            return '';
+        }
+
+        return $cleaned;
+    };
+
+    $masterDescriptionsByName = [];
+    $episodeSpecificDescriptions = [];
+
+    try {
+        if (Schema::hasTable('master_programs')) {
+            $masterDescriptionsByName = MasterProgram::query()
+                ->get(['id', 'nombre', 'descripcion', 'comentario_predeterminado'])
+                ->mapWithKeys(function (MasterProgram $mp) use ($cleanEditorialText): array {
+                    $key = mb_strtolower(trim((string) $mp->nombre));
+                    $desc = $cleanEditorialText(implode(' ', array_filter([
+                        trim((string) $mp->descripcion),
+                        trim((string) $mp->comentario_predeterminado),
+                    ])));
+                    return $key !== '' ? [$key => $desc] : [];
+                })
+                ->all();
+        }
+
+        if (Schema::hasTable('radio_programs')) {
+            $episodeRows = RadioProgram::query()
+                ->latest('fecha_emision')
+                ->latest('id')
+                ->limit(40)
+                ->get(['id', 'titulo_programa', 'live_title', 'live_description', 'resena', 'comentario_episodio']);
+
+            foreach ($episodeRows as $row) {
+                $epSpecific = $cleanEditorialText((string) (
+                    $row->live_description
+                    ?: $row->resena
+                    ?: $row->comentario_episodio
+                    ?: ''
+                ));
+
+                if ($epSpecific !== '') {
+                    $episodeSpecificDescriptions['id:' . $row->id] = $epSpecific;
+                    $titleKey = mb_strtolower(trim((string) ($row->live_title ?: $row->titulo_programa ?: '')));
+                    if ($titleKey !== '' && ! isset($episodeSpecificDescriptions['title:' . $titleKey])) {
+                        $episodeSpecificDescriptions['title:' . $titleKey] = $epSpecific;
+                    }
+                }
+            }
+        }
+    } catch (\Throwable) {
+        // Mantener resiliencia sin fallar si alguna tabla no está disponible
+    }
+
+    $normalizeEpisode = static function (array $episode) use (
+        $fallbackImage,
+        $cleanEditorialText,
+        $masterDescriptionsByName,
+        $episodeSpecificDescriptions
+    ): array {
+        $id = trim((string) data_get($episode, 'id', ''));
         $program = trim((string) data_get($episode, 'program', data_get($episode, 'title', 'Podcast')));
         $episodeTitle = trim((string) data_get($episode, 'episode_title', data_get($episode, 'title', $program)));
         $host = trim((string) data_get($episode, 'host', 'Seven Rock Radio'));
         $date = trim((string) data_get($episode, 'date', ''));
-        $summary = trim((string) data_get($episode, 'summary', ''));
+
+        $programKey = mb_strtolower($program);
+        $epTitleKey = mb_strtolower($episodeTitle);
+
+        // Prioridad 1: Descripción específica del episodio (si contiene texto útil)
+        $specificFromDb = ($id !== '' ? ($episodeSpecificDescriptions['id:' . $id] ?? '') : '')
+            ?: ($epTitleKey !== '' ? ($episodeSpecificDescriptions['title:' . $epTitleKey] ?? '') : '');
+        $payloadSummary = $cleanEditorialText((string) data_get($episode, 'summary', data_get($episode, 'description', '')));
+
+        // Prioridad 2: Si está vacía, descripción general de su programa
+        $programGeneralDesc = $programKey !== '' ? ($masterDescriptionsByName[$programKey] ?? '') : '';
+
+        // Prioridad 3: Si ambas faltan, conservar metadatos sin inventar contenido ('')
+        $resolvedSummary = $specificFromDb !== ''
+            ? $specificFromDb
+            : ($payloadSummary !== '' ? $payloadSummary : $programGeneralDesc);
+
         $src = trim((string) data_get($episode, 'src', ''));
         $archiveUrl = trim((string) data_get($episode, 'archive_url', data_get($episode, 'url', '')));
         $image = PublicMediaUrl::normalizePublicUrl((string) data_get($episode, 'image', ''));
@@ -23,13 +110,13 @@
             ->all();
 
         return [
-            'id' => trim((string) data_get($episode, 'id', '')),
+            'id' => $id,
             'program' => $program !== '' ? $program : 'Podcast',
             'title' => trim((string) data_get($episode, 'title', $program !== '' ? $program : 'Podcast')),
             'episode_title' => $episodeTitle !== '' ? $episodeTitle : ($program !== '' ? $program : 'Podcast'),
             'host' => $host !== '' ? $host : 'Seven Rock Radio',
             'date' => $date,
-            'summary' => $summary !== '' ? $summary : 'Episodio listo para escuchar desde la portada.',
+            'summary' => $resolvedSummary,
             'image' => $image !== '' ? $image : $fallbackImage,
             'src' => $src !== '' ? $src : (string) ($audioSources[0] ?? ''),
             'audio_sources' => $audioSources,
@@ -108,14 +195,21 @@
         $sidebarEpisodes = array_merge($sidebarEpisodes, $extraEpisodes);
     }
 
-    $sidebarEpisodes = array_slice($sidebarEpisodes, 0, 8);
+    $sidebarEpisodes = array_slice($sidebarEpisodes, 0, 5);
+    $allEpisodesList = collect([$heroEpisode])
+        ->concat($sidebarEpisodes)
+        ->unique($episodeIdentity)
+        ->take(6)
+        ->values()
+        ->all();
 @endphp
 
 <div
-    class="mt-8 md:mt-10 grid gap-6 lg:grid-cols-[1.15fr_.85fr] items-start"
+    class="mx-auto mt-8 max-w-[1200px] px-6 md:mt-10"
     x-data="{
         activeEpisode: @js($heroEpisode),
-        sidebarEpisodes: @js($sidebarEpisodes),
+        sidebarEpisodes: @js($allEpisodesList),
+        descExpanded: false,
         formatearTituloJS(text) {
             if (!text) return '';
             let cleanText = text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
@@ -135,8 +229,6 @@
             let half = Math.ceil(totalWords / 2);
             return `<span class='text-white'>${words.slice(0, half).join(' ')}</span> <span class='text-lucille-accent'>${words.slice(half).join(' ')}</span>`;
         },
-        infoModalOpen: false,
-        lastTrigger: null,
         playing: false,
         muted: false,
         volume: 85,
@@ -147,18 +239,12 @@
         progressInterval: null,
         init() {
             this.syncAudio(false);
-            window.addEventListener('sr-force-close-modals', () => {
-                this.closeInfoModal();
-            }, { once: true });
-            window.addEventListener('pageshow', () => {
-                this.closeInfoModal();
-            }, { once: true });
             window.addEventListener('sr-live-playing', () => {
                 if (this.playing) {
                     this.pause();
                 }
             });
-            
+
             this.progressInterval = setInterval(() => {
                 if (this.playing && this.fixedDuration > 0) {
                     if (this.currentTime >= this.fixedDuration) {
@@ -177,6 +263,7 @@
             return this.episodeKey(this.activeEpisode) === this.episodeKey(episode);
         },
         normalizeEpisode(episode) {
+            const rawSummary = String(episode?.summary || '').trim();
             return {
                 id: episode?.id || '',
                 program: episode?.program || episode?.title || 'Podcast',
@@ -184,7 +271,7 @@
                 episode_title: episode?.episode_title || episode?.program || episode?.title || 'Podcast',
                 host: episode?.host || 'Seven Rock Radio',
                 date: episode?.date || '',
-                summary: episode?.summary || 'Episodio listo para escuchar desde la portada.',
+                summary: rawSummary === 'Episodio listo para escuchar desde la portada.' ? '' : rawSummary,
                 image: episode?.image || '{{ $fallbackImage }}',
                 src: episode?.src || '',
                 audio_sources: Array.isArray(episode?.audio_sources) ? episode.audio_sources.filter(Boolean) : [],
@@ -193,26 +280,22 @@
                 program_url: episode?.program_url || '',
             };
         },
+        hasLongSummary() {
+            const text = String(this.activeEpisode?.summary || '').trim();
+            return text.length > 180;
+        },
+        visibleSummary() {
+            const text = String(this.activeEpisode?.summary || '').trim();
+            if (!text) return '';
+            if (this.descExpanded || text.length <= 180) return text;
+            const sliced = text.slice(0, 180);
+            const lastSpace = sliced.lastIndexOf(' ');
+            return (lastSpace > 120 ? sliced.slice(0, lastSpace) : sliced) + '…';
+        },
         selectEpisode(episode) {
             this.activeEpisode = this.normalizeEpisode(episode);
-            this.closeInfoModal();
+            this.descExpanded = false;
             this.syncAudio(false);
-            this.play();
-        },
-        openInfoModal(event = null) {
-            if ((event && event.isTrusted === false) || !window.__srUserGesture) {
-                return;
-            }
-            this.lastTrigger = event ? (event.currentTarget || event.target) : document.activeElement;
-            this.infoModalOpen = true;
-            document.body.style.overflow = 'hidden';
-        },
-        closeInfoModal() {
-            this.infoModalOpen = false;
-            document.body.style.overflow = '';
-            if (this.lastTrigger && typeof this.lastTrigger.focus === 'function') {
-                this.lastTrigger.focus();
-            }
         },
         syncAudio(autoplay = false) {
             const audio = this.$refs.audio;
@@ -245,6 +328,7 @@
                 audio.src = source;
                 audio.load();
                 this.failedAudioSources = [];
+                this.playing = false;
                 this.currentTime = 0;
                 this.fixedDuration = 0;
                 this.progress = 0;
@@ -406,7 +490,7 @@
         seekAudio(event) {
             const audio = this.$refs.audio;
             if (!audio || !this.fixedDuration) return;
-            
+
             let percentage = 0;
             if (event && event.type === 'click') {
                 const rect = event.currentTarget.getBoundingClientRect();
@@ -415,7 +499,7 @@
             } else {
                 percentage = Math.max(0, Math.min(100, Number(event) || 0));
             }
-            
+
             this.progress = percentage;
             const targetTime = (this.fixedDuration * percentage) / 100;
             this.currentTime = targetTime;
@@ -437,11 +521,11 @@
 
             const audioTime = Number.isFinite(audio.currentTime) && audio.currentTime > 0 ? Math.round(audio.currentTime) : 0;
             const diff = Math.abs(this.currentTime - audioTime);
-            
+
             if (diff > 3) {
                 this.currentTime = audioTime;
             }
-            
+
             if (Number.isFinite(audio.duration) && audio.duration > 0) {
                 this.fixedDuration = Math.round(audio.duration);
                 this.progress = Math.min(100, (this.currentTime / this.fixedDuration) * 100);
@@ -472,132 +556,134 @@
         },
     }"
 >
-    <article class="home-panel min-w-0 overflow-hidden">
-        <div class="p-4 md:p-6 lg:p-7">
-            <div class="relative overflow-hidden border border-base-300 bg-base-200 h-[220px] sm:h-[250px] md:h-[300px]">
-                <!-- Fondo desenfocado -->
-                <div class="absolute inset-0 z-0 overflow-hidden">
-                    <img 
-                        :src="activeEpisode.image" 
-                        x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ $fallbackImage }}'; }"
-                        class="h-full w-full object-cover blur-xl opacity-40 scale-125"
-                        alt="" 
-                        aria-hidden="true"
-                    >
-                    <div class="absolute inset-0 bg-base-200/30"></div>
-                </div>
-                <!-- Imagen principal -->
-                <img
-                    :src="activeEpisode.image"
-                    x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ $fallbackImage }}'; }"
-                    :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
-                    width="1280"
-                    height="720"
-                    fetchpriority="high"
-                    class="relative z-10 block h-full w-full object-contain object-center drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"
-                >
-            </div>
+    <div class="grid items-start gap-8 lg:grid-cols-[minmax(280px,460px)_minmax(0,1fr)] lg:gap-12">
+        {{-- 1. Columna izquierda: Portada completa sin recorte ni marcos decorativos añadidos --}}
+        <div class="flex w-full items-start justify-center lg:sticky lg:top-24">
+            <img
+                :src="activeEpisode.image"
+                x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ $fallbackImage }}'; }"
+                :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
+                width="1280"
+                height="720"
+                fetchpriority="high"
+                class="block h-auto max-h-[440px] w-full object-contain object-top"
+            >
+        </div>
 
-            <div class="mt-4 flex items-center gap-3">
-                <span class="h-px w-16 bg-lucille-accent/90"></span>
-                <span class="h-px w-12 bg-lucille-accent/90"></span>
-            </div>
-
-            <div class="mt-4 max-w-[720px]">
-                <div class="min-w-0 flex-1">
-                    <h3 class="font-display text-[20px] uppercase leading-[1.05] tracking-[.12em] md:text-[28px] text-balance" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"></h3>
-                    <p class="mt-2 font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
+        {{-- 2. Columna derecha: Arriba lista compacta de episodios, debajo ficha, reproductor y descripción visible --}}
+        <div class="flex min-w-0 flex-col gap-5">
+            {{-- Arriba: Lista compacta de episodios --}}
+            <div>
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1.5">
+                    <span class="font-display text-xs uppercase tracking-[.22em] text-[#dcdcdc]">Últimos episodios</span>
+                    <span class="text-[11px] text-[#9a9a9a]">Selecciona un episodio para ver su ficha</span>
                 </div>
 
-                <div class="mt-4">
-                    <div class="mb-5 flex flex-col gap-1.5">
-                        <p class="text-[11px] uppercase tracking-[.24em] text-base-content/80" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
-                        <p class="text-[15px] font-medium text-base-content/90" x-text="activeEpisode.episode_title || 'Nuevo episodio'"></p>
+                @if ($allEpisodesList !== [])
+                    <div class="custom-scrollbar max-h-[184px] divide-y divide-white/8 overflow-y-auto border-t border-b border-white/10" role="list" aria-label="Últimos episodios de podcast">
+                        @foreach ($allEpisodesList as $episode)
+                            <button
+                                type="button"
+                                role="listitem"
+                                class="lucille-flat-row flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                :class="isActiveEpisode(@js($episode)) ? 'lucille-flat-row--active' : ''"
+                                :aria-pressed="isActiveEpisode(@js($episode)) ? 'true' : 'false'"
+                                @click="selectEpisode(@js($episode))"
+                            >
+                                <div class="flex min-w-0 flex-1 items-center gap-3">
+                                    <span
+                                        class="h-2 w-2 shrink-0 rounded-full transition-colors"
+                                        :class="isActiveEpisode(@js($episode)) ? 'bg-lucille-accent' : 'bg-white/20'"
+                                        aria-hidden="true"
+                                    ></span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+                                            <span class="font-display text-[13px] uppercase tracking-[.1em] text-[#e5e5e5] md:text-[14px]">
+                                                {!! formatear_titulo($episode['program']) !!}
+                                            </span>
+                                            @if (!empty($episode['date']))
+                                                <span class="text-[11px] text-[#9a9a9a]">{{ $episode['date'] }}</span>
+                                            @endif
+                                        </div>
+                                        <div class="mt-0.5 truncate text-[12px] text-[#b0b0b0]">
+                                            {{ $episode['episode_title'] }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <span
+                                    class="shrink-0 font-display text-[10px] uppercase tracking-[.16em]"
+                                    :class="isActiveEpisode(@js($episode)) ? 'text-[var(--lucille-accent-readable,#ff5b52)]' : 'text-[#9a9a9a]'"
+                                    x-text="isActiveEpisode(@js($episode)) ? (playing ? 'Sonando' : 'Activo') : 'Seleccionar'"
+                                ></span>
+                            </button>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="lucille-flat-surface px-5 py-8 text-sm text-[#9a9a9a]">
+                        No hay episodios listos todavía.
+                    </div>
+                @endif
+            </div>
+
+            {{-- Debajo de la lista: Ficha del episodio, reproductor integrado y descripción editorial visible automáticamente --}}
+            <article class="lucille-flat-surface p-5 md:p-6" aria-live="polite">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span class="font-display text-[11px] uppercase tracking-[.2em] text-[var(--lucille-accent-readable,#ff5b52)]" x-text="activeEpisode.host || 'Seven Rock Radio'"></span>
+                    <span class="text-[11px] uppercase tracking-[.16em] text-[#a3a3a3]" x-text="activeEpisode.date || 'Archivo de podcast'"></span>
+                </div>
+
+                <h3
+                    class="mt-1.5 font-display text-[22px] uppercase leading-[1.05] tracking-[.1em] text-white md:text-[26px]"
+                    x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"
+                ></h3>
+
+                <p
+                    class="mt-1.5 text-[15px] font-semibold leading-snug text-[#e2e2e2]"
+                    x-text="activeEpisode.episode_title || 'Episodio destacado'"
+                ></p>
+
+                {{-- Descripción editorial visible automáticamente junto a la ficha (sin exigir pulsar «Más información») --}}
+                <template x-if="activeEpisode.summary">
+                    <div class="mt-3 border-t border-white/10 pt-3">
+                        <p class="text-[13px] leading-6 text-[#c4c4c4]" x-text="visibleSummary()"></p>
+                        <template x-if="hasLongSummary()">
+                            <button
+                                type="button"
+                                class="mt-1.5 inline-flex items-center gap-1 font-display text-[11px] uppercase tracking-[.14em] text-[var(--lucille-accent-readable,#ff5b52)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                :aria-expanded="descExpanded ? 'true' : 'false'"
+                                @click="descExpanded = !descExpanded"
+                            >
+                                <span x-text="descExpanded ? 'Mostrar menos' : 'Leer más'"></span>
+                            </button>
+                        </template>
+                    </div>
+                </template>
+
+                {{-- Reproductor integrado junto a la ficha y descripción del episodio --}}
+                <x-home.repro-seven />
+
+                {{-- Metadatos disponibles y enlace discreto «Ver episodio» --}}
+                <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#9e9e9e]">
+                        <span><strong class="font-semibold text-[#cfcfcf]">Programa:</strong> <span x-text="activeEpisode.program"></span></span>
+                        <span><strong class="font-semibold text-[#cfcfcf]">Presenta:</strong> <span x-text="activeEpisode.host"></span></span>
+                        <template x-if="activeEpisode.date">
+                            <span><strong class="font-semibold text-[#cfcfcf]">Fecha:</strong> <span x-text="activeEpisode.date"></span></span>
+                        </template>
                     </div>
 
-                    <div class="mb-5">
-                        <x-button
-                            class="w-full flex justify-center"
-                            variant="outline"
-                            @click="openInfoModal($event); $dispatch('open-modal-info-modal')"
+                    <template x-if="activeEpisode.program_url">
+                        <a
+                            :href="activeEpisode.program_url"
+                            class="inline-flex min-h-[28px] items-center gap-1.5 font-display text-[11px] uppercase tracking-[.16em] text-[#dcdcdc] transition-colors hover:text-[var(--lucille-accent-readable,#ff5b52)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
                         >
-                            Info del Episodio
-                        </x-button>
-                    </div>
-
-                    <x-home.repro-seven />
+                            <span>Ver episodio</span>
+                            <span aria-hidden="true">&rarr;</span>
+                        </a>
+                    </template>
                 </div>
-            </div>
+            </article>
         </div>
-    </article>
-
-    <aside class="home-panel min-w-0 overflow-hidden p-0">
-        <div class="border-b border-base-300 px-6 py-5">
-            <div class="font-display text-sm uppercase tracking-[.22em] text-base-content/80">Últimos episodios</div>
-            <div class="mt-2 text-sm text-base-content/60">Servidor de Podcast</div>
-        </div>
-
-        @if ($sidebarEpisodes !== [])
-            <div class="grid gap-0 divide-y divide-base-300">
-                @foreach ($sidebarEpisodes as $episode)
-                    <button
-                        type="button"
-                        class="flex items-center gap-3 px-4 py-3 text-left transition-colors duration-300 hover:bg-base-content/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/80"
-                        :class="isActiveEpisode(@js($episode)) ? 'bg-primary/10 ring-1 ring-primary/50' : ''"
-                        @click="selectEpisode(@js($episode))"
-                    >
-                        <div class="h-16 w-16 shrink-0 overflow-hidden border border-base-300 bg-base-200 md:h-18 md:w-18">
-                            <img src="{{ $episode['image'] }}" alt="{{ $episode['program'] }}" width="320" height="240" class="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.02]" loading="lazy" decoding="async"
-                                 onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ $fallbackImage }}'; }">
-                        </div>
-
-                        <div class="min-w-0 flex-1">
-                            <div class="text-[10px] uppercase tracking-[.22em] text-base-content/60">
-                                {{ $episode['date'] ?: 'Servidor de Podcast' }}
-                            </div>
-                            <div class="mt-1 font-display text-[14px] uppercase tracking-[.12em] text-base-content/80 md:text-[15px]">
-                                {!! formatear_titulo($episode['program']) !!}
-                            </div>
-                            <div class="mt-1 truncate text-[12px] text-base-content/50">
-                                {{ $episode['episode_title'] }}
-                            </div>
-                        </div>
-                    </button>
-                @endforeach
-            </div>
-        @else
-            <div class="px-6 py-10 text-sm text-base-content/60">
-                No hay episodios listos todavía.
-            </div>
-        @endif
-    </aside>
-
-    <x-modal id="info-modal" size="md">
-        <div>
-            <x-badge x-text="activeEpisode.episode_title || 'Nuevo episodio'"></x-badge>
-            <h3 class="mt-md font-display text-[22px] uppercase leading-none tracking-[.12em] text-base-content" x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title || 'Podcast')"></h3>
-            <p class="mt-sm text-xs uppercase tracking-[.24em] text-base-content/70" x-text="activeEpisode.date || 'Servidor de Podcast'"></p>
-            <p class="mt-xs font-display text-[11px] uppercase tracking-[.18em] text-primary" x-text="activeEpisode.host || ''"></p>
-        </div>
-        
-        <div class="mt-lg space-y-md pt-md">
-            <p class="text-sm leading-7 text-base-content/80" x-text="activeEpisode.summary || 'Episodio listo para escuchar desde la portada.'"></p>
-        </div>
-
-        <x-slot:actions>
-            <x-button
-                as="a"
-                x-bind:href="activeEpisode.program_url || '#'"
-                color="primary"
-            >
-                Ir a la Página del Podcast
-            </x-button>
-            <x-button
-                @click="open = false; closeInfoModal()"
-                appearance="ghost"
-            >
-                Cerrar
-            </x-button>
-        </x-slot:actions>
-    </x-modal>
+    </div>
 </div>

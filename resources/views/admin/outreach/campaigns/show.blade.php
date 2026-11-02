@@ -1,68 +1,87 @@
-<x-layouts.admin title="Campaña outreach">
-    <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-        <div class="flex flex-wrap items-start justify-between gap-4">
+<x-layouts.admin title="Detalle de campaña de invitación">
+    <div class="mx-auto max-w-7xl space-y-5 font-sans">
+        <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-4">
             <div>
-                <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $campaign->name }}</h1>
-                <p class="mt-3 max-w-3xl text-sm text-[#9a9a9a]">
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-[#c32720]">Contactos e invitaciones · Detalle de campaña</div>
+                <h1 class="mt-0.5 font-display text-2xl uppercase tracking-[.08em] text-white">{{ $campaign->name }}</h1>
+                <p class="mt-1 text-xs text-gray-400">
                     {{ $campaign->description ?: 'Sin descripción.' }}
                     @if ($campaign->program_code)
-                        · Programa: {{ $campaign->program_code }}
+                        · Programa: <strong class="text-gray-200">{{ $campaign->program_code }}</strong>
                     @endif
                 </p>
             </div>
-            <div class="flex flex-wrap gap-3">
-                <a href="{{ route('admin.outreach.campaigns.index') }}" class="lucille-button">Volver</a>
-                <a href="{{ route('admin.outreach.campaigns.create') }}" class="lucille-button-solid">Nueva campaña</a>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.outreach.campaigns.index') }}" class="inline-flex h-9 items-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white">
+                    Volver a campañas
+                </a>
+                <a href="{{ route('admin.outreach.campaigns.create') }}" class="inline-flex h-9 items-center rounded-lg bg-[#c32720] px-3.5 text-xs font-semibold text-white hover:bg-[#a8201a]">
+                    + Nueva campaña
+                </a>
             </div>
-        </div>
+        </header>
 
-        <div class="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        @if (session('status'))
+            <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-200" role="status">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
             @foreach ([
-                ['label' => 'Enviados', 'value' => $campaign->sent_count],
+                ['label' => 'Despachados (SMTP)', 'value' => $campaign->sent_count],
                 ['label' => 'Abiertos', 'value' => $campaign->opened_count],
                 ['label' => 'Respondidos', 'value' => $campaign->responded_count],
                 ['label' => 'Estado', 'value' => $campaign->completed_at ? 'Completada' : 'En proceso'],
             ] as $card)
-                <div class="border border-[#2b2b2b] bg-[#151515] p-5">
-                    <div class="text-xs uppercase tracking-[.2em] text-[#9a9a9a]">{{ $card['label'] }}</div>
-                    <div class="mt-2 font-display text-3xl text-[#dcdcdc]">{{ $card['value'] }}</div>
+                <div class="rounded-xl border border-white/10 bg-[#101012] p-3.5">
+                    <div class="text-[11px] font-medium text-gray-400">{{ $card['label'] }}</div>
+                    <div class="mt-1 font-display text-2xl text-white">{{ $card['value'] }}</div>
                 </div>
             @endforeach
         </div>
-    </div>
 
-    <section class="mt-8 border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6">
-        <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Envíos individuales</h2>
-        <div class="mt-5 overflow-x-auto">
-            <table class="w-full min-w-[980px] text-left text-sm">
-                <thead class="text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
-                    <tr>
-                        <th class="py-3 pr-4">Banda/Programa</th>
-                        <th class="py-3 pr-4">Email</th>
-                        <th class="py-3 pr-4">Asunto</th>
-                        <th class="py-3 pr-4">Status</th>
-                        <th class="py-3 pr-4">Error</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($logs as $log)
-                        <tr class="border-t border-[#242424] align-top">
-                            <td class="py-4 pr-4 text-[#dcdcdc]">
-                                {{ $log->bandContact?->displayName() ?? $log->recipient_email }}
-                                <div class="mt-1 text-xs text-[#9a9a9a]">{{ $log->bandContact?->programLabel() ?? $campaign->program?->name ?? 'Productor' }}</div>
-                            </td>
-                            <td class="py-4 pr-4 text-[#9f9f9f]">{{ $log->recipient_email }}</td>
-                            <td class="py-4 pr-4 text-[#9f9f9f]">{{ $log->subject }}</td>
-                            <td class="py-4 pr-4 text-[#9f9f9f]">{{ $log->status }}</td>
-                            <td class="py-4 pr-4 text-[#9f9f9f]">{{ $log->error_message ?: '—' }}</td>
+        <section class="rounded-xl border border-white/10 bg-[#101012] overflow-hidden">
+            <div class="border-b border-white/5 px-4 py-3">
+                <h2 class="font-display text-sm uppercase tracking-wider text-white">Envíos individuales registrados</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="border-b border-white/10 bg-[#151518] text-[11px] font-semibold text-gray-400">
+                        <tr>
+                            <th class="px-4 py-3">Banda / Programa</th>
+                            <th class="px-4 py-3">Destinatario</th>
+                            <th class="px-4 py-3">Asunto</th>
+                            <th class="px-4 py-3">Estado</th>
+                            <th class="px-4 py-3">Detalle de error</th>
                         </tr>
-                    @empty
-                        <tr><td colspan="5" class="py-8 text-center text-[#9a9a9a]">Aún no hay envíos registrados.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        @forelse ($logs as $log)
+                            <tr class="hover:bg-white/[0.02] align-middle">
+                                <td class="px-4 py-3">
+                                    <div class="font-semibold text-white">{{ $log->bandContact?->displayName() ?? $log->recipient_email }}</div>
+                                    <div class="mt-0.5 text-[11px] text-gray-400">{{ $log->bandContact?->programLabel() ?? $campaign->program?->name ?? 'Productor' }}</div>
+                                </td>
+                                <td class="px-4 py-3 text-gray-300">{{ $log->recipient_email }}</td>
+                                <td class="px-4 py-3 text-gray-200">{{ $log->subject }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center rounded border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] text-gray-200">
+                                        {{ $log->status === 'sent' ? 'Enviado (SMTP)' : $log->status }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-[11px] text-gray-400">{{ $log->error_message ?: '—' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-4 py-8 text-center text-xs text-gray-400">Aún no hay envíos registrados en esta campaña.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-        <div class="mt-6">{{ $logs->links() }}</div>
-    </section>
+        <div>{{ $logs->links() }}</div>
+    </div>
 </x-layouts.admin>

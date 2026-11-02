@@ -1,26 +1,29 @@
 {{-- ======================================================================
-     MULTIMEDIA HUB - Seven Rock Radio
+     MULTIMEDIA - Seven Rock Radio
      /multimedia · SiteController@multimedia
      ====================================================================== --}}
 <x-layouts.site
-    title="Seven Rock Radio – Multimedia Hub"
+    title="Seven Rock Radio – Multimedia"
     description="Todo el universo multimedia de Seven Rock Radio en un solo lugar: radio en vivo, podcasts, música, videos y galería de fotos."
 >
 @php
-    $fallbackImage = asset('assets/lucille/logo.png');
+    $fallbackImage = data_get($themeAppearance ?? [], 'media.logo_url') ?: asset('assets/lucille/pedalboard-1511069_1920.jpg');
+    $multimediaTitle = data_get($themeAppearance ?? [], 'ui_texts.multimedia_title') ?: 'Multimedia';
+    $multimediaSubtitle = data_get($themeAppearance ?? [], 'ui_texts.multimedia_subtitle') ?: 'Radio en vivo, podcasts, música, videos y galería';
     $lightboxImages = collect($galleryImages)
         ->map(fn ($img) => ['src' => data_get($img, 'url', ''), 'caption' => (data_get($img, 'title') ?? data_get($img, 'filename', '')) . ' — ' . data_get($img, 'talent.band_name', 'Talento')])
         ->values();
 @endphp
 
 <x-sections.page-heading
-    title="Multimedia Hub"
-    subtitle="Todo en un solo lugar: radio, podcasts, música, videos y galería"
+    :title="$multimediaTitle"
+    :subtitle="$multimediaSubtitle"
     image="assets/lucille/microphone-1206364_1920.jpg"
-    overlay="rgba(10,10,11,.88)"
+    overlay="rgba(16,16,18,.82)"
+    :compact="true"
 />
 
-<section class="lucille-content-box pb-36"
+<section class="mx-auto max-w-[1180px] px-5 pt-8 pb-36"
     x-data="{
         activeTab: 'radio',
         lightboxOpen: false,
@@ -29,6 +32,10 @@
         get lightboxCurrent() { return this.lightboxImages[this.lightboxIndex] ?? null; },
         songSearch: '',
         currentlyPlayingUrl: '',
+        drawerOpen: false,
+        drawerTab: 'letras',
+        playerVisible: false,
+        activeTrack: null,
 
         init() {
             const validTabs = ['radio', 'podcasts', 'musica', 'videos', 'galeria'];
@@ -46,7 +53,6 @@
                 }
             };
             syncFromHash();
-            // Ensure initial entry has state
             if (!history.state || !history.state.tab) {
                 history.replaceState({ tab: this.activeTab }, '', window.location.href);
             }
@@ -78,56 +84,91 @@
     @sr-catalog-stopped.window="currentlyPlayingUrl = ''"
 >
 
-    {{-- ─────────── TAB NAVIGATION ─────────── --}}
-    <div class="sticky top-[var(--nav-height,64px)] z-30 bg-[#0a0a0b]/90 backdrop-blur-md border-b border-[#1a1a1a] -mx-6 px-6 mb-10">
-        <div class="flex gap-1 overflow-x-auto py-3">
+    {{-- ─────────── NAVEGACIÓN DE PESTAÑAS ─────────── --}}
+    <div class="sticky top-[var(--nav-height,64px)] z-30 -mx-5 mb-8 border-b border-white/10 bg-[#141416]/95 px-5 backdrop-blur-md">
+        <div class="flex gap-1.5 overflow-x-auto py-2.5" role="tablist" aria-label="Secciones de multimedia">
             @foreach ([
-                ['key'=>'radio',    'icon'=>'📻', 'label'=>'Radio En Vivo'],
-                ['key'=>'podcasts', 'icon'=>'🎙️', 'label'=>'Podcasts'],
-                ['key'=>'musica',   'icon'=>'🎵', 'label'=>'Música'],
-                ['key'=>'videos',   'icon'=>'🎬', 'label'=>'Videos'],
-                ['key'=>'galeria',  'icon'=>'📷', 'label'=>'Galería'],
+                [
+                    'key' => 'radio',
+                    'label' => 'Radio en vivo',
+                    'svg' => '<path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" />',
+                ],
+                [
+                    'key' => 'podcasts',
+                    'label' => 'Podcasts',
+                    'svg' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />',
+                ],
+                [
+                    'key' => 'musica',
+                    'label' => 'Música',
+                    'svg' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />',
+                ],
+                [
+                    'key' => 'videos',
+                    'label' => 'Videos',
+                    'svg' => '<path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />',
+                ],
+                [
+                    'key' => 'galeria',
+                    'label' => 'Galería',
+                    'svg' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />',
+                ],
             ] as $tab)
-                <button type="button"
+                <button
+                    type="button"
+                    role="tab"
+                    :aria-selected="activeTab === '{{ $tab['key'] }}' ? 'true' : 'false'"
+                    aria-controls="{{ $tab['key'] }}"
                     @click="switchTab('{{ $tab['key'] }}')"
-                    :class="activeTab === '{{ $tab['key'] }}' ? 'border-lucille-accent text-white bg-lucille-accent/10' : 'border-transparent text-[#666] hover:text-[#aaa] hover:border-[#333]'"
-                    class="flex items-center gap-2 px-5 py-2.5 rounded-lg border font-display text-xs uppercase tracking-[.1em] transition-all duration-200 shrink-0"
+                    :class="activeTab === '{{ $tab['key'] }}'
+                        ? 'border-lucille-accent bg-lucille-accent/15 text-white'
+                        : 'border-transparent text-[#b8b8b8] hover:border-white/15 hover:bg-white/[0.03] hover:text-white'"
+                    class="flex shrink-0 items-center gap-2 rounded-sm border px-4 py-2 font-display text-xs uppercase tracking-[.1em] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
                     id="tab-{{ $tab['key'] }}"
-                ><span>{{ $tab['icon'] }}</span><span>{{ $tab['label'] }}</span></button>
+                >
+                    <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        {!! $tab['svg'] !!}
+                    </svg>
+                    <span>{{ $tab['label'] }}</span>
+                </button>
             @endforeach
         </div>
     </div>
 
     {{-- ═══════════ TAB 1: RADIO EN VIVO ═══════════ --}}
-    <div id="radio" x-show="activeTab === 'radio'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0">
-        <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] mb-8 flex items-center gap-3">
-            <span class="w-1 h-6 bg-lucille-accent rounded-full"></span>Radio En Vivo
+    <div id="radio" role="tabpanel" aria-labelledby="tab-radio" x-show="activeTab === 'radio'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+        <h2 class="mb-6 flex items-center gap-3 font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">
+            <span class="h-5 w-1 bg-lucille-accent"></span>Radio en vivo
         </h2>
-        <div class="grid md:grid-cols-2 gap-6">
-            {{-- Station card --}}
-            <div class="bg-[#101012] border border-[#242424] rounded-xl p-6 flex flex-col gap-5">
-                <div class="flex items-center gap-4">
-                    <div class="w-20 h-20 rounded-xl border-2 border-lucille-accent/40 overflow-hidden shadow-[0_0_20px_rgba(195,39,32,.2)] shrink-0">
-                        <img src="https://c30.radioboss.fm/stationlogo/569.jpg" alt="Seven Rock Radio" class="w-full h-full object-cover">
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="w-2 h-2 rounded-full bg-lucille-accent animate-pulse"></span>
-                            <span class="text-[10px] text-lucille-accent uppercase tracking-[.15em] font-display">En Vivo Ahora</span>
+        <div class="grid gap-6 md:grid-cols-2">
+            {{-- Tarjeta de estación --}}
+            <div class="lucille-flat-surface flex flex-col justify-between gap-5 p-6">
+                <div class="flex flex-col gap-5">
+                    <div class="flex items-center gap-4">
+                        <div class="h-20 w-20 shrink-0 overflow-hidden bg-[#111]">
+                            <img src="https://c30.radioboss.fm/stationlogo/569.jpg" alt="Seven Rock Radio" class="h-full w-full object-contain">
                         </div>
-                        <h3 class="font-display text-xl uppercase tracking-wider text-white">Seven Rock Radio</h3>
-                        <p class="text-sm text-[#7b7b7b] mt-0.5">Todas las épocas del rock, están aquí</p>
+                        <div class="min-w-0 flex-1">
+                            <div class="mb-1 flex items-center gap-2">
+                                <span class="h-2 w-2 animate-pulse rounded-full bg-lucille-accent"></span>
+                                <span class="font-display text-[10px] uppercase tracking-[.16em] text-[var(--lucille-accent-readable,#ff5b52)]">Señal en directo</span>
+                            </div>
+                            <h3 class="font-display text-xl uppercase tracking-wider text-white">Seven Rock Radio</h3>
+                            <p class="mt-0.5 text-sm text-[#a3a3a3]">Todas las épocas del rock, están aquí</p>
+                        </div>
+                    </div>
+
+                    {{-- Suena ahora --}}
+                    <div class="flex items-center gap-3.5 border border-white/8 bg-[#121214] p-3.5">
+                        <img id="rbcloud_np_cover_mm" src="https://c30.radioboss.fm/w/artwork/569.jpg" width="56" height="56" alt="Carátula actual" class="h-14 w-14 shrink-0 bg-[#0d0d0e] object-contain">
+                        <div class="min-w-0 flex-1">
+                            <div class="mb-0.5 font-display text-[10px] uppercase tracking-[.14em] text-[#9a9a9a]">Suena ahora</div>
+                            <div id="rbcloud_np_artist_mm" class="line-clamp-1 font-display text-[13px] text-white">Cargando...</div>
+                            <div id="rbcloud_np_title_mm" class="mt-0.5 line-clamp-2 text-[12px] text-[#b5b5b5]"></div>
+                        </div>
                     </div>
                 </div>
-                {{-- Now Playing --}}
-                <div class="bg-[#0a0a0b] border border-[#1f1f1f] rounded-lg p-4 flex items-center gap-3">
-                    <img id="rbcloud_np_cover_mm" src="https://c30.radioboss.fm/w/artwork/569.jpg" width="56" height="56" alt="Carátula" class="rounded border border-[#333] w-14 h-14 object-cover shrink-0">
-                    <div class="min-w-0 flex-1">
-                        <div class="text-[10px] uppercase tracking-[.1em] text-[#555] mb-1 font-display">Suena ahora</div>
-                        <div id="rbcloud_np_artist_mm" class="font-display text-[13px] text-white truncate">Cargando...</div>
-                        <div id="rbcloud_np_title_mm" class="text-[11px] text-[#777] truncate mt-0.5"></div>
-                    </div>
-                </div>
+
                 <div id="rbcloud_np_a16176" class="hidden"></div>
                 <div id="rbcloud_np_t16176" class="hidden"></div>
                 <img id="rbcloud_np_c16176" src="https://c30.radioboss.fm/w/artwork/569.jpg" class="hidden" alt="">
@@ -143,10 +184,13 @@
                     }, 3000);
                 });
                 </script>
-                <button type="button"
-                    class="w-full py-3 rounded-xl bg-lucille-accent font-display text-sm uppercase tracking-[.1em] text-white shadow-[0_4px_20px_rgba(195,39,32,.3)] hover:bg-lucille-accent/90 active:scale-98 transition-all duration-200"
-                    @click="playTrack({ src: 'live', type: 'live', title: 'Seven Rock Radio', subtitle: 'En Vivo', image: 'https://c30.radioboss.fm/stationlogo/569.jpg' })">
-                    <span>▶ Escuchar en Vivo</span>
+                <button
+                    type="button"
+                    class="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-sm bg-lucille-accent px-5 font-display text-xs uppercase tracking-[.14em] text-white transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    @click="playTrack({ src: 'live', type: 'live', title: 'Seven Rock Radio', subtitle: 'En Vivo', image: 'https://c30.radioboss.fm/stationlogo/569.jpg' })"
+                >
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6,3 20,12 6,21"/></svg>
+                    <span>Escuchar en vivo</span>
                 </button>
             </div>
 
@@ -155,53 +199,61 @@
                 $todayKey = ['DOMINGO','LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO'][date('w')];
                 $todayGroup = collect($programsByDay)->firstWhere('day', $todayKey);
             @endphp
-            <div class="bg-[#101012] border border-[#242424] rounded-xl p-6">
-                <h4 class="font-display text-sm uppercase tracking-[.1em] text-[#dcdcdc] mb-4 flex items-center gap-2">
-                    <span class="w-1 h-4 bg-lucille-accent rounded-full"></span>Programas de Hoy
-                </h4>
-                @if ($todayGroup && !empty($todayGroup['programs']))
-                    <div class="divide-y divide-[#1a1a1a]">
-                        @foreach ($todayGroup['programs'] as $prog)
-                            <a href="{{ route('programs.detail', ['identifier' => $prog['archive_identifier'] ?? $prog['slug']]) }}"
-                               class="flex items-center gap-3 py-3 group/p hover:pl-1 transition-all duration-200">
-                                <div class="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-[#2a2a2a]">
-                                    <img src="{{ $prog['cover'] ?: $fallbackImage }}" alt="{{ $prog['name'] }}" class="w-full h-full object-cover">
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="font-display text-[12px] uppercase tracking-[.06em] text-[#dcdcdc] group-hover/p:text-lucille-accent transition-colors truncate">{{ $prog['name'] }}</div>
-                                    @if ($prog['host'] ?? $prog['conductor'] ?? '')
-                                        <div class="text-[10px] text-[#666] mt-0.5">{{ $prog['host'] ?? $prog['conductor'] }}</div>
+            <div class="lucille-flat-surface flex flex-col justify-between p-6">
+                <div>
+                    <h3 class="mb-4 flex items-center gap-2 font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">
+                        <span class="h-4 w-1 bg-lucille-accent"></span>Programas de hoy
+                    </h3>
+                    @if ($todayGroup && !empty($todayGroup['programs']))
+                        <div class="divide-y divide-white/8 border-t border-b border-white/8">
+                            @foreach ($todayGroup['programs'] as $prog)
+                                <a href="{{ route('programs.detail', ['identifier' => $prog['archive_identifier'] ?? $prog['slug']]) }}"
+                                   class="group/p flex items-center gap-3 py-2.5 transition-colors hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent">
+                                    <div class="h-11 w-11 shrink-0 overflow-hidden bg-[#111]">
+                                        <img src="{{ $prog['cover'] ?: $fallbackImage }}" alt="{{ $prog['name'] }}" class="h-full w-full object-contain">
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="line-clamp-2 font-display text-[12px] uppercase leading-snug tracking-[.06em] text-[#e0e0e0] transition-colors group-hover/p:text-[var(--lucille-accent-readable,#ff5b52)]">{{ $prog['name'] }}</div>
+                                        @if ($prog['host'] ?? $prog['conductor'] ?? '')
+                                            <div class="mt-0.5 text-[11px] text-[#9e9e9e]">{{ $prog['host'] ?? $prog['conductor'] }}</div>
+                                        @endif
+                                    </div>
+                                    @if ($prog['hora'] ?? '')
+                                        <span class="shrink-0 font-mono text-[11px] text-[#b0b0b0]">{{ substr($prog['hora'], 0, 5) }} hs</span>
                                     @endif
-                                </div>
-                                @if ($prog['hora'] ?? '')
-                                    <span class="text-[10px] font-mono text-[#555] shrink-0">{{ substr($prog['hora'], 0, 5) }} hs</span>
-                                @endif
-                            </a>
-                        @endforeach
-                    </div>
-                @else
-                    <p class="text-sm text-[#555] py-4">No hay programas registrados para hoy.</p>
-                @endif
-                <a href="{{ route('programs') }}" class="mt-4 inline-block text-[11px] uppercase tracking-[.15em] text-lucille-accent hover:underline font-display">Ver parrilla completa →</a>
+                                </a>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="py-4 text-sm text-[#9a9a9a]">No hay programas registrados para hoy.</p>
+                    @endif
+                </div>
+                <a href="{{ route('programs') }}" class="mt-4 inline-flex items-center gap-1.5 font-display text-[11px] uppercase tracking-[.15em] text-[var(--lucille-accent-readable,#ff5b52)] hover:underline">
+                    <span>Ver parrilla completa</span>
+                    <span aria-hidden="true">&rarr;</span>
+                </a>
             </div>
         </div>
     </div>
 
     {{-- ═══════════ TAB 2: PODCASTS ═══════════ --}}
-    <div id="podcasts" x-show="activeTab === 'podcasts'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" x-data="{ expandedProgram: null }">
-        <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] mb-2 flex items-center gap-3">
-            <span class="w-1 h-6 bg-lucille-accent rounded-full"></span>Podcasts
-        </h2>
-        <p class="text-sm text-[#7b7b7b] mb-8 ml-4">Toca la portada para ver los episodios · Haz clic en ▶ para reproducir</p>
+    <div id="podcasts" role="tabpanel" aria-labelledby="tab-podcasts" x-show="activeTab === 'podcasts'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-data="{ expandedProgram: null }">
+        <div class="mb-6 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+            <h2 class="flex items-center gap-3 font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">
+                <span class="h-5 w-1 bg-lucille-accent"></span>Podcasts
+            </h2>
+            <p class="text-xs text-[#a3a3a3]">Despliega los episodios de cada programa o pulsa reproducir para escuchar la última emisión</p>
+        </div>
 
         @if (empty($groupedEpisodes))
-            <div class="py-16 text-center text-sm text-[#7b7b7b]">No hay episodios disponibles todavía.</div>
+            <div class="lucille-flat-surface py-14 text-center text-sm text-[#a3a3a3]">No hay episodios disponibles todavía.</div>
         @else
-            <div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 @foreach ($groupedEpisodes as $programName => $eps)
                     @php
                         $firstEp        = $eps[0] ?? [];
-                        $progImage      = $firstEp['image'] ?? $fallbackImage;
+                        $rawProgImg     = (string) ($firstEp['image'] ?? '');
+                        $progImage      = \App\Support\PublicMediaUrl::normalizePublicUrl($rawProgImg) ?: $fallbackImage;
                         $progCount      = count($eps);
                         $progId         = 'prog-' . Str::slug($programName);
                         $latestDate     = $firstEp['date'] ?? '';
@@ -209,57 +261,72 @@
                         $progIdentifier = $programSlugMap[$programName] ?? Str::slug($programName);
                         $progUrl        = route('programs.detail', ['identifier' => $progIdentifier]);
                         $hasMore        = $progCount > 3;
-                        // Enriquecer con datos del MasterProgram asociado
                         $matchedProg    = collect($programsByDay)->flatMap(fn($d) => $d['programs'])->firstWhere('name', $programName);
-                        $progDesc       = $matchedProg['description'] ?? '';
+                        $progDesc       = trim((string) preg_replace('/\*{1,2}([^*]+)\*{1,2}/u', '$1', (string) ($matchedProg['description'] ?? '')));
                         $progHost       = $matchedProg['host'] ?? $matchedProg['conductor'] ?? '';
                         $progGenre      = $matchedProg['genre'] ?? '';
                     @endphp
-                    <div class="podcast-card-premium">
-                        <div class="relative group/cover aspect-square overflow-hidden bg-[#080808]">
-                            <img src="{{ $progImage }}" alt="{{ $programName }}" width="640" height="480"
-                                class="w-full h-full object-contain p-3 transition duration-500 ease-out group-hover/cover:scale-105"
-                                loading="lazy" decoding="async">
-                            <div class="absolute inset-0 bg-black/70 opacity-0 group-hover/cover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4">
-                                @if (!empty($firstEp['src']))
-                                    <button type="button"
-                                        class="w-12 h-12 rounded-full bg-lucille-accent text-white flex items-center justify-center shadow-[0_0_20px_rgba(195,39,32,.4)] hover:scale-110 active:scale-95 transition-all duration-200"
-                                        @click.prevent="playTrack({ type:'podcast', src:'{{ addslashes($firstEp['src']) }}', title:'{{ addslashes($firstEp['episode_title'] ?? $firstEp['title'] ?? '') }}', subtitle:'{{ addslashes($programName) }}', image:'{{ $progImage }}', archive_url:'{{ $firstEp['archive_url'] ?? '' }}' })" title="Reproducir último episodio">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>
-                                    </button>
-                                @endif
-                                <button type="button"
-                                    class="w-12 h-12 rounded-full bg-[#222] border border-[#444] text-[#ccc] flex items-center justify-center hover:bg-[#333] hover:text-white hover:scale-110 active:scale-95 transition-all duration-200"
-                                    @click.prevent="expandedProgram = expandedProgram === '{{ $progId }}' ? null : '{{ $progId }}'">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        {{-- Program info --}}
-                        <div class="px-4 py-3.5 border-b border-[#242424]">
-                            <div class="flex items-start justify-between gap-2">
-                                <div class="min-w-0 flex-1">
-                                    <h3 class="font-display text-[13px] uppercase tracking-[.06em] text-[#dcdcdc] leading-tight truncate">{{ $programName }}</h3>
-                                    @if ($progHost) <p class="text-[10px] text-[#888] mt-0.5">{{ $progHost }}</p> @endif
-                                    @if ($progGenre)
-                                        <span class="inline-block mt-1 text-[9px] uppercase tracking-[.08em] text-lucille-accent/70 border border-lucille-accent/20 px-1.5 py-0.5 rounded">{{ $progGenre }}</span>
+                    <div class="podcast-card-premium flex flex-col justify-between">
+                        <div>
+                            {{-- Portada completa sin recorte ni marcos decorativos añadidos --}}
+                            <div class="group/cover relative aspect-square overflow-hidden bg-[#101012]">
+                                <img src="{{ $progImage }}" alt="{{ $programName }}" width="640" height="480"
+                                    onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ $fallbackImage }}'; }"
+                                    class="h-full w-full object-contain transition duration-300 ease-out"
+                                    loading="lazy" decoding="async">
+                                <div class="absolute inset-0 flex items-center justify-center gap-3 bg-black/70 opacity-0 transition-opacity duration-200 group-hover/cover:opacity-100 focus-within:opacity-100">
+                                    @if (!empty($firstEp['src']))
+                                        <button type="button"
+                                            class="flex h-11 w-11 items-center justify-center rounded-sm bg-lucille-accent text-white transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                                            @click.prevent="playTrack({ type:'podcast', src:'{{ addslashes($firstEp['src']) }}', title:'{{ addslashes($firstEp['episode_title'] ?? $firstEp['title'] ?? '') }}', subtitle:'{{ addslashes($programName) }}', image:'{{ $progImage }}', archive_url:'{{ $firstEp['archive_url'] ?? '' }}' })"
+                                            title="Reproducir último episodio"
+                                            aria-label="Reproducir último episodio de {{ $programName }}"
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6,3 20,12 6,21"/></svg>
+                                        </button>
                                     @endif
-                                    @if ($progDesc) <p class="mt-1.5 text-[10px] text-[#666] line-clamp-2 leading-relaxed">{{ $progDesc }}</p> @endif
-                                    <p class="mt-1.5 text-[10px] text-[#555]">{{ $progCount }} {{ $progCount===1 ? 'episodio' : 'episodios' }}@if($latestDate) · {{ $latestDate }}@endif</p>
+                                    <button type="button"
+                                        class="flex h-11 w-11 items-center justify-center rounded-sm border border-white/25 bg-[#1b1b1e] text-[#e0e0e0] transition-colors hover:border-white hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                        @click.prevent="expandedProgram = expandedProgram === '{{ $progId }}' ? null : '{{ $progId }}'"
+                                        aria-label="Ver episodios de {{ $programName }}"
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                                    </button>
                                 </div>
-                                <button type="button" class="shrink-0 text-[#555] hover:text-[#aaa] transition-colors mt-0.5"
-                                    @click="expandedProgram = expandedProgram === '{{ $progId }}' ? null : '{{ $progId }}'">
-                                    <svg class="w-4 h-4 transition-transform duration-300" :class="expandedProgram === '{{ $progId }}' ? 'rotate-180 text-lucille-accent' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
-                                </button>
+                            </div>
+
+                            {{-- Información del programa (títulos de hasta dos líneas) --}}
+                            <div class="px-4 py-3.5">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="min-w-0 flex-1">
+                                        <h3 class="line-clamp-2 font-display text-[14px] uppercase leading-snug tracking-[.06em] text-[#e5e5e5]">{{ $programName }}</h3>
+                                        @if ($progHost)
+                                            <p class="mt-0.5 text-[11px] text-[#a3a3a3]">{{ $progHost }}</p>
+                                        @endif
+                                        @if ($progGenre)
+                                            <span class="mt-1.5 inline-block border border-white/15 bg-white/[0.03] px-1.5 py-0.5 text-[9px] uppercase tracking-[.08em] text-[#cfcfcf]">{{ $progGenre }}</span>
+                                        @endif
+                                        @if ($progDesc)
+                                            <p class="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-[#9a9a9a]">{{ $progDesc }}</p>
+                                        @endif
+                                        <p class="mt-2 text-[11px] text-[#8f8f8f]">{{ $progCount }} {{ $progCount===1 ? 'episodio' : 'episodios' }}@if($latestDate) · {{ $latestDate }}@endif</p>
+                                    </div>
+                                    <button type="button"
+                                        class="mt-0.5 shrink-0 p-1 text-[#a3a3a3] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                        :aria-expanded="expandedProgram === '{{ $progId }}' ? 'true' : 'false'"
+                                        aria-label="Mostrar episodios de {{ $programName }}"
+                                        @click="expandedProgram = expandedProgram === '{{ $progId }}' ? null : '{{ $progId }}'">
+                                        <svg class="h-4 w-4 transition-transform duration-200" :class="expandedProgram === '{{ $progId }}' ? 'rotate-180 text-lucille-accent' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        {{-- Episodes panel --}}
+                        {{-- Panel desplegable de episodios --}}
                         <div x-show="expandedProgram === '{{ $progId }}'"
-                            x-transition:enter="transition-all duration-300 ease-out" x-transition:enter-start="opacity-0 max-h-0" x-transition:enter-end="opacity-100 max-h-[900px]"
-                            x-transition:leave="transition-all duration-200 ease-in"  x-transition:leave-start="opacity-100 max-h-[900px]" x-transition:leave-end="opacity-0 max-h-0"
-                            class="border-t border-[#1f1f1f] divide-y divide-[#1f1f1f] overflow-hidden bg-[#080808]">
+                            x-transition:enter="transition-all duration-200 ease-out" x-transition:enter-start="opacity-0 max-h-0" x-transition:enter-end="opacity-100 max-h-[900px]"
+                            x-transition:leave="transition-all duration-150 ease-in"  x-transition:leave-start="opacity-100 max-h-[900px]" x-transition:leave-end="opacity-0 max-h-0"
+                            class="divide-y divide-white/8 overflow-hidden border-t border-white/10 bg-[#121215]">
                             @foreach ($visibleEps as $episode)
                                 @php
                                     $epTitle   = $episode['episode_title'] ?? $episode['title'] ?? '';
@@ -267,23 +334,23 @@
                                     $epDate    = $episode['date'] ?? '';
                                     $epSummary = $episode['summary'] ?? '';
                                 @endphp
-                                <button type="button" class="flex items-start gap-3 w-full px-4 py-3 text-left transition-all duration-200 hover:bg-[#121212] group/ep"
+                                <button type="button" class="group/ep flex w-full items-start gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lucille-accent"
                                     @click="playTrack({ type:'podcast', src:'{{ addslashes($epSrc) }}', title:'{{ addslashes($epTitle) }}', subtitle:'{{ addslashes($programName) }}', image:'{{ $progImage }}', archive_url:'{{ $episode['archive_url'] ?? '' }}' })">
-                                    <div class="mt-0.5 shrink-0 w-7 h-7 rounded-full border border-[#333] bg-[#151515] flex items-center justify-center text-[#888] transition-all duration-200 group-hover/ep:bg-lucille-accent group-hover/ep:border-lucille-accent group-hover/ep:text-white">
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>
+                                    <div class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-white/15 bg-[#1b1b1f] text-[#b5b5b5] transition-colors group-hover/ep:border-lucille-accent group-hover/ep:bg-lucille-accent group-hover/ep:text-white">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6,3 20,12 6,21"/></svg>
                                     </div>
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-start justify-between gap-2">
-                                            <span class="text-[12px] text-[#ccc] group-hover/ep:text-lucille-accent transition-colors line-clamp-1 leading-snug font-medium">{{ $epTitle ?: 'Episodio' }}</span>
-                                            @if ($epDate) <span class="shrink-0 text-[9px] text-[#666] whitespace-nowrap font-mono">{{ $epDate }}</span> @endif
+                                            <span class="line-clamp-2 text-[12px] font-medium leading-snug text-[#dedede] transition-colors group-hover/ep:text-white">{{ $epTitle ?: 'Episodio' }}</span>
+                                            @if ($epDate) <span class="shrink-0 whitespace-nowrap font-mono text-[10px] text-[#9a9a9a]">{{ $epDate }}</span> @endif
                                         </div>
-                                        @if ($epSummary) <p class="mt-1 text-[10px] text-[#666] line-clamp-1">{{ $epSummary }}</p> @endif
+                                        @if ($epSummary) <p class="mt-1 line-clamp-2 text-[11px] text-[#9a9a9a]">{{ $epSummary }}</p> @endif
                                     </div>
                                 </button>
                             @endforeach
                             @if ($hasMore)
-                                <a href="{{ $progUrl }}" class="flex items-center justify-center gap-1.5 w-full px-4 py-3 text-[10px] uppercase tracking-[.08em] text-[#777] bg-[#101010] border-t border-[#1f1f1f] hover:bg-[#181818] hover:text-lucille-accent transition-all duration-200">
-                                    Ver más ({{ $progCount - 3 }} {{ $progCount-3===1?'episodio':'episodios' }}) →
+                                <a href="{{ $progUrl }}" class="flex w-full items-center justify-center gap-1.5 border-t border-white/10 bg-[#16161a] px-4 py-2.5 font-display text-[10px] uppercase tracking-[.12em] text-[#c8c8c8] transition-colors hover:bg-white/[0.05] hover:text-white">
+                                    Ver todos ({{ $progCount }} episodios) &rarr;
                                 </a>
                             @endif
                         </div>
@@ -294,21 +361,24 @@
     </div>
 
     {{-- ═══════════ TAB 3: CATÁLOGO DE MÚSICA ═══════════ --}}
-    <div id="musica" x-show="activeTab === 'musica'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-            <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] flex items-center gap-3">
-                <span class="w-1 h-6 bg-lucille-accent rounded-full"></span>Catálogo de Música
+    <div id="musica" role="tabpanel" aria-labelledby="tab-musica" x-show="activeTab === 'musica'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+        <div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <h2 class="flex items-center gap-3 font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">
+                <span class="h-5 w-1 bg-lucille-accent"></span>Catálogo de música
             </h2>
-            <div class="relative max-w-xs w-full">
-                <input type="text" x-model="songSearch" placeholder="Buscar canción, artista..."
-                    class="w-full bg-[#101012] border border-[#242424] rounded-lg px-4 py-2 text-sm text-[#dcdcdc] placeholder-[#555] focus:outline-none focus:border-lucille-accent/50 transition-colors">
-                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[#444]">🔍</span>
+            <div class="relative w-full max-w-xs">
+                <label for="multimedia-song-search" class="sr-only">Buscar canción o artista</label>
+                <input id="multimedia-song-search" type="text" x-model="songSearch" placeholder="Buscar canción o artista..."
+                    class="w-full rounded-sm border border-white/15 bg-[#161619] py-2 pr-9 pl-3.5 text-sm text-[#e0e0e0] placeholder-[#8f8f8f] transition-colors focus:border-lucille-accent focus:outline-none">
+                <svg class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#8f8f8f]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.3-4.3"/>
+                </svg>
             </div>
         </div>
         @if ($songs->isEmpty())
-            <div class="py-16 text-center text-sm text-[#7b7b7b]">No hay canciones publicadas todavía.</div>
+            <div class="lucille-flat-surface py-14 text-center text-sm text-[#a3a3a3]">No hay canciones publicadas todavía.</div>
         @else
-            <div class="divide-y divide-[#1a1a1a]">
+            <div class="divide-y divide-white/8 border-t border-b border-white/10">
                 @php $visibleIndex = 1; @endphp
                 @foreach ($songs as $song)
                     @php
@@ -328,8 +398,23 @@
                             $socialLinks['youtube'] = $song->youtube_url;
                         }
                     @endphp
-                    <div class="group/song flex items-center gap-4 py-3 px-2 rounded-lg hover:bg-[#101012] transition-all duration-200 cursor-pointer"
+                    <div class="group/song lucille-flat-row flex cursor-pointer items-center gap-4 px-3 py-2.5"
                         x-show="songSearch === '' || '{{ addslashes($searchStr) }}'.includes(songSearch.toLowerCase())"
+                        tabindex="0"
+                        role="button"
+                        @keydown.enter.prevent="playTrack({
+                            type: 'song',
+                            src: '{{ addslashes($audioUrl) }}',
+                            title: '{{ addslashes($song->title) }}',
+                            subtitle: '{{ addslashes($song->artist_name) }}',
+                            image: '{{ $coverUrl }}',
+                            album: '',
+                            lyrics: null,
+                            bandInfo: {{ !empty($song->description) ? Js::from($song->description) : ($song->radioArtist && !empty($song->radioArtist->biography) ? Js::from($song->radioArtist->biography) : 'null') }},
+                            bandName: '{{ addslashes($song->artist_name) }}',
+                            bandMembers: [],
+                            socialLinks: {{ Js::from($socialLinks) }}
+                        })"
                         @click="playTrack({
                             type: 'song',
                             src: '{{ addslashes($audioUrl) }}',
@@ -343,11 +428,11 @@
                             bandMembers: [],
                             socialLinks: {{ Js::from($socialLinks) }}
                         })">
-                        <span class="text-[12px] font-mono text-[#444] w-6 text-center shrink-0"
+                        <span class="w-6 shrink-0 text-center font-mono text-[12px] text-[#8f8f8f]"
                               x-show="currentlyPlayingUrl !== '{{ addslashes($audioUrl) }}'"
                               :class="currentlyPlayingUrl !== '{{ addslashes($audioUrl) }}' ? 'group-hover/song:hidden' : 'hidden'">{{ $visibleIndex++ }}</span>
                         {{-- Equalizer animado activo --}}
-                        <span class="w-6 flex items-end justify-center gap-px shrink-0"
+                        <span class="flex w-6 shrink-0 items-end justify-center gap-px"
                               x-show="currentlyPlayingUrl === '{{ addslashes($audioUrl) }}'"
                               x-cloak
                               style="height:24px">
@@ -357,23 +442,24 @@
                             <span class="sr-eq-bar" style="--d:200ms; --h:80%"></span>
                             <span class="sr-eq-bar" style="--d:40ms;  --h:55%"></span>
                         </span>
-                        <span class="hidden group-hover/song:flex text-lucille-accent w-6 justify-center shrink-0"
-                              x-show="currentlyPlayingUrl !== '{{ addslashes($audioUrl) }}'">▶</span>
-                        <div class="w-10 h-10 rounded overflow-hidden border border-[#2a2a2a] shrink-0">
-                            <img src="{{ $coverUrl }}" alt="{{ $song->title }}" class="w-full h-full object-cover" width="40" height="40" loading="lazy" decoding="async">
+                        <span class="hidden w-6 shrink-0 justify-center text-lucille-accent group-hover/song:flex"
+                              x-show="currentlyPlayingUrl !== '{{ addslashes($audioUrl) }}'" aria-hidden="true">
+                            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>
+                        </span>
+                        <div class="h-11 w-11 shrink-0 overflow-hidden bg-[#111]">
+                            <img src="{{ $coverUrl }}" alt="{{ $song->title }}" class="h-full w-full object-contain" width="44" height="44" loading="lazy" decoding="async">
                         </div>
                         <div class="min-w-0 flex-1">
-                            <div class="font-display text-[13px] text-[#dcdcdc] truncate group-hover/song:text-lucille-accent transition-colors"
-                                 :class="{ 'text-lucille-accent': currentlyPlayingUrl === '{{ addslashes($audioUrl) }}' }">{{ $song->title }}</div>
-                            <div class="text-[11px] text-[#777] truncate">{{ $song->artist_name }}</div>
+                            <div class="line-clamp-2 font-display text-[13px] leading-snug text-[#e2e2e2] transition-colors group-hover/song:text-white"
+                                 :class="{ 'text-[var(--lucille-accent-readable,#ff5b52)]': currentlyPlayingUrl === '{{ addslashes($audioUrl) }}' }">{{ $song->title }}</div>
+                            <div class="mt-0.5 line-clamp-1 text-[12px] text-[#9e9e9e]">{{ $song->artist_name }}</div>
                         </div>
-
                     </div>
                 @endforeach
 
                 <div x-show="songSearch !== '' && !$el.parentElement.querySelector('.group\\/song:not([style*=\'display: none\'])')"
                      x-cloak
-                     class="py-16 text-center text-sm text-[#7b7b7b]">
+                     class="py-14 text-center text-sm text-[#a3a3a3]">
                     No se encontraron canciones que coincidan con «<span x-text="songSearch" class="text-white"></span>».
                 </div>
             </div>
@@ -381,12 +467,12 @@
     </div>
 
     {{-- ═══════════ TAB 4: VIDEOS ═══════════ --}}
-    <div id="videos" x-show="activeTab === 'videos'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0">
-        <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] mb-8 flex items-center gap-3">
-            <span class="w-1 h-6 bg-lucille-accent rounded-full"></span>Videos
+    <div id="videos" role="tabpanel" aria-labelledby="tab-videos" x-show="activeTab === 'videos'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+        <h2 class="mb-6 flex items-center gap-3 font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">
+            <span class="h-5 w-1 bg-lucille-accent"></span>Videos
         </h2>
         @if ($videos->isEmpty())
-            <div class="py-16 text-center text-sm text-[#7b7b7b]">No hay videos publicados todavía.</div>
+            <div class="lucille-flat-surface py-14 text-center text-sm text-[#a3a3a3]">No hay videos publicados todavía.</div>
         @else
             <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 @foreach ($videos as $video)
@@ -397,61 +483,59 @@
                             if ($m[1] ?? '') $embedUrl = 'https://www.youtube.com/embed/'.$m[1].'?rel=0';
                         }
                     @endphp
-                    <div class="group">
+                    <article class="lucille-flat-surface group flex flex-col overflow-hidden">
                         @if ($embedUrl)
-                            <div class="relative aspect-video bg-[#080808] overflow-hidden rounded-t-lg border border-[#242424]">
-                                <iframe src="{{ $embedUrl }}" title="{{ $video->title }}" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+                            <div class="relative aspect-video overflow-hidden bg-[#0a0a0b]">
+                                <iframe src="{{ $embedUrl }}" title="{{ $video->title }}" class="h-full w-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
                             </div>
                         @else
-                            <div class="relative aspect-video bg-cover bg-center overflow-hidden rounded-t-lg border border-[#242424]" style="background-image:url('{{ $video->image_url }}')">
-                                <div class="absolute inset-0 flex items-center justify-center bg-black/50">
-                                    <a href="{{ $video->youtube_url }}" target="_blank" class="w-14 h-14 rounded-full bg-lucille-accent/90 flex items-center justify-center hover:scale-110 transition-all duration-200">
-                                        <span class="text-white text-xl ml-0.5">▶</span>
+                            <div class="relative aspect-video overflow-hidden bg-[#0a0a0b] bg-cover bg-center" style="background-image:url('{{ $video->image_url }}')">
+                                <div class="absolute inset-0 flex items-center justify-center bg-black/55">
+                                    <a href="{{ $video->youtube_url }}" target="_blank" rel="noopener noreferrer" class="flex h-12 w-12 items-center justify-center rounded-sm bg-lucille-accent text-white transition-colors hover:brightness-110" aria-label="Reproducir video {{ $video->title }}">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6,3 20,12 6,21"/></svg>
                                     </a>
                                 </div>
                             </div>
                         @endif
-                        <div class="bg-[#101012] border border-t-0 border-[#242424] rounded-b-lg px-4 py-3">
-                            <h3 class="font-display text-sm uppercase tracking-[.08em] text-[#dcdcdc] truncate group-hover:text-lucille-accent transition-colors">{{ $video->title }}</h3>
-                            @if ($video->summary) <p class="text-[11px] text-[#666] mt-1 line-clamp-1">{{ $video->summary }}</p> @endif
+                        <div class="flex flex-1 flex-col justify-between p-4">
+                            <h3 class="line-clamp-2 font-display text-sm uppercase leading-snug tracking-[.06em] text-[#e2e2e2] transition-colors group-hover:text-white">{{ $video->title }}</h3>
+                            @if ($video->summary)
+                                <p class="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-[#9e9e9e]">{{ $video->summary }}</p>
+                            @endif
                         </div>
-                    </div>
+                    </article>
                 @endforeach
             </div>
         @endif
     </div>
 
     {{-- ═══════════ TAB 5: GALERÍA ═══════════ --}}
-    <div id="galeria" x-show="activeTab === 'galeria'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0">
-        <h2 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc] mb-8 flex items-center gap-3">
-            <span class="w-1 h-6 bg-lucille-accent rounded-full"></span>Galería de Fotos
+    <div id="galeria" role="tabpanel" aria-labelledby="tab-galeria" x-show="activeTab === 'galeria'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+        <h2 class="mb-6 flex items-center gap-3 font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">
+            <span class="h-5 w-1 bg-lucille-accent"></span>Galería de fotos
         </h2>
         @if (empty($galleryImages))
-            {{-- P1-5: Estado vacío de Galería con mensaje de marca y CTA --}}
-            <div class="py-24 text-center">
-                <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#111] border border-[#242424]">
-                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#c32720" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            {{-- Estado vacío sobrio sin prometer aportes no verificados de fotos por bandas --}}
+            <div class="lucille-flat-surface py-16 text-center px-6">
+                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-sm border border-white/10 bg-[#141417]">
+                    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#c32720" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                         <circle cx="12" cy="13" r="4"/>
                     </svg>
                 </div>
-                <p class="font-display text-sm uppercase tracking-[.18em] text-[#dcdcdc] mb-2">La galería pronto cobrará vida</p>
-                <p class="text-sm text-[#555] max-w-xs mx-auto leading-relaxed">
-                    Aún no hay fotografías publicadas. Los talentos de la comunidad podrán compartir su trabajo aquí muy pronto.
+                <p class="font-display text-sm uppercase tracking-[.16em] text-[#dcdcdc]">Archivo fotográfico</p>
+                <p class="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-[#9e9e9e]">
+                    Aún no hay fotografías publicadas en la galería editorial.
                 </p>
-                <a href="{{ route('talents.login') }}" class="mt-6 inline-flex items-center gap-2 border border-lucille-accent/30 px-5 py-2.5 font-display text-[11px] uppercase tracking-[.15em] text-lucille-accent hover:bg-lucille-accent/10 transition-colors duration-200">
-                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                    ¡Soy un Talento &mdash; Acceder!
-                </a>
             </div>
         @else
-            <div class="columns-1 gap-[5px] md:columns-2 lg:columns-3">
+            <div class="columns-1 gap-2 md:columns-2 lg:columns-3">
                 @foreach ($galleryImages as $idx => $image)
                     @php $talent = data_get($image, 'talent'); @endphp
-                    <a href="{{ data_get($image,'url') }}" class="lucille-gallery-tile group relative mb-[5px] block overflow-hidden bg-[#1d1d1d]" @click.prevent="showImage({{ $idx }})">
-                        <img src="{{ data_get($image,'url') }}" alt="{{ data_get($image,'title', data_get($image,'filename','')) }}" loading="lazy" decoding="async" style="aspect-ratio: 4 / 3;" class="w-full opacity-50 transition duration-500 ease-out group-hover:scale-[1.03] group-hover:opacity-100">
-                        <span class="absolute inset-0 bg-[rgba(7,16,33,.4)] opacity-0 transition duration-300 group-hover:opacity-100"></span>
-                        <span class="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-xs font-bold uppercase tracking-[5px] text-white opacity-0 transition duration-300 group-hover:opacity-100">
+                    <a href="{{ data_get($image,'url') }}" class="lucille-gallery-tile group relative mb-2 block overflow-hidden bg-[#18181b]" @click.prevent="showImage({{ $idx }})">
+                        <img src="{{ data_get($image,'url') }}" alt="{{ data_get($image,'title', data_get($image,'filename','')) }}" loading="lazy" decoding="async" class="h-auto w-full object-contain transition duration-300 ease-out group-hover:opacity-95">
+                        <span class="absolute inset-0 bg-black/45 opacity-0 transition duration-200 group-hover:opacity-100"></span>
+                        <span class=" line-clamp-2 absolute right-3 bottom-3 left-3 z-10 font-display text-xs uppercase tracking-[.12em] text-white opacity-0 transition duration-200 group-hover:opacity-100">
                             {{ data_get($image,'title',data_get($image,'filename','')) }}@if($talent) — {{ data_get($talent,'band_name') }}@endif
                         </span>
                     </a>
@@ -486,54 +570,52 @@
         <div x-cloak x-show="drawerOpen && playerVisible && activeTrack"
             x-transition:enter="transition-all ease-out duration-300" x-transition:enter-start="translate-y-full opacity-0" x-transition:enter-end="translate-y-0 opacity-100"
             x-transition:leave="transition-all ease-in duration-200"  x-transition:leave-start="translate-y-0 opacity-100"  x-transition:leave-end="translate-y-full opacity-0"
-            class="fixed bottom-[88px] left-0 right-0 z-[110] flex justify-center px-4 pointer-events-none">
-            <div class="w-full max-w-3xl pointer-events-auto bg-[#0b0b0c]/96 backdrop-blur-xl border border-white/8 rounded-2xl shadow-[0_-10px_60px_rgba(0,0,0,0.8)] overflow-hidden">
-                <div class="flex border-b border-white/5">
-                    <button type="button" @click="drawerTab='letras'" :class="drawerTab==='letras'?'text-white border-lucille-accent':'text-[#555] border-transparent'" class="flex-1 py-3 font-display text-xs uppercase tracking-[.1em] border-b-2 transition-all duration-200">🎵 Letras</button>
-                    <button type="button" @click="drawerTab='banda'"  :class="drawerTab==='banda' ?'text-white border-lucille-accent':'text-[#555] border-transparent'" class="flex-1 py-3 font-display text-xs uppercase tracking-[.1em] border-b-2 transition-all duration-200">🎸 Info Banda</button>
-                    <button type="button" @click="drawerOpen=false" class="px-4 text-[#444] hover:text-[#888] transition-colors text-lg" aria-label="Cerrar">✕</button>
+            class="pointer-events-none fixed right-0 bottom-[88px] left-0 z-[110] flex justify-center px-4">
+            <div class="pointer-events-auto w-full max-w-3xl overflow-hidden rounded-sm border border-white/12 bg-[#121215]/96 shadow-[0_-10px_60px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+                <div class="flex border-b border-white/10">
+                    <button type="button" @click="drawerTab='letras'" :class="drawerTab==='letras'?'text-white border-lucille-accent':'text-[#9e9e9e] border-transparent'" class="flex-1 border-b-2 py-3 font-display text-xs uppercase tracking-[.1em] transition-all duration-200">Letras</button>
+                    <button type="button" @click="drawerTab='banda'"  :class="drawerTab==='banda' ?'text-white border-lucille-accent':'text-[#9e9e9e] border-transparent'" class="flex-1 border-b-2 py-3 font-display text-xs uppercase tracking-[.1em] transition-all duration-200">Información de banda</button>
+                    <button type="button" @click="drawerOpen=false" class="px-4 text-lg text-[#9e9e9e] transition-colors hover:text-white" aria-label="Cerrar">✕</button>
                 </div>
                 <div x-show="drawerTab==='letras'" class="max-h-64 overflow-y-auto p-5">
                     <template x-if="activeTrack?.lyrics">
-                        <pre class="text-sm text-[#ccc] leading-relaxed whitespace-pre-wrap font-sans" x-text="activeTrack.lyrics"></pre>
+                        <pre class="whitespace-pre-wrap font-sans text-sm leading-relaxed text-[#d4d4d4]" x-text="activeTrack.lyrics"></pre>
                     </template>
                     <template x-if="!activeTrack?.lyrics">
-                        <p class="text-sm text-[#555] text-center py-8">No hay letra disponible para esta canción.</p>
+                        <p class="py-8 text-center text-sm text-[#9e9e9e]">No hay letra disponible para esta canción.</p>
                     </template>
                 </div>
-                <div x-show="drawerTab==='banda'" class="max-h-64 overflow-y-auto p-5 space-y-3">
+                <div x-show="drawerTab==='banda'" class="max-h-64 space-y-3 overflow-y-auto p-5">
                     <template x-if="activeTrack?.bandName">
                         <h4 class="font-display text-base uppercase tracking-[.1em] text-white" x-text="activeTrack.bandName"></h4>
                     </template>
                     <template x-if="activeTrack?.bandInfo">
-                        <p class="text-sm text-[#aaa] leading-relaxed" x-text="activeTrack.bandInfo"></p>
+                        <p class="text-sm leading-relaxed text-[#bdbdbd]" x-text="activeTrack.bandInfo"></p>
                     </template>
                     <template x-if="activeTrack?.bandMembers && activeTrack.bandMembers.length">
                         <div>
-                            <p class="text-[10px] uppercase tracking-[.1em] text-[#555] mb-2">Integrantes</p>
+                            <p class="mb-2 text-[10px] uppercase tracking-[.1em] text-[#9a9a9a]">Integrantes</p>
                             <div class="flex flex-wrap gap-2">
                                 <template x-for="m in activeTrack.bandMembers" :key="m">
-                                    <span class="text-[11px] text-[#ccc] border border-[#2a2a2a] rounded px-2 py-1" x-text="m"></span>
+                                    <span class="rounded-sm border border-white/15 px-2 py-1 text-[11px] text-[#dcdcdc]" x-text="m"></span>
                                 </template>
                             </div>
                         </div>
                     </template>
                     <template x-if="activeTrack?.socialLinks && Object.keys(activeTrack.socialLinks??{}).length">
-                        <div class="flex gap-3 flex-wrap">
+                        <div class="flex flex-wrap gap-3">
                             <template x-for="[key,url] in Object.entries(activeTrack.socialLinks??{})" :key="key">
-                                <a :href="url" target="_blank" rel="noopener" class="text-[10px] uppercase tracking-[.08em] text-lucille-accent border border-lucille-accent/30 hover:bg-lucille-accent/10 rounded px-2 py-1 transition-colors" x-text="key"></a>
+                                <a :href="url" target="_blank" rel="noopener" class="rounded-sm border border-lucille-accent/40 px-2.5 py-1 text-[10px] uppercase tracking-[.08em] text-[var(--lucille-accent-readable,#ff5b52)] transition-colors hover:bg-lucille-accent/15" x-text="key"></a>
                             </template>
                         </div>
                     </template>
                     <template x-if="!activeTrack?.bandInfo && (!activeTrack?.bandMembers || !activeTrack.bandMembers.length)">
-                        <p class="text-sm text-[#555] text-center py-8">No hay información de banda disponible.</p>
+                        <p class="py-8 text-center text-sm text-[#9e9e9e]">No hay información de banda disponible.</p>
                     </template>
                 </div>
             </div>
         </div>
     </template>
-
-
 
 </section>
 
@@ -552,7 +634,6 @@
     height: var(--h, 50%);
     box-shadow: 0 0 4px rgba(195,39,32,.7);
 }
-/* Each bar gets a slightly different speed via nth-child */
 .sr-eq-bar:nth-child(1) { --spd: 0.52s; }
 .sr-eq-bar:nth-child(2) { --spd: 0.38s; }
 .sr-eq-bar:nth-child(3) { --spd: 0.65s; }

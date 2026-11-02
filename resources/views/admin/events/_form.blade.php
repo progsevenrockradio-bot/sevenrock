@@ -16,204 +16,187 @@
 @endphp
 
 <div x-data="eventForm" class="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
-    
     <!-- Left Column: Form Editor -->
     <div class="space-y-6">
         <!-- Tabs Buttons Navigation -->
-        <div class="mb-4 border-b border-[#2b2b2b] flex gap-2 overflow-x-auto pb-px">
-            <button type="button" @click="tab = 'general'" :class="tab === 'general' ? 'border-b-2 border-[var(--lucille-accent)] text-[#dcdcdc]' : 'text-[#9a9a9a] hover:text-[#bcbcbc]'" class="pb-3 px-4 text-xs font-display uppercase tracking-[.18em] transition-colors focus:outline-none whitespace-nowrap">
+        <div class="flex gap-2 border-b border-white/10 pb-2 text-xs font-medium">
+            <button type="button" @click="tab = 'general'" :class="tab === 'general' ? 'bg-[#c32720] text-white font-semibold' : 'border border-white/10 bg-white/5 text-gray-300 hover:text-white hover:bg-white/10'" class="px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap">
                 Información General
             </button>
-            <button type="button" @click="tab = 'details'" :class="tab === 'details' ? 'border-b-2 border-[var(--lucille-accent)] text-[#dcdcdc]' : 'text-[#9a9a9a] hover:text-[#bcbcbc]'" class="pb-3 px-4 text-xs font-display uppercase tracking-[.18em] transition-colors focus:outline-none whitespace-nowrap">
+            <button type="button" @click="tab = 'details'" :class="tab === 'details' ? 'bg-[#c32720] text-white font-semibold' : 'border border-white/10 bg-white/5 text-gray-300 hover:text-white hover:bg-white/10'" class="px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap">
                 Detalles & Enlaces
             </button>
-            <button type="button" @click="tab = 'media'" :class="tab === 'media' ? 'border-b-2 border-[var(--lucille-accent)] text-[#dcdcdc]' : 'text-[#9a9a9a] hover:text-[#bcbcbc]'" class="pb-3 px-4 text-xs font-display uppercase tracking-[.18em] transition-colors focus:outline-none whitespace-nowrap">
+            <button type="button" @click="tab = 'media'" :class="tab === 'media' ? 'bg-[#c32720] text-white font-semibold' : 'border border-white/10 bg-white/5 text-gray-300 hover:text-white hover:bg-white/10'" class="px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap">
                 Póster & Multimedia
             </button>
         </div>
 
         <!-- Tab 1: General Info -->
-        <div x-show="tab === 'general'" class="space-y-6" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
-            <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6 space-y-5">
+        <div x-show="tab === 'general'" class="space-y-6">
+            <section class="rounded-xl border border-white/10 bg-white/[0.02] p-5 sm:p-6 space-y-5">
                 <div>
-                    <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Información General</h2>
-                    <p class="mt-1 text-xs text-[#9a9a9a]">Datos esenciales y clasificación del evento.</p>
+                    <h2 class="font-display text-sm uppercase tracking-wider text-white">Datos Principales</h2>
+                    <p class="mt-0.5 text-xs text-gray-400">Datos esenciales y clasificación del evento.</p>
                 </div>
 
-                <div class="grid gap-5">
+                <div class="grid gap-4">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['form_title_label'] }} <span class="text-[var(--lucille-accent)]">*</span></label>
-                        <input name="title" x-model="title" @input="updateSlug" class="lucille-product-field w-full @error('title') border-red-500/80 bg-red-950/10 @enderror">
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Título del evento <span class="text-[#c32720]">*</span></label>
+                        <input name="title" x-model="title" @input="updateSlug" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2.5 text-base font-semibold text-white placeholder-gray-500 focus:border-[#c32720] focus:outline-none">
                         @error('title')
-                            <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
+                            <p class="mt-1 text-xs text-rose-400 font-medium">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['form_slug_label'] }}</label>
-                        <input name="slug" x-model="slug" @input="slugManuallyEdited = true" class="lucille-product-field w-full @error('slug') border-red-500/80 bg-red-950/10 @enderror">
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Slug / Enlace permanente</label>
+                        <input name="slug" x-model="slug" @input="slugManuallyEdited = true" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-xs font-mono text-gray-300 placeholder-gray-600 focus:border-[#c32720] focus:outline-none">
                         @error('slug')
-                            <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
+                            <p class="mt-1 text-xs text-rose-400 font-medium">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    <div>
-                        <label class="mb-2 flex items-center gap-3 text-xs uppercase tracking-[.18em] text-[#9a9a9a]">
-                            <input type="checkbox" name="is_cancelled" value="1" x-model="is_cancelled" class="lucille-product-checkbox h-4 w-4 rounded border-[#2b2b2b] bg-black/40 text-[var(--lucille-accent)] focus:ring-[var(--lucille-accent)] focus:ring-offset-0">
-                            Evento Cancelado
+                    <div class="pt-1">
+                        <label class="flex items-center gap-3 text-sm text-gray-300 cursor-pointer">
+                            <input type="checkbox" name="is_cancelled" value="1" x-model="is_cancelled" class="h-4 w-4 rounded border-white/20 bg-black/40 text-[#c32720] focus:ring-[#c32720]">
+                            <span>Marcar evento como CANCELADO</span>
                         </label>
-                        <p class="mt-1.5 text-xs text-[#9a9a9a]">Muestra el evento como CANCELADO en la página.</p>
+                        <p class="mt-1 text-xs text-gray-500 pl-7">Muestra la insignia destacada de "Cancelado" en la agenda.</p>
                     </div>
 
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Categorías</label>
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Categorías</label>
                         <input
                             name="categories_text"
                             x-model="categories"
-                            class="lucille-product-field w-full"
-                            placeholder="Guest Appearance, Music Festivals"
+                            class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 placeholder-gray-500 focus:border-[#c32720] focus:outline-none"
+                            placeholder="Festival, Hard Rock, Gira Europea"
                         >
-                        <p class="mt-2 text-xs uppercase tracking-[.14em] text-[#9a9a9a]">Separa los nombres con comas.</p>
+                        <p class="mt-1 text-xs text-gray-500">Separa las categorías con comas.</p>
                     </div>
                 </div>
             </section>
 
-            <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6">
-                <div class="mb-5">
-                    <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Descripción del Evento</h2>
-                    <p class="mt-1 text-xs text-[#9a9a9a]">Cada párrafo se guarda de manera independiente para formatear la página pública del show.</p>
+            <section class="rounded-xl border border-white/10 bg-white/[0.02] p-5 sm:p-6 space-y-4">
+                <div>
+                    <h2 class="font-display text-sm uppercase tracking-wider text-white">Descripción del Concierto</h2>
+                    <p class="mt-0.5 text-xs text-gray-400">Información sobre horarios de apertura, teloneros y sinopsis.</p>
                 </div>
 
-                <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Párrafos descriptivos</label>
-                <textarea
-                    name="content_text"
-                    x-model="content"
-                    rows="10"
-                    class="lucille-product-field w-full font-body text-[15px] leading-7"
-                    placeholder="Escribe la descripción aquí. Deja una línea en blanco entre párrafos para separarlos."
-                ></textarea>
+                <div>
+                    <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Texto informativo</label>
+                    <textarea
+                        name="content_text"
+                        x-model="content"
+                        rows="8"
+                        class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:border-[#c32720] focus:outline-none"
+                        placeholder="Escribe la descripción aquí. Deja una línea en blanco entre párrafos."
+                    ></textarea>
+                </div>
             </section>
         </div>
 
         <!-- Tab 2: Details & Links -->
-        <div x-show="tab === 'details'" class="space-y-6" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" style="display: none;">
-            <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6 space-y-5">
+        <div x-show="tab === 'details'" class="space-y-6" style="display: none;">
+            <section class="rounded-xl border border-white/10 bg-white/[0.02] p-5 sm:p-6 space-y-5">
                 <div>
-                    <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Fecha & Ubicación</h2>
-                    <p class="mt-1 text-xs text-[#9a9a9a]">Detalles de horarios y lugar del espectáculo.</p>
+                    <h2 class="font-display text-sm uppercase tracking-wider text-white">Fecha & Ubicación</h2>
+                    <p class="mt-0.5 text-xs text-gray-400">Detalles de horarios y lugar del espectáculo.</p>
                 </div>
 
-                <div class="grid gap-5 md:grid-cols-2">
+                <div class="grid gap-4 md:grid-cols-2">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['starts_at_label'] }} <span class="text-[var(--lucille-accent)]">*</span></label>
-                        <input type="datetime-local" name="starts_at" x-model="starts_at" class="lucille-product-field w-full @error('starts_at') border-red-500/80 bg-red-950/10 @enderror">
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Fecha y hora de inicio <span class="text-[#c32720]">*</span></label>
+                        <input type="datetime-local" name="starts_at" x-model="starts_at" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none">
                         @error('starts_at')
-                            <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
+                            <p class="mt-1 text-xs text-rose-400">{{ $message }}</p>
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['ends_at_label'] }}</label>
-                        <input type="datetime-local" name="ends_at" x-model="ends_at" class="lucille-product-field w-full @error('ends_at') border-red-500/80 bg-red-950/10 @enderror">
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Fecha y hora de fin (Opcional)</label>
+                        <input type="datetime-local" name="ends_at" x-model="ends_at" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none">
                         @error('ends_at')
-                            <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
+                            <p class="mt-1 text-xs text-rose-400">{{ $message }}</p>
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['location_label'] }}</label>
-                        <input name="location" x-model="location" class="lucille-product-field w-full" placeholder="Loch Ness, UK">
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Ciudad / País</label>
+                        <input name="location" x-model="location" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none" placeholder="Madrid, España">
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['venue_label'] }}</label>
-                        <input name="venue" x-model="venue" class="lucille-product-field w-full" placeholder="Rockness Festival">
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Sala / Recinto</label>
+                        <input name="venue" x-model="venue" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none" placeholder="WiZink Center">
                     </div>
                 </div>
             </section>
 
-            <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6 space-y-5">
+            <section class="rounded-xl border border-white/10 bg-white/[0.02] p-5 sm:p-6 space-y-5">
                 <div>
-                    <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Enlaces del Evento</h2>
-                    <p class="mt-1 text-xs text-[#9a9a9a]">Configuración de botones interactivos para el público.</p>
+                    <h2 class="font-display text-sm uppercase tracking-wider text-white">Venta de Entradas & Enlaces</h2>
+                    <p class="mt-0.5 text-xs text-gray-400">Configuración de botones de compra y redes.</p>
                 </div>
 
-                <div class="grid gap-5 md:grid-cols-2">
+                <div class="grid gap-4 md:grid-cols-2">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['ticket_label_label'] }}</label>
-                        <input name="ticket_label" x-model="ticket_label" class="lucille-product-field w-full" placeholder="Tickets">
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Texto del botón de entradas</label>
+                        <input name="ticket_label" x-model="ticket_label" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none" placeholder="Comprar Entradas">
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">{{ $admin['ticket_url_label'] }}</label>
-                        <input name="ticket_url" x-model="ticket_url" class="lucille-product-field w-full @error('ticket_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://...">
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Enlace de venta de entradas</label>
+                        <input name="ticket_url" x-model="ticket_url" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none" placeholder="https://ticketmaster.es/...">
                         @error('ticket_url')
-                            <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
+                            <p class="mt-1 text-xs text-rose-400">{{ $message }}</p>
                         @enderror
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Venue URL</label>
-                        <input name="venue_url" x-model="venue_url" class="lucille-product-field w-full @error('venue_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://...">
-                        @error('venue_url')
-                            <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
-                        @enderror
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Web de la Sala (Venue URL)</label>
+                        <input name="venue_url" x-model="venue_url" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none" placeholder="https://...">
                     </div>
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Facebook URL</label>
-                        <input name="facebook_url" x-model="facebook_url" class="lucille-product-field w-full @error('facebook_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://www.facebook.com/...">
-                        @error('facebook_url')
-                            <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
-                        @enderror
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Evento en Facebook / Redes</label>
+                        <input name="facebook_url" x-model="facebook_url" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none" placeholder="https://facebook.com/events/...">
                     </div>
                 </div>
             </section>
         </div>
 
         <!-- Tab 3: Poster & Media -->
-        <div x-show="tab === 'media'" class="space-y-6" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" style="display: none;">
-            <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6 space-y-5">
+        <div x-show="tab === 'media'" class="space-y-6" style="display: none;">
+            <section class="rounded-xl border border-white/10 bg-white/[0.02] p-5 sm:p-6 space-y-5">
                 <div>
-                    <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Póster Promocional</h2>
-                    <p class="mt-1 text-xs text-[#9a9a9a]">Sube una imagen local o proporciona una ruta/URL existente <span class="text-[var(--lucille-accent)]">*</span></p>
+                    <h2 class="font-display text-sm uppercase tracking-wider text-white">Cartel / Póster Oficial</h2>
+                    <p class="mt-0.5 text-xs text-gray-400">Sube una imagen o proporciona una URL externa.</p>
                 </div>
 
-                <div class="grid gap-5">
+                <div class="grid gap-4">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Ruta o URL de Imagen</label>
-                        <input name="poster" x-model="poster" class="lucille-product-field w-full @error('poster') border-red-500/80 bg-red-950/10 @enderror" placeholder="assets/lucille/ozzfest_poster.jpg">
-                        @error('poster')
-                            <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
-                        @enderror
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Ruta o URL de Imagen</label>
+                        <input name="poster" x-model="poster" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none" placeholder="https://... o ruta relativa">
                     </div>
 
-                    <div class="border border-[#2b2b2b] bg-black/30 p-4">
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a] font-medium">Subir archivo de imagen local</label>
-                        <input type="file" name="poster_file" @change="handlePosterUpload" class="block w-full text-xs text-[#9a9a9a] file:mr-4 file:py-2 file:px-4 file:border file:border-[#2b2b2b] file:bg-black/40 file:text-[#dcdcdc] file:text-[11px] file:uppercase file:tracking-wider hover:file:bg-black/60 file:cursor-pointer @error('poster_file') border border-red-500 bg-red-950/20 @enderror">
-                        @error('poster_file')
-                            <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-2.5 text-[10px] uppercase tracking-wider text-[#666]">Límite de tamaño: 6MB. JPG, PNG o WebP recomendados.</p>
+                    <div class="rounded-xl border border-white/10 bg-black/40 p-4">
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-2">Subir archivo de imagen local</label>
+                        <input type="file" name="poster_file" @change="handlePosterUpload" class="block w-full text-xs text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-white/10 file:text-gray-200 hover:file:bg-white/20">
+                        <p class="mt-2 text-[11px] text-gray-500">Formatos recomendados: JPG, PNG o WebP hasta 6MB.</p>
                     </div>
                 </div>
             </section>
 
-            <section class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] p-6 space-y-5">
+            <section class="rounded-xl border border-white/10 bg-white/[0.02] p-5 sm:p-6 space-y-5">
                 <div>
-                    <h2 class="font-display text-sm uppercase tracking-[.12em] text-[#dcdcdc]">Video & Ubicación</h2>
-                    <p class="mt-1 text-xs text-[#9a9a9a]">Inserta códigos embebidos para enriquecer la página del show.</p>
+                    <h2 class="font-display text-sm uppercase tracking-wider text-white">Vídeo Embebido & Mapa</h2>
+                    <p class="mt-0.5 text-xs text-gray-400">Inserta códigos embebidos para enriquecer la ficha del concierto.</p>
                 </div>
 
-                <div class="grid gap-5">
+                <div class="grid gap-4">
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Video Embed URL</label>
-                        <input name="embed_url" x-model="embed_url" @input="embed_url = cleanIframeSrc(embed_url)" class="lucille-product-field w-full @error('embed_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://www.youtube.com/embed/...">
-                        @error('embed_url')
-                            <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
-                        @enderror
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Vídeo Embed URL (YouTube)</label>
+                        <input name="embed_url" x-model="embed_url" @input="embed_url = cleanIframeSrc(embed_url)" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none" placeholder="https://www.youtube.com/embed/...">
                     </div>
 
                     <div>
-                        <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#9a9a9a]">Google Maps Embed URL</label>
-                        <input name="map_url" x-model="map_url" @input="map_url = cleanIframeSrc(map_url)" class="lucille-product-field w-full @error('map_url') border-red-500/80 bg-red-950/10 @enderror" placeholder="https://www.google.com/maps/embed?...">
-                        @error('map_url')
-                            <p class="mt-1.5 text-xs text-red-500 font-semibold">{{ $message }}</p>
-                        @enderror
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Google Maps Embed URL</label>
+                        <input name="map_url" x-model="map_url" @input="map_url = cleanIframeSrc(map_url)" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none" placeholder="https://www.google.com/maps/embed?...">
                     </div>
                 </div>
             </section>
@@ -222,91 +205,74 @@
 
     <!-- Right Column: Live Interactive Preview -->
     <div class="space-y-6">
-        <div class="sticky top-[100px] border border-[#2b2b2b] bg-[rgba(16,16,18,.62)] p-5 backdrop-blur-sm space-y-5">
-            <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-3">
-                <span class="font-display text-[10px] uppercase tracking-[.25em] text-[#9a9a9a]">Vista Previa en Vivo</span>
+        <div class="sticky top-[100px] rounded-xl border border-white/10 bg-black/40 p-5 space-y-5 shadow-xl">
+            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                <span class="text-xs font-medium uppercase tracking-wider text-gray-400">Vista Previa en Vivo</span>
                 <span class="inline-flex items-center gap-1.5">
-                    <span class="h-1.5 w-1.5 rounded-full bg-[var(--lucille-accent)] animate-pulse"></span>
-                    <span class="text-[9px] uppercase tracking-wider text-[#bcbcbc]">Actualizando</span>
+                    <span class="h-2 w-2 rounded-full bg-[#c32720] animate-pulse"></span>
+                    <span class="text-[10px] uppercase tracking-wider text-gray-400">Actualizando</span>
                 </span>
             </div>
 
             <!-- Page Header Mock -->
-            <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-6 text-center">
+            <div class="rounded-xl border border-white/10 bg-[#101012] p-5 text-center">
                 <!-- Categories Badges -->
                 <div class="mb-3 flex flex-wrap justify-center gap-1.5">
                     <template x-for="cat in categoriesArray" :key="cat">
-                        <span class="border border-[#2b2b2b] bg-[rgba(255,255,255,.02)] px-2.5 py-0.5 text-[9px] uppercase tracking-wider text-[#bcbcbc]" x-text="cat"></span>
+                        <span class="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium text-gray-300" x-text="cat"></span>
                     </template>
                     <template x-if="categoriesArray.length === 0">
-                        <span class="border border-dashed border-[#2b2b2b] px-2.5 py-0.5 text-[9px] uppercase tracking-wider text-[#555]">Sin categorías</span>
+                        <span class="rounded-full border border-dashed border-white/10 px-2.5 py-0.5 text-[10px] text-gray-500">Sin categorías</span>
                     </template>
                 </div>
 
                 <!-- Event Title -->
-                <div class="relative inline-block mt-3">
-                    <h1 class="font-display text-2xl uppercase tracking-[.12em] break-words leading-tight" :class="is_cancelled ? 'text-[#9a9a9a] line-through' : 'text-[#dcdcdc]'" x-text="title || 'Título del Evento'"></h1>
+                <div class="relative inline-block mt-2">
+                    <h1 class="font-display text-xl sm:text-2xl uppercase tracking-wider break-words leading-tight" :class="is_cancelled ? 'text-gray-500 line-through' : 'text-white'" x-text="title || 'Título del Evento'"></h1>
                     <template x-if="is_cancelled">
-                        <span class="absolute -top-3 -right-6 rotate-[15deg] border-2 border-[#c32720] bg-black/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-[#c32720] shadow-[0_5px_15px_rgba(195,39,32,0.4)]">Cancelado</span>
+                        <span class="absolute -top-3 -right-6 rotate-[12deg] rounded border border-rose-500 bg-rose-950 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-200 shadow-md">Cancelado</span>
                     </template>
                 </div>
-                <p class="mt-1.5 text-[9px] uppercase tracking-[.36em] text-[#9a9a9a]">Upcoming shows 2026</p>
+                <p class="mt-1 text-[10px] uppercase tracking-widest text-[#c32720] font-semibold">Seven Rock Radio • Conciertos</p>
 
                 <!-- Date & Time badges -->
-                <div class="mt-4 flex flex-wrap justify-center gap-2 text-[10px] uppercase tracking-wider text-[#dcdcdc]">
-                    <span class="border border-[#2b2b2b] px-3 py-1 bg-black/25" x-text="formattedDate"></span>
-                    <span class="border border-[#2b2b2b] px-3 py-1 bg-black/25" x-text="formattedTime"></span>
+                <div class="mt-3 flex flex-wrap justify-center gap-2 text-xs text-gray-300">
+                    <span class="rounded-md border border-white/10 px-2.5 py-1 bg-white/5" x-text="formattedDate"></span>
+                    <span class="rounded-md border border-white/10 px-2.5 py-1 bg-white/5" x-text="formattedTime"></span>
                 </div>
             </div>
 
             <!-- Event Split Layout Mock -->
             <div class="grid gap-4 sm:grid-cols-2">
                 <!-- Info & Content -->
-                <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.8)] p-4 space-y-4">
-                    <!-- Venue details -->
-                    <div class="grid gap-2 text-[11px] text-[#9a9a9a] border-l border-[#2b2b2b]/60 pl-3.5 space-y-1">
+                <div class="rounded-xl border border-white/10 bg-[#101012] p-4 space-y-3">
+                    <div class="space-y-2 text-xs text-gray-400">
                         <div>
-                            <span class="text-[9px] uppercase tracking-[.08em] text-[#dcdcdc] font-display block">Fecha:</span>
-                            <span class="text-[#bcbcbc]" x-text="formattedDate"></span>
+                            <span class="text-[10px] uppercase tracking-wider text-gray-500 block">Ubicación:</span>
+                            <span class="text-white font-medium" x-text="location || 'No especificada'"></span>
                         </div>
                         <div>
-                            <span class="text-[9px] uppercase tracking-[.08em] text-[#dcdcdc] font-display block">Hora:</span>
-                            <span class="text-[#bcbcbc]" x-text="formattedTime"></span>
-                        </div>
-                        <div>
-                            <span class="text-[9px] uppercase tracking-[.08em] text-[#dcdcdc] font-display block">Ubicación:</span>
-                            <span class="text-[#bcbcbc]" x-text="location || 'Ubicación no especificada'"></span>
-                        </div>
-                        <div>
-                            <span class="text-[9px] uppercase tracking-[.08em] text-[#dcdcdc] font-display block">Lugar:</span>
-                            <span class="text-[#bcbcbc]" x-text="venue || 'Lugar no especificado'"></span>
+                            <span class="text-[10px] uppercase tracking-wider text-gray-500 block">Sala:</span>
+                            <span class="text-white font-medium" x-text="venue || 'No especificada'"></span>
                         </div>
                     </div>
 
-                    <!-- Actions -->
-                    <div class="flex flex-wrap gap-1.5 border-t border-[#2b2b2b]/60 pt-3">
-                        <span class="border border-[#2b2b2b] px-2.5 py-1 text-[10px] uppercase tracking-wider text-[#bcbcbc] bg-black/20" x-text="ticket_label || 'Tickets'"></span>
-                        <template x-if="facebook_url">
-                            <span class="border border-[#2b2b2b] px-2.5 py-1 text-[10px] uppercase tracking-wider text-[#bcbcbc] bg-black/20">Facebook</span>
-                        </template>
+                    <div class="pt-3 border-t border-white/10">
+                        <span class="inline-flex items-center justify-center h-7 px-3 rounded bg-[#c32720] text-white text-[11px] font-semibold" x-text="ticket_label || 'Tickets'"></span>
                     </div>
 
                     <!-- Content Paragraphs -->
-                    <div class="border-t border-[#2b2b2b]/60 pt-3 space-y-2 text-[11px] text-[#9a9a9a] max-h-[140px] overflow-y-auto pr-1">
+                    <div class="pt-2 border-t border-white/10 space-y-2 text-xs text-gray-400 max-h-[120px] overflow-y-auto">
                         <template x-for="(para, idx) in contentParagraphs" :key="idx">
                             <p x-text="para" class="leading-relaxed"></p>
-                        </template>
-                        <template x-if="contentParagraphs.length === 0">
-                            <p class="italic text-[#555] text-[10px]">Ingresa texto en la descripción del evento para previsualizar los párrafos...</p>
                         </template>
                     </div>
                 </div>
 
-                <!-- Poster & Video Preview -->
+                <!-- Poster Mock -->
                 <div class="space-y-3">
-                    <!-- Poster Mock -->
-                    <div class="border border-[#2b2b2b] bg-black/40 p-1.5">
-                        <div class="relative aspect-[2/3] w-full overflow-hidden bg-[#111] flex items-center justify-center border border-[#2b2b2b]">
+                    <div class="rounded-xl border border-white/10 bg-[#101012] p-2">
+                        <div class="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-black flex items-center justify-center border border-white/5">
                             <img
                                 :src="localPosterPreview || (poster ? (poster.startsWith('http') || poster.startsWith('/') || poster.startsWith('assets/') ? poster : '/' + poster) : '')"
                                 x-show="localPosterPreview || poster"
@@ -314,47 +280,23 @@
                                 alt="Póster"
                             >
                             <div class="text-center p-4" x-show="!localPosterPreview && !poster">
-                                <span class="block text-2xl mb-1.5 text-[#333]">🖼️</span>
-                                <span class="text-[9px] uppercase tracking-wider text-[#666]">Sin Póster</span>
+                                <span class="block text-2xl mb-1 text-gray-600">🖼️</span>
+                                <span class="text-[10px] uppercase tracking-wider text-gray-500">Sin Póster</span>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Video Embed Mock -->
-                    <div class="border border-[#2b2b2b] bg-black/40 p-1.5">
-                        <div class="relative aspect-video w-full overflow-hidden bg-[#111] border border-[#2b2b2b] flex items-center justify-center">
-                            <template x-if="embed_url">
-                                <iframe :src="embed_url" class="absolute inset-0 h-full w-full" allowfullscreen></iframe>
-                            </template>
-                            <template x-if="!embed_url">
-                                <span class="text-[9px] uppercase tracking-wider text-[#666]">Sin Video Embebido</span>
-                            </template>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Map Embed Mock -->
-            <div class="border border-[#2b2b2b] bg-black/40 p-1.5">
-                <div class="relative min-h-[100px] w-full overflow-hidden bg-[#111] border border-[#2b2b2b] flex items-center justify-center">
-                    <template x-if="map_url">
-                        <iframe :src="map_url" class="absolute inset-0 h-full w-full border-0" allowfullscreen></iframe>
-                    </template>
-                    <template x-if="!map_url">
-                        <span class="text-[9px] uppercase tracking-wider text-[#666]">Sin Mapa de Ubicación</span>
-                    </template>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Global form actions placement at the bottom (secondary) -->
-    <div class="col-span-full border-t border-[#2b2b2b] pt-6 flex flex-wrap gap-3">
-        <button type="submit" class="lucille-button-solid">
-            {{ $isEdit ? (!empty($admin['edit_event']) ? $admin['edit_event'] : 'Guardar Evento') : (!empty($admin['new_event']) ? $admin['new_event'] : 'Crear Evento') }}
+    <!-- Global form actions placement at the bottom -->
+    <div class="col-span-full border-t border-white/10 pt-6 flex flex-wrap gap-3">
+        <button type="submit" class="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-lg bg-[#c32720] hover:bg-[#a8201a] text-white text-xs font-semibold tracking-wide shadow-md shadow-red-950/40 transition-all">
+            {{ $isEdit ? 'Guardar Evento' : 'Crear Evento' }}
         </button>
-        <a href="{{ route('admin.events.index') }}" class="lucille-button">
-            {{ !empty($admin['back_to_events']) ? $admin['back_to_events'] : 'Volver a Eventos' }}
+        <a href="{{ route('admin.events.index') }}" class="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all">
+            Volver a Eventos
         </a>
     </div>
 </div>
@@ -382,13 +324,13 @@
             venue_url: {!! json_encode(old('venue_url', $event->venue_url)) !!},
             facebook_url: {!! json_encode(old('facebook_url', $event->facebook_url)) !!},
             slugManuallyEdited: {!! json_encode($isEdit) !!},
-            localPosterPreview: {!! json_encode($posterPreview) !!},
+            localPosterPreview: {!! json_encode($posterPreview ?? null) !!},
             is_cancelled: {!! json_encode(old('is_cancelled', $event->is_cancelled)) !!},
 
             slugify(text) {
                 if (!text) return '';
                 return text.toString().toLowerCase().trim()
-                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove accents
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
                     .replace(/\s+/g, '-')
                     .replace(/[^\w\-]+/g, '')
                     .replace(/\-\-+/g, '-')
@@ -430,21 +372,17 @@
                 return this.content.split(/\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);
             },
             get formattedDate() {
-                if (!this.starts_at) return 'Date';
+                if (!this.starts_at) return 'Fecha';
                 const d = new Date(this.starts_at);
-                const options = { month: 'long', day: 'numeric', year: 'numeric' };
-                return d.toLocaleDateString('en-US', options);
+                const options = { month: 'short', day: 'numeric', year: 'numeric' };
+                return d.toLocaleDateString('es-ES', options);
             },
             get formattedTime() {
-                if (!this.starts_at) return 'Time';
+                if (!this.starts_at) return 'Hora';
                 const d = new Date(this.starts_at);
-                let hours = d.getHours();
-                let minutes = d.getMinutes();
-                const ampm = hours >= 12 ? 'pm' : 'am';
-                hours = hours % 12;
-                hours = hours ? hours : 12;
-                minutes = minutes < 10 ? '0'+minutes : minutes;
-                return hours + ':' + minutes + ' ' + ampm;
+                let hours = d.getHours().toString().padStart(2, '0');
+                let minutes = d.getMinutes().toString().padStart(2, '0');
+                return hours + ':' + minutes + ' h';
             }
         }));
     }

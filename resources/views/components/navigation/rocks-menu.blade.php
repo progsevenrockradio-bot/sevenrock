@@ -162,15 +162,15 @@
             height: auto !important;
         }
         .rocks-header-top > div {
-            padding-top: 40px !important;
-            padding-bottom: 20px !important;
+            padding-top: 10px !important;
+            padding-bottom: 6px !important;
         }
         .rocks-header-sticky > div {
-            padding-top: 16px !important;
-            padding-bottom: 12px !important;
+            padding-top: 8px !important;
+            padding-bottom: 6px !important;
         }
         #site-content {
-            margin-top: 136px !important;
+            margin-top: 72px !important;
         }
     }
 </style>
@@ -182,12 +182,12 @@
     :class="sticky ? 'rocks-header-sticky' : 'rocks-header-top'"
     class="inset-x-0 top-0 z-50 transition-all duration-300"
 >
-    <div class="absolute inset-0 z-0 bg-cover bg-center md:hidden" style="background-image: linear-gradient(rgba(16, 16, 18, 0.75), rgba(16, 16, 18, 0.75)), var(--lucille-bg-image);" aria-hidden="true"></div>
+    <div class="absolute inset-0 z-0 bg-[#121215] md:hidden border-b border-white/8" aria-hidden="true"></div>
     <div 
         class="mx-auto flex h-full max-w-[1240px] flex-col justify-center px-4 lg:px-6 md:flex-row md:items-center md:justify-between md:py-0 md:gap-4 xl:gap-6"
     >
         <div class="flex w-full items-center justify-between md:contents">
-            <a href="{{ route('home') }}" class="relative z-10 flex h-full items-center gap-3 py-2 md:py-0 shrink-0 min-w-[200px] xl:min-w-[225px] select-none rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black" aria-label="{{ $brandMark }} home">
+            <a href="{{ route('home') }}" class="relative z-10 flex h-full items-center gap-3 py-1.5 md:py-0 shrink-0 min-w-[200px] xl:min-w-[225px] select-none rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black" aria-label="{{ $brandMark }} home">
                 @if ($brandDisplayMode === 'both' && $logoUrl)
                     <img src="{{ $logoUrl }}" alt="{{ $brandMark }}" class="lucille-brand-logo-both" width="108" height="62" loading="eager" fetchpriority="high" decoding="async">
                     <span class="brand-mark-container" :class="sticky ? 'sticky-active' : 'normal'">
@@ -223,7 +223,7 @@
             </div>
         </div>
 
-        <div class="relative z-10 md:hidden w-full px-1 pb-3 pt-1 text-center">
+        <div class="relative z-10 md:hidden w-full px-1 pb-1.5 pt-0 text-center">
             <span class="inline-block max-w-full font-display text-[8.5px] uppercase tracking-[.22em] leading-tight text-white/50">
                 Todas las épocas del Rock, <span class="text-lucille-accent/70">están aquí</span>
             </span>

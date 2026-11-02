@@ -4,9 +4,10 @@
     'image' => null,
     'overlay' => 'rgba(21,21,21,.88)',
     'categories' => [],
+    'compact' => false,
 ])
 
-<section class="lucille-page-heading {{ $subtitle ? '' : 'no-subtitle' }} {{ ! empty($categories) ? 'has-cpt-tax' : '' }}">
+<section class="lucille-page-heading {{ $compact ? 'lucille-page-heading--compact' : '' }} {{ $subtitle ? '' : 'no-subtitle' }} {{ ! empty($categories) ? 'has-cpt-tax' : '' }}">
     @if ($image)
         @php
             $pageHeadingImage = \App\Support\PublicMediaUrl::normalizePublicUrl($image)

@@ -39,8 +39,8 @@ input:checked + .cookie-slider:before {
     transform: translateX(20px);
 }
 
-.section-band { background: rgba(8, 26, 36, 0.2) !important; }
-.home-section-texture::before { background-image: none !important; }
+body:not(.lucille-theme-v2) .section-band { background: rgba(8, 26, 36, 0.2) !important; }
+body:not(.lucille-theme-v2) .home-section-texture::before { background-image: none !important; }
 .lucille-page-heading .lucille-card-image + div[class="absolute inset-0"] { background: rgba(21, 21, 21, 0.3) !important; }
 @media (max-width: 767px) {
     #site-footer {

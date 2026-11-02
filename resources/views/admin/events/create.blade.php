@@ -1,51 +1,36 @@
-<x-layouts.admin :title="($themeAppearance['admin_texts']['new_event'] ?? 'New event').' - '.$themeSettings->site_name">
-    @php $admin = $themeAppearance['admin_texts']; @endphp
-
+@php $admin = $themeAppearance['admin_texts']; @endphp
+<x-layouts.admin :title="'Nuevo evento'.' - '.$themeSettings->site_name">
     <form action="{{ route('admin.events.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         @csrf
 
-        <!-- Sticky Header Action Bar -->
-        <div class="sticky top-0 z-50 -mx-6 mb-6 border-b border-[#2b2b2b] bg-[rgba(16,16,18,.96)] px-6 py-4 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
+        <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 class="font-display text-2xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ !empty($admin['new_event']) ? $admin['new_event'] : 'Nuevo Evento' }}</h1>
-                <p class="mt-1 text-xs text-[#9a9a9a]">{{ !empty($admin['create_event_copy']) ? $admin['create_event_copy'] : 'Crea un nuevo evento para la programación.' }}</p>
+                <a href="{{ route('admin.events.index') }}" class="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors mb-2">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    <span>Volver a eventos</span>
+                </a>
+                <h1 class="font-display text-2xl sm:text-3xl uppercase tracking-wider text-[#dcdcdc]">Nuevo Evento</h1>
+                <p class="mt-1 text-sm text-gray-400">Crea un nuevo concierto o evento para la agenda pública.</p>
             </div>
             <div class="flex items-center gap-3">
-                <a href="{{ route('admin.events.index') }}" class="lucille-button">
-                    {{ !empty($admin['back_to_events']) ? $admin['back_to_events'] : 'Volver a Eventos' }}
-                </a>
-                <button type="submit" class="lucille-button-solid">
-                    {{ !empty($admin['new_event']) ? $admin['new_event'] : 'Crear Evento' }}
+                <button type="submit" class="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg bg-[#c32720] hover:bg-[#a8201a] text-white text-xs font-semibold tracking-wide shadow-md shadow-red-950/40 transition-all focus:outline-none focus:ring-2 focus:ring-[#c32720]/50">
+                    Crear Evento
                 </button>
             </div>
         </div>
 
         @if ($errors->any())
-            <div x-data="{ showErrors: true }" x-show="showErrors" style="position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px; display: none;" x-transition>
-                <!-- Backdrop -->
-                <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px);" @click="showErrors = false"></div>
-                <!-- Content -->
-                <div style="position: relative; width: 100%; max-width: 460px; border: 1px solid rgba(195, 39, 32, 0.4); background: rgba(12, 12, 13, 0.98); padding: 24px; box-shadow: 0 30px 60px rgba(0,0,0,0.6);">
-                    <div style="height: 4px; width: 100%; background: #c32720; position: absolute; top: 0; left: 0;"></div>
-                    <div style="display: flex; align-items: start; gap: 12px; margin-top: 8px;">
-                        <div style="display: flex; height: 40px; width: 40px; flex-shrink: 0; align-items: center; justify-content: center; border: 1px solid #c32720; background: rgba(195,39,32,0.12); font-size: 14px; font-weight: bold; color: #ffd0d0;">!</div>
-                        <div style="flex: 1; min-width: 0;">
-                            <h3 style="font-family: var(--font-display); font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #ffaaaa; margin: 0 0 8px 0;">Errores de Validación</h3>
-                            <ul style="list-style-type: disc; padding-left: 16px; margin: 0; font-size: 12px; color: rgba(220,220,220,0.85); line-height: 1.6;">
-                                @foreach ($errors->all() as $error)
-                                    <li style="margin-bottom: 6px;">{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    </div>
-                    <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
-                        <button type="button" @click="showErrors = false" class="lucille-button-solid">Cerrar</button>
-                    </div>
-                </div>
+            <div class="mb-6 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-300">
+                <div class="font-medium mb-1">Por favor revisa los errores en el formulario:</div>
+                <ul class="list-disc list-inside space-y-1 text-xs text-rose-200">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
             </div>
         @endif
 
-        <div class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
+        <div class="rounded-xl border border-white/10 bg-[#101012] p-5 sm:p-6 shadow-xl">
             @include('admin.events._form', ['event' => $event])
         </div>
     </form>

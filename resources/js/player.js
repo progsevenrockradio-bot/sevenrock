@@ -206,6 +206,7 @@ export function registerRadioPlayer(Alpine) {
         statusSyncHandle: null,
         viewportResizeHandle: null,
 
+        instanceId: 'player_' + Math.random().toString(36).substring(2, 9),
         init() {
             this.panelOpen = this.mode === 'page' ? true : false;
             this.sharePanelOpen = false;
@@ -284,17 +285,52 @@ export function registerRadioPlayer(Alpine) {
             this.syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('sevenrock_player_sync') : null;
             if (this.syncChannel) {
                 this.syncChannel.onmessage = (e) => {
-                    if (e.data === 'refresh') {
+                    const data = e.data;
+                    if (data === 'refresh') {
                         void this.refreshStatus(true, false, true);
+                    } else if (data && typeof data === 'object' && data.type === 'audio_play_active') {
+                        if (data.instanceId && data.instanceId !== this.instanceId && this.playing) {
+                            this.playing = false;
+                            this.loading = false;
+                            const audio = this.$refs?.audio;
+                            if (audio) {
+                                audio.pause();
+                            }
+                            this.updateDocumentTitle();
+                            this.updateMediaSessionPlaybackState(false);
+                        }
                     }
                 };
             }
             this.storageSyncListener = (e) => {
                 if (e.key === 'sevenrock_player_refresh_trigger') {
                     void this.refreshStatus(true, false, true);
+                } else if (e.key === 'sevenrock_audio_active_instance') {
+                    try {
+                        const payload = JSON.parse(e.newValue || '{}');
+                        if (payload.instanceId && payload.instanceId !== this.instanceId && this.playing) {
+                            this.playing = false;
+                            this.loading = false;
+                            const audio = this.$refs?.audio;
+                            if (audio) {
+                                audio.pause();
+                            }
+                            this.updateDocumentTitle();
+                            this.updateMediaSessionPlaybackState(false);
+                        }
+                    } catch (_) {
+                        // ignore parse error
+                    }
                 }
             };
             window.addEventListener('storage', this.storageSyncListener);
+
+            // Reactivar sondeo y refrescar al recuperar foco
+            this.boundFocusHandler = () => {
+                this.statusFailureCount = 0;
+                void this.refreshStatus(true, false, true);
+            };
+            window.addEventListener('focus', this.boundFocusHandler);
 
             // Media Session API integration
             this.$watch('track', (value) => this.updateMediaSession(value));
@@ -338,6 +374,9 @@ export function registerRadioPlayer(Alpine) {
             if (this.storageSyncListener) {
                 window.removeEventListener('storage', this.storageSyncListener);
             }
+            if (this.boundFocusHandler) {
+                window.removeEventListener('focus', this.boundFocusHandler);
+            }
             if (this.toastHandle) {
                 clearTimeout(this.toastHandle);
             }
@@ -360,8 +399,9 @@ export function registerRadioPlayer(Alpine) {
 
         handleVisibilityChange() {
             if (document.hidden) {
-                // En segundo plano: si no reproduce, pausa sondeos; si reproduce, extiende intervalo a 30s
-                if (!this.playing) {
+                // En segundo plano: si no reproduce, pausa sondeos (salvo en modo popup que mantiene sondeo continuo);
+                // si reproduce, extiende intervalo a 30s
+                if (!this.playing && this.mode !== 'popup') {
                     if (this.pollHandle) {
                         clearTimeout(this.pollHandle);
                         this.pollHandle = null;
@@ -383,16 +423,16 @@ export function registerRadioPlayer(Alpine) {
             }
             const run = async () => {
                 await this.refreshStatus(true);
-                let baseInterval = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
+                let baseInterval = (this.playing || this.mode === 'popup') ? Math.max(3, this.pollInterval) * 1000 : 15000;
                 if (document.hidden) {
-                    baseInterval = this.playing ? 30000 : 60000;
+                    baseInterval = (this.playing || this.mode === 'popup') ? 30000 : 60000;
                 }
                 const backoff = (this.statusFailureCount && this.statusFailureCount > 0)
                     ? Math.min(60000, baseInterval * Math.pow(1.5, Math.min(4, this.statusFailureCount)))
                     : baseInterval;
                 this.pollHandle = setTimeout(run, backoff);
             };
-            const initialDelay = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
+            const initialDelay = (this.playing || this.mode === 'popup') ? Math.max(3, this.pollInterval) * 1000 : 15000;
             this.pollHandle = setTimeout(run, initialDelay);
         },
 
@@ -402,16 +442,16 @@ export function registerRadioPlayer(Alpine) {
             }
             const run = async () => {
                 await this.refreshStatus(true);
-                let baseInterval = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
+                let baseInterval = (this.playing || this.mode === 'popup') ? Math.max(3, this.pollInterval) * 1000 : 15000;
                 if (document.hidden) {
-                    baseInterval = this.playing ? 30000 : 60000;
+                    baseInterval = (this.playing || this.mode === 'popup') ? 30000 : 60000;
                 }
                 const backoff = (this.statusFailureCount && this.statusFailureCount > 0)
                     ? Math.min(60000, baseInterval * Math.pow(1.5, Math.min(4, this.statusFailureCount)))
                     : baseInterval;
                 this.pollHandle = setTimeout(run, backoff);
             };
-            const initialDelay = this.playing ? Math.max(3, this.pollInterval) * 1000 : 15000;
+            const initialDelay = (this.playing || this.mode === 'popup') ? Math.max(3, this.pollInterval) * 1000 : 15000;
             this.pollHandle = setTimeout(run, initialDelay);
         },
 
@@ -535,6 +575,27 @@ export function registerRadioPlayer(Alpine) {
                     this.adjustPollingInterval();
                     this.updateMediaSession(this.track);
                     this.updateMediaSessionPlaybackState(true);
+
+                    // Notificar a otras ventanas y reproductores para evitar audio simultáneo
+                    if (this.syncChannel) {
+                        try {
+                            this.syncChannel.postMessage({
+                                type: 'audio_play_active',
+                                instanceId: this.instanceId,
+                                timestamp: Date.now(),
+                            });
+                        } catch (_) {
+                            // ignore broadcast error
+                        }
+                    }
+                    try {
+                        safeWrite('sevenrock_audio_active_instance', JSON.stringify({
+                            instanceId: this.instanceId,
+                            timestamp: Date.now(),
+                        }));
+                    } catch (_) {
+                        // ignore storage error
+                    }
                 });
 
                 audio.addEventListener('playing', () => {
@@ -1226,6 +1287,11 @@ export function registerRadioPlayer(Alpine) {
             }
         },
 
+        isItemFallbackCover(url) {
+            if (!url) return true;
+            return isFallbackImage(url, this.fallbackCover, this.logoUrl);
+        },
+
         get nextTrackRemainingSeconds() {
             if (this.track.is_live || this.progress.duration <= 0) {
                 return Number.POSITIVE_INFINITY;
@@ -1502,6 +1568,8 @@ export function registerRadioPlayer(Alpine) {
                 return;
             }
 
+            const currentSignature = this.track.signature;
+
             try {
                 const response = await fetch(`${this.bandInfoUrl}?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}`, {
                     headers: {
@@ -1513,6 +1581,11 @@ export function registerRadioPlayer(Alpine) {
                 const data = payload?.data || {};
 
                 if (!payload?.success) {
+                    return;
+                }
+
+                // Descartar si mientras respondía la API el reproductor cambió a otra pista
+                if (this.track.signature && currentSignature && this.track.signature !== currentSignature) {
                     return;
                 }
 
@@ -1633,10 +1706,11 @@ export function registerRadioPlayer(Alpine) {
             const widgetArtist = isServerDefault ? (widgetTrack?.artist || '') : '';
             const widgetCover = isServerDefault ? (widgetTrack?.cover || '') : '';
 
-            const currentTitle = this.track.title && this.track.title !== this.defaultTitle ? this.track.title : '';
-            const currentArtist = this.track.artist && this.track.artist !== this.defaultArtist ? this.track.artist : '';
-            const nextTitle = this.normalizeTrackTitle(track.title || widgetTitle || currentTitle || this.defaultTitle || 'Transmisión Oficial');
-            const nextArtist = this.normalizeBandArtist(track.artist || widgetArtist || currentArtist || this.defaultArtist || 'Seven Rock Radio');
+            const defaultSiteTitle = this.defaultTitle || 'Transmisión Oficial';
+            const defaultSiteArtist = this.defaultArtist || 'Seven Rock Radio';
+
+            const nextTitle = this.normalizeTrackTitle(track.title || widgetTitle) || defaultSiteTitle;
+            const nextArtist = this.normalizeBandArtist(track.artist || widgetArtist) || defaultSiteArtist;
             const tempBuster = nextArtist + '|' + nextTitle;
 
             // Si es bloque de programa activo y ya tenemos una portada no-fallback, la conservamos
@@ -1644,18 +1718,21 @@ export function registerRadioPlayer(Alpine) {
             const nowIsPrograma = Boolean(track.es_bloque_programa ?? data.es_bloque_programa ?? (track.program_id || data.program_id || false));
             const currentCoverIsReal = this.track?.cover && !isFallbackImage(this.track.cover, this.fallbackCover, this.logoUrl);
 
+            const isSameTrackAsCurrent = (this.track && this.track.artist === nextArtist && this.track.title === nextTitle);
+
             let nextCoverCandidate = this.fallbackCover;
             if (track.cover && (track.cover_is_fallback === false || !isFallbackImage(track.cover, this.fallbackCover, this.logoUrl))) {
                 nextCoverCandidate = track.cover;
             } else if (currentIsPrograma && nowIsPrograma && currentCoverIsReal) {
                 // Programa activo que continúa: NO degradar la portada al fallback aunque el poll no traiga cover
                 nextCoverCandidate = this.track.cover;
-            } else if (this.track && this.track.cover && !isFallbackImage(this.track.cover, this.fallbackCover, this.logoUrl) && nextArtist === this.track.artist && nextTitle === this.track.title) {
+            } else if (isSameTrackAsCurrent && currentCoverIsReal) {
+                // Mantiene portada solo si es estrictamente la misma pista
                 nextCoverCandidate = this.track.cover;
             } else if (widgetCover && !isFallbackImage(widgetCover, this.fallbackCover, this.logoUrl)) {
                 nextCoverCandidate = widgetCover;
             } else {
-                nextCoverCandidate = widgetCover || track.cover || (nowIsPrograma ? this.track.cover : '') || this.fallbackCover;
+                nextCoverCandidate = (nowIsPrograma && currentCoverIsReal ? this.track.cover : '') || this.fallbackCover;
             }
             const nextCover = this.cleanCover(nextCoverCandidate, this.fallbackCover, tempBuster);
 

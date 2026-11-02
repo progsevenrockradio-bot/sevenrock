@@ -11,8 +11,19 @@
             <span class="text-[9px] text-neutral-400 font-mono">Próxima canción</span>
         </div>
         <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-lg overflow-hidden bg-neutral-900 border border-neutral-800 shrink-0 flex items-center justify-center">
-                <img :src="nextTrack?.cover || fallbackCover" alt="" class="w-full h-full object-cover" x-on:error="if ($el.src !== fallbackCover) $el.src = fallbackCover">
+            <div class="w-12 h-12 rounded-lg overflow-hidden bg-[#18181c] border border-white/10 shrink-0 flex items-center justify-center">
+                <template x-if="nextTrack?.cover && !isItemFallbackCover(nextTrack.cover)">
+                    <img :src="nextTrack.cover" alt="" class="w-full h-full object-cover" x-on:error="nextTrack.cover = null">
+                </template>
+                <template x-if="!nextTrack?.cover || isItemFallbackCover(nextTrack.cover)">
+                    <span class="flex items-center justify-center w-full h-full text-neutral-500 bg-[#121215]">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 18V5l12-2v13"></path>
+                            <circle cx="6" cy="18" r="3"></circle>
+                            <circle cx="18" cy="16" r="3"></circle>
+                        </svg>
+                    </span>
+                </template>
             </div>
             <div class="min-w-0 flex-1">
                 <div class="text-xs font-bold text-white truncate" x-text="nextTrack?.title || ''"></div>
@@ -44,8 +55,19 @@
             <template x-for="(item, index) in visibleHistory" :key="index + '-' + (item.title || '') + '-' + (item.played_at || '')">
                 <div class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#15151a] border border-white/5 hover:border-[#c32720]/40 transition">
                     <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div class="w-9 h-9 rounded bg-neutral-900 border border-neutral-800 shrink-0 overflow-hidden flex items-center justify-center">
-                            <img :src="item.cover || fallbackCover" alt="" class="w-full h-full object-cover" x-on:error="if ($el.src !== fallbackCover) $el.src = fallbackCover">
+                        <div class="w-9 h-9 rounded bg-[#18181c] border border-white/10 shrink-0 overflow-hidden flex items-center justify-center text-neutral-400">
+                            <template x-if="item.cover && !isItemFallbackCover(item.cover)">
+                                <img :src="item.cover" alt="" class="w-full h-full object-cover" x-on:error="item.cover = null">
+                            </template>
+                            <template x-if="!item.cover || isItemFallbackCover(item.cover)">
+                                <span class="flex items-center justify-center w-full h-full text-neutral-500 bg-[#121215]">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M9 18V5l12-2v13"></path>
+                                        <circle cx="6" cy="18" r="3"></circle>
+                                        <circle cx="18" cy="16" r="3"></circle>
+                                    </svg>
+                                </span>
+                            </template>
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="text-xs font-semibold text-white truncate" x-text="item.title || 'Título no disponible'"></div>

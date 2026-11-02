@@ -1185,7 +1185,25 @@ Alpine.data('podcastUploadsDashboard', (options = {}) => ({
     },
     renderHtml(html) {
         if (this.$refs.recentUploads) {
+            const activeEl = document.activeElement;
+            const hadFocusInside = this.$refs.recentUploads.contains(activeEl);
+            const activeHref = activeEl?.getAttribute?.('href');
+            const activeName = activeEl?.getAttribute?.('name');
+            const activeVal = activeEl?.getAttribute?.('value');
+
             this.$refs.recentUploads.innerHTML = html;
+
+            if (hadFocusInside && activeEl) {
+                let targetToFocus = null;
+                if (activeHref) {
+                    targetToFocus = this.$refs.recentUploads.querySelector(`a[href="${CSS.escape(activeHref)}"]`);
+                } else if (activeName && activeVal) {
+                    targetToFocus = this.$refs.recentUploads.querySelector(`button[name="${CSS.escape(activeName)}"][value="${CSS.escape(activeVal)}"]`);
+                }
+                if (targetToFocus && typeof targetToFocus.focus === 'function') {
+                    targetToFocus.focus({ preventScroll: true });
+                }
+            }
         }
     },
     async refresh(silent = false) {

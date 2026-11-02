@@ -1,13 +1,21 @@
 @php $admin = $themeAppearance['admin_texts']; @endphp
-<x-layouts.admin :title="$admin['edit_image'].' - '.$themeSettings->site_name">
-    <div class="mb-6">
-        <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $admin['edit_image'] }}</h1>
-        <p class="mt-2 text-[#9a9a9a]">Update a gallery tile.</p>
+<x-layouts.admin :title="'Editar imagen'.' - '.$themeSettings->site_name">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <a href="{{ route('admin.gallery.index') }}" class="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors mb-2">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>Volver a galería</span>
+            </a>
+            <h1 class="font-display text-2xl sm:text-3xl uppercase tracking-wider text-[#dcdcdc]">Editar Imagen</h1>
+            <p class="mt-1 text-sm text-gray-400">Actualiza los datos y la posición de la fotografía.</p>
+        </div>
     </div>
 
-    <form action="{{ route('admin.gallery.update', $image) }}" method="POST" enctype="multipart/form-data" class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-        @csrf
-        @method('PUT')
-        @include('admin.gallery._form', ['image' => $image])
-    </form>
+    <div class="rounded-xl border border-white/10 bg-[#101012] p-6 sm:p-8 shadow-xl">
+        <form action="{{ route('admin.gallery.update', $image) }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            @method('PUT')
+            @include('admin.gallery._form', ['image' => $image])
+        </form>
+    </div>
 </x-layouts.admin>

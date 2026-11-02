@@ -1,12 +1,20 @@
-<x-layouts.admin :title="($themeAppearance['admin_texts']['new_video'] ?? 'New video').' - '.$themeSettings->site_name">
-    @php $admin = $themeAppearance['admin_texts']; @endphp
-    <div class="mb-6">
-        <h1 class="font-display text-3xl uppercase tracking-[.12em] text-[#dcdcdc]">{{ $admin['new_video'] }}</h1>
-        <p class="mt-2 text-[#9a9a9a]">{{ $admin['create_video_copy'] }}</p>
+@php $admin = $themeAppearance['admin_texts']; @endphp
+<x-layouts.admin :title="'Nuevo vídeo'.' - '.$themeSettings->site_name">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <a href="{{ route('admin.videos.index') }}" class="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors mb-2">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>Volver a vídeos</span>
+            </a>
+            <h1 class="font-display text-2xl sm:text-3xl uppercase tracking-wider text-[#dcdcdc]">Nuevo Vídeo</h1>
+            <p class="mt-1 text-sm text-gray-400">Añade un nuevo videoclip o directo a la lista.</p>
+        </div>
     </div>
 
-    <form action="{{ route('admin.videos.store') }}" method="POST" enctype="multipart/form-data" class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-8">
-        @csrf
-        @include('admin.videos._form', ['video' => $video])
-    </form>
+    <div class="rounded-xl border border-white/10 bg-[#101012] p-6 sm:p-8 shadow-xl">
+        <form action="{{ route('admin.videos.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            @include('admin.videos._form', ['video' => $video])
+        </form>
+    </div>
 </x-layouts.admin>

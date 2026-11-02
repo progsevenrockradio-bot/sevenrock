@@ -34,12 +34,12 @@
         --lucille-accent-readable: var(--theme-accent-readable, #ff5b52);
         --radio-player-offset: 108px;
         --radio-player-lift: 0px;
-        --modal-overlay-bg: rgba(0, 0, 0, .72);
+        --modal-overlay-bg: rgba(0, 0, 0, .85);
         --modal-overlay-z-index: 120;
-        --modal-bg: linear-gradient(180deg, rgba(16, 16, 18, .92), rgba(10, 10, 11, .96));
-        --modal-border-color: rgba(184, 175, 162, .22);
-        --modal-border-radius: 18px;
-        --modal-shadow: 0 28px 72px rgba(0, 0, 0, .58);
+        --modal-bg: rgba(18, 18, 22, .98);
+        --modal-border-color: rgba(255, 255, 255, .1);
+        --modal-border-radius: 4px;
+        --modal-shadow: 0 24px 60px rgba(0, 0, 0, .65);
     }
 
     html {
@@ -331,9 +331,10 @@
     height: 100vh;
     height: 100dvh;
     min-height: 100dvh;
-    overflow: hidden;
-    background: #050505;
-    color: #f4f1ea;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #121215;
+    color: #f0f0f0;
 }
 
 .radio-player-popup-shell button {
@@ -351,12 +352,12 @@
     height: 100%;
     object-fit: cover;
     transform: scale(1.08);
-    filter: blur(44px) saturate(1.1);
-    opacity: .38;
+    filter: blur(48px) saturate(0.9);
+    opacity: .20;
 }
 
 .radio-player-popup-overlay {
-    background: linear-gradient(180deg, rgba(0, 0, 0, .40) 0%, rgba(7, 7, 9, .72) 44%, rgba(6, 6, 8, .96) 100%);
+    background: linear-gradient(180deg, rgba(18, 18, 21, .75) 0%, rgba(18, 18, 21, .92) 50%, rgba(18, 18, 21, .98) 100%);
 }
 
 .radio-player-popup-content-area {
@@ -366,9 +367,11 @@
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
-    gap: 1rem;
-    padding: clamp(.875rem, 3vw, 1.5rem);
+    width: 100%;
+    max-width: 680px;
+    margin-inline: auto;
+    gap: 1.25rem;
+    padding: clamp(1rem, 3vw, 2rem);
 }
 
 .radio-player-popup-header,
@@ -694,40 +697,54 @@
 .radio-player-popup-meta {
     display: flex;
     flex-direction: column;
-    gap: .35rem;
-    max-width: min(100%, 32rem);
+    gap: .5rem;
+    width: 100%;
+    max-width: 480px;
     margin-inline: auto;
     text-align: center;
 }
 
 .radio-player-popup-title {
     margin: 0;
-    color: #fff;
+    color: #ffffff;
     font-family: var(--font-display);
-    font-size: clamp(1.75rem, 4vw, 2.75rem);
-    font-weight: 900;
-    line-height: .98;
+    font-size: clamp(1.4rem, 4vw, 2.2rem);
+    font-weight: 700;
+    line-height: 1.15;
     text-transform: uppercase;
+    letter-spacing: .08em;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .radio-player-popup-artist {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    animation: fontCycle 8s ease-in-out infinite;
+    margin: 0;
+    color: #c5c5c5;
+    font-family: var(--font-sans);
+    font-size: clamp(.85rem, 2.5vw, 1.05rem);
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: .02em;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
 }
 
 .radio-player-popup-state,
 .radio-player-popup-listeners {
     margin: 0;
-    color: #7b7b7b;
+    color: #8b8b8b;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    letter-spacing: .06em;
 }
 
 .radio-player-popup-controls {
     display: flex;
     flex-direction: column;
-    gap: .75rem;
-    width: min(100%, 560px);
+    gap: .85rem;
+    width: 100%;
+    max-width: 480px;
     margin-inline: auto;
 }
 
@@ -740,13 +757,13 @@
 .radio-player-popup-tracktimer {
     display: flex;
     align-items: center;
-    gap: .5rem;
+    gap: .35rem;
     min-height: 1.5rem;
-    color: #b7ad9f;
-    font-family: var(--font-display);
+    color: #f0f0f0;
+    font-family: var(--font-mono, monospace);
     font-size: 11px;
-    letter-spacing: .18em;
-    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
@@ -804,13 +821,13 @@
     align-items: center;
     gap: .75rem;
     width: 100%;
-    padding: .65rem 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+    max-width: 480px;
+    margin-inline: auto;
+    padding: .6rem .85rem;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 4px;
+    background: #141417;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .radio-player-popup-volume-range {
@@ -986,10 +1003,11 @@
 
 @layer components {
     .lucille-fixed-bg {
-        background: #151515;
+        background-color: #151515;
         position: fixed;
         inset: 0;
         z-index: -1000;
+        background-image: var(--lucille-bg-image-fallback, url('/assets/lucille/dark-background.jpg'));
         background-image: var(--lucille-bg-image, url('/assets/lucille/dark-background.jpg'));
         background-position: center center;
         background-size: cover;
@@ -1002,6 +1020,83 @@
         inset: 0;
         content: '';
         background: transparent;
+    }
+
+    /* Base compartida Lucille (Inicio y Multimedia):
+       Recupera el fondo carbón con textura fina, iluminación central suave y bordes oscuros
+       sin quedar oculto tras el fondo opaco de body o capas azules/negras sólidas. */
+    html:has(> body.lucille-theme-v2) {
+        background-color: #151515 !important;
+    }
+
+    body.lucille-theme-v2 {
+        background: transparent !important;
+    }
+
+    body.lucille-theme-v2 .lucille-fixed-bg {
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    body.lucille-theme-v2 .lucille-fixed-bg::after {
+        background: radial-gradient(
+            ellipse 78% 68% at 50% 42%,
+            rgba(255, 255, 255, 0.04) 0%,
+            rgba(22, 22, 24, 0.12) 52%,
+            rgba(5, 5, 6, 0.62) 100%
+        );
+    }
+
+    body.lucille-theme-v2 #site-main,
+    body.lucille-theme-v2 #site-footer {
+        position: relative;
+        z-index: 1;
+    }
+
+    body.lucille-theme-v2 .section-band,
+    body.lucille-theme-v2 .home-section-blue,
+    body.lucille-theme-v2 .home-section-cool {
+        background: rgba(18, 18, 20, 0.22) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.04);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    body.lucille-theme-v2 .home-section-gray {
+        background: rgba(24, 24, 26, 0.14) !important;
+    }
+
+    body.lucille-theme-v2 .home-section-black {
+        background: rgba(10, 10, 11, 0.34) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.04);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    body.lucille-theme-v2 .home-section-texture::before {
+        background-image: var(--lucille-bg-image-fallback, url('/assets/lucille/dark-background.jpg'));
+        background-image: var(--lucille-bg-image, url('/assets/lucille/dark-background.jpg'));
+        opacity: 0.18;
+    }
+
+    .lucille-flat-surface {
+        background: rgba(22, 22, 25, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 2px;
+    }
+
+    .lucille-flat-row {
+        background: rgba(26, 26, 29, 0.66);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        border-left: 3px solid transparent;
+        transition: background-color 0.18s ease, border-color 0.18s ease;
+    }
+
+    .lucille-flat-row:hover {
+        background: rgba(38, 38, 43, 0.84);
+    }
+
+    .lucille-flat-row--active {
+        background: rgba(42, 42, 47, 0.92);
+        border-left-color: var(--color-lucille-accent, #c32720);
     }
 
     .section-band {
@@ -1058,19 +1153,18 @@
     .rocks-header-top {
         position: absolute;
         height: 90px;
-        background-image: linear-gradient(rgba(16, 16, 18, 0.75), rgba(16, 16, 18, 0.75)), var(--lucille-bg-image);
-        background-size: cover;
-        background-position: center;
-        box-shadow: inset 0 -1px rgba(255, 255, 255, .03);
+        background-color: rgba(18, 18, 21, 0.94);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
 
     .rocks-header-sticky {
         position: fixed;
         height: 70px;
-        background-image: linear-gradient(rgba(16, 16, 18, 0.92), rgba(16, 16, 18, 0.92)), var(--lucille-bg-image);
-        background-size: cover;
-        background-position: center;
-        box-shadow: 0 1px 0 rgba(255, 255, 255, .04);
+        background-color: rgba(16, 16, 19, 0.97);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
     }
 
     .lucille-brand-mark {
@@ -1180,6 +1274,20 @@
         border-color: rgba(195, 39, 32, 0.25);
         box-shadow: 0 20px 35px -10px hsla(4, 71%, 45%, 0.12),
                     0 0 20px 1px hsla(4, 71%, 45%, 0.04);
+    }
+
+    body.lucille-theme-v2 .podcast-card-premium {
+        background: rgba(22, 22, 25, 0.76);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 2px;
+        box-shadow: none;
+        transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    body.lucille-theme-v2 .podcast-card-premium:hover {
+        transform: none;
+        border-color: rgba(195, 39, 32, 0.4);
+        box-shadow: none;
     }
 
     .lucille-heading {
@@ -1406,6 +1514,25 @@
         font-weight: 300;
         line-height: 1.15;
         text-transform: uppercase;
+    }
+
+    .lucille-page-heading--compact .lucille-page-heading-inner {
+        padding: 132px 20px 44px;
+    }
+
+    .lucille-page-heading--compact .lucille-page-title {
+        font-size: clamp(26px, 4.2vw, 52px);
+        letter-spacing: 0.08em;
+    }
+
+    .lucille-page-heading--compact .lucille-page-subtitle {
+        margin-top: 10px;
+        color: #b8b8b8;
+        font-family: var(--font-sans);
+        font-size: clamp(13px, 1.5vw, 15px);
+        font-weight: 400;
+        letter-spacing: 0.04em;
+        text-transform: none;
     }
 
     .lucille-cpt-meta {
@@ -1825,31 +1952,42 @@
 
     .lucille-events-list {
         width: 100%;
-        margin: 80px 0;
+        margin: 20px 0;
+        list-style: none;
+        padding: 0;
     }
 
     .lucille-event-row {
         display: block;
         position: relative;
-        border-bottom: 1px solid #2b2b2b;
-        padding: 20px 5px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 24px 16px;
+        border-radius: 4px;
+        transition: background-color .2s ease;
     }
 
-    .lucille-event-row:first-child {
-        padding: 20px 0 60px;
+    .lucille-event-row:hover {
+        background-color: rgba(255, 255, 255, 0.04);
     }
 
     .lucille-event-row:last-child {
         border-bottom-width: 0;
     }
 
+    .lucille-event-row--featured {
+        padding: 28px 16px;
+    }
+
     .lucille-event-link {
         display: grid;
-        grid-template-columns: 20% 25% 35% 20%;
+        grid-template-columns: 220px 1.4fr 1.4fr auto;
         align-items: center;
+        gap: 28px;
         color: #7b7b7b;
-        line-height: 26px;
-        transition: color .3s ease;
+        line-height: 1.4;
+        transition: color .2s ease;
+        text-decoration: none;
+        width: 100%;
     }
 
     .lucille-event-row:hover .lucille-event-link {
@@ -1858,60 +1996,74 @@
 
     .lucille-event-date {
         position: relative;
-        min-height: 40px;
+        width: 100%;
+        max-width: 220px;
+    }
+
+    /* Contenedor relativo del día grande y mes superpuesto */
+    .lucille-event-date-featured {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 120px;
+        height: 70px;
+    }
+
+    /* Día grande tipográfico en fondo para el primer evento destacado */
+    .lucille-event-day-ghost {
         font-family: var(--font-display);
-    }
-
-    .lucille-event-date,
-    .lucille-event-buy {
-        text-align: center;
-    }
-
-    .lucille-event-row:first-child .lucille-event-location,
-    .lucille-event-row:first-child .lucille-event-venue,
-    .lucille-event-row:first-child .lucille-event-buy {
-        font-size: 16px;
-        font-weight: 400;
-        letter-spacing: 0;
-        text-transform: uppercase;
-    }
-
-    .lucille-event-day {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: #fff;
-        font-size: 90px;
-        font-weight: 700;
-        letter-spacing: 3px;
+        font-size: 80px;
+        font-weight: 900;
         line-height: 1;
-        opacity: .35;
+        color: #ffffff;
+        opacity: 0.12;
+        letter-spacing: 0;
+        display: block;
+        user-select: none;
+        pointer-events: none;
     }
 
-    .lucille-event-month {
+    .lucille-event-row:hover .lucille-event-day-ghost {
+        opacity: 0.20;
+        transition: opacity .2s ease;
+    }
+
+    /* Mes superpuesto centrado encima y dentro del área del número */
+    .lucille-event-month-overlay {
         position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: #dcdcdc;
-        font-size: 16px;
-        font-weight: 300;
-        letter-spacing: 2px;
-        text-transform: lowercase;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        z-index: 10;
     }
 
-    .lucille-event-year {
-        visibility: hidden;
+    .lucille-event-month-text {
+        font-family: var(--font-sans);
+        font-size: 13px;
+        font-weight: 500;
+        color: #dcdcdc;
+        letter-spacing: 1px;
+        line-height: 1;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    .lucille-event-date-standard {
+        display: flex;
+        align-items: center;
+        min-height: 30px;
     }
 
     .lucille-event-location,
     .lucille-event-venue {
-        text-align: center;
+        text-align: left;
     }
 
     .lucille-event-buy {
         text-align: right;
+        white-space: nowrap;
     }
 
     .lucille-form-field {
@@ -5551,12 +5703,17 @@
         }
 
         .radio-player-popup-title {
-            font-size: clamp(1.35rem, 7vw, 2rem);
-            line-height: 1.02;
+            font-size: clamp(1.2rem, 5.5vw, 1.65rem);
+            line-height: 1.15;
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
 
         .radio-player-popup-artist {
-            font-size: clamp(.82rem, 3.6vw, 1rem);
+            font-size: clamp(.8rem, 3.2vw, .95rem);
+            word-break: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
         }
 
         .radio-player-popup-progress {
@@ -5654,6 +5811,15 @@
         }
     }
 
+    @media (prefers-reduced-motion: reduce) {
+        .radio-player-popup-wavebars,
+        .radio-player-popup-wavebar,
+        .radio-player-wavebar {
+            animation: none !important;
+            transition: none !important;
+        }
+    }
+
     @media (max-width: 979px) {
         .lucille-blog-standard-main,
         .lucille-blog-sidebar {
@@ -5686,23 +5852,42 @@
 
         .lucille-event-link {
             grid-template-columns: 1fr;
-            gap: 10px;
-            text-align: center;
+            gap: 12px;
+            text-align: left;
         }
 
-        .lucille-event-row:first-child {
-            padding-bottom: 35px;
+        .lucille-event-row {
+            padding: 16px 12px;
         }
 
-        .lucille-event-row:first-child .lucille-event-date {
-            min-height: 84px;
+        .lucille-event-row--featured {
+            padding: 20px 12px;
+        }
+
+        .lucille-event-date-featured {
+            justify-content: center;
+            min-height: 55px;
+            width: 90px;
+        }
+
+        .lucille-event-day-ghost {
+            font-size: 58px;
+        }
+
+        .lucille-event-month-overlay {
+            align-items: center;
+            justify-content: center;
+            padding-left: 0;
         }
 
         .lucille-event-location,
         .lucille-event-venue,
-        .lucille-event-buy,
-        .lucille-event-row:first-child .lucille-event-buy {
-            text-align: center;
+        .lucille-event-buy {
+            text-align: left;
+        }
+
+        .lucille-event-buy {
+            padding-top: 4px;
         }
     }
 
@@ -6423,11 +6608,13 @@ audio.dark-audio {
         writing-mode: horizontal-tb;
         transform: translateX(-50%);
         top: auto;
-        bottom: 40px;
+        bottom: 50px;
         left: 50%;
         right: auto;
         width: 90%;
         text-align: center;
+        font-size: clamp(14px, 4vw, 22px);
+        line-height: 1.15;
     }
 }
 

@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $action }} - Seven Rock Radio</title>
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #151515;
+            background-color: #0e0e11;
             color: #dcdcdc;
             display: flex;
             justify-content: center;
@@ -19,117 +17,117 @@
             margin: 0;
             padding: 16px;
         }
-        .card {
+        .panel {
             background-color: #101012;
-            padding: 24px 20px;
+            padding: 28px 24px;
             border-radius: 12px;
-            max-width: 520px;
+            max-width: 480px;
             width: 100%;
-            text-align: center;
-            box-shadow: 0 28px 72px rgba(0,0,0,.58);
-            border: 1px solid #1a1a1a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 28px 72px rgba(0, 0, 0, .58);
         }
-        @media (min-width: 640px) {
-            .card {
-                padding: 40px 30px;
-            }
-        }
-        .badge {
-            display: inline-block;
-            padding: 6px 14px;
-            border-radius: 9999px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
             text-transform: uppercase;
-            margin-bottom: 20px;
+            letter-spacing: 0.05em;
+            margin-bottom: 14px;
         }
-        .badge-success {
-            background-color: rgba(40, 167, 69, 0.15);
-            color: #28a745;
-            border: 1px solid rgba(40, 167, 69, 0.3);
+        .status-ok {
+            background-color: rgba(16, 185, 129, 0.12);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.3);
         }
-        .badge-danger {
+        .status-err {
             background-color: rgba(195, 39, 32, 0.15);
-            color: #c32720;
-            border: 1px solid rgba(195, 39, 32, 0.3);
+            color: #fca5a5;
+            border: 1px solid rgba(195, 39, 32, 0.35);
         }
         h1 {
-            color: #dcdcdc;
-            margin: 0 0 15px;
-            font-size: 1.8rem;
-            letter-spacing: -0.02em;
-        }
-        .band-name {
-            color: #c32720;
-            font-weight: 700;
+            color: #ffffff;
+            margin: 0 0 8px;
+            font-size: 1.35rem;
+            letter-spacing: 0.02em;
         }
         p {
-            font-size: 1.05rem;
-            line-height: 1.6;
-            margin-bottom: 20px;
-            color: #a0a0a0;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            margin: 0 0 18px;
+            color: #9ca3af;
         }
-        .status-box {
-            background-color: rgba(255, 255, 255, 0.02);
-            border: 1px solid #222;
+        .meta {
+            background-color: #151518;
+            border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 25px;
-            text-align: left;
-            font-size: 0.95rem;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
+            padding: 14px;
+            margin-bottom: 20px;
+            font-size: 0.8125rem;
         }
-        .status-box div {
-            margin-bottom: 6px;
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
         }
-        .status-box div:last-child {
-            margin-bottom: 0;
-        }
-        .btn {
-            display: block;
-            background-color: #081a24;
-            color: #dcdcdc;
-            text-decoration: none;
-            padding: 14px 28px;
-            border-radius: 6px;
-            font-weight: bold;
-            border: 1px solid #1a1a1a;
-            transition: all 0.2s ease;
-        }
-        @media (min-width: 640px) {
-            .btn {
-                display: inline-block;
-            }
-        }
-        .btn:hover {
+        .meta-row:last-child { border-bottom: 0; }
+        .meta-label { color: #9ca3af; }
+        .meta-value { color: #ffffff; font-weight: 600; }
+        .action-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 38px;
             background-color: #c32720;
-            color: #fff;
-            border-color: #c32720;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.8125rem;
+            font-weight: 600;
         }
+        .action-link:hover { background-color: #a8201a; }
     </style>
 </head>
 <body>
-    <div class="card">
+    @php
+        $planLabels = ['free' => 'Gratuito (Free)', 'basic' => 'Básico', 'pro' => 'Pro', 'premium' => 'Premium'];
+        $statusLabels = ['active' => 'Activa', 'pending' => 'Pendiente', 'expired' => 'Vencida', 'inactive' => 'Inactiva', 'cancelled' => 'Cancelada'];
+    @endphp
+    <div class="panel">
         @if(str_contains(strtolower($action), 'aprobada'))
-            <span class="badge badge-success">✓ Aprobado</span>
+            <span class="status-pill status-ok">✓ Banda aprobada</span>
         @else
-            <span class="badge badge-danger">✕ Rechazado</span>
+            <span class="status-pill status-err">✕ Solicitud rechazada</span>
         @endif
 
         <h1>{{ $action }}</h1>
-
         <p>{{ $message }}</p>
 
-        <div class="status-box">
-            <div><strong>Banda:</strong> <span class="band-name">{{ $talent->band_name }}</span></div>
-            <div><strong>Email:</strong> {{ $talent->email }}</div>
-            <div><strong>Plan:</strong> {{ ucfirst($talent->plan) }}</div>
-            <div><strong>Estado actual:</strong> {{ ucfirst($talent->subscription_status) }}</div>
+        <div class="meta">
+            <div class="meta-row">
+                <span class="meta-label">Banda</span>
+                <span class="meta-value">{{ $talent->band_name }}</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Correo electrónico</span>
+                <span class="meta-value">{{ $talent->email }}</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Plan</span>
+                <span class="meta-value">{{ $planLabels[$talent->plan] ?? ucfirst((string) $talent->plan) }}</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Estado de suscripción</span>
+                <span class="meta-value">{{ $statusLabels[$talent->subscription_status] ?? ucfirst((string) $talent->subscription_status) }}</span>
+            </div>
         </div>
 
-        <a href="{{ route('admin.talents.index') }}" class="btn">Ir al panel de talentos</a>
+        <a href="{{ route('admin.talents.index') }}" class="action-link">Ir a Bandas del Muro</a>
     </div>
 </body>
 </html>
