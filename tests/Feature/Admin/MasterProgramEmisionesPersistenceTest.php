@@ -248,4 +248,155 @@ final class MasterProgramEmisionesPersistenceTest extends TestCase
         $followResponse->assertSee('MARTES');
         $followResponse->assertSee('14:00');
     }
+
+    public function test_real_form_submission_with_duracion_real_sec_as_zero_converts_to_3900_seconds(): void
+    {
+        // Caso exacto del usuario: 65 minutos y 0 segundos (ej. "0" o "00" enviado por navegador)
+        $program = MasterProgram::create([
+            'nombre'           => 'UNO POR SEMANA .... LA LEYENDA CONTINUA',
+            'conductor'        => 'LUCHO ALMIRON',
+            'dia_transmision'  => 'VIERNES',
+            'hora_transmision' => '17:05:00',
+            'timezone'         => 'America/Caracas',
+            'duracion_minutos' => 65,
+            'genero'           => 'Rock',
+            'activo'           => true,
+        ]);
+
+        $payload = [
+            'nombre'           => 'UNO POR SEMANA .... LA LEYENDA CONTINUA',
+            'conductor'        => 'LUCHO ALMIRON',
+            'dia_transmision'  => 'VIERNES',
+            'hora_transmision' => '17:05:00',
+            'timezone'         => 'America/Caracas',
+            'duracion_minutos' => 65,
+            'genero'           => 'Rock',
+            'activo'           => 1,
+            'emisiones'        => [
+                [
+                    'id'                => 0,
+                    'tipo'              => 'retransmision',
+                    'etiqueta'          => 'Retransmisión Martes',
+                    'dia_semana'        => 'MARTES',
+                    'hora_inicio'       => '13:05',
+                    'duracion_minutos'  => 65,
+                    'duracion_real_min' => '65',
+                    'duracion_real_sec' => '00', // Cero con padding como suelen enviar navegadores o inputs
+                    'activo'            => 1,
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($this->admin)
+            ->put(route('admin.master-programs.update', $program), $payload);
+
+        $response->assertRedirect(route('admin.master-programs.edit', $program));
+        $response->assertSessionDoesntHaveErrors();
+
+        $program->refresh();
+        $martes = $program->emisiones->firstWhere('dia_semana', 'MARTES');
+        $this->assertNotNull($martes);
+        // (65 * 60) + 0 = 3900 segundos enteros
+        $this->assertSame(3900, $martes->duracion_segundos);
+
+        // Volver a editar para comprobar que se renderiza 65m y 0s
+        $editResponse = $this->actingAs($this->admin)->get(route('admin.master-programs.edit', $program));
+        $editResponse->assertOk();
+        $editResponse->assertSee('&quot;duracion_real_min&quot;:65', false);
+        $editResponse->assertSee('&quot;duracion_real_sec&quot;:0', false);
+    }
+
+    public function test_conductor_registration_and_linking_flow(): void
+    {
+        $program = MasterProgram::create([
+            'nombre'           => 'Programa Conductor Test',
+            'conductor'        => 'Lucho Almiron',
+            'dia_transmision'  => 'VIERNES',
+            'hora_transmision' => '17:05:00',
+            'timezone'         => 'America/Caracas',
+            'duracion_minutos' => 65,
+            'genero'           => 'Rock',
+            'activo'           => true,
+        ]);
+
+        $payload = [
+            'nombre'                 => 'Programa Conductor Test',
+            'conductor'              => 'Lucho Almiron',
+            'dia_transmision'        => 'VIERNES',
+            'hora_transmision'       => '17:05:00',
+            'timezone'               => 'America/Caracas',
+            'duracion_minutos'       => 65,
+            'genero'                 => 'Rock',
+            'activo'                 => 1,
+            'conductor_submissions_section_present' => '1',
+            'new_conductor_name'     => 'Lucho Almiron',
+            'new_conductor_email'    => 'lucho.almiron.conductor@sevenrockradio.test',
+            'new_conductor_password' => 'Secreto1234!',
+        ];
+
+        $response = $this->actingAs($this->admin)
+            ->put(route('admin.master-programs.update', $program), $payload);
+
+        $response->assertRedirect(route('admin.master-programs.edit', $program));
+        $response->assertSessionDoesntHaveErrors();
+
+        // 1. Verificar que el usuario conductor se creó
+        $user = User::query()->where('email', 'lucho.almiron.conductor@sevenrockradio.test')->first();
+        $this->assertNotNull($user);
+        $this->assertSame('Lucho Almiron', $user->name);
+        $this->assertTrue((bool) $user->is_conductor);
+        $this->assertFalse((bool) $user->hasAdminAccess()); // Sin permisos administrativos
+        $this->assertNotSame('admin', $user->role);
+
+        // 2. Verificar que se vinculó en la tabla pivote master_program_conductor con is_active = true
+        $authorized = $program->authorizedConductors()->get();
+        $this->assertTrue($authorized->contains('id', $user->id));
+
+        // 3. Volver a editar: el conductor debe aparecer en la lista de conductores disponibles/autorizados
+        $editResponse = $this->actingAs($this->admin)->get(route('admin.master-programs.edit', $program));
+        $editResponse->assertOk();
+        $editResponse->assertSee('Lucho Almiron');
+        $editResponse->assertSee('lucho.almiron.conductor@sevenrockradio.test');
+        $editResponse->assertDontSee('No hay cuentas de conductor registradas todavía.');
+    }
+
+    public function test_cannot_assign_admin_account_as_conductor(): void
+    {
+        $program = MasterProgram::create([
+            'nombre'           => 'Programa Admin Guard',
+            'conductor'        => 'Host',
+            'dia_transmision'  => 'VIERNES',
+            'hora_transmision' => '17:05:00',
+            'timezone'         => 'America/Caracas',
+            'duracion_minutos' => 65,
+            'genero'           => 'Rock',
+            'activo'           => true,
+        ]);
+
+        // Intentar registrar el email de un admin existente
+        $payload = [
+            'nombre'                 => 'Programa Admin Guard',
+            'conductor'              => 'Host',
+            'dia_transmision'        => 'VIERNES',
+            'hora_transmision'       => '17:05:00',
+            'timezone'               => 'America/Caracas',
+            'duracion_minutos'       => 65,
+            'genero'                 => 'Rock',
+            'activo'                 => 1,
+            'conductor_submissions_section_present' => '1',
+            'new_conductor_name'     => 'Admin User',
+            'new_conductor_email'    => $this->admin->email,
+            'new_conductor_password' => 'Secreto1234!',
+        ];
+
+        $response = $this->actingAs($this->admin)
+            ->from(route('admin.master-programs.edit', $program))
+            ->put(route('admin.master-programs.update', $program), $payload);
+
+        $response->assertRedirect(route('admin.master-programs.edit', $program));
+        $response->assertSessionHasErrors(['new_conductor_email']);
+
+        // El admin no debe quedar vinculado como conductor
+        $this->assertCount(0, $program->authorizedConductors);
+    }
 }

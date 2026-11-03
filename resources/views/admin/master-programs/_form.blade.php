@@ -294,14 +294,17 @@
                     <div>
                         <label class="{{ $labelClass }}">Nuevo conductor (nombre)</label>
                         <input name="new_conductor_name" value="{{ old('new_conductor_name') }}" class="{{ $inputClass }}" placeholder="Nombre completo">
+                        @error('new_conductor_name')<p class="mt-1 text-xs text-red-400">{{ $message }}</p>@enderror
                     </div>
                     <div>
                         <label class="{{ $labelClass }}">Nuevo conductor (correo)</label>
-                        <input type="email" name="new_conductor_email" value="{{ old('new_conductor_email') }}" class="{{ $inputClass }}" placeholder="conductor@ejemplo.com">
+                        <input type="email" name="new_conductor_email" value="{{ old('new_conductor_email') }}" class="{{ $inputClass }}" placeholder="conductor@ejemplo.com" autocomplete="off">
+                        @error('new_conductor_email')<p class="mt-1 text-xs text-red-400">{{ $message }}</p>@enderror
                     </div>
                     <div>
                         <label class="{{ $labelClass }}">Contraseña inicial</label>
-                        <input type="password" name="new_conductor_password" class="{{ $inputClass }}" placeholder="Mínimo 8 caracteres">
+                        <input type="password" name="new_conductor_password" class="{{ $inputClass }}" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+                        @error('new_conductor_password')<p class="mt-1 text-xs text-red-400">{{ $message }}</p>@enderror
                     </div>
                 </div>
             </div>

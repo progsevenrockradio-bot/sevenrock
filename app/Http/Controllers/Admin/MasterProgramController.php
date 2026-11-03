@@ -390,6 +390,9 @@ final class MasterProgramController extends Controller
             'new_conductor_name' => ['nullable', 'string', 'max:255'],
             'new_conductor_email' => ['nullable', 'email', 'max:255'],
             'new_conductor_password' => ['nullable', 'string', 'min:8', 'max:255'],
+        ], [
+            'new_conductor_email.email' => 'El correo del nuevo conductor debe ser una dirección válida.',
+            'new_conductor_password.min' => 'La contraseña inicial del nuevo conductor debe tener al menos 8 caracteres.',
         ]);
 
         $selectedIds = collect((array) $request->input('conductor_user_ids', []))
@@ -405,6 +408,12 @@ final class MasterProgramController extends Controller
 
         if ($newEmail !== '') {
             $conductorUser = User::query()->where('email', $newEmail)->first();
+            if ($conductorUser && $conductorUser->hasAdminAccess()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'new_conductor_email' => 'La dirección ingresada pertenece a una cuenta de administrador. No se puede convertir en cuenta de conductor.',
+                ]);
+            }
+
             if (! $conductorUser) {
                 $userPayload = [
                     'name' => $newName !== '' ? $newName : $masterProgram->conductor,
@@ -438,7 +447,7 @@ final class MasterProgramController extends Controller
                     $user->forceFill(['is_conductor' => true])->save();
                 }
                 $syncPayload[$userId] = [
-                    'authorized' => true,
+                    'is_active' => true,
                     'authorized_by' => $request->user()?->id,
                     'authorized_at' => now(),
                 ];
@@ -468,6 +477,28 @@ final class MasterProgramController extends Controller
             return;
         }
 
+        // Normalizar strings de dígitos con posibles ceros a la izquierda (ej. "00", "05") antes de validar integer
+        $cleanedRows = [];
+        foreach ($rows as $k => $row) {
+            if (is_array($row)) {
+                if (isset($row['duracion_real_sec']) && is_string($row['duracion_real_sec'])) {
+                    $secTrim = trim($row['duracion_real_sec']);
+                    if (preg_match('/^\d+$/', $secTrim)) {
+                        $row['duracion_real_sec'] = (int) $secTrim;
+                    }
+                }
+                if (isset($row['duracion_real_min']) && is_string($row['duracion_real_min'])) {
+                    $minTrim = trim($row['duracion_real_min']);
+                    if (preg_match('/^\d+$/', $minTrim)) {
+                        $row['duracion_real_min'] = (int) $minTrim;
+                    }
+                }
+            }
+            $cleanedRows[$k] = $row;
+        }
+        $request->merge(['emisiones' => $cleanedRows]);
+        $rows = $cleanedRows;
+
         $request->validate([
             'emisiones.*.tipo'              => ['nullable', 'string', 'in:' . implode(',', $tiposValidos)],
             'emisiones.*.dia_semana'        => ['nullable', 'string', 'in:' . implode(',', $diasValidos)],
@@ -483,6 +514,12 @@ final class MasterProgramController extends Controller
             'emisiones.*.hora_inicio.max' => 'La hora de inicio no debe superar los 8 caracteres.',
             'emisiones.*.duracion_minutos.min' => 'La duración en minutos debe ser de al menos 1.',
             'emisiones.*.duracion_minutos.max' => 'La duración en minutos no debe superar los 600.',
+            'emisiones.*.duracion_real_min.integer' => 'Los minutos de duración real deben ser un número entero.',
+            'emisiones.*.duracion_real_min.min' => 'Los minutos de duración real no pueden ser negativos.',
+            'emisiones.*.duracion_real_min.max' => 'Los minutos de duración real no deben superar los 600.',
+            'emisiones.*.duracion_real_sec.integer' => 'Los segundos de duración real deben ser un número entero entre 0 y 59.',
+            'emisiones.*.duracion_real_sec.min' => 'Los segundos de duración real no pueden ser negativos.',
+            'emisiones.*.duracion_real_sec.max' => 'Los segundos de duración real deben estar entre 0 y 59.',
             'emisiones.*.enlace.url' => 'El enlace en vivo de la emisión debe ser una URL válida (con http:// o https://).',
             'emisiones.*.url_podcast.url' => 'La URL del podcast de la emisión debe ser una URL válida (con http:// o https://).',
         ]);
