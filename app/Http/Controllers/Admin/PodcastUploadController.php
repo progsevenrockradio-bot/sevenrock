@@ -61,6 +61,7 @@ final class PodcastUploadController extends Controller
     public function index(): View
     {
         $masterPrograms = MasterProgram::adminListing();
+        $masterPrograms->loadMissing('emisiones');
 
         $dayTabs = [
             'LUNES' => 'Lunes',
@@ -85,9 +86,52 @@ final class PodcastUploadController extends Controller
         });
 
         $programsByDay = collect($dayTabs)
-            ->mapWithKeys(static fn (string $label, string $day) => [
-                $day => $masterPrograms->where('dia_transmision', $day)->values(),
-            ]);
+            ->mapWithKeys(function (string $label, string $day) use ($masterPrograms): array {
+                $dayEntries = collect();
+
+                foreach ($masterPrograms as $program) {
+                    $emisiones = $program->emisiones;
+
+                    if ($emisiones->isNotEmpty()) {
+                        // Si tiene emisiones configuradas, tomamos ÚNICAMENTE las activas del día correspondiente.
+                        // Si todas las emisiones están inactivas, NO se recurre al horario base (emisión desactivada explícitamente).
+                        $activePassesForDay = $emisiones->where('activo', true)
+                            ->filter(fn ($em) => strtoupper(trim((string) $em->dia_semana)) === $day)
+                            ->sortBy(fn ($em) => (string) ($em->hora_inicio ?? '99:99:99'))
+                            ->values();
+
+                        if ($activePassesForDay->isNotEmpty()) {
+                            $earliestPass = $activePassesForDay->first();
+                            $earliestTime = (string) ($earliestPass->hora_inicio ?? '99:99:99');
+
+                            $dayEntries->push([
+                                'program' => $program,
+                                'sort_time' => $earliestTime,
+                            ]);
+                        }
+                    } else {
+                        // Retrocompatibilidad: programas históricos sin ninguna emisión configurada en master_program_emisiones
+                        $baseDay = strtoupper(trim((string) $program->dia_transmision));
+                        if ($baseDay === $day) {
+                            $baseTime = (string) ($program->hora_transmision ?? '99:99:99');
+                            $dayEntries->push([
+                                'program' => $program,
+                                'sort_time' => $baseTime,
+                            ]);
+                        }
+                    }
+                }
+
+                // Ordenar por hora de pase del día (ascendente) y luego por nombre
+                $sorted = $dayEntries->sortBy([
+                    fn ($a, $b) => strcmp((string) $a['sort_time'], (string) $b['sort_time']),
+                    fn ($a, $b) => strnatcasecmp((string) $a['program']->name, (string) $b['program']->name),
+                ])->pluck('program')->values();
+
+                return [
+                    $day => $sorted,
+                ];
+            });
 
         $selectedProgramId = old('master_program_id');
         $suggestedEpisodeNumber = '';

@@ -397,26 +397,6 @@ class MasterProgram extends Model
             $tz = config('app.timezone', 'Europe/Madrid');
         }
 
-        $rawTime = trim((string) ($this->hora_transmision ?? ''));
-        if ($rawTime === '') {
-            return [
-                'status' => 'undetermined',
-                'reason' => 'El Programa Maestro no tiene configurada una hora de transmisión fija.',
-                'cutoff_minutes' => $cutoffMinutes,
-                'cutoff_human' => $cutoffHuman,
-                'timezone' => $tz,
-                'is_closed' => false,
-                'emission_datetime' => null,
-                'emission_formatted' => null,
-                'deadline_datetime' => null,
-                'deadline_formatted' => null,
-                'deadline_human' => 'Horario no determinado',
-                'crosses_midnight' => false,
-                'remaining_seconds' => 0,
-                'remaining_human' => 'Horario no determinado',
-            ];
-        }
-
         $dateStr = null;
         if ($emissionDate instanceof Carbon || $emissionDate instanceof \DateTimeInterface) {
             $dateStr = $emissionDate->format('Y-m-d');
@@ -444,6 +424,102 @@ class MasterProgram extends Model
                 'crosses_midnight' => false,
                 'remaining_seconds' => 0,
                 'remaining_human' => 'Fecha no determinada',
+            ];
+        }
+
+        $isoDays = [
+            1 => 'LUNES',
+            2 => 'MARTES',
+            3 => 'MIERCOLES',
+            4 => 'JUEVES',
+            5 => 'VIERNES',
+            6 => 'SABADO',
+            7 => 'DOMINGO',
+        ];
+
+        try {
+            $dayIso = (int) Carbon::parse($dateStr, $tz)->dayOfWeekIso; // 1 = Lunes, ..., 7 = Domingo
+            $dayName = $isoDays[$dayIso] ?? null;
+        } catch (\Throwable) {
+            $dayName = null;
+        }
+
+        $emisiones = $this->relationLoaded('emisiones') ? $this->emisiones : $this->emisiones()->get();
+
+        $rawTime = '';
+        if ($emisiones->isNotEmpty()) {
+            // Regla de paridad con el selector administrativo:
+            // Si existen emisiones configuradas en master_program_emisiones, tomamos ÚNICAMENTE las activas del día.
+            // Si no hay ninguna emisión activa para esa fecha/día, NO se autoriza la entrega ni se recurre al horario base.
+            $activePasses = $emisiones->where('activo', true)
+                ->filter(fn ($em) => strtoupper(trim((string) $em->dia_semana)) === $dayName)
+                ->sortBy(fn ($em) => (string) ($em->hora_inicio ?? '99:99:99'))
+                ->values();
+
+            if ($activePasses->isEmpty()) {
+                return [
+                    'status' => 'no_active_emission',
+                    'reason' => "El programa no tiene emisiones activas programadas para el día {$dayName} ({$dateStr}).",
+                    'cutoff_minutes' => $cutoffMinutes,
+                    'cutoff_human' => $cutoffHuman,
+                    'timezone' => $tz,
+                    'is_closed' => true, // Bloquea la entrega explícitamente
+                    'emission_datetime' => null,
+                    'emission_formatted' => null,
+                    'deadline_datetime' => null,
+                    'deadline_formatted' => null,
+                    'deadline_human' => "Sin emisión activa para {$dayName}",
+                    'crosses_midnight' => false,
+                    'remaining_seconds' => 0,
+                    'remaining_human' => 'No programado',
+                ];
+            }
+
+            // Si hay múltiples pases activos el mismo día, el pase objetivo se define por el primer pase cronológico del día,
+            // garantizando que el plazo de entrega proteja la primera salida al aire de la jornada.
+            $targetPass = $activePasses->first();
+            $rawTime = trim((string) ($targetPass->hora_inicio ?? ''));
+        } else {
+            // Retrocompatibilidad: programas históricos sin ninguna emisión configurada en master_program_emisiones
+            $baseDay = strtoupper(trim((string) $this->dia_transmision));
+            if ($dayName !== null && $baseDay !== '' && $baseDay !== $dayName) {
+                return [
+                    'status' => 'no_active_emission',
+                    'reason' => "El programa histórico está configurado para {$baseDay}, no para {$dayName} ({$dateStr}).",
+                    'cutoff_minutes' => $cutoffMinutes,
+                    'cutoff_human' => $cutoffHuman,
+                    'timezone' => $tz,
+                    'is_closed' => true,
+                    'emission_datetime' => null,
+                    'emission_formatted' => null,
+                    'deadline_datetime' => null,
+                    'deadline_formatted' => null,
+                    'deadline_human' => "Sin emisión activa para {$dayName}",
+                    'crosses_midnight' => false,
+                    'remaining_seconds' => 0,
+                    'remaining_human' => 'No programado',
+                ];
+            }
+
+            $rawTime = trim((string) ($this->hora_transmision ?? ''));
+        }
+
+        if ($rawTime === '') {
+            return [
+                'status' => 'undetermined',
+                'reason' => 'El Programa Maestro no tiene configurada una hora de transmisión fija.',
+                'cutoff_minutes' => $cutoffMinutes,
+                'cutoff_human' => $cutoffHuman,
+                'timezone' => $tz,
+                'is_closed' => false,
+                'emission_datetime' => null,
+                'emission_formatted' => null,
+                'deadline_datetime' => null,
+                'deadline_formatted' => null,
+                'deadline_human' => 'Horario no determinado',
+                'crosses_midnight' => false,
+                'remaining_seconds' => 0,
+                'remaining_human' => 'Horario no determinado',
             ];
         }
 
