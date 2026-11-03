@@ -103,7 +103,12 @@
                         {{-- Vista móvil (tarjetas compactas) --}}
                         <div class="space-y-3 md:hidden">
                             @foreach ($dayPrograms as $masterProgram)
-                                @php $emisionesActivas = $masterProgram->emisiones()->activas()->get(); @endphp
+                                @php
+                                    $emisionesActivas = $masterProgram->relationLoaded('emisiones')
+                                        ? $masterProgram->emisiones->where('activo', true)->values()
+                                        : $masterProgram->emisiones()->activas()->get();
+                                    $emisionesDelDia = $emisionesActivas->filter(fn ($em) => strtoupper(trim((string) $em->dia_semana)) === $dayKey)->values();
+                                @endphp
                                 <div class="rounded-xl border border-white/10 bg-[#101012] p-4 space-y-3">
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="flex items-center gap-3 min-w-0">
@@ -127,7 +132,22 @@
                                     <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-300 border-t border-white/5 pt-2.5">
                                         <span class="rounded border border-white/10 bg-white/5 px-2 py-0.5 font-mono text-[11px] text-zinc-200">{{ $masterProgram->program_code ?: 'Sin código' }}</span>
                                         <span>·</span>
-                                        <span>{{ $masterProgram->dia_transmision }} {{ $masterProgram->hora_transmision ? substr((string) $masterProgram->hora_transmision, 0, 5) : 'Sin hora' }}</span>
+                                        @if ($emisionesDelDia->isNotEmpty())
+                                            <div class="flex flex-wrap items-center gap-1.5">
+                                                @foreach ($emisionesDelDia as $em)
+                                                    <span class="font-semibold text-zinc-100">
+                                                        {{ $em->horaFormateada() }}
+                                                        @if ($em->tipo === 'retransmision')
+                                                            <span class="text-[10px] text-amber-400/90 font-normal">(Podcast)</span>
+                                                        @elseif ($em->tipo === 'en_vivo')
+                                                            <span class="text-[10px] text-red-400 font-normal">(En vivo)</span>
+                                                        @endif
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <span>{{ $masterProgram->dia_transmision }} {{ $masterProgram->hora_transmision ? substr((string) $masterProgram->hora_transmision, 0, 5) : 'Sin hora' }}</span>
+                                        @endif
                                         <span class="text-zinc-500">({{ $masterProgram->timezone }})</span>
                                     </div>
 
@@ -158,7 +178,7 @@
                                         <tr>
                                             <th class="px-4 py-3">Programa</th>
                                             <th class="px-4 py-3">Código</th>
-                                            <th class="px-4 py-3">Horario base</th>
+                                            <th class="px-4 py-3">Horario ({{ $dayLabel }})</th>
                                             <th class="px-4 py-3">Emisiones activas</th>
                                             <th class="px-4 py-3">Estado</th>
                                             <th class="px-4 py-3 text-right">Acciones</th>
@@ -196,19 +216,42 @@
                                                     @endif
                                                 </td>
                                                 <td class="px-4 py-3.5 text-xs">
-                                                    <div class="font-medium text-zinc-200">
-                                                        {{ $masterProgram->dia_transmision }} · {{ $masterProgram->hora_transmision ? substr((string) $masterProgram->hora_transmision, 0, 5) : 'Sin hora' }}
-                                                    </div>
+                                                    @php
+                                                        $emisionesActivas = $masterProgram->relationLoaded('emisiones')
+                                                            ? $masterProgram->emisiones->where('activo', true)->values()
+                                                            : $masterProgram->emisiones()->activas()->get();
+                                                        $emisionesDelDia = $emisionesActivas->filter(fn ($em) => strtoupper(trim((string) $em->dia_semana)) === $dayKey)->values();
+                                                    @endphp
+                                                    @if ($emisionesDelDia->isNotEmpty())
+                                                        <div class="space-y-1">
+                                                            @foreach ($emisionesDelDia as $em)
+                                                                <div class="flex items-center gap-1.5">
+                                                                    <span class="font-semibold text-zinc-100">{{ $em->horaFormateada() }}</span>
+                                                                    @if ($em->tipo === 'retransmision')
+                                                                        <span class="inline-flex items-center rounded border border-white/15 bg-white/5 px-1 py-0.2 text-[9px] font-medium text-zinc-300">Podcast</span>
+                                                                    @elseif ($em->tipo === 'en_vivo')
+                                                                        <span class="inline-flex items-center rounded border border-red-500/30 bg-red-500/10 px-1 py-0.2 text-[9px] font-semibold text-red-400">En vivo</span>
+                                                                    @else
+                                                                        <span class="inline-flex items-center rounded border border-white/10 bg-white/[0.03] px-1 py-0.2 text-[9px] text-zinc-400">Normal</span>
+                                                                    @endif
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    @else
+                                                        <div class="font-medium text-zinc-200">
+                                                            {{ $masterProgram->dia_transmision }} · {{ $masterProgram->hora_transmision ? substr((string) $masterProgram->hora_transmision, 0, 5) : 'Sin hora' }}
+                                                        </div>
+                                                    @endif
                                                     <div class="mt-0.5 text-zinc-500">{{ $masterProgram->timezone }}</div>
                                                 </td>
                                                 <td class="px-4 py-3.5">
-                                                    @php $emisionesActivas = $masterProgram->emisiones()->activas()->get(); @endphp
                                                     @if ($emisionesActivas->isEmpty())
                                                         <span class="text-xs text-zinc-500">—</span>
                                                     @else
                                                         <div class="space-y-1.5">
                                                             @foreach ($emisionesActivas as $em)
-                                                                <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                                                                @php $isSameDay = strtoupper(trim((string) $em->dia_semana)) === $dayKey; @endphp
+                                                                <div class="flex flex-wrap items-center gap-1.5 text-xs {{ $isSameDay ? 'font-medium' : 'opacity-70' }}">
                                                                     @if ($em->tipo === 'en_vivo')
                                                                         <span class="inline-flex items-center rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-red-400">En vivo</span>
                                                                     @elseif ($em->tipo === 'retransmision')
@@ -216,7 +259,7 @@
                                                                     @else
                                                                         <span class="inline-flex items-center rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-zinc-400">Normal</span>
                                                                     @endif
-                                                                    <span class="text-zinc-300">{{ ucfirst(substr(strtolower($em->dia_semana), 0, 3)) }} {{ $em->horaFormateada() }}</span>
+                                                                    <span class="{{ $isSameDay ? 'text-white underline decoration-[#c32720] decoration-2 underline-offset-2' : 'text-zinc-300' }}">{{ ucfirst(substr(strtolower($em->dia_semana), 0, 3)) }} {{ $em->horaFormateada() }}</span>
                                                                     @if ($em->duracionRealFormateada())
                                                                         <span class="text-[11px] text-amber-400" title="Duración real del archivo">⏱ {{ $em->duracionRealFormateada() }}</span>
                                                                     @endif
