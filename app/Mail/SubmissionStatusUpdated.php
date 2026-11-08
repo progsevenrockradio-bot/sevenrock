@@ -23,10 +23,12 @@ class SubmissionStatusUpdated extends Mailable
      */
     public function envelope(): Envelope
     {
-        $statusStr = $this->submission->status === 'approved' ? 'aprobada' : 'rechazada';
-        
+        $subject = $this->submission->status === 'approved'
+            ? 'Tu maqueta ha sido aprobada - Seven Rock Radio'
+            : 'Resultado de la revisión de tu maqueta';
+
         return new Envelope(
-            subject: 'Tu maqueta ha sido ' . $statusStr . ' - ' . config('app.name'),
+            subject: $subject,
         );
     }
 

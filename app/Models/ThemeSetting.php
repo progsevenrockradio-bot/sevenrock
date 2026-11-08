@@ -228,7 +228,7 @@ class ThemeSetting extends Model
             'contact_info_title' => 'Donde encontrarnos',
             'contact_description' => 'Whether you like our music or you just would like to say hello, we would love to hear from you. Follow us on social media or simply use this contact form to send us an email.',
             'contact_address' => '',
-            'contact_email' => 'prog.sevenrockradio@gmail.com',
+            'contact_email' => 'sevenrockradio@gmail.com',
             'notification_email' => 'prog.sevenrockradio@gmail.com',
             'notification_copy_email' => 'contact@sevenrockradio.com',
             'notification_from_email' => 'prog.sevenrockradio@gmail.com',

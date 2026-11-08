@@ -17,7 +17,7 @@
 
     <div
         x-data="{
-            activeTab: '{{ request()->has('logs_page') ? 'correos' : 'maquetas' }}',
+            activeTab: '{{ request()->has('followups_page') ? 'seguimiento' : (request()->has('logs_page') ? 'correos' : 'maquetas') }}',
             showEmailModal: false,
             currentEmailContent: '',
             selectedMaquetas: [],
@@ -99,6 +99,17 @@
                 >
                     <span>Historial de correos</span>
                     <span class="rounded bg-black/30 px-1.5 py-0.5 text-[10px]">{{ $emailLogs->total() }}</span>
+                </button>
+                <button
+                    type="button"
+                    role="tab"
+                    :aria-selected="activeTab === 'seguimiento'"
+                    @click="activeTab = 'seguimiento'"
+                    :class="activeTab === 'seguimiento' ? 'bg-[#c32720] text-white font-semibold shadow-sm' : 'text-gray-400 hover:text-white'"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-[#c32720]"
+                >
+                    <span>Seguimiento Muro del Rock</span>
+                    <span class="rounded bg-black/30 px-1.5 py-0.5 text-[10px]">{{ isset($muroFollowups) ? $muroFollowups->total() : 0 }}</span>
                 </button>
             </div>
         </header>
@@ -384,6 +395,15 @@
                                                 Publicada en catálogo
                                             </span>
                                         @endif
+                                        @if ($submission->hasValidMarketingConsent())
+                                            <span class="inline-flex items-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300" title="Aceptó recibir información del Muro del Rock ({{ $submission->marketing_opt_in_at?->format('d/m/Y H:i') }} · {{ $submission->marketing_opt_in_version }})">
+                                                Opt-in Muro: Sí
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center rounded-md border border-white/10 px-2 py-0.5 text-[10px] text-gray-400" title="Sin consentimiento comercial para el Muro del Rock">
+                                                Opt-in Muro: No
+                                            </span>
+                                        @endif
                                     </div>
                                 </td>
                                 <td class="px-4 py-3.5 whitespace-nowrap text-right">
@@ -424,15 +444,27 @@
                                                 </form>
                                             @else
                                                 @php
-                                                    $hasActiveFeed = \App\Models\NewRelease::where('title', $submission->song_title)
-                                                        ->where('artist_name', $submission->band_name)
-                                                        ->where('show_in_feed', true)
-                                                        ->exists();
+                                                    $hasActiveFeed = $submission->new_release_id
+                                                        ? \App\Models\NewRelease::where('id', $submission->new_release_id)->where('show_in_feed', true)->exists()
+                                                        : \App\Models\NewRelease::where('title', $submission->song_title)
+                                                            ->where('artist_name', $submission->band_name)
+                                                            ->where('show_in_feed', true)
+                                                            ->exists();
                                                 @endphp
                                                 <label class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/10 bg-[#151518] px-2.5 text-[11px] text-gray-300 cursor-pointer">
                                                     <input type="checkbox" @change="toggleFeed({{ $submission->id }}, $event.target)" {{ $hasActiveFeed ? 'checked' : '' }} class="h-3.5 w-3.5 rounded border-white/20 bg-[#101012] text-[#c32720] focus:ring-[#c32720]">
                                                     <span>En portada</span>
                                                 </label>
+                                                @if ($submission->publication_notice_status === 'failed')
+                                                    <form action="{{ route('admin.submissions.retryNotice', $submission) }}" method="POST">
+                                                        @csrf
+                                                        <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20" title="El aviso falló. Reintenta solo el correo; no se republica.">
+                                                            Reintentar aviso
+                                                        </button>
+                                                    </form>
+                                                @elseif (in_array($submission->publication_notice_status, ['pending', 'unknown'], true))
+                                                    <span class="inline-flex h-8 items-center rounded-lg border border-white/10 px-2.5 text-[11px] text-gray-400" title="Aviso en estado indeterminado: no se reenvía automáticamente. Revisa el historial.">Aviso por revisar</span>
+                                                @endif
                                             @endif
                                         @endif
 
@@ -551,6 +583,189 @@
             @if ($emailLogs->hasPages())
                 <div class="pt-2">
                     {{ $emailLogs->links() }}
+                </div>
+            @endif
+        </div>
+
+        {{-- PESTAÑA 3: Seguimiento Muro del Rock --}}
+        @php
+            $sim = $followupSimulation ?? [
+                'campaign_enabled' => false,
+                'has_approved_cta_url' => false,
+                'reply_to' => 'prog.sevenrockradio@gmail.com',
+                'sent' => 0,
+                'skipped' => 0,
+                'failed' => 0,
+                'blocked_or_waiting' => 0,
+                'items' => [],
+            ];
+            $simById = collect($sim['items'] ?? [])->keyBy('id');
+            $followupStatusStyles = [
+                'scheduled' => 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+                'paused' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+                'cancelled' => 'border-white/10 bg-white/[0.04] text-gray-400',
+                'skipped' => 'border-white/10 bg-white/[0.04] text-gray-400',
+                'sending' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+                'sent' => 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+                'failed' => 'border-red-500/30 bg-red-500/10 text-red-300',
+                'unknown' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+            ];
+        @endphp
+        <div x-show="activeTab === 'seguimiento'" x-cloak class="space-y-4">
+            {{-- Estado de seguridad y vista previa --}}
+            <div class="rounded-xl border border-white/10 bg-[#101012] p-4 space-y-3">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wider text-[#c32720]">Invitación opcional · 3 días después de la primera publicación</div>
+                        <h2 class="mt-0.5 font-display text-lg uppercase tracking-wider text-white">Estado del seguimiento comercial (Muro del Rock)</h2>
+                        <p class="mt-1 text-xs text-gray-400">
+                            Un único seguimiento por contacto y campaña. Solo para bandas con consentimiento explícito, sin baja y sin plan de pago activo.
+                        </p>
+                    </div>
+                    @if (!empty($followupPreviewHtml))
+                        <button
+                            type="button"
+                            @click='openEmailModal(@json($followupPreviewHtml))'
+                            class="inline-flex h-9 items-center justify-center rounded-lg bg-[#c32720] px-4 text-xs font-semibold text-white hover:bg-[#a8201a]"
+                        >
+                            Ver borrador del correo de invitación
+                        </button>
+                    @endif
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-3 pt-2 border-t border-white/10 text-xs">
+                    <div class="rounded-lg border border-white/5 bg-[#151518] p-3">
+                        <div class="text-[11px] text-gray-400">Estado de la campaña</div>
+                        <div class="mt-1 font-semibold {{ $sim['campaign_enabled'] ? 'text-emerald-300' : 'text-amber-300' }}">
+                            {{ $sim['campaign_enabled'] ? 'Activa' : 'Desactivada por defecto (bloqueo activo)' }}
+                        </div>
+                        <div class="mt-0.5 text-[11px] text-gray-500">Configuración: MURO_FOLLOWUP_ENABLED</div>
+                    </div>
+                    <div class="rounded-lg border border-white/5 bg-[#151518] p-3">
+                        <div class="text-[11px] text-gray-400">Destino comercial (Plan Básico 3,50 €/mes)</div>
+                        <div class="mt-1 font-semibold break-all {{ $sim['has_approved_cta_url'] ? 'text-emerald-300' : 'text-amber-300' }}">
+                            {{ $sim['has_approved_cta_url'] ? app(\App\Services\SubmissionFollowupService::class)->configuredCtaUrl() : 'Pendiente de URL aprobada (no enlaza al registro actual)' }}
+                        </div>
+                        <div class="mt-0.5 text-[11px] text-gray-500">Configuración: MURO_FOLLOWUP_CTA_URL</div>
+                    </div>
+                    <div class="rounded-lg border border-white/5 bg-[#151518] p-3">
+                        <div class="text-[11px] text-gray-400">Buzón de respuesta (Reply-To) y Simulación</div>
+                        <div class="mt-1 font-semibold text-white break-all">{{ $sim['reply_to'] }}</div>
+                        <div class="mt-0.5 text-[11px] text-gray-400">
+                            Simulación actual: {{ $sim['sent'] }} enviables ahora · {{ $sim['blocked_or_waiting'] }} en espera/retenidos · {{ $sim['skipped'] }} excluidos
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Tabla de seguimientos --}}
+            <div class="rounded-xl border border-white/10 bg-[#101012] overflow-hidden">
+                <table class="min-w-full divide-y divide-white/10 text-left text-xs">
+                    <thead class="bg-white/[0.02] text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                        <tr>
+                            <th scope="col" class="px-4 py-3">Banda y contacto</th>
+                            <th scope="col" class="px-3 py-3">Publicación y plazo (+3 días)</th>
+                            <th scope="col" class="px-3 py-3">Estado</th>
+                            <th scope="col" class="px-3 py-3">Motivo / Diagnóstico de simulación</th>
+                            <th scope="col" class="px-4 py-3 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        @forelse ($muroFollowups ?? [] as $followup)
+                            @php
+                                $fStyle = $followupStatusStyles[$followup->status] ?? 'border-white/10 bg-white/[0.04] text-gray-300';
+                                $simItem = $simById->get($followup->id);
+                            @endphp
+                            <tr class="hover:bg-white/[0.02] transition-colors align-top">
+                                <td class="px-4 py-3.5">
+                                    <div class="font-semibold text-white text-sm">{{ $followup->band_name }}</div>
+                                    <div class="text-[11px] text-gray-300 break-all">{{ $followup->contact_email }}</div>
+                                    @if ($followup->trackSubmission)
+                                        <div class="mt-1 text-[11px] text-gray-400">Tema: {{ $followup->trackSubmission->song_title }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-3.5 whitespace-nowrap text-gray-300">
+                                    <div>1.ª pub.: {{ $followup->first_published_at?->format('d/m/Y H:i') ?? 'N/D' }}</div>
+                                    <div class="mt-0.5 text-[11px] text-gray-400">
+                                        Previsto: {{ $followup->scheduled_for?->format('d/m/Y H:i') ?? 'No programado' }}
+                                    </div>
+                                    @if ($followup->sent_at)
+                                        <div class="mt-0.5 text-[11px] text-emerald-300">Enviado: {{ $followup->sent_at->format('d/m/Y H:i') }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-3.5 whitespace-nowrap">
+                                    <span class="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium {{ $fStyle }}">
+                                        {{ $followup->statusLabel() }}
+                                    </span>
+                                    @if ($followup->attempts > 0)
+                                        <div class="mt-1 text-[11px] text-gray-400">Intentos: {{ $followup->attempts }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-3.5 text-gray-300">
+                                    <div>{{ $followup->reasonLabel() }}</div>
+                                    @if ($simItem)
+                                        <div class="mt-1 text-[11px] text-gray-400">
+                                            Simulación: {{ $simItem['can_send_now'] ? 'Se enviaría ahora' : $simItem['reason_text'] }}
+                                        </div>
+                                    @endif
+                                    @if ($followup->last_error)
+                                        <div class="mt-1 text-[11px] text-red-300">Error: {{ $followup->last_error }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3.5 whitespace-nowrap text-right">
+                                    <div class="inline-flex flex-wrap items-center justify-end gap-1.5">
+                                        @if ($followup->status === 'scheduled')
+                                            <form action="{{ route('admin.submissions.followups.pause', $followup) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20">
+                                                    Pausar
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        @if ($followup->status === 'paused')
+                                            <form action="{{ route('admin.submissions.followups.resume', $followup) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">
+                                                    Reanudar
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        @if ($followup->status === 'failed')
+                                            <form action="{{ route('admin.submissions.followups.retry', $followup) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20" title="Reintenta únicamente un fallo de envío confirmado">
+                                                    Reintentar envío
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        @if (in_array($followup->status, ['scheduled', 'paused', 'failed'], true))
+                                            <form action="{{ route('admin.submissions.followups.cancel', $followup) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 text-xs font-medium text-red-300 hover:bg-red-500/20">
+                                                    Cancelar
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-4 py-10 text-center text-xs text-gray-400">
+                                    No hay seguimientos registrados todavía. Se crean automáticamente cuando se publica por primera vez una maqueta.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            @if (isset($muroFollowups) && $muroFollowups->hasPages())
+                <div class="pt-2">
+                    {{ $muroFollowups->links() }}
                 </div>
             @endif
         </div>

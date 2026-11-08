@@ -71,6 +71,29 @@
                         </span>
                     </template>
                 </div>
+
+                @if ($talent->is_hidden || $talent->subscription_status === 'expired')
+                    <div class="mt-4 border border-amber-500/30 bg-amber-500/10 p-4 rounded-[6px] text-xs text-amber-200 space-y-2">
+                        <div class="flex items-center gap-2 font-display uppercase tracking-wider text-amber-300 font-semibold">
+                            <span>⚠️</span>
+                            <span>Subida de archivos pausada</span>
+                        </div>
+                        <p class="leading-relaxed text-amber-100/90">
+                            Tu suscripción está actualmente vencida o en pausa. Mientras la cuenta no esté activa, se han bloqueado nuevas cargas de archivos.
+                            @if ($talent->isPaidPlan())
+                                <br><span class="text-amber-300 font-semibold">Período de recuperación activo</span> hasta el <strong>{{ $talent->recoveryPeriodEndsAt()?->format('d/m/Y') ?? 'próximamente' }} inclusive</strong>.
+                            @endif
+                        </p>
+                        <p class="text-[11px] text-amber-200/80">
+                            Tus archivos existentes se conservan disponibles. Puedes descargarlos de forma individual desde la lista de archivos a continuación o renovar tu plan para reactivar tu cuenta.
+                        </p>
+                        <div class="pt-1">
+                            <a href="{{ route('talents.subscriptions.plans') }}" class="lucille-button-solid text-[11px] py-1.5 px-3 uppercase tracking-wider inline-block">
+                                Renovar plan
+                            </a>
+                        </div>
+                    </div>
+                @endif
                 
                 {{-- Resumen de Límites con capacidades por tipo obtenidas de las reglas del servidor --}}
                 <div class="mt-4 border border-white/5 bg-white/[0.02] p-4 rounded-[6px] text-xs space-y-2.5 text-[#7b7b7b] font-sans">
@@ -214,7 +237,10 @@
                                 </svg>
                                 <div>
                                     <p class="font-semibold text-amber-300">Tipo no incluido en tu plan</p>
-                                    <p class="mt-0.5 text-amber-200/80">Tu plan actual no incluye la subida de <span x-text="currentSpec.plural"></span>. Elige otro tipo de contenido disponible para subir.</p>
+                                    <p class="mt-0.5 text-amber-200/80">
+                                        Tu plan actual no incluye la subida de archivos de <span x-text="currentSpec.plural"></span>.
+                                        <span x-show="selectedType === 'video'">Puedes añadir enlaces a YouTube libremente desde la sección «Mi Perfil».</span>
+                                    </p>
                                 </div>
                             </div>
                         </template>

@@ -205,6 +205,7 @@ final class SitemapController extends Controller
 
         // 7. Nuevos lanzamientos activos y no futuros
         $releases = NewRelease::query()
+            ->publiclyAccessible()
             ->where('is_active', true)
             ->where('show_in_feed', true)
             ->whereNotNull('audio_path')

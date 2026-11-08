@@ -6,8 +6,10 @@ namespace App\Models;
 
 use App\Models\Concerns\Auditable;
 use App\Support\PublicMediaUrl;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -33,7 +35,13 @@ class NewRelease extends Model
             $updatedToActive = ! $wasActive && $isActiveNow;
 
             if ($newlyActive || $updatedToActive) {
-                $newRelease->sendPublishedNotification();
+                // Las maquetas publicadas desde el panel (origin='submission') tienen su
+                // propio circuito de aviso (App\Services\SubmissionPublisher), que se envía
+                // tras confirmar la transacción y deja estado reintentable. Aquí se omite
+                // para no duplicar el correo; el resto de orígenes conserva su comportamiento.
+                if ($newRelease->origin !== 'submission') {
+                    $newRelease->sendPublishedNotification();
+                }
 
                 if ($newRelease->show_in_feed) {
                     try {
@@ -89,6 +97,46 @@ class NewRelease extends Model
     public function getUrlAttribute(): string
     {
         return route('new-releases.single', $this->slug);
+    }
+
+    /**
+     * Criterio público único de la ficha: activo, con fecha ya alcanzada y sin embargo vigente.
+     *
+     * show_in_feed NO forma parte del criterio: solo controla si aparece en portada/listados
+     * y en el Muro; una ficha con show_in_feed=false sigue siendo accesible por su enlace.
+     * Un embargo marcado como activo sin fecha de fin se trata como vigente (igual que el panel editorial).
+     */
+    public function scopePubliclyAccessible(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where(fn (Builder $q) => $q->whereNull('released_at')->orWhere('released_at', '<=', now()))
+            ->where(fn (Builder $q) => $q
+                ->where('is_embargo_active', false)
+                ->orWhereNull('is_embargo_active')
+                ->orWhere(fn (Builder $e) => $e->whereNotNull('embargo_until')->where('embargo_until', '<=', now())));
+    }
+
+    public function isPubliclyAccessible(): bool
+    {
+        if (! $this->is_active) {
+            return false;
+        }
+
+        if ($this->released_at !== null && $this->released_at->isFuture()) {
+            return false;
+        }
+
+        if ($this->is_embargo_active) {
+            return $this->embargo_until !== null && ! $this->embargo_until->isFuture();
+        }
+
+        return true;
+    }
+
+    public function trackSubmission(): HasOne
+    {
+        return $this->hasOne(TrackSubmission::class, 'new_release_id');
     }
 
     public function sendPublishedNotification(): void

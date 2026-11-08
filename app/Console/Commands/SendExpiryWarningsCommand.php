@@ -24,8 +24,8 @@ class SendExpiryWarningsCommand extends Command
 {
     /** @var string */
     protected $signature = 'talents:send-expiry-warnings
-                            {--days= : Días específicos antes del vencimiento (opcional)}
-                            {--stage= : Etapa específica (7_days_before, 1_day_before, 3_days_before_purge)}
+                            {--days= : Días específicos antes del vencimiento o fin de recuperación (opcional)}
+                            {--stage= : Etapa específica (7_days_before, 1_day_before, 3_days_before_purge, recovery_7_days_before, recovery_1_day_before)}
                             {--dry-run : Muestra los candidatos sin enviar emails}';
 
     /** @var string */
@@ -53,10 +53,22 @@ class SendExpiryWarningsCommand extends Command
             $totalSent += $this->processActivePreExpiryNotice(1, TalentSubscriptionReminder::STAGE_1_DAY_BEFORE, $dryRun);
         }
 
-        // 3. AVISO 3 DÍAS ANTES DE FINALIZAR LOS 15 DÍAS DE GRACIA (Aviso previo a la purga)
+        // 3. AVISO 3 DÍAS ANTES DE FINALIZAR LOS 15 DÍAS DE GRACIA (Aviso previo a la purga de cuentas Free)
         if (($specificStage === null || $specificStage === TalentSubscriptionReminder::STAGE_3_DAYS_BEFORE_PURGE) &&
             ($specificDays === null || $specificDays === 3)) {
             $totalSent += $this->processGraceFinalNotice($dryRun);
+        }
+
+        // 4. AVISO 7 DÍAS ANTES DE FINALIZAR LA RECUPERACIÓN (Planes de pago Básico y Pro)
+        if (($specificStage === null || $specificStage === TalentSubscriptionReminder::STAGE_RECOVERY_7_DAYS_BEFORE) &&
+            ($specificDays === null || $specificDays === 7)) {
+            $totalSent += $this->processPaidRecoveryNotice(7, TalentSubscriptionReminder::STAGE_RECOVERY_7_DAYS_BEFORE, $dryRun);
+        }
+
+        // 5. AVISO 1 DÍA ANTES DE FINALIZAR LA RECUPERACIÓN (Planes de pago Básico y Pro)
+        if (($specificStage === null || $specificStage === TalentSubscriptionReminder::STAGE_RECOVERY_1_DAY_BEFORE) &&
+            ($specificDays === null || $specificDays === 1)) {
+            $totalSent += $this->processPaidRecoveryNotice(1, TalentSubscriptionReminder::STAGE_RECOVERY_1_DAY_BEFORE, $dryRun);
         }
 
         $this->info("Revisión de avisos completada. Total enviados: {$totalSent}.");
@@ -148,8 +160,9 @@ class SendExpiryWarningsCommand extends Command
         $today = today();
         $targetPurgeDate = $today->copy()->addDays(3);
 
-        // Bandas en gracia cuya purga está programada exactamente en 3 días
+        // Bandas en gracia cuya purga está programada exactamente en 3 días (excluyendo planes de pago Básico y Pro)
         $candidates = Talent::query()
+            ->whereNotIn('plan', ['basic', 'pro'])
             ->where('is_hidden', true)
             ->where('subscription_status', 'expired')
             ->whereNotNull('expires_grace_at')
@@ -212,6 +225,101 @@ class SendExpiryWarningsCommand extends Command
             } catch (Throwable $e) {
                 Log::error("SendExpiryWarnings: error enviando aviso final de gracia a {$talent->email}: " . $e->getMessage());
                 $this->warn("  [ERROR 3_days_before_purge] {$talent->band_name}: " . $e->getMessage());
+            }
+        }
+
+        return $sentCount;
+    }
+
+    private function processPaidRecoveryNotice(int $daysLeft, string $stage, bool $dryRun): int
+    {
+        $today = today();
+        $targetCycleEndDate = $today->copy()->subDays(Talent::PAID_RECOVERY_DAYS - $daysLeft);
+        $targetRecoveryEndDate = $today->copy()->addDays($daysLeft);
+
+        // Solo bandas de planes de pago (Básico y Pro) que actualmente estén OCULTAS y VENCIDAS
+        $candidates = Talent::query()
+            ->whereIn('plan', ['basic', 'pro'])
+            ->where('is_hidden', true)
+            ->where('subscription_status', 'expired')
+            ->whereHas('subscriptions', function ($q) use ($targetCycleEndDate): void {
+                $q->whereDate('end_date', $targetCycleEndDate);
+            })
+            ->with(['subscriptions' => fn ($q) => $q->latest('end_date')])
+            ->get();
+
+        $sentCount = 0;
+
+        foreach ($candidates as $talent) {
+            // Comprobación de seguridad: si la banda ya renovó o está activa, NO enviar recordatorio del ciclo anterior
+            if ($talent->subscription_status !== 'expired' || ! $talent->is_hidden) {
+                continue;
+            }
+
+            $subscription = $talent->subscriptions->first();
+            if (! $subscription || ! $subscription->end_date) {
+                continue;
+            }
+
+            $cycleEndDate = $subscription->end_date;
+            $recoveryEndDate = $talent->recoveryPeriodEndsAt() ?? $cycleEndDate->copy()->addDays(Talent::PAID_RECOVERY_DAYS);
+
+            // Verificar que la fecha calculada de fin de recuperación coincida con el objetivo
+            if ($recoveryEndDate->toDateString() !== $targetRecoveryEndDate->toDateString()) {
+                continue;
+            }
+
+            // Evitar duplicados por banda, ciclo y etapa
+            $alreadySent = TalentSubscriptionReminder::query()
+                ->where('talent_id', $talent->id)
+                ->where('stage', $stage)
+                ->where('cycle_end_date', $cycleEndDate)
+                ->exists();
+
+            if ($alreadySent) {
+                continue;
+            }
+
+            if ($dryRun) {
+                $this->line("  [DRY-RUN {$stage}] {$talent->band_name} ({$talent->email}) — fin de recuperación en {$daysLeft} días ({$targetRecoveryEndDate->toDateString()})");
+                continue;
+            }
+
+            if (! filled($talent->email)) {
+                continue;
+            }
+
+            try {
+                Mail::to($talent->email)->send(new \App\Mail\TalentExpiryWarningMail(
+                    talent: $talent,
+                    daysLeft: $daysLeft,
+                    stage: $stage,
+                    endDate: $cycleEndDate,
+                    purgeDate: $recoveryEndDate,
+                ));
+
+                $formattedCycleEndDate = $cycleEndDate instanceof \Carbon\CarbonInterface ? $cycleEndDate->toDateString() : (string) $cycleEndDate;
+
+                TalentSubscriptionReminder::query()->create([
+                    'talent_id' => $talent->id,
+                    'talent_subscription_id' => $subscription->id,
+                    'stage' => $stage,
+                    'cycle_end_date' => $formattedCycleEndDate,
+                    'sent_at' => now(),
+                    'recipient_email' => $talent->email,
+                    'metadata' => [
+                        'days_left' => $daysLeft,
+                        'end_date' => $formattedCycleEndDate,
+                        'recovery_end_date' => $recoveryEndDate->toDateString(),
+                        'recovery_days' => Talent::PAID_RECOVERY_DAYS,
+                    ],
+                ]);
+
+                $this->line("  [OK {$stage}] Aviso de recuperación enviado a: {$talent->band_name} ({$talent->email})");
+                $sentCount++;
+            } catch (Throwable $e) {
+                Log::error("SendExpiryWarnings: error enviando {$stage} a {$talent->email}: " . $e->getMessage());
+                $this->warn("  [ERROR {$stage}] {$talent->band_name}: " . $e->getMessage());
             }
         }
 

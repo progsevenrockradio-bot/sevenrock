@@ -385,4 +385,92 @@ class RadioBossFilenameAndPostDeliveryEditorialTest extends TestCase
         // El remote_path en metadatos no fue cambiado
         $this->assertSame($remotePath, $episode->radioboss_metadata['remote_path']);
     }
+
+    /**
+     * 7. Nombres reservados de Windows (DOS device names como CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+     * deben ser rechazados por isSafeRemoteName y saneados por generateSafeProposal.
+     */
+    public function test_windows_reserved_names_are_rejected_and_proposal_is_sanitized(): void
+    {
+        $this->assertFalse(RadioBossPathValidator::isSafeRemoteName('CON.mp3'));
+        $this->assertFalse(RadioBossPathValidator::isSafeRemoteName('aux.mp3'));
+        $this->assertFalse(RadioBossPathValidator::isSafeRemoteName('NUL.mp3'));
+        $this->assertFalse(RadioBossPathValidator::isSafeRemoteName('com1.mp3'));
+        $this->assertFalse(RadioBossPathValidator::isSafeRemoteName('LPT9.mp3'));
+
+        $proposalCon = RadioBossPathValidator::generateSafeProposal('CON.mp3');
+        $this->assertSame('CON-episode.mp3', $proposalCon);
+        $this->assertTrue(RadioBossPathValidator::isSafeRemoteName($proposalCon));
+
+        $proposalAux = RadioBossPathValidator::generateSafeProposal('aux.mp3');
+        $this->assertSame('aux-episode.mp3', $proposalAux);
+        $this->assertTrue(RadioBossPathValidator::isSafeRemoteName($proposalAux));
+    }
+
+    /**
+     * 8. Actualización de portada en episodio ya entregado:
+     * - sheet_only: Se permite actualizar la imagen de la ficha pública sin reprocesar audio ni reenviar correos.
+     * - reembed_and_redistribute: Se rechaza porque el audio ya fue emitido y entregado a RadioBOSS.
+     */
+    public function test_post_delivery_cover_update_with_sheet_only_succeeds_without_reprocessing(): void
+    {
+        Queue::fake();
+        Event::fake([PodcastRadiobossUploaded::class]);
+        Storage::fake('r2');
+
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'ROCK CLASICO',
+            'ruta_ftp' => '07.- DOMINGO/15.- ROCK CLASICO',
+        ]);
+
+        $episode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'ROCK CLASICO',
+            'live_title' => 'Especial Led Zeppelin',
+            'conductor' => 'Carlos',
+            'enviado_radioboss' => true,
+            'radioboss_status' => 'radioboss_verified',
+            'imagen_episodio' => 'podcast-inbox/covers/rock-clasico/old-cover.jpg',
+            'radioboss_metadata' => ['remote_path' => '07.- DOMINGO/15.- ROCK CLASICO/010.- ROCK CLASICO 08-11-2026.mp3'],
+            'archivo_mp3' => 'programas_procesados/rock-clasico/010.- ROCK CLASICO 08-11-2026.mp3',
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        // Intento con reembed_and_redistribute: debe fallar
+        $failResponse = $this->actingAs($this->adminUser)->put(
+            route('admin.podcast-uploads.editorial.update', $episode),
+            [
+                'live_title' => 'Especial Led Zeppelin',
+                'editorial_summary' => 'Resumen',
+                'resena' => 'Descripción',
+                'cover_update_scope' => 'reembed_and_redistribute',
+                'imagen_episodio_url' => 'https://cdn.example.com/new-cover.jpg',
+            ]
+        );
+        $failResponse->assertSessionHasErrors(['archivo_mp3']);
+
+        // Intento con sheet_only: debe tener éxito
+        $successResponse = $this->actingAs($this->adminUser)->put(
+            route('admin.podcast-uploads.editorial.update', $episode),
+            [
+                'live_title' => 'Especial Led Zeppelin Remaster',
+                'editorial_summary' => 'Resumen',
+                'resena' => 'Descripción',
+                'cover_update_scope' => 'sheet_only',
+                'imagen_episodio_url' => 'https://cdn.example.com/new-sheet-cover.jpg',
+            ]
+        );
+
+        $successResponse->assertSessionHasNoErrors();
+        $episode->refresh();
+
+        $this->assertSame('https://cdn.example.com/new-sheet-cover.jpg', $episode->imagen_episodio);
+        $this->assertSame('sheet_only', $episode->delivery_metadata['last_cover_update_scope']);
+        $this->assertTrue((bool) $episode->delivery_metadata['cover_embedded_in_mp3_outdated']);
+
+        // Ningún trabajo de procesamiento de MP3 o subida fue encolado
+        Queue::assertNotPushed(ProcessMp3Job::class);
+        Queue::assertNotPushed(UploadRadiobossJob::class);
+        Queue::assertNotPushed(UploadArchiveOrgJob::class);
+    }
 }

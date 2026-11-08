@@ -64,6 +64,16 @@ class RadioArtistTalentFallback extends RadioArtist
         return [];
     }
 
+    public function supportPaymentUrl(): ?string
+    {
+        return null;
+    }
+
+    public function merchPaymentUrl(): ?string
+    {
+        return null;
+    }
+
     public function media(): HasMany
     {
         return $this->hasMany(TalentMedia::class, 'talent_id')->whereRaw('1 = 0');

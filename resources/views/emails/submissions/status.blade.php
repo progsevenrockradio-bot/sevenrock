@@ -1,16 +1,16 @@
 <x-mail::message>
 # Hola, {{ $submission->band_name }}
 
-Queremos informarte que tu maqueta **"{{ $submission->song_title }}"** ha sido revisada por nuestro equipo de curación.
+Nuestro equipo ha revisado tu maqueta **"{{ $submission->song_title }}"**.
 
 @if($submission->status === 'approved')
-¡Felicidades! 🎉 Tu canción ha sido **aprobada** y pronto formará parte de nuestra programación. Mantente en sintonía.
+Tu canción ha sido **aprobada** tras la revisión. La aprobación no implica por sí misma su publicación en la web ni su emisión en radio. Si se publica en nuestro catálogo, te escribiremos con el enlace.
 @elseif($submission->status === 'rejected')
-Lamentablemente, en esta ocasión tu canción no ha sido seleccionada para nuestra programación. Te animamos a seguir enviando tu material en el futuro.
+En esta ocasión tu canción no ha sido seleccionada. Te animamos a seguir enviándonos tu material en el futuro.
 @endif
 
-Gracias por compartir tu música con nosotros y ser parte de la escena rockera.
+Gracias por compartir tu música con nosotros.
 
-Saludos cordiales,<br>
-El equipo de {{ config('app.name') }}
+Un saludo,<br>
+Equipo de Seven Rock Radio
 </x-mail::message>

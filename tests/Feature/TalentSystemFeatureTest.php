@@ -164,6 +164,7 @@ class TalentSystemFeatureTest extends TestCase
     public function test_without_renewal_after_15_days_grace_media_purged_profile_preserved(): void
     {
         Mail::fake();
+        \Illuminate\Support\Facades\Storage::fake('r2');
 
         $talent = $this->createTalent([
             'band_name'           => 'Banda Purgada',

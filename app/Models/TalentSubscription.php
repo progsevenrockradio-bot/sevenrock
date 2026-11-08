@@ -17,9 +17,20 @@ class TalentSubscription extends Model
         'currency',
         'payment_provider',
         'payment_id',
+        'payment_reference',
+        'confirmed_by_user_id',
+        'confirmed_at',
+        'notes',
+        'idempotency_token',
         'start_date',
         'end_date',
         'status',
+        'is_courtesy',
+        'courtesy_type',
+        'is_refunded',
+        'refunded_at',
+        'refund_reason',
+        'refunded_by_user_id',
     ];
 
     protected function casts(): array
@@ -28,6 +39,10 @@ class TalentSubscription extends Model
             'amount' => 'decimal:2',
             'start_date' => 'date',
             'end_date' => 'date',
+            'confirmed_at' => 'datetime',
+            'is_courtesy' => 'boolean',
+            'is_refunded' => 'boolean',
+            'refunded_at' => 'datetime',
         ];
     }
 
@@ -39,5 +54,15 @@ class TalentSubscription extends Model
     public function talent(): BelongsTo
     {
         return $this->belongsTo(Talent::class);
+    }
+
+    public function confirmedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by_user_id');
+    }
+
+    public function refundedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'refunded_by_user_id');
     }
 }

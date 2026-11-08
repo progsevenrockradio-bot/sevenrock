@@ -22,14 +22,21 @@
                                 Tu perfil en <strong style="color: #ffffff;">Seven Rock Radio</strong> ha sido <strong style="color: #4ade80;">aprobado</strong> por nuestro equipo. Ya estás visible en el portal y tu música puede llegar a toda nuestra audiencia.
                             </p>
 
+                            @php
+                                $isPaid = in_array($talent->plan, ['basic', 'pro'], true);
+                            @endphp
                             <div style="background-color: rgba(74, 222, 128, 0.08); border-left: 4px solid #4ade80; padding: 15px; margin: 20px 0; border-radius: 4px;">
                                 <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #a0aab5;">
                                     <strong style="color: #4ade80;">Periodo activo:</strong>
-                                    Tu espacio estará activo durante <strong style="color: #ffffff;">{{ \App\Models\Talent::FREE_DURATION_DAYS }} días</strong>
-                                    @if($endDate)
-                                        , hasta el <strong style="color: #ffffff;">{{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}</strong>
+                                    @if($isPaid)
+                                        Tu suscripción {{ ucfirst($talent->plan) }} incluye servicio hasta el <strong style="color: #ffffff;">{{ $endDate ? \Carbon\Carbon::parse($endDate)->format('d/m/Y') : '' }}</strong> inclusive. Al finalizar dicho plazo, la ficha pública se pausará conservando todo tu material subido, pudiendo reactivarla en cualquier momento al renovar.
+                                    @else
+                                        Tu espacio estará activo durante <strong style="color: #ffffff;">{{ \App\Models\Talent::FREE_DURATION_DAYS }} días</strong>
+                                        @if($endDate)
+                                            , hasta el <strong style="color: #ffffff;">{{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}</strong>
+                                        @endif
+                                        . Después tendrás {{ $graceDays }} días adicionales de gracia para renovar antes de que el material sea eliminado.
                                     @endif
-                                    . Después tendrás {{ $graceDays }} días adicionales de gracia para renovar antes de que el material sea eliminado.
                                 </p>
                             </div>
 

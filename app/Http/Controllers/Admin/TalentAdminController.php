@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exceptions\DuplicatePaymentOperationException;
 use App\Http\Controllers\Controller;
 use App\Mail\ContentApprovedMail;
 use App\Mail\TalentApprovedMail;
 use App\Models\Talent;
 use App\Models\TalentMedia;
 use App\Models\TalentSubscription;
+use App\Rules\SafeExternalHttpsUrl;
 use App\Services\BackblazeService;
 use App\Services\TalentReferralService;
+use App\Services\TalentSubscriptionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
@@ -76,11 +80,101 @@ class TalentAdminController extends Controller
         ]);
     }
 
-    public function edit(Talent $talent): View
+    public function edit(Talent $talent, TalentSubscriptionService $subscriptionService): View
     {
+        $talent->load(['subscriptions' => fn ($query) => $query->latest()]);
+        $renewalPreview = $subscriptionService->previewRenewal($talent);
+
         return view('admin.talents.edit', [
-            'talent' => $talent->load(['subscriptions' => fn ($query) => $query->latest()]),
+            'talent' => $talent,
+            'renewalPreview' => $renewalPreview,
+            'idempotencyToken' => (string) \Illuminate\Support\Str::uuid(),
         ]);
+    }
+
+    public function confirmRenewal(Request $request, Talent $talent, TalentSubscriptionService $subscriptionService): RedirectResponse
+    {
+        /** @var \App\Models\User $admin */
+        $admin = Auth::guard('web')->user();
+
+        $validated = $request->validate([
+            'payment_reference' => ['required', 'string', 'min:3', 'max:255'],
+            'payment_provider' => ['nullable', 'string', 'in:paypal,manual'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'idempotency_token' => ['nullable', 'string', 'max:100'],
+        ], [
+            'payment_reference.required' => 'El ID de la operación de PayPal recibido en Seven Rock Radio es obligatorio para confirmar la renovación.',
+        ]);
+
+        try {
+            $subscription = $subscriptionService->confirmPaymentRenewal(
+                $talent,
+                $admin,
+                $validated['payment_reference'],
+                $validated['notes'] ?? null,
+                $validated['idempotency_token'] ?? null,
+                $validated['payment_provider'] ?? 'paypal'
+            );
+
+            $endDateFormatted = $subscription->end_date ? $subscription->end_date->format('d/m/Y') : 'N/D';
+
+            return redirect()->route('admin.talents.edit', $talent)->with('status', "Pago confirmado y suscripción renovada para '{$talent->band_name}'. Servicio incluido hasta el {$endDateFormatted} inclusive (Ref: {$subscription->payment_reference}).");
+        } catch (DuplicatePaymentOperationException $e) {
+            return redirect()->route('admin.talents.edit', $talent)->withInput()->withErrors(['renewal' => $e->getMessage()]);
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->route('admin.talents.edit', $talent)->withInput()->withErrors(['renewal' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            Log::error("TalentAdminController::confirmRenewal error: " . $e->getMessage());
+            return redirect()->route('admin.talents.edit', $talent)->withInput()->withErrors(['renewal' => 'Ocurrió un error inesperado al registrar la renovación.']);
+        }
+    }
+
+    public function grantCourtesy(Request $request, Talent $talent, TalentSubscriptionService $subscriptionService): RedirectResponse
+    {
+        /** @var \App\Models\User $admin */
+        $admin = Auth::guard('web')->user() ?? \App\Models\User::first() ?? new \App\Models\User(['id' => 1]);
+
+        $validated = $request->validate([
+            'months' => ['required', 'integer', 'in:1,2'],
+            'courtesy_type' => ['required', 'string', 'in:initial_collaborator,referral_reward,other'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        try {
+            $subscription = $subscriptionService->grantCourtesy(
+                talent: $talent,
+                admin: $admin,
+                months: (int) $validated['months'],
+                courtesyType: $validated['courtesy_type'],
+                notes: $validated['notes'] ?? null
+            );
+
+            $endDateFormatted = $subscription->end_date ? $subscription->end_date->format('d/m/Y') : 'N/D';
+
+            return redirect()->route('admin.talents.edit', $talent)->with('status', "Cortesía de {$validated['months']} meses (Plan Básico) concedida con éxito a '{$talent->band_name}'. Vigencia hasta el {$endDateFormatted} inclusive.");
+        } catch (\Throwable $e) {
+            Log::error("TalentAdminController::grantCourtesy error: " . $e->getMessage());
+            return redirect()->route('admin.talents.edit', $talent)->withErrors(['courtesy' => 'Error al conceder la cortesía: ' . $e->getMessage()]);
+        }
+    }
+
+    public function refundSubscription(Request $request, Talent $talent, TalentSubscription $subscription, TalentSubscriptionService $subscriptionService): RedirectResponse
+    {
+        /** @var \App\Models\User $admin */
+        $admin = Auth::guard('web')->user() ?? \App\Models\User::first() ?? new \App\Models\User(['id' => 1]);
+
+        $validated = $request->validate([
+            'refund_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $subscriptionService->refundSubscription($subscription, $admin, $validated['refund_reason'] ?? null);
+
+            return redirect()->route('admin.talents.edit', $talent)->with('status', "La suscripción #{$subscription->id} fue marcada como anulada/reembolsada. Las recompensas de referidos asociadas han sido señaladas para revisión administrativa.");
+        } catch (\Throwable $e) {
+            Log::error("TalentAdminController::refundSubscription error: " . $e->getMessage());
+            return redirect()->route('admin.talents.edit', $talent)->withErrors(['refund' => 'Error al marcar reembolso: ' . $e->getMessage()]);
+        }
     }
 
     public function update(Request $request, Talent $talent): RedirectResponse
@@ -91,17 +185,46 @@ class TalentAdminController extends Controller
             'plan' => ['required', 'in:free,basic,pro,premium'],
             'is_featured' => ['nullable', 'boolean'],
             'subscription_status' => ['required', 'in:active,inactive,cancelled'],
+            'payment_links' => ['nullable', 'array'],
+            'payment_links.support' => ['nullable', 'string', 'max:2048', new SafeExternalHttpsUrl()],
+            'payment_links.merch' => ['nullable', 'string', 'max:2048', new SafeExternalHttpsUrl()],
         ]);
 
-        $talent->update([
+        // Actualización segura de enlaces de pago preservando histórico
+        $rawPaymentLinks = $request->input('payment_links');
+        if (is_array($rawPaymentLinks)) {
+            $existingPaymentLinks = is_array($talent->payment_links) ? $talent->payment_links : [];
+
+            if (array_key_exists('support', $rawPaymentLinks)) {
+                $supportVal = trim((string) ($validated['payment_links']['support'] ?? ''));
+                if ($supportVal !== '') {
+                    $existingPaymentLinks['support'] = $supportVal;
+                } else {
+                    unset($existingPaymentLinks['support'], $existingPaymentLinks['paypal']);
+                }
+            }
+
+            if (array_key_exists('merch', $rawPaymentLinks)) {
+                $merchVal = trim((string) ($validated['payment_links']['merch'] ?? ''));
+                if ($merchVal !== '') {
+                    $existingPaymentLinks['merch'] = $merchVal;
+                } else {
+                    unset($existingPaymentLinks['merch'], $existingPaymentLinks['store'], $existingPaymentLinks['otro'], $existingPaymentLinks['bandcamp']);
+                }
+            }
+
+            $talent->payment_links = empty($existingPaymentLinks) ? null : $existingPaymentLinks;
+        }
+
+        // La edición de perfil/biografía/destacados NO debe alterar fechas de vencimiento ni renovar.
+        $talent->fill([
             'band_name' => $validated['band_name'],
             'bio' => $validated['bio'] ?? null,
             'plan' => $validated['plan'],
             'is_featured' => $request->boolean('is_featured'),
             'subscription_status' => $validated['subscription_status'],
         ]);
-
-        $this->syncSubscription($talent, $validated['plan'], $validated['subscription_status']);
+        $talent->save();
 
         return redirect()->route('admin.talents.index')->with('status', 'Talento actualizado.');
     }
@@ -115,15 +238,23 @@ class TalentAdminController extends Controller
 
     public function suspend(Talent $talent): RedirectResponse
     {
-        $talent->update(['subscription_status' => 'cancelled']);
-        $talent->subscriptions()->latest()->first()?->update(['status' => 'cancelled', 'end_date' => today()]);
+        // La suspensión desactiva el servicio sin alterar la fecha original de fin ni confirmar pagos
+        $talent->update([
+            'subscription_status' => 'cancelled',
+            'is_hidden' => true,
+        ]);
+        $talent->subscriptions()->latest()->first()?->update(['status' => 'cancelled']);
 
         return back()->with('status', 'Talento suspendido.');
     }
 
     public function activate(Talent $talent): RedirectResponse
     {
-        $talent->update(['subscription_status' => 'active']);
+        // La reactivación administrativa solo restablece el estado activo sin extender fechas ni confirmar pago
+        $talent->update([
+            'subscription_status' => 'active',
+            'is_hidden' => false,
+        ]);
         $talent->subscriptions()->latest()->first()?->update(['status' => 'active']);
 
         return back()->with('status', 'Talento activado.');
@@ -132,6 +263,7 @@ class TalentAdminController extends Controller
     /**
      * Aprueba un talento registrado:
      *  - Si es FREE: crea/actualiza la suscripción con start=hoy, end=hoy+45 días.
+     *  - Si es Básico/Pro: usa mes calendario sin desbordamiento (addMonthNoOverflow).
      *  - Activa el referido (si vino con código) y evalúa hitos del referidor.
      *  - Envía email de aprobación a la banda.
      */
@@ -141,9 +273,11 @@ class TalentAdminController extends Controller
         $durationDays = ($talent->referred_by_code && $plan === 'free')
             ? (Talent::FREE_DURATION_DAYS + Talent::REFERRAL_BONUS_DAYS)
             : Talent::FREE_DURATION_DAYS;
+
+        // Mes calendario sin desbordamiento para planes de pago
         $endDate = $plan === 'free'
             ? today()->addDays($durationDays)
-            : today()->addMonth();
+            : today()->addMonthNoOverflow();
 
         $subscription = $talent->subscriptions()->latest()->first();
 
@@ -155,7 +289,7 @@ class TalentAdminController extends Controller
                 'status'     => 'active',
             ]);
         } else {
-            $talent->subscriptions()->create([
+            $subscription = $talent->subscriptions()->create([
                 'plan'             => $plan,
                 'amount'           => (float) config("payment.plans.{$plan}.amount", 0),
                 'currency'         => (string) config("payment.plans.{$plan}.currency", 'EUR'),

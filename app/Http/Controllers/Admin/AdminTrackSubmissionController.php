@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\SubmissionMuroFollowup;
 use App\Models\TrackSubmission;
+use App\Services\SubmissionFollowupService;
+use App\Services\SubmissionPublisher;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
@@ -45,9 +50,24 @@ class AdminTrackSubmissionController extends Controller
             ->paginate(20, ['*'], 'logs_page')
             ->withQueryString();
 
+        $followupService = app(SubmissionFollowupService::class);
+        $muroFollowups = Schema::hasTable('submission_muro_followups')
+            ? SubmissionMuroFollowup::query()
+                ->with(['trackSubmission', 'release'])
+                ->orderByDesc('updated_at')
+                ->paginate(20, ['*'], 'followups_page')
+                ->withQueryString()
+            : new LengthAwarePaginator([], 0, 20, 1, ['pageName' => 'followups_page']);
+
+        $followupSimulation = $followupService->processDueFollowups(true);
+        $followupPreviewHtml = $followupService->renderPreviewHtml($muroFollowups->first());
+
         return view('admin.submissions.index', [
             'submissions' => $submissions,
             'emailLogs' => $emailLogs,
+            'muroFollowups' => $muroFollowups,
+            'followupSimulation' => $followupSimulation,
+            'followupPreviewHtml' => $followupPreviewHtml,
             'filters' => [
                 'search' => (string) $request->input('search', ''),
                 'status' => (string) $request->input('status', ''),
@@ -171,86 +191,65 @@ class AdminTrackSubmissionController extends Controller
 
     /**
      * Publish the approved submission to the NewReleases Hub catalog.
+     * Usa el mismo servicio que la publicación en lote (SubmissionPublisher).
      */
-    public function publishToHub(Request $request, TrackSubmission $submission): RedirectResponse
+    public function publishToHub(Request $request, SubmissionPublisher $publisher, TrackSubmission $submission): RedirectResponse
     {
-        if ($submission->status !== 'approved') {
-            return redirect()->back()->with('error', 'Solo las maquetas aprobadas pueden publicarse en el Hub.');
+        $outcome = $publisher->publish($submission, $request->boolean('show_in_feed'));
+
+        return match ($outcome['result']) {
+            SubmissionPublisher::PUBLISHED => redirect()->back()->with(
+                $outcome['notice'] === TrackSubmission::NOTICE_SENT ? 'success' : 'error',
+                $this->noticeMessage($outcome['notice'], true)
+            ),
+            SubmissionPublisher::ALREADY_PUBLISHED => redirect()->back()->with('error', $outcome['message']),
+            default => redirect()->back()->with('error', $outcome['message']),
+        };
+    }
+
+    /**
+     * Reintenta únicamente el aviso de publicación tras un fallo de envío confirmado.
+     * No crea ni modifica el lanzamiento.
+     */
+    public function retryNotice(SubmissionPublisher $publisher, TrackSubmission $submission): RedirectResponse
+    {
+        $notice = $publisher->retryNotice($submission);
+
+        if ($notice === TrackSubmission::NOTICE_SENT) {
+            return redirect()->back()->with('success', 'Aviso de publicación enviado a la banda.');
         }
 
-        if ($submission->published_to_hub) {
-            return redirect()->back()->with('error', 'Esta maqueta ya ha sido publicada en el Hub.');
-        }
+        return redirect()->back()->with('error', $notice === 'not_retriable'
+            ? 'Esta maqueta no tiene un aviso fallido que reintentar.'
+            : $this->noticeMessage($notice, false));
+    }
 
-        $existing = \App\Models\NewRelease::where('title', $submission->song_title)
-            ->where('artist_name', $submission->band_name)
-            ->exists();
+    public function pauseFollowup(SubmissionFollowupService $service, SubmissionMuroFollowup $followup): RedirectResponse
+    {
+        $res = $service->pause($followup);
 
-        if ($existing) {
-            $submission->update(['published_to_hub' => true]);
-            return redirect()->back()->with('error', 'Ya existe un lanzamiento con este artista y título (Duplicado prevenido).');
-        }
+        return redirect()->back()->with($res['ok'] ? 'success' : 'error', $res['message']);
+    }
 
-        try {
-            // Generar slug basado en título y artista
-            $slugBase = \Illuminate\Support\Str::slug($submission->song_title . '-' . $submission->band_name);
-            $slug = $slugBase;
-            $count = 1;
-            while (\App\Models\NewRelease::where('slug', $slug)->exists()) {
-                $slug = $slugBase . '-' . $count;
-                $count++;
-            }
+    public function resumeFollowup(SubmissionFollowupService $service, SubmissionMuroFollowup $followup): RedirectResponse
+    {
+        $res = $service->resume($followup);
 
-            // Mapear enlace social a youtube/spotify
-            $youtubeUrl = null;
-            $spotifyUrl = null;
-            if ($submission->social_link) {
-                if (str_contains(strtolower($submission->social_link), 'youtube.com') || str_contains(strtolower($submission->social_link), 'youtu.be')) {
-                    $youtubeUrl = $submission->social_link;
-                } elseif (str_contains(strtolower($submission->social_link), 'spotify.com')) {
-                    $spotifyUrl = $submission->social_link;
-                }
-            }
+        return redirect()->back()->with($res['ok'] ? 'success' : 'error', $res['message']);
+    }
 
-            $newRelease = \App\Models\NewRelease::create([
-                'title' => $submission->song_title,
-                'slug' => $slug,
-                'artist_name' => $submission->band_name,
-                'released_at' => now(),
-                'audio_path' => $submission->file_path, // Uses same path in R2
-                'youtube_url' => $youtubeUrl,
-                'spotify_url' => $spotifyUrl,
-                'description' => 'Maqueta descubierta y promocionada por el A&R de Seven Rock Radio.',
-                'is_active' => true,
-                'show_in_feed' => $request->boolean('show_in_feed'),
-                'author_email' => $submission->contact_email,
-                'origin' => 'submission',
-            ]);
+    public function cancelFollowup(SubmissionFollowupService $service, SubmissionMuroFollowup $followup): RedirectResponse
+    {
+        $res = $service->cancel($followup);
 
-            \App\Jobs\ExtractReleaseCoverJob::dispatch($newRelease, $submission->file_path);
+        return redirect()->back()->with($res['ok'] ? 'success' : 'error', $res['message']);
+    }
 
-            $submission->update(['published_to_hub' => true]);
+    public function retryFollowup(SubmissionFollowupService $service, SubmissionMuroFollowup $followup): RedirectResponse
+    {
+        $res = $service->retryFailed($followup);
 
-            try {
-                $mail = new \App\Mail\SubmissionPublishedToHub($submission, $newRelease);
-                \Illuminate\Support\Facades\Mail::to($submission->contact_email)->send($mail);
-
-                \App\Models\EmailLog::create([
-                    'track_submission_id' => $submission->id,
-                    'to_email' => $submission->contact_email,
-                    'subject' => $mail->envelope()->subject,
-                    'body' => $mail->render(),
-                    'status' => 'sent',
-                ]);
-            } catch (\Throwable $mailException) {
-                Log::error('Error sending hub publication email', ['error' => $mailException->getMessage(), 'submission_id' => $submission->id]);
-            }
-
-            return redirect()->back()->with('success', 'Maqueta publicada exitosamente en el Catálogo Musical (Hub). Se ha enviado un correo a la banda.');
-        } catch (\Throwable $e) {
-            Log::error('Error al publicar maqueta al hub ID ' . $submission->id . ': ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Ocurrió un error al publicar la maqueta.');
-        }
+        return redirect()->back()->with($res['ok'] ? 'success' : 'error', $res['message']);
     }
 
     public function toggleFeed(Request $request, TrackSubmission $submission)
@@ -259,10 +258,14 @@ class AdminTrackSubmissionController extends Controller
             return response()->json(['success' => false, 'message' => 'La maqueta no está publicada en el Hub.']);
         }
 
-        $updatedCount = \App\Models\NewRelease::where('title', $submission->song_title)
-            ->where('artist_name', $submission->band_name)
-            ->update(['show_in_feed' => $request->boolean('show_in_feed')]);
-            
+        // Si hay vínculo explícito se usa; los registros históricos sin vínculo conservan el comportamiento anterior.
+        $query = $submission->new_release_id
+            ? \App\Models\NewRelease::where('id', $submission->new_release_id)
+            : \App\Models\NewRelease::where('title', $submission->song_title)
+                ->where('artist_name', $submission->band_name);
+
+        $updatedCount = $query->update(['show_in_feed' => $request->boolean('show_in_feed')]);
+
         if ($updatedCount > 0) {
             return response()->json(['success' => true]);
         }
@@ -270,7 +273,7 @@ class AdminTrackSubmissionController extends Controller
         return response()->json(['success' => false, 'message' => 'No se encontró el lanzamiento asociado.']);
     }
 
-    public function bulkPublish(Request $request): RedirectResponse
+    public function bulkPublish(Request $request, SubmissionPublisher $publisher): RedirectResponse
     {
         $action = $request->input('action');
         $submissionIds = $request->input('submissions', []);
@@ -280,79 +283,56 @@ class AdminTrackSubmissionController extends Controller
         }
 
         $submissions = TrackSubmission::whereIn('id', $submissionIds)->where('status', 'approved')->where('published_to_hub', false)->get();
-        
+
         if ($submissions->isEmpty()) {
             return redirect()->back()->with('error', 'Ninguna de las maquetas seleccionadas es válida para publicar (deben estar aprobadas y no publicadas).');
         }
 
         $showInFeed = $action === 'publish_visible';
-        $publishedCount = 0;
+        $counts = ['published' => 0, 'review' => 0, 'errors' => 0, 'notice_failed' => 0];
 
         foreach ($submissions as $submission) {
-            $existing = \App\Models\NewRelease::where('title', $submission->song_title)
-                ->where('artist_name', $submission->band_name)
-                ->exists();
+            $outcome = $publisher->publish($submission, $showInFeed);
 
-            if ($existing) {
-                $submission->update(['published_to_hub' => true]);
-                continue;
-            }
+            match ($outcome['result']) {
+                SubmissionPublisher::PUBLISHED => $counts['published']++,
+                SubmissionPublisher::NEEDS_REVIEW => $counts['review']++,
+                SubmissionPublisher::ERROR => $counts['errors']++,
+                default => null,
+            };
 
-            // Re-use logic from publishToHub (inline for bulk)
-            $slugBase = \Illuminate\Support\Str::slug($submission->song_title . '-' . $submission->band_name);
-            $slug = $slugBase;
-            $count = 1;
-            while (\App\Models\NewRelease::where('slug', $slug)->exists()) {
-                $slug = $slugBase . '-' . $count;
-                $count++;
-            }
-
-            $youtubeUrl = null;
-            $spotifyUrl = null;
-            if ($submission->social_link) {
-                if (str_contains(strtolower($submission->social_link), 'youtube.com') || str_contains(strtolower($submission->social_link), 'youtu.be')) {
-                    $youtubeUrl = $submission->social_link;
-                } elseif (str_contains(strtolower($submission->social_link), 'spotify.com')) {
-                    $spotifyUrl = $submission->social_link;
-                }
-            }
-
-            $newRelease = \App\Models\NewRelease::create([
-                'title' => $submission->song_title,
-                'slug' => $slug,
-                'artist_name' => $submission->band_name,
-                'released_at' => now(),
-                'audio_path' => $submission->file_path,
-                'youtube_url' => $youtubeUrl,
-                'spotify_url' => $spotifyUrl,
-                'description' => 'Maqueta descubierta y promocionada por el A&R de Seven Rock Radio.',
-                'is_active' => true,
-                'show_in_feed' => $showInFeed,
-                'author_email' => $submission->contact_email,
-                'origin' => 'submission',
-            ]);
-
-            \App\Jobs\ExtractReleaseCoverJob::dispatch($newRelease, $submission->file_path);
-
-            $submission->update(['published_to_hub' => true]);
-            $publishedCount++;
-
-            try {
-                $mail = new \App\Mail\SubmissionPublishedToHub($submission, $newRelease);
-                \Illuminate\Support\Facades\Mail::to($submission->contact_email)->send($mail);
-
-                \App\Models\EmailLog::create([
-                    'track_submission_id' => $submission->id,
-                    'to_email' => $submission->contact_email,
-                    'subject' => $mail->envelope()->subject,
-                    'body' => $mail->render(),
-                    'status' => 'sent',
-                ]);
-            } catch (\Throwable $mailException) {
-                Log::error('Error sending hub publication email', ['error' => $mailException->getMessage(), 'submission_id' => $submission->id]);
+            if ($outcome['result'] === SubmissionPublisher::PUBLISHED && $outcome['notice'] !== TrackSubmission::NOTICE_SENT) {
+                $counts['notice_failed']++;
             }
         }
 
-        return redirect()->back()->with('success', "Se publicaron $publishedCount maquetas al Hub correctamente.");
+        $message = "Se publicaron {$counts['published']} maquetas al Hub correctamente.";
+        if ($counts['notice_failed'] > 0) {
+            $message .= " {$counts['notice_failed']} aviso(s) no se enviaron; revisa el historial y reintenta.";
+        }
+        if ($counts['review'] > 0) {
+            $message .= " {$counts['review']} requieren revisión manual (posible duplicado o registro histórico).";
+        }
+        if ($counts['errors'] > 0) {
+            $message .= " {$counts['errors']} con error.";
+        }
+
+        $hasProblems = $counts['notice_failed'] + $counts['review'] + $counts['errors'] > 0;
+
+        return redirect()->back()->with($counts['published'] > 0 && ! $hasProblems ? 'success' : 'error', $message);
+    }
+
+    private function noticeMessage(?string $notice, bool $published): string
+    {
+        $prefix = $published ? 'Maqueta publicada en el Catálogo Musical (Hub). ' : '';
+
+        return $prefix . match ($notice) {
+            TrackSubmission::NOTICE_SENT => 'Se ha enviado el aviso a la banda.',
+            TrackSubmission::NOTICE_FAILED => 'El aviso por correo falló; la publicación se conserva y puedes reintentar solo el aviso.',
+            TrackSubmission::NOTICE_UNKNOWN => 'El aviso pudo enviarse pero no se registró; no se reenviará automáticamente, revisa el historial.',
+            TrackSubmission::NOTICE_SKIPPED => 'El correo de contacto no es válido; no se envió aviso.',
+            'not_public' => 'La ficha aún no es pública (inactiva, fecha futura o embargo); no se envió aviso.',
+            default => 'El aviso queda pendiente.',
+        };
     }
 }

@@ -104,7 +104,7 @@
                     <h3 class="mb-8 font-display text-[18px] uppercase tracking-[.08em] text-[#dcdcdc] font-normal">{{ $contact['info_title'] }}</h3>
                     <div class="space-y-5 text-[15px] leading-7 text-[#7b7b7b]">
                         <p>{{ $contact['address'] }}</p>
-                        <p><a href="mailto:{{ $contact['email'] }}" class="transition hover:text-lucille-accent">{{ $contact['email'] }}</a></p>
+                        <p><a href="mailto:{{ !empty($contact['email']) ? $contact['email'] : 'sevenrockradio@gmail.com' }}" class="transition hover:text-lucille-accent">{{ !empty($contact['email']) ? $contact['email'] : 'sevenrockradio@gmail.com' }}</a></p>
                         <p>{{ $contact['phone_primary'] }}</p>
                         <p>{{ $contact['phone_secondary'] }}</p>
                     </div>

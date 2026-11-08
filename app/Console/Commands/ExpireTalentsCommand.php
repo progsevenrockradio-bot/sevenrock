@@ -51,7 +51,15 @@ class ExpireTalentsCommand extends Command
             ->whereHas('subscriptions', function ($q) use ($today): void {
                 $q->where('status', 'active')
                   ->whereNotNull('end_date')
-                  ->whereDate('end_date', '<=', $today);
+                  ->where(function ($sub) use ($today): void {
+                      $sub->where(function ($paid) use ($today): void {
+                          $paid->whereIn('plan', ['basic', 'pro'])
+                               ->whereDate('end_date', '<', $today);
+                      })->orWhere(function ($free) use ($today): void {
+                          $free->whereNotIn('plan', ['basic', 'pro'])
+                               ->whereDate('end_date', '<=', $today);
+                      });
+                  });
             })
             ->with(['subscriptions' => fn ($q) => $q->where('status', 'active')->latest('end_date')])
             ->get();
@@ -59,11 +67,12 @@ class ExpireTalentsCommand extends Command
         $hiddenCount = 0;
         foreach ($toHide as $talent) {
             $latestSub = $talent->subscriptions->first();
+            $isPaidPlan = in_array($talent->plan, ['basic', 'pro'], true);
 
             $talent->update([
                 'is_hidden' => true,
                 'subscription_status' => 'expired',
-                'expires_grace_at' => $now->copy()->addDays(self::GRACE_DAYS),
+                'expires_grace_at' => $isPaidPlan ? null : $now->copy()->addDays(self::GRACE_DAYS),
             ]);
 
             if ($latestSub) {
@@ -73,6 +82,7 @@ class ExpireTalentsCommand extends Command
             if (filled($talent->email) && $latestSub) {
                 $cycleEndDate = $latestSub->end_date;
                 $purgeDate = $talent->expires_grace_at;
+                $recoveryEndDate = $isPaidPlan ? $cycleEndDate->copy()->addDays(Talent::PAID_RECOVERY_DAYS) : null;
 
                 $alreadySent = TalentSubscriptionReminder::query()
                     ->where('talent_id', $talent->id)
@@ -86,6 +96,7 @@ class ExpireTalentsCommand extends Command
                             talent: $talent,
                             expiredDate: $cycleEndDate,
                             purgeDate: $purgeDate,
+                            recoveryEndDate: $recoveryEndDate,
                         ));
 
                         TalentSubscriptionReminder::query()->create([
@@ -98,6 +109,8 @@ class ExpireTalentsCommand extends Command
                             'metadata' => [
                                 'end_date' => $cycleEndDate?->toDateString(),
                                 'grace_days' => self::GRACE_DAYS,
+                                'recovery_days' => $isPaidPlan ? Talent::PAID_RECOVERY_DAYS : null,
+                                'recovery_end_date' => $recoveryEndDate?->toDateString(),
                                 'expires_grace_at' => $purgeDate?->toIso8601String(),
                             ],
                         ]);
@@ -115,7 +128,9 @@ class ExpireTalentsCommand extends Command
         $this->info("Paso 1 completado: {$hiddenCount} banda(s) pasaron a OCULTO.");
 
         // 2. PASO 4: Identificar bandas en gracia vencida (han pasado los 15 días sin renovar) y purgar material
+        // Las cuentas de pago (Básico y Pro) quedan explícitamente excluidas de la purga automática
         $toPurge = Talent::query()
+            ->whereNotIn('plan', ['basic', 'pro'])
             ->where('is_hidden', true)
             ->where('subscription_status', 'expired')
             ->where(function ($q) use ($now, $today): void {

@@ -16,6 +16,15 @@ final class RadioBossPathValidator
     public const FORBIDDEN_CHARACTERS_REGEX = '/[\/\\\\:*?"<>|]/';
 
     /**
+     * Nombres de dispositivo reservados en el sistema de archivos de Windows (DOS device names).
+     */
+    public const WINDOWS_RESERVED_NAMES = [
+        'CON', 'PRN', 'AUX', 'NUL',
+        'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+        'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9',
+    ];
+
+    /**
      * Determina si un nombre de archivo remoto es 100% ASCII y seguro para RadioBOSS.
      */
     public static function isSafeRemoteName(?string $name): bool
@@ -46,10 +55,15 @@ final class RadioBossPathValidator
             return false;
         }
 
-        // El cuerpo del nombre no puede estar vacío
+        // El cuerpo del nombre no puede estar vacío ni coincidir con nombres reservados de Windows
         $stem = pathinfo($trimmed, PATHINFO_FILENAME);
+        $trimmedStem = trim($stem);
 
-        return trim($stem) !== '';
+        if ($trimmedStem === '' || in_array(strtoupper($trimmedStem), self::WINDOWS_RESERVED_NAMES, true)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -109,6 +123,10 @@ final class RadioBossPathValidator
             if (str_contains($trimmedName, '..')) {
                 $issues[] = 'El nombre contiene referencias relativas inválidas (..).';
             }
+            $stemCheck = trim(pathinfo($trimmedName, PATHINFO_FILENAME));
+            if ($stemCheck !== '' && in_array(strtoupper($stemCheck), self::WINDOWS_RESERVED_NAMES, true)) {
+                $issues[] = 'El nombre coincide con un dispositivo reservado de Windows (ej. CON, PRN, AUX, NUL, COM1-9, LPT1-9).';
+            }
         }
 
         if ($folder === null || trim($folder) === '') {
@@ -143,6 +161,9 @@ final class RadioBossPathValidator
         // Transliterar caracteres acentuados (ej. CÓDIGO -> CODIGO)
         $asciiStem = (string) Str::ascii($stem);
 
+        // Eliminar referencias relativas
+        $asciiStem = str_replace('..', '-', $asciiStem);
+
         // Reemplazar caracteres prohibidos con '-'
         $sanitizedStem = (string) preg_replace(self::FORBIDDEN_CHARACTERS_REGEX, '-', $asciiStem);
         // Limpiar cualquier carácter que no sea ASCII imprimible
@@ -155,7 +176,19 @@ final class RadioBossPathValidator
             $sanitizedStem = 'episode';
         }
 
-        return $sanitizedStem . '.mp3';
+        // Si coincide con un nombre reservado de Windows, sufijar para evitar rechazo
+        if (in_array(strtoupper($sanitizedStem), self::WINDOWS_RESERVED_NAMES, true)) {
+            $sanitizedStem .= '-episode';
+        }
+
+        $proposal = $sanitizedStem . '.mp3';
+
+        // Autovalidación: garantizar que la propuesta supere estrictamente su propia validación
+        if (! self::isSafeRemoteName($proposal)) {
+            $proposal = 'episode-' . date('Ymd') . '.mp3';
+        }
+
+        return $proposal;
     }
 
     /**

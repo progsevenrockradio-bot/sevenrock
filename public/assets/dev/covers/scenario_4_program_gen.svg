@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <rect width="500" height="500" fill="#4c1d95"/>
+  <circle cx="250" cy="180" r="100" fill="#8b5cf6" opacity="0.3"/>
+  <text x="250" y="200" font-family="Arial, sans-serif" font-size="70" fill="#ddd6fe" text-anchor="middle">📻</text>
+  <rect x="30" y="270" width="440" height="90" rx="10" fill="#2e1065" opacity="0.95"/>
+  <text x="250" y="305" font-family="Impact, sans-serif" font-size="28" fill="#ffffff" text-anchor="middle" letter-spacing="2">EL GARAJE DEL ROCK</text>
+  <text x="250" y="340" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#c4b5fd" text-anchor="middle">MÁSTER GENERAL (Sin Ep. Específico)</text>
+  <text x="250" y="415" font-family="Arial, sans-serif" font-size="16" fill="#ddd6fe" text-anchor="middle">Conduce: Laura Garaje (Viernes 20:00)</text>
+  <rect x="140" y="445" width="220" height="26" rx="13" fill="#7c3aed"/>
+  <text x="250" y="462" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#ffffff" text-anchor="middle">ESTADO 4: MÁSTER GENERAL</text>
+</svg>

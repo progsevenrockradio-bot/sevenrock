@@ -340,19 +340,59 @@
                         </div>
                     @endif
 
-                    <!-- Payment Methods Panel -->
+                    <!-- External Support & Purchase Links Panel -->
                     @php($paymentLinks = $talent->paymentLinkMap())
                     @if ($paymentLinks !== [])
-                        <div class="border border-white/10 bg-[#141417] rounded-sm p-5 md:p-6 shadow-sm">
-                            <h3 class="font-display text-lg uppercase tracking-[.12em] text-white border-b border-white/10 pb-2.5">Acepto pagos vía</h3>
-                            <div class="mt-3 flex flex-wrap gap-2.5">
-                                @foreach ($paymentLinks as $label => $url)
-                                    <a href="{{ $url }}" target="_blank" rel="nofollow noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-white/15 bg-[#101012] text-xs text-[#dcdcdc] hover:border-white/30 hover:text-white transition-colors">
-                                        <span>{{ ucfirst($label) }}</span>
-                                        <span class="text-[10px] text-[#8b8b8b]">↗</span>
+                        <div class="border border-white/10 bg-[#141417] rounded-sm p-5 md:p-6 shadow-sm space-y-3.5">
+                            <h3 class="font-display text-lg uppercase tracking-[.12em] text-white border-b border-white/10 pb-2.5">
+                                Apoyo y compra directa
+                            </h3>
+
+                            <div class="flex flex-wrap gap-2.5 sm:gap-3">
+                                @if (!empty($paymentLinks['support']))
+                                    <a
+                                        href="{{ $paymentLinks['support'] }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer nofollow"
+                                        class="lucille-button-solid inline-flex items-center gap-2 rounded-sm px-4 py-2 text-xs font-display uppercase tracking-[.12em] text-white"
+                                    >
+                                        <span>Apoyar a la banda</span>
+                                        <span class="text-[11px] opacity-80">↗</span>
                                     </a>
+                                @endif
+
+                                @if (!empty($paymentLinks['merch']))
+                                    <a
+                                        href="{{ $paymentLinks['merch'] }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer nofollow"
+                                        class="lucille-button inline-flex items-center gap-2 rounded-sm px-4 py-2 text-xs font-display uppercase tracking-[.12em] text-[#dcdcdc] hover:text-white"
+                                    >
+                                        <span>Comprar música / Merch</span>
+                                        <span class="text-[11px] opacity-80">↗</span>
+                                    </a>
+                                @endif
+
+                                {{-- Enlaces adicionales preservados si no son support ni merch --}}
+                                @foreach ($paymentLinks as $key => $url)
+                                    @if (!in_array($key, ['support', 'merch'], true) && filled($url))
+                                        <a
+                                            href="{{ $url }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer nofollow"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-white/15 bg-[#101012] text-xs text-[#dcdcdc] hover:border-white/30 hover:text-white transition-colors"
+                                        >
+                                            <span>{{ \App\Models\Talent::paymentLinkLabel($key) }}</span>
+                                            <span class="text-[10px] text-[#8b8b8b]">↗</span>
+                                        </a>
+                                    @endif
                                 @endforeach
                             </div>
+
+                            <p class="text-[11px] text-[#8b8b8b] flex items-center gap-1.5">
+                                <span class="text-white/40">ℹ️</span>
+                                <span>El pago se realiza en una plataforma externa.</span>
+                            </p>
                         </div>
                     @endif
                 </div>

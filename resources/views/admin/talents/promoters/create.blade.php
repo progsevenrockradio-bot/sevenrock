@@ -44,7 +44,7 @@
                 </div>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-4 sm:grid-cols-3">
                 <div>
                     <label for="promoter-owner-type" class="mb-1.5 block text-xs font-medium text-gray-300">Tipo de promotor</label>
                     <select
@@ -58,6 +58,19 @@
                         <option value="banda" @selected(old('owner_type') === 'banda')>Banda</option>
                     </select>
                     @error('owner_type') <span class="mt-1 block text-xs text-red-400">{{ $message }}</span> @enderror
+                </div>
+
+                <div>
+                    <label for="promoter-campaign" class="mb-1.5 block text-xs font-medium text-gray-300">Campaña</label>
+                    <input
+                        id="promoter-campaign"
+                        type="text"
+                        name="campaign"
+                        value="{{ old('campaign', 'pilot_2026') }}"
+                        placeholder="pilot_2026"
+                        class="h-9 w-full rounded-lg border border-white/10 bg-[#151518] px-3 text-xs text-white placeholder-gray-500 focus:border-[#c32720] focus:outline-none focus:ring-1 focus:ring-[#c32720]"
+                    >
+                    @error('campaign') <span class="mt-1 block text-xs text-red-400">{{ $message }}</span> @enderror
                 </div>
 
                 <div>

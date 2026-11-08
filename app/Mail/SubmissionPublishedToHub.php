@@ -28,7 +28,7 @@ class SubmissionPublishedToHub extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '¡Tu música ya suena en el Hub Multimedia de Seven Rock Radio!',
+            subject: 'Tu canción ya está publicada en el Hub de Seven Rock Radio',
         );
     }
 

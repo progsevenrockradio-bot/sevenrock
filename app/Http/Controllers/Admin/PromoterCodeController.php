@@ -49,6 +49,7 @@ class PromoterCodeController extends Controller
             'owner_name' => 'required|string|max:255',
             'owner_email' => 'required|email|max:255|unique:promoter_codes,owner_email,NULL,id,is_archived,0',
             'owner_type' => 'required|in:conductor,persona,banda',
+            'campaign' => 'nullable|string|max:64',
             'max_bands' => 'nullable|integer|min:1',
             'assigned_talent_id' => 'nullable|exists:talents,id',
             'notes' => 'nullable|string',
@@ -61,6 +62,7 @@ class PromoterCodeController extends Controller
             'owner_name' => $validated['owner_name'],
             'owner_email' => $validated['owner_email'],
             'owner_type' => $validated['owner_type'],
+            'campaign' => $validated['campaign'] ?: 'pilot_2026',
             'max_bands' => $maxBands,
             'assigned_talent_id' => $validated['assigned_talent_id'] ?? null,
             'notes' => $validated['notes'] ?? null,
@@ -68,6 +70,30 @@ class PromoterCodeController extends Controller
 
         return redirect()->route('admin.talents.promoters.index')
             ->with('success', "Código {$promoter->code} creado con éxito.");
+    }
+
+    public function grantCollaboratorCourtesy(Request $request, PromoterCode $promoter, \App\Services\TalentSubscriptionService $subscriptionService)
+    {
+        if (! $promoter->assigned_talent_id || ! $promoter->assignedTalent) {
+            return back()->with('error', 'Este promotor no tiene una banda asociada. Los locutores sin banda solo tienen seguimiento de resultados; no se asignan meses a cuentas ficticias.');
+        }
+
+        /** @var \App\Models\User $admin */
+        $admin = auth()->user() ?? \App\Models\User::first() ?? new \App\Models\User(['id' => 1]);
+
+        try {
+            $sub = $subscriptionService->grantCourtesy(
+                talent: $promoter->assignedTalent,
+                admin: $admin,
+                months: 2,
+                courtesyType: 'initial_collaborator',
+                notes: "Cortesía inicial (2 meses Básico) concedida al colaborador {$promoter->owner_name} (Código {$promoter->code})"
+            );
+
+            return back()->with('success', "Cortesía de 2 meses iniciales concedida con éxito a la banda '{$promoter->assignedTalent->band_name}'. Vigencia hasta el {$sub->end_date->format('d/m/Y')}.");
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Error al conceder la cortesía: ' . $e->getMessage());
+        }
     }
 
     public function expand(Request $request, PromoterCode $promoter)

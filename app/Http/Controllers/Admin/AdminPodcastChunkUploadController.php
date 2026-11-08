@@ -25,8 +25,9 @@ final class AdminPodcastChunkUploadController extends Controller
         $uploadId = (string) $request->input('upload_id');
         $chunkIndex = (int) $request->input('chunk_index');
 
-        $chunkDir = storage_path("app/podcast-chunks/{$uploadId}");
-        File::ensureDirectoryExists($chunkDir);
+        $chunkDir = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, storage_path("app/podcast-chunks/{$uploadId}"));
+        File::ensureDirectoryExists($chunkDir, 0777);
+        @chmod($chunkDir, 0777);
 
         $chunkFile = $request->file('file');
         if ($chunkFile === null || ! $chunkFile->isValid()) {
@@ -35,7 +36,19 @@ final class AdminPodcastChunkUploadController extends Controller
             ], 400);
         }
 
-        $chunkFile->move($chunkDir, "chunk_{$chunkIndex}.part");
+        $targetName = "chunk_{$chunkIndex}.part";
+        try {
+            $chunkFile->move($chunkDir, $targetName);
+        } catch (\Symfony\Component\HttpFoundation\File\Exception\FileException $e) {
+            // Fallback para entornos Windows donde is_writable() sobre directorios reporta false
+            $sourcePath = $chunkFile->getPathname();
+            $targetPath = $chunkDir . DIRECTORY_SEPARATOR . $targetName;
+            if (is_file($sourcePath) && (@rename($sourcePath, $targetPath) || @copy($sourcePath, $targetPath))) {
+                @unlink($sourcePath);
+            } else {
+                throw $e;
+            }
+        }
 
         return response()->json([
             'status' => 'chunk_uploaded',
@@ -56,7 +69,7 @@ final class AdminPodcastChunkUploadController extends Controller
         $totalChunks = (int) $request->input('total_chunks');
         $filename = (string) $request->input('filename');
 
-        $chunkDir = storage_path("app/podcast-chunks/{$uploadId}");
+        $chunkDir = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, storage_path("app/podcast-chunks/{$uploadId}"));
 
         if (! File::isDirectory($chunkDir)) {
             return response()->json([

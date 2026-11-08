@@ -16,6 +16,8 @@ class PromoterCode extends Model
 {
     use HasFactory;
     public const DEFAULT_MAX_BANDS = 18;
+    public const PILOT_BANDS_PER_REWARD = 3;
+    public const PILOT_MAX_REWARDS = 2;
 
     protected $table = 'promoter_codes';
 
@@ -24,6 +26,7 @@ class PromoterCode extends Model
         'owner_name',
         'owner_email',
         'owner_type',
+        'campaign',
         'max_bands',
         'assigned_talent_id',
         'is_archived',
@@ -48,6 +51,11 @@ class PromoterCode extends Model
         return $this->hasMany(TalentReferral::class, 'promoter_code_id');
     }
 
+    public function rewards(): HasMany
+    {
+        return $this->hasMany(TalentReferralReward::class, 'promoter_code_id');
+    }
+
     public function assignedTalent(): BelongsTo
     {
         return $this->belongsTo(Talent::class, 'assigned_talent_id');
@@ -56,6 +64,44 @@ class PromoterCode extends Model
     public function activeBandsCount(): int
     {
         return (int) $this->referrals()->whereIn('status', ['active', 'paid'])->count();
+    }
+
+    /**
+     * Cuenta las bandas referidas distintas que completaron su primer pago real no reembolsado.
+     */
+    public function validPaidBandsCount(): int
+    {
+        return (int) $this->referrals()
+            ->where('status', 'paid')
+            ->where('is_refunded', false)
+            ->count();
+    }
+
+    /**
+     * Retorna el resumen del progreso en la campaña piloto.
+     */
+    public function pilotMetrics(): array
+    {
+        $paidCount = $this->validPaidBandsCount();
+        $rewards = $this->rewards()->where('campaign', $this->campaign ?: 'pilot_2026')->get();
+        $grantedCount = $rewards->where('status', TalentReferralReward::STATUS_GRANTED)->count();
+        $pendingProCount = $rewards->where('status', TalentReferralReward::STATUS_PENDING_PRO_RESOLUTION)->count();
+        $flaggedReviewCount = $rewards->where('status', TalentReferralReward::STATUS_FLAGGED_REVIEW)->count();
+
+        $nextMilestone = $paidCount < 3 ? 3 : ($paidCount < 6 ? 6 : 6);
+        $neededForNext = max(0, $nextMilestone - $paidCount);
+
+        return [
+            'paid_count' => $paidCount,
+            'granted_rewards' => $grantedCount,
+            'max_rewards' => self::PILOT_MAX_REWARDS,
+            'remaining_rewards' => max(0, self::PILOT_MAX_REWARDS - $grantedCount),
+            'next_milestone' => $nextMilestone,
+            'needed' => $neededForNext,
+            'has_pro_pending' => $pendingProCount > 0,
+            'has_flagged_review' => $flaggedReviewCount > 0,
+            'is_locutor_only' => $this->assigned_talent_id === null,
+        ];
     }
 
     public function hasReachedLimit(): bool

@@ -36,6 +36,26 @@
                             <input type="file" name="audio_file" accept=".mp3,.wav,.flac" class="lucille-form-field w-full" style="padding-top: 10px;" required>
                         </div>
 
+                        <div class="pt-3 border-t border-white/10">
+                            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#7b7b7b]">Comunicaciones opcionales (no obligatorias)</p>
+                            <label for="marketing_opt_in" class="flex items-start gap-3 cursor-pointer rounded-md border border-white/10 bg-[#101012] p-3.5 text-sm text-[#dcdcdc]">
+                                <input
+                                    id="marketing_opt_in"
+                                    type="checkbox"
+                                    name="marketing_opt_in"
+                                    value="1"
+                                    @checked(old('marketing_opt_in') === '1')
+                                    class="mt-1 h-4 w-4 shrink-0 accent-[#c32720]"
+                                >
+                                <span class="leading-relaxed">
+                                    Quiero recibir información sobre los servicios y planes del Muro del Rock. Puedo darme de baja cuando quiera.
+                                    <span class="mt-1 block text-xs text-[#7b7b7b]">
+                                        Opcional. Enviar, evaluar o publicar tu maqueta no depende de marcar esta casilla.
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+
                         <div class="pt-4">
                             <button type="submit" class="lucille-button-solid w-full">Enviar Maqueta a A&R</button>
                         </div>

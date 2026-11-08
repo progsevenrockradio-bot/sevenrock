@@ -67,6 +67,12 @@ class Prompt31DirectNewsAndAiLimitTest extends TestCase
 
         $mockAddress->mail = $sender;
 
+        $rawHeaders = "From: {$sender}\r\nSubject: {$subject}\r\nAuthentication-Results: mx.google.com; dkim=pass header.i=@gmail.com\r\n";
+        $mockHeader = \Mockery::mock(\Webklex\PHPIMAP\Header::class);
+        $mockHeader->shouldReceive('__get')->with('raw')->andReturn($rawHeaders);
+        $mockHeader->raw = $rawHeaders;
+        $mockMessage->shouldReceive('getHeader')->andReturn($mockHeader);
+
         $mockMessage->shouldReceive('getMessageId')->andReturn($msgId);
         $mockMessage->shouldReceive('getSubject')->andReturn($subject);
         $mockMessage->shouldReceive('getFrom')->andReturn(new PaginatedCollection([$mockAddress]));
@@ -94,6 +100,7 @@ class Prompt31DirectNewsAndAiLimitTest extends TestCase
         $aiMock = \Mockery::mock(AiParserManager::class);
         $aiMock->shouldReceive('hasAnyProvider')->andReturn(true);
         $aiMock->shouldReceive('parse')->never();
+        $aiMock->shouldReceive('generateStructured')->never();
         $this->app->instance(AiParserManager::class, $aiMock);
 
         $geminiMock = \Mockery::mock(GeminiContentParser::class);
@@ -130,7 +137,7 @@ class Prompt31DirectNewsAndAiLimitTest extends TestCase
         $output = Artisan::output();
 
         $this->assertSame(0, $exitCode);
-        $this->assertStringContainsString('[DARK VADER] Noticia publicada directamente (sin IA)', $output);
+        $this->assertStringContainsString('[DARK VADER] Noticia procesada directamente (sin IA)', $output);
 
         $post = Post::where('title', 'Metallica anuncia fechas 2027')->first();
         $this->assertNotNull($post);
@@ -150,6 +157,7 @@ class Prompt31DirectNewsAndAiLimitTest extends TestCase
         $aiMock = \Mockery::mock(AiParserManager::class);
         $aiMock->shouldReceive('hasAnyProvider')->andReturn(true);
         $aiMock->shouldReceive('parse')->never();
+        $aiMock->shouldReceive('generateStructured')->never();
         $this->app->instance(AiParserManager::class, $aiMock);
 
         $body = "1. 🎸 1970 - Black Sabbath lanza su segundo álbum Paranoid en Reino Unido.\n2. 🎤 1948 - Nace Robert Plant, cantante de Led Zeppelin.";
@@ -174,7 +182,29 @@ class Prompt31DirectNewsAndAiLimitTest extends TestCase
     {
         $aiMock = \Mockery::mock(AiParserManager::class);
         $aiMock->shouldReceive('hasAnyProvider')->andReturn(true);
-        $aiMock->shouldReceive('parse')->once()->andReturn([
+        $aiMock->shouldReceive('generateStructured')->andReturnUsing(function ($prompt, $schema, $stage) {
+            if ($stage === 'classification_extraction') {
+                return [
+                    'content_type' => 'musical_news',
+                    'editorial_importance' => 4,
+                    'artist_name' => 'Judas Priest',
+                    'geographic_scope' => 'international',
+                    'primary_source' => 'official_statement',
+                    'verifiable_facts' => ['Lanzamiento de videoclip oficial'],
+                    'confirmed_tour_dates' => [],
+                    'sentiment' => 'positive',
+                ];
+            }
+            return [
+                'title' => 'Judas Priest estrena nuevo videoclip oficial',
+                'excerpt' => 'La banda británica ha lanzado su nuevo single con videoclip.',
+                'content' => '<p>La banda británica ha lanzado su nuevo single con videoclip.</p>',
+                'headline_style' => 'informative',
+                'categories' => ['Heavy Metal', 'Noticias Rock'],
+                'tags' => ['Judas Priest', 'Heavy Metal'],
+            ];
+        });
+        $aiMock->shouldReceive('parse')->andReturn([
             'type' => 'post',
             'title' => 'Judas Priest estrena nuevo videoclip oficial',
             'content' => '<p>La banda británica ha lanzado su nuevo single con videoclip.</p>',
@@ -191,7 +221,7 @@ class Prompt31DirectNewsAndAiLimitTest extends TestCase
         $output = Artisan::output();
 
         $this->assertSame(0, $exitCode);
-        $this->assertStringContainsString('Consultando a la IA', $output);
+        $this->assertStringContainsString('Consultando al pipeline editorial de IA', $output);
 
         $post = Post::where('title', 'Judas Priest estrena nuevo videoclip oficial')->first();
         $this->assertNotNull($post);
@@ -205,6 +235,7 @@ class Prompt31DirectNewsAndAiLimitTest extends TestCase
         $aiMock = \Mockery::mock(AiParserManager::class);
         $aiMock->shouldReceive('hasAnyProvider')->andReturn(true);
         $aiMock->shouldReceive('parse')->never();
+        $aiMock->shouldReceive('generateStructured')->never();
         $this->app->instance(AiParserManager::class, $aiMock);
 
         $body = "<p>Estimado cliente: Adjuntamos su factura mensual correspondiente al servicio de hosting web. Importe total: 45,00 EUR.</p>";
@@ -242,6 +273,7 @@ class Prompt31DirectNewsAndAiLimitTest extends TestCase
         $aiMock = \Mockery::mock(AiParserManager::class);
         $aiMock->shouldReceive('hasAnyProvider')->andReturn(true);
         $aiMock->shouldReceive('parse')->never();
+        $aiMock->shouldReceive('generateStructured')->never();
         $this->app->instance(AiParserManager::class, $aiMock);
 
         $body = "<p>Gira europea de Opeth confirmada para el mes de noviembre.</p>";
@@ -275,7 +307,8 @@ class Prompt31DirectNewsAndAiLimitTest extends TestCase
         $aiMock = \Mockery::mock(AiParserManager::class);
         $aiMock->lastError = 'Google Generative AI error: 429 Resource has been exhausted (rate limit exceeded)';
         $aiMock->shouldReceive('hasAnyProvider')->andReturn(true);
-        $aiMock->shouldReceive('parse')->once()->andReturn(null);
+        $aiMock->shouldReceive('generateStructured')->andReturn(null);
+        $aiMock->shouldReceive('parse')->andReturn(null);
         $aiMock->shouldReceive('isRecoverableError')->andReturn(true);
         $this->app->instance(AiParserManager::class, $aiMock);
 

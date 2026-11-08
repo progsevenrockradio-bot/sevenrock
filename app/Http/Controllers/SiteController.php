@@ -103,6 +103,7 @@ class SiteController extends Controller
 
         $newReleases = $this->safeValue(
             fn () => NewRelease::query()
+                ->publiclyAccessible()
                 ->where('is_active', true)
                 ->where('show_in_feed', true)
                 ->where(fn ($q) => $q->whereNull('released_at')->orWhere('released_at', '<=', now()))
@@ -440,6 +441,7 @@ class SiteController extends Controller
     public function newReleases(): View
     {
         $newReleases = NewRelease::query()
+            ->publiclyAccessible()
             ->where('is_active', true)
             ->where('show_in_feed', true)
             ->whereNotNull('audio_path')
@@ -472,6 +474,7 @@ class SiteController extends Controller
     {
         $newRelease = NewRelease::query()
             ->with('radioArtist')
+            ->publiclyAccessible()
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -863,6 +866,7 @@ class SiteController extends Controller
         $songs = $this->safeValue(
             fn () => NewRelease::query()
                 ->with('radioArtist')
+                ->publiclyAccessible()
                 ->where('is_active', true)
                 ->where(fn ($q) => $q->whereNull('released_at')->orWhere('released_at', '<=', now()))
                 ->orderByDesc('released_at')
@@ -1828,6 +1832,12 @@ class SiteController extends Controller
     public function contactSend(ContactFormRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+
+        // Solicitudes del Plan Pro (página informativa): se identifican de forma explícita,
+        // aunque la persona edite el texto del mensaje.
+        if ($request->input('plan_interest') === 'pro') {
+            $validated['message'] = '[SOLICITUD PLAN PRO · 7 €/mes] ' . $validated['message'];
+        }
 
         try {
             Mail::to(config('mail.from.address', 'prog.sevenrockradio@gmail.com'))->send(new ContactMail(

@@ -23,11 +23,11 @@ Ubicación del Firmante: [Ciudad], [País]
 PRIMERA. Objeto del Contrato y Límites de Material.
 El Proveedor concede al Artista un espacio digital de almacenamiento limitado bajo la modalidad del Plan FREE en la plataforma de Seven Rock Radio para alojar exclusivamente el siguiente material promocional:
 
-Un máximo de TRES (3) canciones en formato de audio MP3, las cuales deben incluir obligatoriamente sus etiquetas de metadatos (tags ID3: título, artista, álbum) correctamente cumplimentadas.
+Un máximo de DOS (2) canciones en formato de audio MP3, las cuales deben incluir obligatoriamente sus etiquetas de metadatos (tags ID3: título, artista, álbum) correctamente cumplimentadas.
 
 El tamaño máximo de archivo permitido por canción es de DOCE (12) Megabytes (MB).
 
-Alojamiento de material gráfico complementario consistente en una (1) biografía artística en texto y una (1) fotografía promocional de prensa.
+Alojamiento de material gráfico complementario consistente en una (1) biografía artística en texto y una (1) fotografía promocional de prensa (máx. 10 MB). El límite total de almacenamiento compartido es de CINCUENTA (50) Megabytes (MB).
 
 El Proveedor queda autorizado a ejercer el derecho de comunicación pública y puesta a disposición del público de dichos contenidos a través de los canales digitales de la emisora, estrictamente para los fines de promoción previstos en este acuerdo.
 

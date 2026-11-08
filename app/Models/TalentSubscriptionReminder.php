@@ -13,6 +13,8 @@ class TalentSubscriptionReminder extends Model
     public const STAGE_1_DAY_BEFORE = '1_day_before';
     public const STAGE_AT_EXPIRY = 'at_expiry';
     public const STAGE_3_DAYS_BEFORE_PURGE = '3_days_before_purge';
+    public const STAGE_RECOVERY_7_DAYS_BEFORE = 'recovery_7_days_before';
+    public const STAGE_RECOVERY_1_DAY_BEFORE = 'recovery_1_day_before';
 
     protected $fillable = [
         'talent_id',

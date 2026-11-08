@@ -62,6 +62,7 @@ class PwaAppController extends Controller
         // New Releases para "Lo Último"
         $newReleases = $this->safeValue(
             fn () => NewRelease::query()
+                ->publiclyAccessible()
                 ->where('is_active', true)
                 ->where('show_in_feed', true)
                 ->orderByDesc('released_at')
@@ -135,6 +136,7 @@ class PwaAppController extends Controller
 
         $newReleases = $this->safeValue(
             fn () => NewRelease::query()
+                ->publiclyAccessible()
                 ->where('is_active', true)
                 ->orderByDesc('released_at')
                 ->take(24)

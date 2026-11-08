@@ -23,10 +23,47 @@
             </div>
             <div class="text-left sm:text-right w-full sm:w-auto text-sm text-[#7b7b7b]">
                 <div class="font-display text-xs uppercase tracking-[.18em] text-[#dcdcdc]">Plan {{ ucfirst($talent->plan) }}</div>
-                <div>Estado: {{ match($talent->subscription_status) { 'active' => 'Activo', 'expired' => 'Vencido', 'pending' => 'Pendiente', 'cancelled' => 'Cancelado', default => ucfirst($talent->subscription_status) } }}</div>
-                <div>{{ $talent->plan === 'free' ? 'Próxima renovación' : 'Próximo cobro' }}: {{ $subscription?->end_date?->format('d/m/Y') ?? 'Sin fecha' }}</div>
+                <div>Estado: {{ match($talent->subscription_status) { 'active' => 'Activo', 'expired' => 'Pausado (Vencido)', 'pending' => 'Pendiente', 'cancelled' => 'Cancelado', default => ucfirst($talent->subscription_status) } }}</div>
+                <div>Servicio incluido hasta: {{ $subscription?->end_date ? $subscription->end_date->format('d/m/Y') . ' inclusive' : 'Sin fecha' }}</div>
+                @if ($talent->isPaidPlan() && ($talent->is_hidden || $talent->subscription_status === 'expired'))
+                    <div class="text-amber-400 font-medium">Recuperación hasta: {{ $talent->recoveryPeriodEndsAt()?->format('d/m/Y') ?? 'N/D' }}</div>
+                @endif
             </div>
         </div>
+
+        {{-- Tarjeta informativa del Período de Recuperación de 30 días para Básico y Pro --}}
+        @if ($talent->isPaidPlan() && ($talent->is_hidden || $talent->subscription_status === 'expired'))
+            @php
+                $recoveryEndsAt = $talent->recoveryPeriodEndsAt();
+            @endphp
+            <div class="rounded-sm border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-200 space-y-3">
+                <div class="flex items-center gap-2.5 font-display text-base uppercase tracking-wider text-amber-300">
+                    <span class="text-xl">⚠️</span>
+                    <span>Perfil pausado en el Muro del Rock</span>
+                </div>
+                <div class="text-xs text-amber-100/90 leading-relaxed space-y-1.5">
+                    <p>
+                        Tu suscripción del Plan {{ ucfirst($talent->plan) }} finalizó el <strong class="text-white">{{ $subscription?->end_date ? $subscription->end_date->format('d/m/Y') : 'recientemente' }}</strong>.
+                        Tu ficha pública se encuentra oculta en el Muro del Rock y se han pausado nuevas subidas de archivos.
+                    </p>
+                    <p>
+                        <strong class="text-amber-300">Período de recuperación (30 días):</strong>
+                        Tienes hasta el <strong class="text-white">{{ $recoveryEndsAt ? $recoveryEndsAt->format('d/m/Y') : 'próximamente' }} inclusive</strong> para gestionar tu cuenta.
+                    </p>
+                    <p class="text-[11px] text-amber-200/80">
+                        Conservas acceso completo a tu panel. Te recomendamos <strong>descargar tus canciones y archivos</strong> de forma individual desde la sección de medios o <strong>renovar tu suscripción</strong> para reactivar tu perfil público de inmediato.
+                    </p>
+                </div>
+                <div class="pt-1 flex flex-wrap gap-3">
+                    <a href="{{ route('talents.subscriptions.plans') }}" class="lucille-button-solid text-xs py-2.5 px-4 uppercase tracking-wider">
+                        Renovar suscripción
+                    </a>
+                    <a href="{{ route('talents.media.index') }}" class="lucille-button text-xs py-2.5 px-4 uppercase tracking-wider">
+                        Descargar mis archivos
+                    </a>
+                </div>
+            </div>
+        @endif
 
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_.9fr]">
             <div class="border border-white/10 bg-[#10161b] p-4 sm:p-6">
@@ -35,8 +72,11 @@
                         <div class="font-display text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Mi suscripción</div>
                         <h2 class="mt-2 font-display text-2xl uppercase tracking-[.12em] text-white">{{ ucfirst($talent->plan) }}</h2>
                         <p class="mt-1 text-sm text-[#8b8b8b]">
-                            Estado: <span class="text-[#dcdcdc]">{{ match($talent->subscription_status) { 'active' => 'Activo', 'expired' => 'Vencido', 'pending' => 'Pendiente', 'cancelled' => 'Cancelado', default => ucfirst($talent->subscription_status) } }}</span>
-                            · Renovación: <span class="text-[#dcdcdc]">{{ $subscription?->end_date?->format('d/m/Y') ?? 'Sin fecha' }}</span>
+                            Estado: <span class="text-[#dcdcdc]">{{ match($talent->subscription_status) { 'active' => 'Activo', 'expired' => 'Pausado (Vencido)', 'pending' => 'Pendiente', 'cancelled' => 'Cancelado', default => ucfirst($talent->subscription_status) } }}</span>
+                            · Servicio incluido hasta: <span class="text-[#dcdcdc]">{{ $subscription?->end_date ? $subscription->end_date->format('d/m/Y') . ' inclusive' : 'Sin fecha' }}</span>
+                            @if ($talent->isPaidPlan() && ($talent->is_hidden || $talent->subscription_status === 'expired'))
+                                · <span class="text-amber-400">Fin recuperación: {{ $talent->recoveryPeriodEndsAt()?->format('d/m/Y') ?? 'N/D' }}</span>
+                            @endif
                         </p>
                     </div>
                     <a href="{{ route('talents.subscriptions.plans') }}" class="lucille-button-solid w-full sm:w-auto text-center shrink-0">
@@ -51,9 +91,9 @@
                     </div>
                     <div class="border border-[#2b2b2b] bg-[#151515] p-4">
                         <div class="text-xs uppercase tracking-[.18em] text-[#7b7b7b]">
-                            {{ $talent->plan === 'free' ? 'Próxima renovación' : 'Próximo cobro' }}
+                            Servicio incluido hasta
                         </div>
-                        <div class="mt-2 text-sm text-white">{{ $subscription?->end_date?->format('d/m/Y') ?? 'Sin fecha' }}</div>
+                        <div class="mt-2 text-sm text-white">{{ $subscription?->end_date ? $subscription->end_date->format('d/m/Y') . ' inclusive' : 'Sin fecha' }}</div>
                     </div>
                 </div>
             </div>
@@ -122,16 +162,34 @@
             <div class="border border-white/10 bg-[#10161b] p-4 sm:p-6">
                 <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Límites del plan</h2>
                 <div class="mt-4 space-y-3 text-sm text-[#7b7b7b]">
-                    @foreach ($limits as $type => $limit)
-                        <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-2">
-                            <span>{{ ucfirst($type) }}</span>
-                            <span class="text-[#dcdcdc]">{{ $limit === 0 ? '0' : $limit }}</span>
-                        </div>
-                    @endforeach
+                    <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-2">
+                        <span>Canciones MP3 <span class="text-xs text-[#6b6b6b]">(máx. {{ (int) ($talent->maxFileSizeKb('mp3') / 1024) }} MB c/u)</span></span>
+                        <span class="text-[#dcdcdc]">{{ $limits['songs'] ?? 0 }}</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-2">
+                        <span>Fotografías <span class="text-xs text-[#6b6b6b]">(máx. {{ (int) ($talent->maxFileSizeKb('photo') / 1024) }} MB c/u)</span></span>
+                        <span class="text-[#dcdcdc]">{{ $limits['photos'] ?? 0 }}</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-2">
+                        <span>Documentos PDF @if (($limits['documents'] ?? 0) > 0)<span class="text-xs text-[#6b6b6b]">(máx. {{ (int) ($talent->maxFileSizeKb('document') / 1024) }} MB c/u)</span>@endif</span>
+                        <span class="text-[#dcdcdc]">{{ ($limits['documents'] ?? 0) === 0 ? 'No incluido (0)' : $limits['documents'] }}</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-2">
+                        @if (($limits['videos'] ?? 0) > 0)
+                            <span>Vídeos MP4/WebM <span class="text-xs text-[#6b6b6b]">(máx. {{ (int) ($talent->maxFileSizeKb('video') / 1024) }} MB c/u · enlaces a YouTube permitidos en perfil)</span></span>
+                        @else
+                            <span>Archivos de vídeo <span class="text-xs text-[#6b6b6b]">(enlaces a YouTube permitidos en perfil)</span></span>
+                        @endif
+                        <span class="text-[#dcdcdc]">{{ ($limits['videos'] ?? 0) === 0 ? 'No incluido (0)' : $limits['videos'] }}</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-2">
+                        <span>Almacenamiento total</span>
+                        <span class="text-[#dcdcdc]">{{ $limits['storage_mb'] ?? 0 }} MB</span>
+                    </div>
                 </div>
                 <div class="mt-5 flex flex-col sm:flex-row gap-3">
-                    <a href="{{ route('talents.profile') }}" class="lucille-button-solid w-full sm:w-auto text-center">Edit profile</a>
-                    <a href="{{ route('talents.media.index') }}" class="lucille-button w-full sm:w-auto text-center">Media library</a>
+                    <a href="{{ route('talents.profile') }}" class="lucille-button-solid w-full sm:w-auto text-center">Editar perfil</a>
+                    <a href="{{ route('talents.media.index') }}" class="lucille-button w-full sm:w-auto text-center">Mis archivos</a>
                 </div>
             </div>
         </div>

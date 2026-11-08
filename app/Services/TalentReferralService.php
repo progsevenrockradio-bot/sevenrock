@@ -96,6 +96,12 @@ final class TalentReferralService
             'activated_at' => now(),
         ]);
 
+        // Participante del piloto con código de promotor: las recompensas se rigen exclusivamente
+        // por primeros pagos reales en TalentReferralPilotService. No ejecutar hitos legacy de 12/18 activaciones.
+        if ($referral->promoter_code_id) {
+            return;
+        }
+
         if ($referral->referrer_talent_id) {
             $this->checkAndApplyMilestone(
                 Talent::query()->find($referral->referrer_talent_id)
@@ -122,6 +128,11 @@ final class TalentReferralService
             'status'  => 'paid',
             'paid_at' => now(),
         ]);
+
+        // El piloto gestiona sus recompensas de forma independiente sin ejecutar los 90 días legacy
+        if ($referral->promoter_code_id) {
+            return;
+        }
 
         if ($referral->referrer_talent_id) {
             $this->checkAndApplyPaidMilestone(

@@ -150,8 +150,8 @@ class MediaController extends Controller
             return redirect()->route('talents.login');
         }
 
-        if (! in_array($talent->subscription_status, ['active'], true)) {
-            $suspendedMsg = 'Tu suscripción está suspendida o vencida. Reactiva o renueva tu plan para subir contenido.';
+        if (! in_array($talent->subscription_status, ['active'], true) || $talent->is_hidden) {
+            $suspendedMsg = 'Tu suscripción está pausada, suspendida o vencida. Reactiva o renueva tu plan para subir contenido.';
             if ($request->expectsJson()) {
                 return response()->json(['message' => $suspendedMsg, 'errors' => ['file' => [$suspendedMsg]]], 422);
             }
@@ -200,9 +200,20 @@ class MediaController extends Controller
         }
 
         if (! $talent->canUpload($validated['type'])) {
-            $quotaError = ($allowedSpec && ! $allowedSpec['included'])
-                ? "El tipo {$allowedSpec['name']} no está incluido en tu plan actual."
-                : 'Tu plan ya alcanzó el límite permitido para este tipo de contenido.';
+            $limitVal = (int) ($allowedSpec['limit'] ?? 0);
+            $usedVal = (int) ($allowedSpec['used'] ?? 0);
+            $pluralName = $allowedSpec['plural'] ?? $validated['type'];
+
+            if ($allowedSpec && ! $allowedSpec['included']) {
+                $quotaError = ($validated['type'] === 'video')
+                    ? 'Tu plan actual no incluye la subida de archivos de vídeo (puedes añadir enlaces a YouTube en tu perfil).'
+                    : "El tipo {$allowedSpec['name']} no está incluido en tu plan actual.";
+            } elseif ($validated['type'] === 'mp3') {
+                $quotaError = "Has alcanzado el límite de {$limitVal} canciones permitidas en tu plan (actualmente tienes {$usedVal}). Para subir una nueva canción debes sustituir o eliminar una existente o actualizar tu plan.";
+            } else {
+                $quotaError = "Has alcanzado el límite de {$limitVal} {$pluralName} permitidas en tu plan (actualmente tienes {$usedVal}). Para subir nuevo contenido debes sustituir o eliminar uno existente o actualizar tu plan.";
+            }
+
             if ($request->expectsJson()) {
                 return response()->json(['message' => $quotaError, 'errors' => ['type' => [$quotaError]]], 422);
             }

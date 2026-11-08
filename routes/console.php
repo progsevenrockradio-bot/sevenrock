@@ -427,3 +427,11 @@ Schedule::command('talents:send-expiry-warnings')
     ->dailyAt('09:00')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/talents-expiry-warnings.log'));
+
+// Generación del informe semanal de audiencia (RadioBOSS + Cloudflare)
+// PREPARADO Y DESACTIVADO TEMPORALMENTE (se habilitará al autorizar en producción):
+// Schedule::command('audience:generate-weekly-report')
+//     ->weeklyOn(1, '06:00')
+//     ->timezone('Europe/Madrid')
+//     ->withoutOverlapping()
+//     ->appendOutputTo(storage_path('logs/audience-weekly-report.log'));

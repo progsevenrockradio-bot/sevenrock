@@ -51,3 +51,5 @@ composer.phar
 /storage/app/temp/
 /docs/auditoria-correos/
 storage/framework/lsp-*.php
+respaldo_*.zip
+

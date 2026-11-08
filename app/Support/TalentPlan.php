@@ -13,26 +13,38 @@ class TalentPlan
     {
         return [
             'free' => [
-                'label' => 'Free',
+                'label' => 'Gratuito',
                 'price' => 0.00,
                 'currency' => 'EUR',
                 'monthly_label' => '0€',
-                'summary' => 'Perfil básico, 1 foto y 1 canción.',
+                'summary' => 'Perfil básico, hasta 2 canciones MP3 (máx. 12 MB c/u), 1 fotografía (máx. 10 MB) y 50 MB de almacenamiento total.',
                 'limits' => [
                     'photos' => 1,
-                    'songs' => 1,
+                    'songs' => 2,
                     'documents' => 0,
                     'videos' => 0,
                     'storage_mb' => 50,
                 ],
-                'features' => ['Perfil básico', '1 foto', '1 canción'],
+                'max_file_size_mb' => [
+                    'songs' => 12,
+                    'photos' => 10,
+                    'documents' => 0,
+                    'videos' => 0,
+                ],
+                'features' => [
+                    'Perfil básico',
+                    'Hasta 2 canciones MP3 (máx. 12 MB c/u)',
+                    '1 fotografía (máx. 10 MB)',
+                    '50 MB de almacenamiento total',
+                ],
             ],
             'basic' => [
-                'label' => 'Basic',
+                'label' => 'Básico',
                 'price' => 3.50,
                 'currency' => 'EUR',
-                'monthly_label' => '3,5€',
-                'summary' => '5 canciones, 10 fotos y estadísticas básicas.',
+                'monthly_label' => '3,50 €/mes',
+                'paypal_url' => 'https://www.paypal.com/ncp/payment/FTNT3HTH6KXR2',
+                'summary' => 'Perfil público con biografía y redes oficiales, hasta 5 canciones (máx. 15 MB c/u), 10 fotografías (máx. 10 MB c/u) y 200 MB de almacenamiento total. Enlaces a YouTube incluidos (sin subida de archivos de vídeo).',
                 'limits' => [
                     'photos' => 10,
                     'songs' => 5,
@@ -40,22 +52,48 @@ class TalentPlan
                     'videos' => 0,
                     'storage_mb' => 200,
                 ],
-                'features' => ['5 canciones', '10 fotos', 'Estadísticas básicas'],
+                'max_file_size_mb' => [
+                    'songs' => 15,
+                    'photos' => 10,
+                    'documents' => 0,
+                    'videos' => 0,
+                ],
+                'features' => [
+                    'Perfil público con biografía y redes oficiales',
+                    'Hasta 5 canciones MP3 (máx. 15 MB c/u)',
+                    'Hasta 10 fotografías (máx. 10 MB c/u)',
+                    '200 MB de almacenamiento total',
+                    'Enlaces a YouTube (sin subida de archivos de vídeo)',
+                ],
             ],
             'pro' => [
                 'label' => 'Pro',
                 'price' => 7.00,
                 'currency' => 'EUR',
-                'monthly_label' => '7€',
-                'summary' => 'Documentos, videos y estadísticas detalladas.',
+                'monthly_label' => '7 €/mes',
+                'paypal_url' => 'https://www.paypal.com/ncp/payment/SHQVV9LS29V8U',
+                'summary' => 'Perfil público con biografía, redes y enlaces a YouTube, hasta 15 canciones MP3 (máx. 20 MB c/u), 50 fotografías (máx. 10 MB c/u), 10 documentos PDF (máx. 10 MB c/u), 3 vídeos MP4/WebM (máx. 50 MB c/u) y 400 MB de almacenamiento total compartido.',
                 'limits' => [
                     'photos' => 50,
-                    'songs' => 20,
+                    'songs' => 15,
                     'documents' => 10,
-                    'videos' => 5,
-                    'storage_mb' => 1000,
+                    'videos' => 3,
+                    'storage_mb' => 400,
                 ],
-                'features' => ['Documentos', 'Videos', 'Estadísticas detalladas'],
+                'max_file_size_mb' => [
+                    'songs' => 20,
+                    'photos' => 10,
+                    'documents' => 10,
+                    'videos' => 50,
+                ],
+                'features' => [
+                    'Perfil público con biografía, redes y enlaces a YouTube',
+                    'Hasta 15 canciones MP3 (máx. 20 MB c/u)',
+                    'Hasta 50 fotografías (máx. 10 MB c/u)',
+                    'Hasta 10 documentos PDF (máx. 10 MB c/u)',
+                    'Hasta 3 vídeos MP4/WebM (máx. 50 MB c/u)',
+                    '400 MB de almacenamiento total compartido',
+                ],
             ],
             'premium' => [
                 'label' => 'Premium',
@@ -91,5 +129,10 @@ class TalentPlan
     public static function amount(string $plan): float
     {
         return (float) (self::definition($plan)['price'] ?? 0);
+    }
+
+    public static function paypalUrl(string $plan): ?string
+    {
+        return config("payment.paypal_links.$plan") ?? self::definition($plan)['paypal_url'] ?? null;
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Talent;
 
 use App\Http\Controllers\Controller;
+use App\Rules\SafeExternalHttpsUrl;
 use App\Services\BackblazeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,6 +44,9 @@ class ProfileController extends Controller
             'tiktok_url' => ['nullable', 'url', 'max:2048'],
             'spotify_url' => ['nullable', 'url', 'max:2048'],
             'website_url' => ['nullable', 'url', 'max:2048'],
+            'payment_links' => ['nullable', 'array'],
+            'payment_links.support' => ['nullable', 'string', 'max:2048', new SafeExternalHttpsUrl()],
+            'payment_links.merch' => ['nullable', 'string', 'max:2048', new SafeExternalHttpsUrl()],
         ]);
 
         try {
@@ -74,6 +78,33 @@ class ProfileController extends Controller
                 'spotify' => $talent->spotify_url,
                 'website' => $talent->website_url,
             ], static fn ($value): bool => filled($value));
+
+            // Actualización segura de enlaces de pago preservando histórico
+            $rawPaymentLinks = $request->input('payment_links');
+            if (is_array($rawPaymentLinks)) {
+                $existingPaymentLinks = is_array($talent->payment_links) ? $talent->payment_links : [];
+
+                if (array_key_exists('support', $rawPaymentLinks)) {
+                    $supportVal = trim((string) ($validated['payment_links']['support'] ?? ''));
+                    if ($supportVal !== '') {
+                        $existingPaymentLinks['support'] = $supportVal;
+                    } else {
+                        unset($existingPaymentLinks['support'], $existingPaymentLinks['paypal']);
+                    }
+                }
+
+                if (array_key_exists('merch', $rawPaymentLinks)) {
+                    $merchVal = trim((string) ($validated['payment_links']['merch'] ?? ''));
+                    if ($merchVal !== '') {
+                        $existingPaymentLinks['merch'] = $merchVal;
+                    } else {
+                        unset($existingPaymentLinks['merch'], $existingPaymentLinks['store'], $existingPaymentLinks['otro'], $existingPaymentLinks['bandcamp']);
+                    }
+                }
+
+                $talent->payment_links = empty($existingPaymentLinks) ? null : $existingPaymentLinks;
+            }
+
             $talent->save();
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Profile update failed: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());

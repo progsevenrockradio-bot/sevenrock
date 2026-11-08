@@ -23,6 +23,7 @@ class Talent extends Authenticatable
 
     public const FREE_DURATION_DAYS = 45;
     public const GRACE_DAYS = 15;
+    public const PAID_RECOVERY_DAYS = 30;
     public const REFERRAL_BONUS_DAYS = 15;
 
     protected $table = 'talents';
@@ -227,16 +228,31 @@ class Talent extends Authenticatable
     public function planLimits(): array
     {
         return match ($this->plan) {
-            'free' => ['photos' => 1, 'songs' => 3, 'documents' => 0, 'videos' => 0, 'storage_mb' => 50],
-            'basic' => ['photos' => 3, 'songs' => 7, 'documents' => 0, 'videos' => 0, 'storage_mb' => 120],
-            'pro' => ['photos' => 50, 'songs' => 15, 'documents' => 10, 'videos' => 5, 'storage_mb' => 400],
+            'free' => TalentPlan::definition('free')['limits'],
+            'basic' => TalentPlan::definition('basic')['limits'],
+            'pro' => TalentPlan::definition('pro')['limits'],
             'premium' => ['photos' => 999, 'songs' => 50, 'documents' => 999, 'videos' => 999, 'storage_mb' => 20480],
-            default => ['photos' => 1, 'songs' => 3, 'documents' => 0, 'videos' => 0, 'storage_mb' => 50],
+            default => TalentPlan::definition('free')['limits'],
         };
     }
 
     public function maxFileSizeKb(string $type): int
     {
+        $sizeKey = match (trim($type)) {
+            'mp3', 'song', 'songs' => 'songs',
+            'photo', 'photos' => 'photos',
+            'document', 'documents' => 'documents',
+            'video', 'videos' => 'videos',
+            default => null,
+        };
+
+        if ($sizeKey) {
+            $planMb = (int) (TalentPlan::definition($this->plan)['max_file_size_mb'][$sizeKey] ?? 0);
+            if ($planMb > 0) {
+                return $planMb * 1024;
+            }
+        }
+
         if (trim($type) === 'mp3' || trim($type) === 'song' || trim($type) === 'songs') {
             $maxMb = match ($this->plan) {
                 'free' => 12,
@@ -287,17 +303,89 @@ class Talent extends Authenticatable
     }
 
     /**
+     * Devuelve el mapa de enlaces externos de apoyo y compra directa propios de la banda.
+     * Soporta las claves predefinidas 'support' y 'merch', preservando valores históricos.
+     *
      * @return array<string, string>
      */
     public function paymentLinkMap(): array
     {
         $stored = is_array($this->payment_links ?? null) ? $this->payment_links : [];
 
-        return array_filter([
-            'paypal' => (string) ($stored['paypal'] ?? ''),
-            'mercadopago' => (string) ($stored['mercadopago'] ?? ''),
-            'otro' => (string) ($stored['otro'] ?? ''),
-        ], static fn (string $value): bool => trim($value) !== '');
+        $map = [];
+
+        // 1. «Apoyar a la banda» (PayPal.Me, Ko-fi u otro compatible)
+        $support = (string) ($stored['support'] ?? $stored['paypal'] ?? '');
+        if (trim($support) !== '') {
+            $map['support'] = trim($support);
+        }
+
+        // 2. «Comprar música / Merch» (Bandcamp, tienda oficial u otro destino)
+        $merch = (string) ($stored['merch'] ?? $stored['otro'] ?? $stored['store'] ?? $stored['bandcamp'] ?? '');
+        if (trim($merch) !== '') {
+            $map['merch'] = trim($merch);
+        }
+
+        // 3. Preservar claves históricas adicionales sin reinterpretarlas automáticamente
+        foreach ($stored as $key => $url) {
+            if (! in_array($key, ['support', 'merch', 'paypal', 'otro', 'store', 'bandcamp'], true) && is_string($url) && trim($url) !== '') {
+                $map[$key] = trim($url);
+            }
+        }
+
+        return $map;
+    }
+
+    public function supportPaymentUrl(): ?string
+    {
+        $map = $this->paymentLinkMap();
+
+        return $map['support'] ?? null;
+    }
+
+    public function merchPaymentUrl(): ?string
+    {
+        $map = $this->paymentLinkMap();
+
+        return $map['merch'] ?? null;
+    }
+
+    public static function paymentLinkLabel(string $key): string
+    {
+        return match (strtolower(trim($key))) {
+            'support', 'paypal' => 'Apoyar a la banda',
+            'merch', 'store', 'otro', 'bandcamp' => 'Comprar música / Merch',
+            'mercadopago' => 'Mercado Pago',
+            default => ucfirst(str_replace('_', ' ', $key)),
+        };
+    }
+
+    public function isPaidPlan(): bool
+    {
+        return in_array($this->plan, ['basic', 'pro'], true);
+    }
+
+    public function recoveryPeriodEndsAt(): ?\Carbon\CarbonInterface
+    {
+        if (! $this->isPaidPlan()) {
+            return null;
+        }
+
+        $latestSub = $this->subscriptions()
+            ->whereNotNull('end_date')
+            ->latest('end_date')
+            ->first();
+
+        if (! $latestSub || ! $latestSub->end_date) {
+            return $this->expires_grace_at;
+        }
+
+        return $latestSub->end_date->copy()->addDays(self::PAID_RECOVERY_DAYS);
+    }
+
+    public function isInRecoveryPeriod(): bool
+    {
+        return $this->isPaidPlan() && (bool) $this->is_hidden && $this->subscription_status === 'expired';
     }
 
     /**

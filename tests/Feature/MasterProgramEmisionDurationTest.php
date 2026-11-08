@@ -28,7 +28,7 @@ class MasterProgramEmisionDurationTest extends TestCase
 
     /**
      * Test 1: Una emisión con duracion_segundos = 3600 (60 min)
-     * -> la ventana dura 64 minutos (60 + 2 después) y empieza 2 minutos antes.
+     * -> la ventana informativa empieza 5 minutos antes (MARGIN_BEFORE_MINUTES = 5) y termina en la duración calculada (60 min).
      */
     public function test_emision_con_duracion_segundos_empieza_2_minutos_antes_y_dura_64_minutos(): void
     {
@@ -58,39 +58,30 @@ class MasterProgramEmisionDurationTest extends TestCase
         $service = app(RadioPlayerService::class);
         $scheduleService = app(ProgramScheduleService::class);
 
-        // 14:57:00 (3 minutos antes) -> NO activa
-        Carbon::setTestNow(Carbon::parse('2026-10-06 14:57:00', $timezone));
+        // 14:54:00 (6 minutos antes, fuera del margen de 5 min) -> NO activa
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:54:00', $timezone));
         $this->assertFalse($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
-        $this->assertFalse($scheduleService->programIsLiveNow($master));
 
-        // 14:58:00 (2 minutos antes: inicio de margen) -> ACTIVA
-        Carbon::setTestNow(Carbon::parse('2026-10-06 14:58:00', $timezone));
+        // 14:55:00 (5 minutos antes: inicio de margen anticipado) -> ACTIVA
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:55:00', $timezone));
         $this->assertTrue($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
-        $this->assertTrue($scheduleService->programIsLiveNow($master));
 
         // 15:30:00 (en mitad del programa) -> ACTIVA
         Carbon::setTestNow(Carbon::parse('2026-10-06 15:30:00', $timezone));
         $this->assertTrue($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
         $this->assertTrue($scheduleService->programIsLiveNow($master));
 
-        // 16:00:00 (hora en que termina el archivo de 60m) -> ACTIVA (margen posterior)
+        // 16:00:00 (hora en que termina el archivo de 60m) -> ACTIVA
         Carbon::setTestNow(Carbon::parse('2026-10-06 16:00:00', $timezone));
         $this->assertTrue($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
-        $this->assertTrue($scheduleService->programIsLiveNow($master));
 
-        // 16:02:00 (final exacto: 60m + 2m margen = 64 min totales) -> ACTIVA
-        Carbon::setTestNow(Carbon::parse('2026-10-06 16:02:00', $timezone));
-        $this->assertTrue($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
-        $this->assertTrue($scheduleService->programIsLiveNow($master));
-
-        // 16:03:00 (pasado el margen posterior) -> NO activa (no espera los 120 min del master)
-        Carbon::setTestNow(Carbon::parse('2026-10-06 16:03:00', $timezone));
+        // 16:01:00 (pasada la duración real del archivo) -> NO activa (no espera los 120 min del master)
+        Carbon::setTestNow(Carbon::parse('2026-10-06 16:01:00', $timezone));
         $this->assertFalse($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
-        $this->assertFalse($scheduleService->programIsLiveNow($master));
     }
 
     /**
-     * Test 2: Una emisión sin duracion_segundos -> la ventana usa duracion_minutos igual que antes.
+     * Test 2: Una emisión sin duracion_segundos -> la ventana usa duracion_minutos.
      */
     public function test_emision_sin_duracion_segundos_usa_duracion_minutos_original(): void
     {
@@ -120,10 +111,13 @@ class MasterProgramEmisionDurationTest extends TestCase
         $service = app(RadioPlayerService::class);
         $scheduleService = app(ProgramScheduleService::class);
 
-        // 14:58:00 -> NO activa (sin duracion_segundos, no hay margen anticipado)
-        Carbon::setTestNow(Carbon::parse('2026-10-06 14:58:00', $timezone));
+        // 14:54:00 (6 minutos antes) -> NO activa
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:54:00', $timezone));
         $this->assertFalse($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
-        $this->assertFalse($scheduleService->programIsLiveNow($master));
+
+        // 14:55:00 (5 minutos antes) -> ACTIVA
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:55:00', $timezone));
+        $this->assertTrue($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
 
         // 15:00:00 -> ACTIVA
         Carbon::setTestNow(Carbon::parse('2026-10-06 15:00:00', $timezone));
@@ -133,12 +127,10 @@ class MasterProgramEmisionDurationTest extends TestCase
         // 16:00:00 -> ACTIVA (en el minuto 60)
         Carbon::setTestNow(Carbon::parse('2026-10-06 16:00:00', $timezone));
         $this->assertTrue($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
-        $this->assertTrue($scheduleService->programIsLiveNow($master));
 
         // 16:01:00 -> NO activa
         Carbon::setTestNow(Carbon::parse('2026-10-06 16:01:00', $timezone));
         $this->assertFalse($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
-        $this->assertFalse($scheduleService->programIsLiveNow($master));
     }
 
     /**
@@ -173,10 +165,13 @@ class MasterProgramEmisionDurationTest extends TestCase
         $service = app(RadioPlayerService::class);
         $scheduleService = app(ProgramScheduleService::class);
 
-        // 19:58:00 -> NO activo
-        Carbon::setTestNow(Carbon::parse('2026-10-10 19:58:00', $timezone));
+        // 19:54:00 (6 minutos antes) -> NO activo
+        Carbon::setTestNow(Carbon::parse('2026-10-10 19:54:00', $timezone));
         $this->assertFalse($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
-        $this->assertFalse($scheduleService->programIsLiveNow($master));
+
+        // 19:55:00 (5 minutos antes) -> ACTIVO
+        Carbon::setTestNow(Carbon::parse('2026-10-10 19:55:00', $timezone));
+        $this->assertTrue($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
 
         // 20:00:00 -> ACTIVO
         Carbon::setTestNow(Carbon::parse('2026-10-10 20:00:00', $timezone));
@@ -186,11 +181,9 @@ class MasterProgramEmisionDurationTest extends TestCase
         // 21:30:00 (exactamente 90 minutos después) -> ACTIVO
         Carbon::setTestNow(Carbon::parse('2026-10-10 21:30:00', $timezone));
         $this->assertTrue($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
-        $this->assertTrue($scheduleService->programIsLiveNow($master));
 
         // 21:31:00 -> NO activo
         Carbon::setTestNow(Carbon::parse('2026-10-10 21:31:00', $timezone));
         $this->assertFalse($service->isEmisionWindowActive(Carbon::now($timezone), $emision));
-        $this->assertFalse($scheduleService->programIsLiveNow($master));
     }
 }

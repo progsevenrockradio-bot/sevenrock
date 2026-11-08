@@ -21,8 +21,13 @@ class TalentReferral extends Model
         'promoter_code_id',
         'referred_talent_id',
         'code',
+        'campaign',
         'status',
         'reward_applied',
+        'first_paid_subscription_id',
+        'is_refunded',
+        'refunded_at',
+        'refund_reason',
         'activated_at',
         'paid_at',
     ];
@@ -32,6 +37,8 @@ class TalentReferral extends Model
         return [
             'activated_at' => 'datetime',
             'paid_at' => 'datetime',
+            'is_refunded' => 'boolean',
+            'refunded_at' => 'datetime',
         ];
     }
 
@@ -53,5 +60,10 @@ class TalentReferral extends Model
     public function referred(): BelongsTo
     {
         return $this->belongsTo(Talent::class, 'referred_talent_id');
+    }
+
+    public function firstPaidSubscription(): BelongsTo
+    {
+        return $this->belongsTo(TalentSubscription::class, 'first_paid_subscription_id');
     }
 }

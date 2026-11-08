@@ -19,16 +19,36 @@
                         <td style="padding: 35px 30px;">
                             <h2 style="margin: 0 0 15px; font-size: 20px; color: #ffffff;">Hola, {{ $talent->band_name }}</h2>
                             <p style="margin: 0 0 10px; font-size: 12px; font-weight: 700; color: #f87171; text-transform: uppercase; letter-spacing: 1.5px;">
-                                Estado actual: Perfil OCULTO en Muro del Rock
+                                Estado actual: Perfil en pausa (OCULTO) en Muro del Rock
                             </p>
+                            @php
+                                $isPaid = in_array($talent->plan, ['basic', 'pro'], true);
+                            @endphp
                             <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #a0aab5;">
-                                Tu periodo de difusión ha vencido el <strong style="color: #ffffff;">{{ isset($expiredDate) ? $expiredDate->format('d/m/Y') : '' }}</strong> y tu perfil ha pasado automáticamente a estar <strong>OCULTO</strong> en el Muro del Rock de Seven Rock Radio. Ningún visitante público podrá ver tu ficha ni escuchar tus canciones mientras permanezca oculto.
+                                Tu periodo de servicio ha finalizado el <strong style="color: #ffffff;">{{ isset($expiredDate) ? $expiredDate->format('d/m/Y') : '' }}</strong> y tu perfil ha pasado a estar <strong>OCULTO</strong> en el Muro del Rock de Seven Rock Radio. Mientras permanezca en pausa, los visitantes no podrán ver tu ficha pública ni reproducir tus temas.
                             </p>
-                            <div style="background-color: rgba(195, 39, 32, 0.1); border-left: 4px solid #c32720; padding: 15px; margin: 25px 0; border-radius: 4px;">
-                                <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #ffb4b0;">
-                                    <strong>Periodo de gracia iniciado:</strong> Tienes <strong>{{ $graceDays }} días</strong> a partir de hoy (hasta el <strong>{{ isset($purgeDate) ? $purgeDate->format('d/m/Y') : '' }}</strong>) para renovar tu suscripción. Si no renuevas dentro de este plazo, todo el material multimedia (canciones, fotos y documentos) será <strong>eliminado definitivamente</strong> de nuestros servidores, tal como establece el contrato de difusión.
-                                </p>
-                            </div>
+                            @if($isPaid)
+                                <div style="background-color: rgba(195, 39, 32, 0.1); border-left: 4px solid #c32720; padding: 18px 20px; margin: 25px 0; border-radius: 4px;">
+                                    <p style="margin: 0 0 10px; font-size: 13px; font-weight: 700; color: #ffb4b0; text-transform: uppercase; letter-spacing: 1px;">
+                                        Período de recuperación iniciado (30 días)
+                                    </p>
+                                    <p style="margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: #dcdcdc;">
+                                        Dispones de un período de recuperación de 30 días, hasta el <strong style="color: #ffffff;">{{ isset($recoveryEndDate) ? $recoveryEndDate->format('d/m/Y') : '' }}</strong> inclusive.
+                                    </p>
+                                    <p style="margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: #dcdcdc;">
+                                        <strong>Acceso conservado al panel de banda:</strong> Tus canciones, fotos y documentos siguen disponibles en tu panel. Te recomendamos <strong>descargar tu material</strong> de forma individual desde la sección de medios o <strong>renovar tu suscripción</strong> antes del {{ isset($recoveryEndDate) ? $recoveryEndDate->format('d/m/Y') : '' }} para reactivar tu ficha pública de inmediato.
+                                    </p>
+                                    <p style="margin: 0; font-size: 11px; line-height: 1.4; color: #a0aab5;">
+                                        Nota: Las nuevas cargas de archivos permanecen pausadas mientras la cuenta no esté activa. Superar los 30 días mantiene el perfil pausado sin ejecutar purgas automáticas ni prometer conservación indefinida.
+                                    </p>
+                                </div>
+                            @else
+                                <div style="background-color: rgba(195, 39, 32, 0.1); border-left: 4px solid #c32720; padding: 15px; margin: 25px 0; border-radius: 4px;">
+                                    <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #ffb4b0;">
+                                        <strong>Periodo de gracia iniciado:</strong> Tienes <strong>{{ $graceDays }} días</strong> a partir de hoy (hasta el <strong>{{ isset($purgeDate) ? $purgeDate->format('d/m/Y') : '' }}</strong>) para renovar tu suscripción. Si no renuevas dentro de este plazo, todo el material multimedia (canciones, fotos y documentos) será <strong>eliminado definitivamente</strong> de nuestros servidores, tal como establece el contrato de difusión.
+                                    </p>
+                                </div>
+                            @endif
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0 10px;">
                                 <tr>
                                     <td align="center">

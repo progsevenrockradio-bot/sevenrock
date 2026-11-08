@@ -50,6 +50,21 @@
                                 <input type="hidden" name="gateway" value="stripe">
                                 <button type="submit" class="lucille-button-solid w-full justify-center">Comenzar gratis</button>
                             </form>
+                        @elseif (!empty($plan['paypal_url']))
+                            <div class="space-y-3">
+                                <a href="{{ $plan['paypal_url'] }}" target="_blank" rel="noopener noreferrer" class="lucille-button-solid w-full text-center justify-center block">
+                                    {{ $key === 'basic' ? 'Pagar un mes de Básico con PayPal' : 'Pagar un mes de Pro con PayPal' }}
+                                </a>
+                                <div class="rounded-sm border border-white/10 bg-black/40 p-3 text-[11px] text-[#8b8b8b] space-y-1.5 leading-relaxed">
+                                    <p class="text-white font-medium">ℹ️ Pago único de 1 mes (verificación manual)</p>
+                                    <p>El abono no activa la cuenta de forma automática. Tras completar el pago, notifícanos tu correo de banda y la referencia de la operación para que el administrador verifique el cobro recibido y aplique la vigencia.</p>
+                                    <div class="pt-1">
+                                        <a href="{{ $key === 'basic' ? route('talents.plans.basic') . '#solicitar-plan-basico' : route('talents.plans.pro') . '#solicitar-plan-pro' }}" class="text-[var(--lucille-accent)] hover:underline font-semibold">
+                                            Notificar referencia de pago o consultar →
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         @else
                             <details class="lucille-admin-dropdown">
                                 <summary class="cursor-pointer list-none border border-white/15 bg-white px-4 py-3 text-center text-sm font-semibold uppercase tracking-[.12em] text-black">

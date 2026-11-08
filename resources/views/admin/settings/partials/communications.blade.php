@@ -133,7 +133,7 @@
             <div>
                 <label class="mb-1.5 block text-xs font-medium text-[#dcdcdc]">Correo público de contacto</label>
                 <input name="contact_email" value="{{ old('contact_email', $settings->contact_email) }}"
-                       placeholder="contacto@sevenrockradio.com"
+                       placeholder="sevenrockradio@gmail.com"
                        class="h-9 w-full rounded-lg border border-white/10 bg-[#151518] px-3 font-mono text-xs text-white placeholder-gray-500 focus:border-[#c32720] focus:outline-none focus:ring-1 focus:ring-[#c32720]">
                 @error('contact_email')<p class="mt-1 text-xs text-red-400">{{ $message }}</p>@enderror
             </div>

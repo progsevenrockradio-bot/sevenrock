@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <rect width="500" height="500" fill="#064e3b"/>
+  <polygon points="250,60 300,170 420,180 330,260 360,380 250,310 140,380 170,260 80,180 200,170" fill="#10b981" opacity="0.3"/>
+  <rect x="180" y="70" width="140" height="32" rx="16" fill="#047857"/>
+  <text x="250" y="91" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#a7f3d0" text-anchor="middle">EMISIÓN EN VIVO</text>
+  <rect x="30" y="270" width="440" height="90" rx="10" fill="#022c22" opacity="0.95"/>
+  <text x="250" y="305" font-family="Impact, sans-serif" font-size="28" fill="#ffffff" text-anchor="middle" letter-spacing="2">LA HORA DEL METAL</text>
+  <text x="250" y="340" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#34d399" text-anchor="middle">Ep. Especial: Himnos NWOBHM</text>
+  <text x="250" y="415" font-family="Arial, sans-serif" font-size="16" fill="#a7f3d0" text-anchor="middle">Conduce: Carlos Metalhead</text>
+  <rect x="130" y="445" width="240" height="26" rx="13" fill="#059669"/>
+  <text x="250" y="462" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#ffffff" text-anchor="middle">ESTADO 3: PROGRAMA ESPECÍFICO</text>
+</svg>

@@ -46,8 +46,8 @@
                             Tienes el derecho de solicitar el acceso, rectificación, portabilidad o eliminación total de tus datos personales de nuestros registros en cualquier momento. Si deseas ejercer este derecho o tienes alguna duda sobre el tratamiento de tus datos, puedes enviarnos una solicitud formal por escrito a nuestro correo de contacto:
                         </p>
                         <div class="mt-4 rounded-lg bg-white/[0.02] border border-white/5 p-4 text-center">
-                            <a href="mailto:{{ $contact['email'] ?? 'prog.sevenrockradio@gmail.com' }}" class="font-display text-base text-white hover:text-lucille-accent transition-colors">
-                                {{ $contact['email'] ?? 'prog.sevenrockradio@gmail.com' }}
+                            <a href="mailto:{{ !empty($contact['email']) ? $contact['email'] : 'sevenrockradio@gmail.com' }}" class="font-display text-base text-white hover:text-lucille-accent transition-colors">
+                                {{ !empty($contact['email']) ? $contact['email'] : 'sevenrockradio@gmail.com' }}
                             </a>
                             @if(!empty($contact['phone_primary']))
                                 <p class="mt-2 text-xs text-[#7b7b7b]">Teléfono: {{ $contact['phone_primary'] }}</p>

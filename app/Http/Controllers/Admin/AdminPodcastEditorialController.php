@@ -244,8 +244,8 @@ class AdminPodcastEditorialController extends Controller
         $master = $radioProgram->masterProgram ?? MasterProgram::query()->findOrFail($radioProgram->master_program_id);
 
         $hasNewCoverFile = $request->hasFile('imagen_episodio_file') || $request->hasFile('imagen_portada');
-        $incomingCoverUrl = trim((string) $request->input('imagen_episodio_url', ''));
-        $coverChanged = $hasNewCoverFile || ($request->has('imagen_episodio_url') && $incomingCoverUrl !== '' && $incomingCoverUrl !== trim((string) $radioProgram->imagen_episodio));
+        $incomingCoverUrl = trim((string) ($request->input('imagen_episodio_url') ?: $request->input('imagen_portada_url', '')));
+        $coverChanged = $hasNewCoverFile || (($request->has('imagen_episodio_url') || $request->has('imagen_portada_url')) && $incomingCoverUrl !== '' && $incomingCoverUrl !== trim((string) $radioProgram->imagen_episodio));
 
         $hasNewAudio = $request->hasFile('archivo_mp3')
             || $request->filled('r2_key')
@@ -263,6 +263,7 @@ class AdminPodcastEditorialController extends Controller
             'radioboss_custom_filename' => ['nullable', 'string', 'max:255'],
             'confirm_radioboss_filename' => ['nullable', 'boolean'],
             'imagen_episodio_url' => ['nullable', 'url', 'max:255'],
+            'imagen_portada_url' => ['nullable', 'url', 'max:255'],
             'imagen_episodio_file' => ['nullable', 'file', 'image', 'max:10240'],
             'imagen_portada' => ['nullable', 'file', 'image', 'max:10240'],
             'cover_update_scope' => [
@@ -315,6 +316,26 @@ class AdminPodcastEditorialController extends Controller
             }
             if (! empty($data['schedule_inclusion_status'])) {
                 $radioProgram->schedule_inclusion_status = (string) $data['schedule_inclusion_status'];
+            }
+
+            // Si se solicita actualizar portada de la ficha pública (sheet_only) post-entrega
+            if ($coverChanged && ($data['cover_update_scope'] ?? 'sheet_only') === 'sheet_only') {
+                $storageFolder = $radioProgram->storageFolderSlug();
+                if ($hasNewCoverFile) {
+                    $file = $request->file('imagen_episodio_file') ?: $request->file('imagen_portada');
+                    $ext = strtolower((string) ($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg'));
+                    $name = sprintf('%s-cover-%s.%s', now()->format('Y-m-d'), Str::lower(Str::uuid()->toString()), $ext);
+                    $stored = Storage::disk('r2')->putFileAs('podcast-inbox/covers/' . $storageFolder, $file, $name);
+                    if (is_string($stored) && $stored !== '') {
+                        $radioProgram->imagen_episodio = trim($stored, '/');
+                    }
+                } elseif ($incomingCoverUrl !== '') {
+                    $radioProgram->imagen_episodio = $incomingCoverUrl;
+                }
+                $delivMeta = (array) ($radioProgram->delivery_metadata ?? []);
+                $delivMeta['last_cover_update_scope'] = 'sheet_only';
+                $delivMeta['cover_embedded_in_mp3_outdated'] = true;
+                $radioProgram->delivery_metadata = $delivMeta;
             }
 
             $radioProgram->save();

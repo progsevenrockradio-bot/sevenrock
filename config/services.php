@@ -62,6 +62,11 @@ return [
         'analytics_id' => env('GOOGLE_ANALYTICS_ID'),
     ],
 
+    'cloudflare' => [
+        'zone_id' => env('CLOUDFLARE_ZONE_ID'),
+        'analytics_token' => env('CLOUDFLARE_ANALYTICS_TOKEN'),
+    ],
+
     'openrouter' => [
         'api_key' => env('OPENROUTER_API_KEY'),
         'model' => env('OPENROUTER_MODEL', 'google/gemini-2.5-flash'),

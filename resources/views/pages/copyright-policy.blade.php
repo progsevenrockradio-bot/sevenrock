@@ -46,8 +46,8 @@
                             Procederemos con la máxima celeridad a investigar y, de ser procedente, retirar o deshabilitar el material en disputa. Para enviar un reclamo formal de infracción, envíanos un correo electrónico detallando la obra protegida, el enlace o programa donde se cometió la presunta infracción, tu información de contacto y una declaración de propiedad al siguiente buzón:
                         </p>
                         <div class="mt-4 rounded-lg bg-white/[0.02] border border-white/5 p-4 text-center">
-                            <a href="mailto:{{ $contact['email'] ?? 'prog.sevenrockradio@gmail.com' }}" class="font-display text-base text-white hover:text-lucille-accent transition-colors">
-                                {{ $contact['email'] ?? 'prog.sevenrockradio@gmail.com' }}
+                            <a href="mailto:{{ !empty($contact['email']) ? $contact['email'] : 'sevenrockradio@gmail.com' }}" class="font-display text-base text-white hover:text-lucille-accent transition-colors">
+                                {{ !empty($contact['email']) ? $contact['email'] : 'sevenrockradio@gmail.com' }}
                             </a>
                         </div>
                     </div>

@@ -16,6 +16,21 @@ use Illuminate\View\View;
 
 class PublicProfileController extends Controller
 {
+    public function basicPlanInfo(): View
+    {
+        return view('talentos.public.plan-basico', [
+            'basicPlan' => \App\Support\TalentPlan::definition('basic'),
+            'allPlans' => \App\Support\TalentPlan::definitions(),
+        ]);
+    }
+
+    public function proPlanInfo(): View
+    {
+        return view('talentos.public.plan-pro', [
+            'proPlan' => \App\Support\TalentPlan::definition('pro'),
+        ]);
+    }
+
     public function index(Request $request): View
     {
         $query = Talent::query()

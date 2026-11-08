@@ -17,9 +17,51 @@
                     </tr>
                     <tr>
                         <td style="padding: 35px 30px;">
+                            @php
+                                $isPaid = in_array($talent->plan, ['basic', 'pro'], true);
+                            @endphp
                             <h2 style="margin: 0 0 15px; font-size: 20px; color: #ffffff;">⏰ Hola, {{ $talent->band_name }}</h2>
 
-                            @if(($stage ?? '') === '3_days_before_purge')
+                            @if(($stage ?? '') === 'recovery_7_days_before')
+                                <p style="margin: 0 0 10px; font-size: 12px; font-weight: 700; color: #facc15; text-transform: uppercase; letter-spacing: 1.5px;">
+                                    Estado actual: Perfil en PAUSA (Quedan 7 días del período de recuperación)
+                                </p>
+                                <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #a0aab5;">
+                                    Te recordamos que tu período de recuperación de 30 días para tu cuenta {{ ucfirst($talent->plan) }} finaliza el <strong style="color: #facc15;">{{ isset($recoveryEndDate) ? $recoveryEndDate->format('d/m/Y') : '' }} (en 7 días)</strong>.
+                                    Mientras tu perfil permanece en pausa fuera del Muro del Rock y con subidas pausadas, tu acceso al panel continúa totalmente operativo.
+                                </p>
+                                <div style="background-color: rgba(250, 204, 21, 0.08); border-left: 4px solid #facc15; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                                    <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: #ffffff;">
+                                        <strong>Opciones disponibles desde tu panel:</strong>
+                                    </p>
+                                    <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: #dcdcdc;">
+                                        • <strong>Descargar tu material:</strong> Puedes descargar tus canciones MP3 y fotografías de forma individual desde la sección de medios.<br>
+                                        • <strong>Renovar tu suscripción:</strong> Al renovar, tu perfil volverá a estar publicado de inmediato en el Muro del Rock.
+                                    </p>
+                                    <p style="margin: 0; font-size: 11px; line-height: 1.4; color: #a0aab5;">
+                                        Te recomendamos descargar tus archivos o renovar antes del {{ isset($recoveryEndDate) ? $recoveryEndDate->format('d/m/Y') : '' }}. Superar el plazo mantiene el perfil pausado sin ejecutar purgas automáticas ni prometer conservación indefinida.
+                                    </p>
+                                </div>
+                            @elseif(($stage ?? '') === 'recovery_1_day_before')
+                                <p style="margin: 0 0 10px; font-size: 12px; font-weight: 700; color: #f87171; text-transform: uppercase; letter-spacing: 1.5px;">
+                                    Estado actual: Perfil en PAUSA (Últimas 24 horas del período de recuperación)
+                                </p>
+                                <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #a0aab5;">
+                                    Aviso importante: tu período de recuperación de 30 días para tu cuenta {{ ucfirst($talent->plan) }} finaliza <strong style="color: #f87171;">mañana ({{ isset($recoveryEndDate) ? $recoveryEndDate->format('d/m/Y') : '' }})</strong>.
+                                    Tu perfil continúa fuera del Muro del Rock, pero conservas acceso completo a tu panel de banda.
+                                </p>
+                                <div style="background-color: rgba(248, 113, 113, 0.1); border-left: 4px solid #f87171; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                                    <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: #ffffff;">
+                                        <strong>Acción recomendada antes de finalizar el plazo:</strong>
+                                    </p>
+                                    <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: #dcdcdc;">
+                                        Te recomendamos encarecidamente <strong>descargar tus canciones y archivos</strong> desde tu panel o <strong>confirmar tu renovación</strong> para reactivar tu presencia pública de inmediato.
+                                    </p>
+                                    <p style="margin: 0; font-size: 11px; line-height: 1.4; color: #a0aab5;">
+                                        Nota: Las cuentas pausadas de Básico y Pro no tienen purga automática programada, pero no garantizan conservación indefinida tras concluir el período de recuperación.
+                                    </p>
+                                </div>
+                            @elseif(($stage ?? '') === '3_days_before_purge')
                                 <p style="margin: 0 0 10px; font-size: 12px; font-weight: 700; color: #f87171; text-transform: uppercase; letter-spacing: 1.5px;">
                                     Estado actual: Perfil OCULTO (Periodo de gracia por finalizar)
                                 </p>
@@ -36,16 +78,20 @@
                                 </div>
                             @elseif(($stage ?? '') === '1_day_before')
                                 <p style="margin: 0 0 10px; font-size: 12px; font-weight: 700; color: #facc15; text-transform: uppercase; letter-spacing: 1.5px;">
-                                    Estado actual: Perfil ACTIVO (Últimas 24 horas)
+                                    Estado actual: Perfil ACTIVO (Últimas 24 horas del periodo incluido)
                                 </p>
                                 <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #a0aab5;">
-                                    Te recordamos que tu espacio en Seven Rock Radio <strong style="color: #facc15;">vence mañana ({{ isset($endDate) ? $endDate->format('d/m/Y') : '' }})</strong>.
-                                    Al vencer, tu perfil pasará automáticamente a estado <strong>OCULTO</strong> y comenzará un periodo de gracia improrrogable de {{ $graceDays }} días (hasta el {{ isset($purgeDate) ? $purgeDate->format('d/m/Y') : '' }}), tras el cual el material no renovado será eliminado definitivamente.
+                                    Te recordamos que tu servicio en Seven Rock Radio <strong style="color: #facc15;">está incluido hasta mañana ({{ isset($endDate) ? $endDate->format('d/m/Y') : '' }}) inclusive</strong>.
+                                    @if($isPaid)
+                                        Al concluir, tu ficha pública quedará en pausa (modo <strong>OCULTO</strong>) y se pausarán nuevas subidas de archivos. Tu acceso al panel y tus archivos subidos se conservan, pudiendo reactivar tu presencia en cualquier momento al renovar tu suscripción.
+                                    @else
+                                        Al vencer, tu perfil pasará automáticamente a estado <strong>OCULTO</strong> y comenzará un periodo de gracia improrrogable de {{ $graceDays }} días (hasta el {{ isset($purgeDate) ? $purgeDate->format('d/m/Y') : '' }}), tras el cual el material no renovado será eliminado definitivamente.
+                                    @endif
                                 </p>
                                 <div style="background-color: rgba(250, 204, 21, 0.08); border-left: 4px solid #facc15; padding: 15px; margin: 20px 0; border-radius: 4px;">
                                     <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #a0aab5;">
-                                        <strong style="color: #facc15;">Evita que tu perfil sea ocultado:</strong><br>
-                                        Renueva hoy mismo tu suscripción para que tu banda continúe sonando sin interrupción en el Muro del Rock.
+                                        <strong style="color: #facc15;">Mantén tu perfil activo sin interrupción:</strong><br>
+                                        Renueva tu suscripción para continuar visible en el Muro del Rock. Si renuevas por adelantado, sumas un mes completo sin perder los días restantes.
                                     </p>
                                 </div>
                             @else
@@ -53,15 +99,19 @@
                                     Estado actual: Perfil ACTIVO en Muro del Rock
                                 </p>
                                 <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #a0aab5;">
-                                    Te avisamos que tu espacio de difusión en Seven Rock Radio
-                                    <strong style="color: #facc15;">vence en {{ $daysLeft }} días (el {{ isset($endDate) ? $endDate->format('d/m/Y') : '' }})</strong>.
-                                    Cuando expire esa fecha, tu perfil pasará a modo <strong>OCULTO</strong> durante un periodo de gracia de {{ $graceDays }} días (hasta el {{ isset($purgeDate) ? $purgeDate->format('d/m/Y') : '' }}),
-                                    tras el cual todo tu material será <strong>eliminado definitivamente</strong>.
+                                    Te avisamos que tu servicio de difusión en Seven Rock Radio
+                                    <strong style="color: #facc15;">está incluido hasta el {{ isset($endDate) ? $endDate->format('d/m/Y') : '' }} (en {{ $daysLeft }} días)</strong> inclusive.
+                                    @if($isPaid)
+                                        Al vencer la fecha, tu ficha pública quedará temporalmente en pausa sin borrar tus canciones o imágenes, pudiendo reactivarla renovando cuando desees.
+                                    @else
+                                        Cuando expire esa fecha, tu perfil pasará a modo <strong>OCULTO</strong> durante un periodo de gracia de {{ $graceDays }} días (hasta el {{ isset($purgeDate) ? $purgeDate->format('d/m/Y') : '' }}),
+                                        tras el cual todo tu material será <strong>eliminado definitivamente</strong>.
+                                    @endif
                                 </p>
                                 <div style="background-color: rgba(250, 204, 21, 0.08); border-left: 4px solid #facc15; padding: 15px; margin: 20px 0; border-radius: 4px;">
                                     <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #a0aab5;">
-                                        <strong style="color: #facc15;">¿Qué puedes hacer ahora?</strong><br>
-                                        Renueva o actualiza tu plan antes del vencimiento y mantén tu música sonando en Seven Rock Radio sin interrupciones.
+                                        <strong style="color: #facc15;">¿Quieres renovar ahora?</strong><br>
+                                        Puedes confirmar tu renovación por anticipado: el nuevo mes se sumará a tu vencimiento actual sin perder ningún día ya abonado.
                                     </p>
                                 </div>
                             @endif
@@ -70,7 +120,7 @@
                                 <tr>
                                     <td align="center">
                                         <a href="{{ $renewalUrl }}" style="display: inline-block; background-color: #c32720; color: #ffffff; text-decoration: none; padding: 14px 32px; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; border-radius: 6px;">
-                                            {{ ($stage ?? '') === '3_days_before_purge' ? 'Reactivar mi perfil y conservar material' : 'Ver planes y renovar ahora' }}
+                                            {{ ($stage ?? '') === '3_days_before_purge' || str_starts_with((string) ($stage ?? ''), 'recovery_') ? 'Reactivar mi perfil ahora' : 'Ver planes y renovar ahora' }}
                                         </a>
                                     </td>
                                 </tr>

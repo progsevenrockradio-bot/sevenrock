@@ -238,11 +238,17 @@
 
     {{-- ═══════════ TAB 2: PODCASTS ═══════════ --}}
     <div id="podcasts" role="tabpanel" aria-labelledby="tab-podcasts" x-show="activeTab === 'podcasts'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-data="{ expandedProgram: null }">
-        <div class="mb-6 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-            <h2 class="flex items-center gap-3 font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">
-                <span class="h-5 w-1 bg-lucille-accent"></span>Podcasts
-            </h2>
-            <p class="text-xs text-[#a3a3a3]">Despliega los episodios de cada programa o pulsa reproducir para escuchar la última emisión</p>
+        <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/5 pb-4">
+            <div>
+                <h2 class="flex items-center gap-3 font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">
+                    <span class="h-5 w-1 bg-lucille-accent"></span>Podcasts
+                </h2>
+                <p class="text-xs text-[#a3a3a3] mt-0.5">Despliega los episodios de cada programa o pulsa reproducir para escuchar la última emisión</p>
+            </div>
+            <a href="{{ route('audience.daily') }}" class="inline-flex items-center gap-2 self-start sm:self-auto rounded-sm border border-white/10 bg-[#16161a] px-3.5 py-1.5 text-xs font-display uppercase tracking-[.12em] text-[#b0b0b5] hover:text-white hover:border-[var(--lucille-accent)] hover:bg-white/5 transition-all shadow-sm">
+                <span class="text-sm leading-none text-[var(--lucille-accent-readable,#ff5b52)]">📊</span>
+                <span>Consulta la audiencia de la radio</span>
+            </a>
         </div>
 
         @if (empty($groupedEpisodes))

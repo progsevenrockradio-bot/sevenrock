@@ -212,9 +212,11 @@ class Phase1CircuitProtectionTest extends TestCase
     }
 
     /**
-     * Verifica que NewRelease enviado voluntariamente por un artista (Buzón de Maquetas) SÍ envíe notificación al artista.
+     * Las maquetas (origin='submission') avisan por su propio circuito (App\Services\SubmissionPublisher),
+     * tras confirmar la transacción y con estado reintentable. El modelo NO debe enviar un segundo aviso.
+     * El circuito único se prueba en Tests\Feature\Admin\TrackSubmissionPublishTest.
      */
-    public function test_artist_submission_new_release_sends_notification_to_artist_on_activation(): void
+    public function test_artist_submission_new_release_does_not_send_model_notification_to_avoid_duplicate(): void
     {
         Mail::fake();
 
@@ -229,9 +231,7 @@ class Phase1CircuitProtectionTest extends TestCase
 
         $release->update(['is_active' => true]);
 
-        Mail::assertSent(NewReleasePublishedMail::class, function ($mail) {
-            return $mail->hasTo('cantante@bandaindie.com');
-        });
+        Mail::assertNotSent(NewReleasePublishedMail::class);
     }
 
     /**

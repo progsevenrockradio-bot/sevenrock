@@ -50,6 +50,8 @@ use App\Http\Controllers\Admin\EmailLogController as AdminEmailLogController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ContractSigningController;
 use App\Http\Controllers\SubmissionController;
+use App\Http\Controllers\AudienceReportController;
+use App\Http\Controllers\AudienceDailyReportController;
 
 Route::controller(\App\Http\Controllers\Admin\ModerationController::class)->prefix('moderation')->name('admin.moderation.')->middleware('signed')->group(function (): void {
     Route::get('/{item}/approve-email', 'approveFromEmail')->name('approve-email')
@@ -112,6 +114,22 @@ Route::get('/new-releases/{slug}', [SiteController::class, 'newReleaseSingle'])-
 Route::get('/colaboradores/{slug}', [SiteController::class, 'agencyPublicProfile'])->name('agency.public-profile');
 Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware(['throttle:comment-submit', \App\Http\Middleware\PreventSpamWithHoneypot::class])->name('posts.comments.store');
 Route::post('/posts/{post}/like', [PostReactionController::class, 'toggle'])->middleware('throttle:60,1')->name('posts.like');
+
+// Consulta Diaria de Audiencia (RadioBOSS para conductores y público)
+Route::controller(AudienceDailyReportController::class)->prefix('audiencia/diaria')->name('audience.daily')->middleware('throttle:30,1')->group(function (): void {
+    Route::get('/', 'index');
+    Route::get('/estado', 'status')->name('.status');
+    Route::get('/pdf', 'downloadPdf')->name('.pdf');
+});
+
+// Informe Semanal de Audiencia (RadioBOSS + Cloudflare)
+Route::controller(AudienceReportController::class)->prefix('audiencia')->name('audience.')->group(function (): void {
+    Route::get('/informe-semanal', 'index')->name('report.latest');
+    Route::get('/informe-semanal/pdf', 'downloadLatestPdf')->name('report.latest.pdf');
+    Route::get('/historico', 'history')->name('history');
+    Route::get('/{year}/semana-{week}', 'show')->name('report.show')->whereNumber(['year', 'week']);
+    Route::get('/{year}/semana-{week}/pdf', 'downloadPdf')->name('report.pdf')->whereNumber(['year', 'week']);
+});
 
 Route::get("/programas", [SiteController::class, "programs"])->name("programs");
 Route::get("/programas/track-play", [SiteController::class, "trackPlay"])->name("programs.track-play");
@@ -231,8 +249,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::delete('/{submission}', 'destroy')->name('destroy');
         Route::get('/{submission}/download', 'download')->name('download');
         Route::post('/{submission}/publish', 'publishToHub')->name('publish');
+        Route::post('/{submission}/retry-notice', 'retryNotice')->name('retryNotice');
         Route::post('/bulk-publish', 'bulkPublish')->name('bulkPublish');
         Route::patch('/{submission}/toggle-feed', 'toggleFeed')->name('toggleFeed');
+        Route::post('/followups/{followup}/pause', 'pauseFollowup')->name('followups.pause');
+        Route::post('/followups/{followup}/resume', 'resumeFollowup')->name('followups.resume');
+        Route::post('/followups/{followup}/cancel', 'cancelFollowup')->name('followups.cancel');
+        Route::post('/followups/{followup}/retry', 'retryFollowup')->name('followups.retry');
     });
 
     Route::controller(AdminPostController::class)->prefix('posts')->name('posts.')->group(function (): void {
@@ -443,6 +466,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::delete('/media/{media}', [AdminTalentAdminController::class, 'deleteMedia'])->name('media.destroy');
         Route::get('/{talent}/edit', [AdminTalentAdminController::class, 'edit'])->name('edit');
         Route::put('/{talent}', [AdminTalentAdminController::class, 'update'])->name('update');
+        Route::post('/{talent}/renew', [AdminTalentAdminController::class, 'confirmRenewal'])->name('renew');
+        Route::post('/{talent}/courtesy', [AdminTalentAdminController::class, 'grantCourtesy'])->name('courtesy');
+        Route::post('/{talent}/subscriptions/{subscription}/refund', [AdminTalentAdminController::class, 'refundSubscription'])->name('subscriptions.refund');
         Route::post('/{talent}/suspend', [AdminTalentAdminController::class, 'suspend'])->name('suspend');
         Route::post('/{talent}/activate', [AdminTalentAdminController::class, 'activate'])->name('activate');
         Route::post('/{talent}/approve', [AdminTalentAdminController::class, 'approve'])->name('approve');
@@ -456,6 +482,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::post('/{promoter}/expand', 'expand')->name('expand');
         Route::post('/{promoter}/renew', 'renew')->name('renew');
         Route::post('/{promoter}/send-email', 'sendEmail')->name('send-email');
+        Route::post('/{promoter}/grant-courtesy', 'grantCollaboratorCourtesy')->name('grant-courtesy');
     });
 
 
@@ -541,7 +568,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 });
 
-// Muro del Rock — Dirección pública principal
+// Muro del Rock — Dirección pública principal y ficha informativa del Plan Básico
+Route::get('/muro-del-rock/plan-basico', [TalentPublicProfileController::class, 'basicPlanInfo'])
+    ->name('talents.plans.basic');
+Route::get('/muro-del-rock/plan-pro', [TalentPublicProfileController::class, 'proPlanInfo'])
+    ->name('talents.plans.pro');
 Route::get('/muro-del-rock', [TalentPublicProfileController::class, 'index'])
     ->middleware('throttle:public-search')
     ->name('talents.explore');
@@ -675,12 +706,14 @@ Route::get('/descargar-app', [\App\Http\Controllers\AppDownloadController::class
 Route::get('/baja/{token}', function (\Illuminate\Http\Request $request, $token) {
     $contact = \App\Models\MarketingContact::where('unsubscribe_token', $token)->firstOrFail();
     
-    if (!$contact->unsubscribed_at) {
+    if (!$contact->unsubscribed_at || $contact->is_active) {
         $contact->update([
             'is_active' => false,
-            'unsubscribed_at' => now(),
+            'unsubscribed_at' => $contact->unsubscribed_at ?? now(),
         ]);
     }
+
+    app(\App\Services\SubmissionFollowupService::class)->cancelPendingForUnsubscribedEmail((string) $contact->email);
 
     return response('<html><body style="font-family: sans-serif; padding: 2rem; max-width: 600px; margin: auto; text-align: center;"><h2>Te hemos dado de baja</h2><p>No volverás a recibir nuestros correos promocionales.</p></body></html>');
 })->name('marketing.unsubscribe')->middleware('signed');

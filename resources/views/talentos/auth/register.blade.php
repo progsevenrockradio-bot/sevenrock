@@ -163,6 +163,27 @@
                                 <span class="text-lucille-accent font-semibold">{{ $plan['monthly_label'] }}</span>
                             </div>
                             <p class="mt-2 text-xs leading-relaxed text-gray-400">{{ $plan['summary'] }}</p>
+                            @if (!empty($plan['features']))
+                                <ul class="mt-2.5 space-y-1 text-[11px] text-gray-300 list-disc pl-4">
+                                    @foreach ($plan['features'] as $feature)
+                                        <li>{{ $feature }}</li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                            @if ($key === 'basic')
+                                <div class="mt-3 pt-2 border-t border-white/5">
+                                    <a href="{{ route('talents.plans.basic') }}" class="text-[11px] font-semibold uppercase tracking-wider text-lucille-accent hover:underline">
+                                        Ver detalles y condiciones del Plan Básico →
+                                    </a>
+                                </div>
+                            @endif
+                            @if ($key === 'pro')
+                                <div class="mt-3 pt-2 border-t border-white/5">
+                                    <a href="{{ route('talents.plans.pro') }}" class="text-[11px] font-semibold uppercase tracking-wider text-lucille-accent hover:underline">
+                                        Ver detalles y condiciones del Plan Pro →
+                                    </a>
+                                </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
