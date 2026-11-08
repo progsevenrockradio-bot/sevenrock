@@ -8,6 +8,7 @@ use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class RadioProgram extends Model
 {
@@ -153,6 +154,25 @@ class RadioProgram extends Model
         return $value !== '' ? $value : 'public';
     }
 
+    public static function sanitizeStatusMessage(?string $value, int $max = 255): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if (mb_strlen($trimmed) <= $max) {
+            return $trimmed;
+        }
+
+        return mb_substr($trimmed, 0, max(0, $max - 3)) . '...';
+    }
+
+    public function setStatusMessageAttribute(?string $value): void
+    {
+        $this->attributes['status_message'] = self::sanitizeStatusMessage($value);
+    }
+
     public function storageFolderSlug(): string
     {
         $metadataFolder = trim((string) data_get($this->delivery_metadata, 'storage_folder', ''));
@@ -216,7 +236,71 @@ class RadioProgram extends Model
 
     public function radiobossRemoteFilename(): string
     {
-        return \App\Jobs\UploadRadiobossJob::resolveRemoteBaseName((string) ($this->archivo_mp3 ?: $this->buildCanonicalFilename()));
+        $confirmed = $this->getConfirmedRadiobossFilename();
+        if ($confirmed !== null && trim($confirmed) !== '') {
+            return trim($confirmed);
+        }
+
+        return \App\Support\Radio\RadioBossPathValidator::generateSafeProposal(
+            (string) ($this->archivo_mp3 ?: $this->buildCanonicalFilename())
+        );
+    }
+
+    public function getConfirmedRadiobossFilename(): ?string
+    {
+        $fromDelivery = data_get($this->delivery_metadata, 'radioboss_custom_filename');
+        if (is_string($fromDelivery) && trim($fromDelivery) !== '') {
+            return trim($fromDelivery);
+        }
+
+        $fromRadioboss = data_get($this->radioboss_metadata, 'custom_remote_filename');
+        if (is_string($fromRadioboss) && trim($fromRadioboss) !== '') {
+            return trim($fromRadioboss);
+        }
+
+        return null;
+    }
+
+    public function setConfirmedRadiobossFilename(?string $filename): self
+    {
+        $sanitized = $filename !== null && trim($filename) !== '' ? trim($filename) : null;
+
+        $deliveryMeta = (array) ($this->delivery_metadata ?? []);
+        $radiobossMeta = (array) ($this->radioboss_metadata ?? []);
+
+        if ($sanitized !== null) {
+            $deliveryMeta['radioboss_custom_filename'] = $sanitized;
+            $deliveryMeta['radioboss_filename_confirmed_at'] = now()->toIso8601String();
+            $radiobossMeta['custom_remote_filename'] = $sanitized;
+        } else {
+            unset($deliveryMeta['radioboss_custom_filename'], $deliveryMeta['radioboss_filename_confirmed_at']);
+            unset($radiobossMeta['custom_remote_filename']);
+        }
+
+        $this->delivery_metadata = $deliveryMeta;
+        $this->radioboss_metadata = $radiobossMeta;
+
+        return $this;
+    }
+
+    public function isDeliveredToRadioboss(): bool
+    {
+        return (bool) $this->enviado_radioboss || $this->radioboss_status === 'radioboss_verified';
+    }
+
+    public function isDeliveredToArchiveOrg(): bool
+    {
+        return $this->archive_org_status === 'archive_verified';
+    }
+
+    public function isDelivered(): bool
+    {
+        return $this->isDeliveredToRadioboss() || $this->isDeliveredToArchiveOrg();
+    }
+
+    public function radiobossFilenameAnalysis(): array
+    {
+        return \App\Support\Radio\RadioBossPathValidator::analyzeEpisode($this);
     }
 
     public static function isProcessedStoragePath(?string $path): bool

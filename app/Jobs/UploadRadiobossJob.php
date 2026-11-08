@@ -151,7 +151,11 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
 
         $disk = (string) ($radioProgram->archivo_mp3_disk ?: 'public');
         $absolutePath = app(\App\Services\FileUploadService::class)->localPath($sourcePath, $disk);
-        if ($absolutePath === null || ! is_file($absolutePath) || ! is_readable($absolutePath)) {
+        $canRead = $absolutePath !== null
+            && is_file($absolutePath)
+            && (is_readable($absolutePath) || ($testHandle = @fopen($absolutePath, 'rb')) !== false && (fclose($testHandle) || true));
+
+        if (! $canRead) {
             $this->markFailure($radioProgram, "No se pudo leer el MP3 procesado: {$sourcePath}");
 
             return;
@@ -161,7 +165,7 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
         $localSha256 = hash_file('sha256', $absolutePath);
         $ftpDisk = Storage::disk('radioboss');
         $folder = $this->resolveRemoteFolder($radioProgram);
-        if ($folder === null) {
+        if ($folder === null || ! \App\Support\Radio\RadioBossPathValidator::isSafeRemoteFolder($folder)) {
             $programName = $radioProgram->masterProgram?->nombre ?? 'Sin nombre';
             $this->markFailure(
                 $radioProgram,
@@ -187,7 +191,21 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
             }
         }
 
-        $baseName = self::resolveRemoteBaseName($sourcePath);
+        // 3.3 Resolución y validación estricta de nombre remoto antes de tocar FTP
+        $confirmedBaseName = $radioProgram->getConfirmedRadiobossFilename();
+        $baseName = ($confirmedBaseName !== null && trim($confirmedBaseName) !== '')
+            ? trim($confirmedBaseName)
+            : self::resolveRemoteBaseName($sourcePath);
+
+        if (! \App\Support\Radio\RadioBossPathValidator::isSafeRemoteName($baseName)) {
+            $this->markFailure(
+                $radioProgram,
+                "El nombre remoto para RadioBOSS ('{$baseName}') contiene caracteres incompatibles que el servidor FTP rechaza. Debe validarse y confirmarse un nombre ASCII seguro antes de iniciar la entrega."
+            );
+
+            return;
+        }
+
         $destinationPath = trim($folder, '/\\') . '/' . $baseName;
         $destinationPath = trim(str_replace(['//', '\\'], ['/', '/'], $destinationPath), '/');
 
@@ -378,8 +396,11 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                 }
 
                 $freshFolder = $this->resolveRemoteFolder($locked);
-                $freshBaseName = self::resolveRemoteBaseName($sourcePath);
-                $expectedPath = trim($freshFolder, '/\\') . '/' . $freshBaseName;
+                $freshConfirmed = $locked->getConfirmedRadiobossFilename();
+                $freshBaseName = ($freshConfirmed !== null && trim($freshConfirmed) !== '')
+                    ? trim($freshConfirmed)
+                    : self::resolveRemoteBaseName($sourcePath);
+                $expectedPath = trim((string) $freshFolder, '/\\') . '/' . $freshBaseName;
                 $expectedPath = trim(str_replace(['//', '\\'], ['/', '/'], $expectedPath), '/');
 
                 if ($destinationPath !== $expectedPath && ! str_starts_with(basename($destinationPath), pathinfo($freshBaseName, PATHINFO_FILENAME))) {
@@ -426,6 +447,9 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
 
             // 8. Renombrado estricto sin sobrescritura destructiva y rotación de respaldo comprobada
             $backedUpFiles = [];
+            $unrotatedLegacyFiles = [];
+            $preserveUnrotatableLegacy = (bool) config('services.radioboss.preserve_unrotatable_legacy_files', true);
+
             if ($archiveToRespaldo) {
                 $backupRoot = (string) config('services.radioboss.backup_root', 'respaldos_programas');
                 $backupDir = trim($backupRoot, '/') . '/' . trim($folder, '/');
@@ -453,22 +477,104 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                             throw new \RuntimeException("Fallo al crear directorio de respaldo externo '{$backupDir}': makeDirectory devolvió false.");
                         }
 
-                        $backupTarget = $backupDir . '/' . $fname;
-                        if ($ftpDisk->exists($backupTarget)) {
-                            $backupTarget = $backupDir . '/' . pathinfo($fname, PATHINFO_FILENAME) . '_' . date('Ymd_His') . '.' . $fileExt;
+                        $backupBaseName = self::resolveRemoteBaseName($fname);
+                        try {
+                            $backupTarget = $this->resolveAvailableBackupPath($ftpDisk, $backupDir, $backupBaseName);
+                        } catch (Throwable $e) {
+                            $this->restoreBackedUpFiles($ftpDisk, $backedUpFiles);
+                            throw $e;
                         }
+
+                        // RadioBOSS puede representar caracteres no soportados como "?" en LIST.
+                        // En nombres de archivo Windows ese carácter no es válido y se trata como legado no direccionable.
+                        $hasNonAscii = (bool) preg_match('/[^\x20-\x7E]/', $fname) || str_contains($fname, '?');
 
                         // Traslado comprobado del episodio anterior hacia el respaldo externo
                         try {
                             $movedToBackup = (bool) $ftpDisk->move($existingFile, $backupTarget);
                         } catch (Throwable $e) {
+                            $sourceStillExists = null;
+                            $backupExists = null;
+                            try {
+                                $currentFiles = (array) $ftpDisk->files($folder);
+                                $sourceStillExists = in_array($existingFile, $currentFiles, true)
+                                    || in_array(basename($existingFile), array_map('basename', $currentFiles), true)
+                                    || (bool) $ftpDisk->exists($existingFile);
+                                $backupExists = (bool) $ftpDisk->exists($backupTarget);
+                            } catch (Throwable) {
+                                // El nombre legado puede ser precisamente lo que el servidor no puede consultar.
+                            }
+                            Log::warning('UploadRadiobossJob: fallo al trasladar episodio anterior a respaldo.', [
+                                'program_id' => $radioProgram->id,
+                                'existing_file' => $existingFile,
+                                'backup_target' => $backupTarget,
+                                'has_non_ascii' => $hasNonAscii,
+                                'source_still_exists' => $sourceStillExists,
+                                'backup_exists' => $backupExists,
+                                'exception' => $e->getMessage(),
+                            ]);
+
+                            if ($hasNonAscii && $preserveUnrotatableLegacy) {
+                                $unrotatedLegacyFiles[] = $existingFile;
+                                Log::info("UploadRadiobossJob: se conserva intacto el episodio legado '{$fname}' en emisión para no bloquear la publicación del nuevo episodio verificado.", [
+                                    'program_id' => $radioProgram->id,
+                                    'legacy_file' => $existingFile,
+                                ]);
+                                continue;
+                            }
+
                             $this->restoreBackedUpFiles($ftpDisk, $backedUpFiles);
-                            throw new \RuntimeException("Fallo al trasladar episodio anterior '{$existingFile}' al respaldo '{$backupTarget}': " . $e->getMessage());
+
+                            if ($hasNonAscii) {
+                                $preservation = $sourceStillExists === true && $backupExists === false
+                                    ? 'El original sigue confirmado en la carpeta de emisión.'
+                                    : 'No se pudo confirmar la ubicación final del original; no reintentar hasta revisar emisión y respaldo.';
+                                throw new \RuntimeException("Fallo al rotar episodio legado '{$fname}' a respaldos: {$e->getMessage()}. {$preservation}");
+                            }
+
+                            throw new \RuntimeException("Fallo al trasladar episodio anterior '{$fname}' al respaldo: {$e->getMessage()}");
                         }
 
                         if (! $movedToBackup || ! $ftpDisk->exists($backupTarget)) {
+                            $sourceStillExists = null;
+                            $backupExists = null;
+                            try {
+                                $currentFiles = (array) $ftpDisk->files($folder);
+                                $sourceStillExists = in_array($existingFile, $currentFiles, true)
+                                    || in_array(basename($existingFile), array_map('basename', $currentFiles), true)
+                                    || (bool) $ftpDisk->exists($existingFile);
+                                $backupExists = (bool) $ftpDisk->exists($backupTarget);
+                            } catch (Throwable) {
+                                // El nombre legado puede ser precisamente lo que el servidor no puede consultar.
+                            }
+                            Log::warning('UploadRadiobossJob: no se pudo confirmar el traslado del episodio anterior a respaldo.', [
+                                'program_id' => $radioProgram->id,
+                                'existing_file' => $existingFile,
+                                'backup_target' => $backupTarget,
+                                'has_non_ascii' => $hasNonAscii,
+                                'source_still_exists' => $sourceStillExists,
+                                'backup_exists' => $backupExists,
+                            ]);
+
+                            if ($hasNonAscii && $preserveUnrotatableLegacy) {
+                                $unrotatedLegacyFiles[] = $existingFile;
+                                Log::info("UploadRadiobossJob: se conserva intacto el episodio legado '{$fname}' en emisión para no bloquear la publicación del nuevo episodio verificado.", [
+                                    'program_id' => $radioProgram->id,
+                                    'legacy_file' => $existingFile,
+                                ]);
+                                continue;
+                            }
+
                             $this->restoreBackedUpFiles($ftpDisk, $backedUpFiles);
-                            throw new \RuntimeException("Fallo al trasladar episodio anterior '{$existingFile}' al respaldo '{$backupTarget}': move devolvió false o el destino no existe.");
+
+                            if ($hasNonAscii) {
+                                $preservation = $sourceStillExists === true && $backupExists === false
+                                    ? 'El original sigue confirmado en la carpeta de emisión.'
+                                    : 'No se pudo confirmar la ubicación final del original; no reintentar hasta revisar emisión y respaldo.';
+                                throw new \RuntimeException("Fallo al rotar episodio legado '{$fname}' a respaldos: el servidor FTP rechazó mover el archivo. {$preservation}");
+                            }
+
+                            throw new \RuntimeException("Fallo al trasladar episodio anterior '{$fname}' al respaldo: move devolvió false o el destino no existe.");
                         }
 
                         $backedUpFiles[] = ['from' => $existingFile, 'to' => $backupTarget];
@@ -508,7 +614,7 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
             }
 
             // 9.1. Registro condicional atómico: verificar por segunda vez bajo lock antes de certificar radioboss_verified
-            $persistedSuccessfully = (bool) DB::transaction(function () use ($currentVersion, $sourcePath, $disk, $destinationPath, $localSha256, $localSize, &$freshProgram): bool {
+            $persistedSuccessfully = (bool) DB::transaction(function () use ($currentVersion, $sourcePath, $disk, $destinationPath, $localSha256, $localSize, $unrotatedLegacyFiles, &$freshProgram): bool {
                 /** @var RadioProgram|null $finalLocked */
                 $finalLocked = RadioProgram::query()->lockForUpdate()->find($this->radioProgramId);
                 if (! $finalLocked instanceof RadioProgram) {
@@ -531,22 +637,33 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                     return false;
                 }
 
+                $metaUpdates = [
+                    'status' => 'radioboss_verified',
+                    'remote_path' => $destinationPath,
+                    'local_path' => (string) $finalLocked->archivo_mp3,
+                    'content_sha256' => $localSha256,
+                    'version' => $currentVersion,
+                    'size' => $localSize,
+                    'verified_at' => now()->toIso8601String(),
+                ];
+
+                if (! empty($unrotatedLegacyFiles)) {
+                    $metaUpdates['unrotated_legacy_files'] = $unrotatedLegacyFiles;
+                    $metaUpdates['coexistence_notice'] = 'Episodio nuevo verificado en destino. Se conservó intacto el episodio anterior legado por restricción de nombres del servidor FTP.';
+                }
+
+                $statusMsg = empty($unrotatedLegacyFiles)
+                    ? 'RadioBOSS verificado. Archive.org pendiente.'
+                    : 'RadioBOSS verificado (coexistiendo con episodio legado). Archive.org pendiente.';
+
                 $finalLocked->forceFill([
                     'enviado_radioboss' => true,
                     'radioboss_status' => 'radioboss_verified',
                     'radioboss_verified_at' => now(),
                     'radioboss_finished_at' => now(),
                     'radioboss_last_error' => null,
-                    'radioboss_metadata' => array_merge((array) ($finalLocked->radioboss_metadata ?? []), [
-                        'status' => 'radioboss_verified',
-                        'remote_path' => $destinationPath,
-                        'local_path' => (string) $finalLocked->archivo_mp3,
-                        'content_sha256' => $localSha256,
-                        'version' => $currentVersion,
-                        'size' => $localSize,
-                        'verified_at' => now()->toIso8601String(),
-                    ]),
-                    'status_message' => 'RadioBOSS verificado. Archive.org pendiente.',
+                    'radioboss_metadata' => array_merge((array) ($finalLocked->radioboss_metadata ?? []), $metaUpdates),
+                    'status_message' => RadioProgram::sanitizeStatusMessage($statusMsg),
                 ])->saveQuietly();
 
                 return true;
@@ -569,7 +686,7 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                 return;
             }
 
-            $audit->record($radioProgram, 'RADIOBOSS_UPLOAD_COMPLETED', 'La subida a RadioBOSS finalizó correctamente y fue verificada.', [
+            $completedAuditContext = [
                 'program_id' => $radioProgram->id,
                 'attempt' => $attempt,
                 'folder' => $folder,
@@ -577,7 +694,12 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                 'size_bytes' => $finalSize,
                 'sha256' => $localSha256,
                 'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
-            ]);
+            ];
+            if (! empty($unrotatedLegacyFiles)) {
+                $completedAuditContext['unrotated_legacy_files'] = $unrotatedLegacyFiles;
+            }
+
+            $audit->record($radioProgram, 'RADIOBOSS_UPLOAD_COMPLETED', 'La subida a RadioBOSS finalizó correctamente y fue verificada.', $completedAuditContext);
 
             $audit->record($radioProgram, 'RADIOBOSS_VERIFIED', 'RadioBOSS quedó verificado con destino sin colisión.', [
                 'program_id' => $radioProgram->id,
@@ -847,7 +969,7 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                 'radioboss_status' => 'radioboss_pending',
                 'delivery_status' => 'delivery_partial',
                 'radioboss_last_error' => null,
-                'status_message' => $msg,
+                'status_message' => RadioProgram::sanitizeStatusMessage($msg),
                 'radioboss_metadata' => array_merge((array) ($radioProgram->radioboss_metadata ?? []), [
                     'status' => 'radioboss_postponed',
                     'postponed_until' => $retryAt,
@@ -886,7 +1008,7 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                 'radioboss_status' => 'radioboss_pending',
                 'delivery_status' => 'delivery_partial',
                 'radioboss_last_error' => $reason,
-                'status_message' => $msg,
+                'status_message' => RadioProgram::sanitizeStatusMessage($msg),
                 'radioboss_metadata' => array_merge((array) ($radioProgram->radioboss_metadata ?? []), [
                     'status' => 'radioboss_pending_info',
                     'pending_reason' => $reason,
@@ -925,6 +1047,32 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
             Log::critical('UploadRadiobossJob: ' . $msg);
             throw new \RuntimeException($msg);
         }
+    }
+
+    private function resolveAvailableBackupPath(mixed $ftpDisk, string $backupDir, string $baseName): string
+    {
+        $candidate = trim($backupDir, '/') . '/' . $baseName;
+        if (! $ftpDisk->exists($candidate)) {
+            return $candidate;
+        }
+
+        $extension = pathinfo($baseName, PATHINFO_EXTENSION);
+        $stem = pathinfo($baseName, PATHINFO_FILENAME);
+        $timestamp = now()->format('Ymd_His');
+
+        for ($suffix = 1; $suffix <= 100; $suffix++) {
+            $versionedName = $stem . '_rotacion_' . $timestamp . '_' . $suffix;
+            if ($extension !== '') {
+                $versionedName .= '.' . $extension;
+            }
+
+            $candidate = trim($backupDir, '/') . '/' . $versionedName;
+            if (! $ftpDisk->exists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        throw new \RuntimeException("No se encontró una ruta libre en respaldos para '{$baseName}'; se detuvo la rotación para evitar sobrescribir archivos.");
     }
 
     private function markFailure(RadioProgram $radioProgram, string $message, ?string $remotePath = null): void
@@ -1000,11 +1148,6 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
      */
     public static function resolveRemoteBaseName(string $sourcePath): string
     {
-        $rawBaseName = basename(str_replace('\\', '/', trim($sourcePath)));
-        $asciiName = (string) Str::ascii($rawBaseName);
-        $sanitized = preg_replace('/[\/\\\\:*?"<>|]/', '-', $asciiName);
-        $sanitized = trim((string) preg_replace('/\s+/', ' ', $sanitized));
-
-        return $sanitized !== '' ? $sanitized : 'episode.mp3';
+        return \App\Support\Radio\RadioBossPathValidator::generateSafeProposal($sourcePath);
     }
 }

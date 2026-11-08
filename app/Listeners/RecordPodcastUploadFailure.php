@@ -26,7 +26,7 @@ final class RecordPodcastUploadFailure
         $program->forceFill([
             'delivery_status' => $this->resolveDeliveryStatus($program, $event->stage),
             'delivery_last_error' => $event->message,
-            'status_message' => $event->message,
+            'status_message' => RadioProgram::sanitizeStatusMessage($event->message),
         ])->saveQuietly();
 
         $this->auditService->record($program, 'ERROR', $event->message, [

@@ -59,6 +59,7 @@ return [
             'passive' => filter_var(env('RADIOBOSS_FTP_PASSIVE', true), FILTER_VALIDATE_BOOL),
             'ssl' => filter_var(env('RADIOBOSS_FTP_SSL', false), FILTER_VALIDATE_BOOL),
             'timeout' => (int) env('RADIOBOSS_FTP_TIMEOUT', 60),
+            'utf8' => filter_var(env('RADIOBOSS_FTP_UTF8', false), FILTER_VALIDATE_BOOL),
             'clear_before_upload' => filter_var(env('RADIOBOSS_FTP_CLEAR_BEFORE_UPLOAD', false), FILTER_VALIDATE_BOOL),
             'verify_after_upload' => filter_var(env('RADIOBOSS_FTP_VERIFY_AFTER_UPLOAD', false), FILTER_VALIDATE_BOOL),
             'scan_remote_for_episode_number' => filter_var(env('RADIOBOSS_FTP_SCAN_REMOTE_FOR_EPISODE_NUMBER', false), FILTER_VALIDATE_BOOL),

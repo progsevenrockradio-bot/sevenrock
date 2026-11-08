@@ -285,7 +285,10 @@ class ProcessMp3Job implements ShouldQueue
 
     private function prepareWorkingCopy(string $sourceAbsolutePath, string $workingPath): void
     {
-        if (! is_file($sourceAbsolutePath) || ! is_readable($sourceAbsolutePath)) {
+        $canRead = is_file($sourceAbsolutePath)
+            && (is_readable($sourceAbsolutePath) || ($testHandle = @fopen($sourceAbsolutePath, 'rb')) !== false && (fclose($testHandle) || true));
+
+        if (! $canRead) {
             throw new \RuntimeException("No se pudo preparar el archivo de trabajo desde {$sourceAbsolutePath}");
         }
 

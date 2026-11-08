@@ -296,7 +296,7 @@ class FileUploadService
                 $directory = storage_path('app/tmp/r2');
                 File::ensureDirectoryExists($directory);
 
-                $tmpPath = $directory . DIRECTORY_SEPARATOR . Str::uuid()->toString() . '-' . basename($key);
+                $tmpPath = $directory . DIRECTORY_SEPARATOR . Str::uuid()->toString() . '-' . Str::ascii(basename($key));
                 $handle = fopen($tmpPath, 'w+b');
                 if ($handle === false) {
                     fclose($stream);
@@ -335,7 +335,7 @@ class FileUploadService
             $directory = storage_path('app/tmp/backblaze');
             File::ensureDirectoryExists($directory);
 
-            $tmpPath = $directory . DIRECTORY_SEPARATOR . Str::uuid()->toString() . '-' . basename($key);
+            $tmpPath = $directory . DIRECTORY_SEPARATOR . Str::uuid()->toString() . '-' . Str::ascii(basename($key));
             $handle = fopen($tmpPath, 'w+b');
             if ($handle === false) {
                 fclose($stream);

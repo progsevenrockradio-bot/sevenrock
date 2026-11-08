@@ -122,6 +122,7 @@ return [
         'backup_root' => env('RADIOBOSS_BACKUP_ROOT', 'respaldos_programas'),
         'staging_root' => env('RADIOBOSS_STAGING_ROOT', 'staging_programas'),
         'default_folder' => env('RADIOBOSS_DEFAULT_FOLDER', 'Programas'),
+        'preserve_unrotatable_legacy_files' => (bool) env('RADIOBOSS_PRESERVE_UNROTATABLE_LEGACY_FILES', true),
     ],
 
 ];

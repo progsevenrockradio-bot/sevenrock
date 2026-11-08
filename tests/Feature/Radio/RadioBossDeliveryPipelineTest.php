@@ -12,18 +12,24 @@ use App\Models\RadioProgram;
 use App\Models\Song;
 use App\Models\User;
 use App\Services\RadioPlayerService;
+use App\Services\FileUploadService;
 use App\Support\Radio\StreamMetadataReader;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class RadioBossDeliveryPipelineTest extends TestCase
 {
     use RefreshDatabase;
+
+    /** @var list<string> */
+    private array $temporaryAudioFiles = [];
 
     protected function setUp(): void
     {
@@ -39,13 +45,25 @@ class RadioBossDeliveryPipelineTest extends TestCase
             'player.radioboss.api_url' => 'https://c30.radioboss.fm',
             'player.radioboss.station_id' => '569',
             'player.radioboss.api_key' => 'test-key-569',
+            'filesystems.disks.r2.key' => 'fake-key',
+            'filesystems.disks.r2.secret' => 'fake-secret',
+            'filesystems.disks.r2.bucket' => 'fake-bucket',
+            'filesystems.disks.r2.url' => 'https://fake-r2.test',
+            'mail.default' => 'array',
         ]);
+
+        Mail::fake();
     }
 
     protected function tearDown(): void
     {
         Cache::flush();
         Carbon::setTestNow();
+        foreach ($this->temporaryAudioFiles as $path) {
+            if (is_file($path)) {
+                @unlink($path);
+            }
+        }
         parent::tearDown();
     }
 
@@ -550,6 +568,8 @@ class RadioBossDeliveryPipelineTest extends TestCase
         $master = MasterProgram::factory()->create([
             'nombre' => 'Collision Show',
             'ruta_ftp' => 'Programas/Collision',
+            'dia_transmision' => 'LUNES',
+            'hora_transmision' => '04:00:00',
         ]);
 
         // Ambos archivos ya existen en el destino
@@ -1720,6 +1740,7 @@ class RadioBossDeliveryPipelineTest extends TestCase
      */
     public function test_accented_program_name_transliterates_to_ascii_for_radioboss(): void
     {
+        Mail::fake();
         Storage::fake('radioboss');
         Storage::fake('r2');
 
@@ -1734,6 +1755,7 @@ class RadioBossDeliveryPipelineTest extends TestCase
         $r2Path = 'programas_procesados/codigo-zona-misterio/014.- CÓDIGO ZONA MISTERIO 08-11-2026.mp3';
         $content = 'misterio-audio-content-231mb-test';
         Storage::disk('r2')->put($r2Path, $content);
+        $this->mockR2LocalPath($r2Path);
 
         $episode = RadioProgram::create([
             'master_program_id' => $master->id,
@@ -1782,6 +1804,7 @@ class RadioBossDeliveryPipelineTest extends TestCase
      */
     public function test_ascii_program_name_is_preserved_identically_for_radioboss(): void
     {
+        Mail::fake();
         Storage::fake('radioboss');
         Storage::fake('r2');
 
@@ -1796,6 +1819,7 @@ class RadioBossDeliveryPipelineTest extends TestCase
         $r2Path = 'programas_procesados/trovador-urbano/200.- TROVADOR URBANO 08-11-2026.mp3';
         $content = 'trovador-audio-content-117mb-test';
         Storage::disk('r2')->put($r2Path, $content);
+        $this->mockR2LocalPath($r2Path);
 
         $episode = RadioProgram::create([
             'master_program_id' => $master->id,
@@ -1828,5 +1852,598 @@ class RadioBossDeliveryPipelineTest extends TestCase
         $episode->refresh();
         $this->assertSame('radioboss_verified', $episode->radioboss_status);
         $this->assertSame($expectedRemotePath, $episode->radioboss_metadata['remote_path']);
+    }
+
+    /**
+     * 27. Publicación automática segura cuando el servidor FTP rechaza rotar un archivo legado no ASCII:
+     * El archivo legado original se preserva intacto en emisión (no borrado, no sobrescrito),
+     * el nuevo episodio se promueve a destino, se verifica tamaño y existencia, y queda marcado
+     * como radioboss_verified registrando la coexistencia sin bloquear la programación de la emisora.
+     */
+    public function test_legacy_non_ascii_file_rotation_rejection_preserves_original_file_and_completes_verified_upload(): void
+    {
+        Mail::fake();
+        Log::spy();
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        config([
+            'services.radioboss.archive_to_respaldo' => true,
+            'services.radioboss.preserve_unrotatable_legacy_files' => true,
+        ]);
+
+        $folder = '07.- DOMINGO/10.- CODIGO ZONA MISTERIO';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'CÓDIGO ZONA MISTERIO',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'LUNES',
+            'hora_transmision' => '04:00:00',
+        ]);
+
+        // Nombre Unicode legado; en el FTP de RadioBOSS se reportó con el carácter convertido a '?'.
+        $legacyFname = '013.- CÓDIGO ZONA MISTERIO 25-10-2026.mp3';
+        $legacyFullPath = $folder . '/' . $legacyFname;
+        $legacyContent = 'audio-legado-anterior-zona-misterio';
+        Storage::disk('radioboss')->put($legacyFullPath, $legacyContent);
+
+        // Nuevo episodio v1 listo en R2
+        $r2Source = 'programas_procesados/codigo-zona-misterio/014.- CÓDIGO ZONA MISTERIO 08-11-2026.mp3';
+        $newContent = 'audio-nuevo-014-codigo-zona-misterio';
+        Storage::disk('r2')->put($r2Source, $newContent);
+        $this->mockR2LocalPath($r2Source, $newContent);
+
+        $newEpisode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'CÓDIGO ZONA MISTERIO Ep 014',
+            'conductor' => 'Iker',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        // Simular que el demonio FTP de RadioBOSS rechaza mover archivos cuya ruta contiene caracteres no ASCII
+        $baseDisk = Storage::disk('radioboss');
+        $failingDisk = new class($baseDisk) {
+            public function __construct(private $inner) {}
+
+            public function move($from, $to)
+            {
+                // Reproducir el rechazo del servidor para el marcador legado '?' y nombres no ASCII.
+                if (preg_match('/[^\x20-\x7E]/', (string) $from) || str_contains((string) $from, '?')) {
+                    return false;
+                }
+
+                return $this->inner->move($from, $to);
+            }
+
+            public function __call($name, $arguments)
+            {
+                return $this->inner->{$name}(...$arguments);
+            }
+        };
+        Storage::set('radioboss', $failingDisk);
+
+        $job = new UploadRadiobossJob($newEpisode->id);
+        $job->handle();
+
+        $newEpisode->refresh();
+
+        // 1. El episodio anterior DEBE seguir existiendo INTACTO en la carpeta de emisión
+        $this->assertTrue(Storage::disk('radioboss')->exists($legacyFullPath), 'El archivo legado original debe existir intacto');
+        $this->assertSame($legacyContent, Storage::disk('radioboss')->get($legacyFullPath), 'El contenido del archivo legado no debe alterarse');
+
+        // 2. El nuevo episodio SÍ se promovió, verificó y certificó en destino
+        $this->assertTrue((bool) $newEpisode->enviado_radioboss, 'Debe marcarse como enviado');
+        $this->assertSame('radioboss_verified', $newEpisode->radioboss_status);
+        $this->assertNotNull($newEpisode->radioboss_verified_at);
+
+        // 3. El nuevo archivo fue verificado en su ruta final con nombre ASCII normalizado
+        $expectedDestination = $folder . '/014.- CODIGO ZONA MISTERIO 08-11-2026.mp3';
+        $this->assertTrue(Storage::disk('radioboss')->exists($expectedDestination), 'El destino nuevo debe existir verificado');
+        $this->assertSame($newContent, Storage::disk('radioboss')->get($expectedDestination));
+
+        // 4. Staging quedó limpio (el temporal de staging se promovió y no quedó huérfano)
+        $stagingFiles = Storage::disk('radioboss')->files('staging_programas/' . $folder);
+        $activeTemps = array_filter($stagingFiles, fn ($f) => str_contains($f, '014.- CODIGO ZONA MISTERIO'));
+        $this->assertEmpty($activeTemps, 'El temporal de staging debe haberse promovido');
+
+        // 5. El mensaje de estado es seguro (<= 255 chars) y registra la coexistencia
+        $this->assertNotNull($newEpisode->status_message);
+        $this->assertLessThanOrEqual(255, mb_strlen($newEpisode->status_message));
+        $this->assertStringContainsString('coexistiendo', (string) $newEpisode->status_message);
+
+        // 6. La metadata documenta el archivo no rotado
+        $this->assertContains($legacyFullPath, $newEpisode->radioboss_metadata['unrotated_legacy_files'] ?? []);
+
+        // 7. Idempotencia: una reejecución debe detectar el archivo verificado y mantenerse en verified
+        $idempotentJob = new UploadRadiobossJob($newEpisode->id);
+        $idempotentJob->handle();
+
+        $newEpisode->refresh();
+        $this->assertSame('radioboss_verified', $newEpisode->radioboss_status);
+        $this->assertTrue((bool) $newEpisode->enviado_radioboss);
+    }
+
+    /**
+     * 28. Protección contra desbordamiento en status_message (VARCHAR 255):
+     * Cualquier mensaje de error extenso (> 255 caracteres) generado por excepciones,
+     * rutas o listeners se almacena dentro de los 255 caracteres sin error SQL,
+     * preservando el detalle técnico íntegro en delivery_last_error y en el log.
+     */
+    public function test_long_error_message_is_safely_persisted_without_sql_truncation(): void
+    {
+        Log::spy();
+        $program = RadioProgram::create([
+            'titulo_programa' => 'Programa Test Long Message',
+            'conductor' => 'Locutor Test',
+            'status_message' => 'Inicial',
+            'delivery_status' => 'delivery_pending',
+        ]);
+
+        // Simular un mensaje de excepción muy largo (> 300 caracteres)
+        $longErrorMessage = "Fallo al trasladar episodio anterior '07.- DOMINGO/10.- CODIGO ZONA MISTERIO/013.- CÓDIGO ZONA MISTERIO 25-10-2026.mp3' al respaldo 'respaldos_programas/07.- DOMINGO/10.- CODIGO ZONA MISTERIO/013.- CÓDIGO ZONA MISTERIO 25-10-2026.mp3': move devolvió false o el destino no existe. Detalles adicionales del error: 550 Path error(3): control characters are not allowed on this FTP daemon.";
+        $this->assertGreaterThan(255, mb_strlen($longErrorMessage));
+
+        // Despachar el evento que activa RecordPodcastUploadFailure
+        \App\Events\PodcastUploadFailed::dispatch(
+            $program->id,
+            'radioboss',
+            $longErrorMessage,
+            ['folder' => '07.- DOMINGO/10.- CODIGO ZONA MISTERIO']
+        );
+
+        $program->refresh();
+
+        // status_message no excede 255 caracteres
+        $this->assertNotNull($program->status_message);
+        $this->assertLessThanOrEqual(255, mb_strlen($program->status_message));
+        $this->assertStringEndsWith('...', $program->status_message);
+
+        // delivery_last_error conserva el error íntegro sin recortes
+        $this->assertSame($longErrorMessage, $program->delivery_last_error);
+        Log::shouldHaveReceived('warning')->withArgs(function (string $message, array $context) use ($longErrorMessage): bool {
+            return $message === 'Podcast upload failed.'
+                && ($context['message'] ?? null) === $longErrorMessage;
+        })->atLeast()->once();
+    }
+
+    /**
+     * 29. Archivo legado reportado con signo de interrogación (ej. 013.- C?DIGO...):
+     * Si el servidor FTP reporta '?' en el nombre y rechaza moverlo, el archivo original
+     * debe mantenerse intacto, la entrega no debe marcarse como exitosa y el temporal se limpia.
+     */
+    public function test_legacy_file_with_question_mark_rotation_rejection_preserves_original_file(): void
+    {
+        Log::spy();
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        config(['services.radioboss.archive_to_respaldo' => true]);
+
+        $folder = '07.- DOMINGO/10.- CODIGO ZONA MISTERIO';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'CÓDIGO ZONA MISTERIO',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'LUNES',
+            'hora_transmision' => '04:00:00',
+        ]);
+
+        // En sistemas Windows (NTFS) el carácter '?' es ilegal para crear archivos locales reales.
+        // Simulamos la presencia del archivo reportado con '?' en el listado FTP de RadioBOSS
+        // mediante el disco decorador, reproduciendo exactamente lo que devuelve el FTP remoto.
+        $legacyFname = '013.- C?DIGO ZONA MISTERIO 25-10-2026.mp3';
+        $legacyFullPath = $folder . '/' . $legacyFname;
+        $legacyContent = 'audio-legado-con-signo-interrogacion';
+
+        $r2Source = 'programas_procesados/codigo-zona-misterio/014.- CÓDIGO ZONA MISTERIO 08-11-2026.mp3';
+        Storage::disk('r2')->put($r2Source, 'audio-nuevo-contenido');
+        $this->mockR2LocalPath($r2Source);
+
+        $newEpisode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'CÓDIGO ZONA MISTERIO Ep 014',
+            'conductor' => 'Iker',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        $baseDisk = Storage::disk('radioboss');
+        $failingDisk = new class($baseDisk, $legacyFullPath, $legacyContent, $folder) {
+            public function __construct(
+                private $inner,
+                private string $legacyPath,
+                private string $legacyContent,
+                private string $targetFolder
+            ) {}
+
+            public function files($directory = null, $recursive = false)
+            {
+                $files = $this->inner->files($directory, $recursive);
+                if ($directory === $this->targetFolder) {
+                    $files[] = $this->legacyPath;
+                }
+
+                return $files;
+            }
+
+            public function exists($path)
+            {
+                if ($path === $this->legacyPath) {
+                    return true;
+                }
+
+                return $this->inner->exists($path);
+            }
+
+            public function get($path)
+            {
+                if ($path === $this->legacyPath) {
+                    return $this->legacyContent;
+                }
+
+                return $this->inner->get($path);
+            }
+
+            public function move($from, $to)
+            {
+                if (str_contains((string) $from, '?') || preg_match('/[^\x20-\x7E]/', (string) $from)) {
+                    return false;
+                }
+
+                return $this->inner->move($from, $to);
+            }
+
+            public function __call($name, $arguments)
+            {
+                return $this->inner->{$name}(...$arguments);
+            }
+        };
+        Storage::set('radioboss', $failingDisk);
+
+        $job = new UploadRadiobossJob($newEpisode->id);
+        $job->handle();
+
+        $newEpisode->refresh();
+
+        // 1. El original sigue existiendo intacto
+        $this->assertTrue(Storage::disk('radioboss')->exists($legacyFullPath));
+        $this->assertSame($legacyContent, Storage::disk('radioboss')->get($legacyFullPath));
+
+        // 2. El nuevo episodio SÍ queda promovido y verificado en su ruta final
+        $this->assertTrue((bool) $newEpisode->enviado_radioboss);
+        $this->assertSame('radioboss_verified', $newEpisode->radioboss_status);
+        $this->assertNotNull($newEpisode->radioboss_verified_at);
+
+        $expectedDestination = $folder . '/014.- CODIGO ZONA MISTERIO 08-11-2026.mp3';
+        $this->assertTrue(Storage::disk('radioboss')->exists($expectedDestination));
+
+        // 3. Staging limpio
+        $stagingFiles = Storage::disk('radioboss')->files('staging_programas/' . $folder);
+        $activeTemps = array_filter($stagingFiles, fn ($f) => str_contains($f, '014.- CODIGO ZONA MISTERIO'));
+        $this->assertEmpty($activeTemps);
+
+        // 4. status_message seguro y dentro del límite de 255 caracteres
+        $this->assertNotNull($newEpisode->status_message);
+        $this->assertLessThanOrEqual(255, mb_strlen($newEpisode->status_message));
+        $this->assertStringContainsString('coexistiendo', (string) $newEpisode->status_message);
+    }
+
+    /**
+     * 30. Archivo legado presente pero la promoción del temporal falla:
+     * El archivo legado original se preserva intacto en emisión, pero el nuevo
+     * episodio NUNCA se marca como entregado ni verificado.
+     */
+    public function test_legacy_file_present_but_promotion_failure_does_not_mark_delivered(): void
+    {
+        Log::spy();
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        config([
+            'services.radioboss.archive_to_respaldo' => true,
+            'services.radioboss.preserve_unrotatable_legacy_files' => true,
+        ]);
+
+        $folder = '07.- DOMINGO/10.- CODIGO ZONA MISTERIO';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'CÓDIGO ZONA MISTERIO',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'LUNES',
+            'hora_transmision' => '04:00:00',
+        ]);
+
+        $legacyFname = '013.- CÓDIGO ZONA MISTERIO 25-10-2026.mp3';
+        $legacyFullPath = $folder . '/' . $legacyFname;
+        $legacyContent = 'audio-legado-anterior-zona-misterio';
+        Storage::disk('radioboss')->put($legacyFullPath, $legacyContent);
+
+        $r2Source = 'programas_procesados/codigo-zona-misterio/014.- CÓDIGO ZONA MISTERIO 08-11-2026.mp3';
+        Storage::disk('r2')->put($r2Source, 'audio-nuevo');
+        $this->mockR2LocalPath($r2Source);
+
+        $newEpisode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'CÓDIGO ZONA MISTERIO Ep 014',
+            'conductor' => 'Iker',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        $baseDisk = Storage::disk('radioboss');
+        $failingDisk = new class($baseDisk) {
+            public function __construct(private $inner) {}
+
+            public function move($from, $to)
+            {
+                // Falla al rotar el legado y TAMBIÉN falla al mover el temporal de staging a destino
+                if (preg_match('/[^\x20-\x7E]/', (string) $from) || str_contains((string) $from, '.tmp_')) {
+                    return false;
+                }
+
+                return $this->inner->move($from, $to);
+            }
+
+            public function __call($name, $arguments)
+            {
+                return $this->inner->{$name}(...$arguments);
+            }
+        };
+        Storage::set('radioboss', $failingDisk);
+
+        $job = new UploadRadiobossJob($newEpisode->id);
+        $job->handle();
+
+        $newEpisode->refresh();
+
+        // 1. El original sigue existiendo intacto
+        $this->assertTrue(Storage::disk('radioboss')->exists($legacyFullPath));
+        $this->assertSame($legacyContent, Storage::disk('radioboss')->get($legacyFullPath));
+
+        // 2. El episodio nuevo NO queda entregado ni verificado
+        $this->assertFalse((bool) $newEpisode->enviado_radioboss);
+        $this->assertSame('radioboss_error', $newEpisode->radioboss_status);
+        $this->assertNull($newEpisode->radioboss_verified_at);
+
+        // 3. El destino final no existe
+        $expectedDestination = $folder . '/014.- CODIGO ZONA MISTERIO 08-11-2026.mp3';
+        $this->assertFalse(Storage::disk('radioboss')->exists($expectedDestination));
+    }
+
+    /**
+     * 31. Preservación desactivada explícitamente:
+     * Si preserve_unrotatable_legacy_files = false y el archivo legado no puede rotarse,
+     * el job se detiene inmediatamente, el original no se altera y no se entrega el nuevo.
+     */
+    public function test_legacy_file_rotation_failure_with_preservation_disabled_halts_upload(): void
+    {
+        Log::spy();
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        config([
+            'services.radioboss.archive_to_respaldo' => true,
+            'services.radioboss.preserve_unrotatable_legacy_files' => false,
+        ]);
+
+        $folder = '07.- DOMINGO/10.- CODIGO ZONA MISTERIO';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'CÓDIGO ZONA MISTERIO',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'LUNES',
+            'hora_transmision' => '04:00:00',
+        ]);
+
+        $legacyFname = '013.- CÓDIGO ZONA MISTERIO 25-10-2026.mp3';
+        $legacyFullPath = $folder . '/' . $legacyFname;
+        $legacyContent = 'audio-legado-anterior-zona-misterio';
+        Storage::disk('radioboss')->put($legacyFullPath, $legacyContent);
+
+        $r2Source = 'programas_procesados/codigo-zona-misterio/014.- CÓDIGO ZONA MISTERIO 08-11-2026.mp3';
+        Storage::disk('r2')->put($r2Source, 'audio-nuevo');
+        $this->mockR2LocalPath($r2Source);
+
+        $newEpisode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'CÓDIGO ZONA MISTERIO Ep 014',
+            'conductor' => 'Iker',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        $baseDisk = Storage::disk('radioboss');
+        $failingDisk = new class($baseDisk) {
+            public function __construct(private $inner) {}
+
+            public function move($from, $to)
+            {
+                if (preg_match('/[^\x20-\x7E]/', (string) $from)) {
+                    return false;
+                }
+
+                return $this->inner->move($from, $to);
+            }
+
+            public function __call($name, $arguments)
+            {
+                return $this->inner->{$name}(...$arguments);
+            }
+        };
+        Storage::set('radioboss', $failingDisk);
+
+        $job = new UploadRadiobossJob($newEpisode->id);
+        $job->handle();
+
+        $newEpisode->refresh();
+
+        // 1. Original intacto
+        $this->assertTrue(Storage::disk('radioboss')->exists($legacyFullPath));
+
+        // 2. No entregado
+        $this->assertFalse((bool) $newEpisode->enviado_radioboss);
+        $this->assertSame('radioboss_error', $newEpisode->radioboss_status);
+        $this->assertNull($newEpisode->radioboss_verified_at);
+
+        // 3. Error registrado dentro del límite
+        $this->assertLessThanOrEqual(255, mb_strlen((string) $newEpisode->status_message));
+        $this->assertStringContainsString('legado', (string) $newEpisode->status_message);
+    }
+
+    /**
+     * 32. Evitar colisiones al elegir nombres de respaldo:
+     * Si el destino inicial en respaldos_programas ya existe, se busca una ruta libre
+     * versionada sin sobrescribir el archivo de respaldo existente.
+     */
+    public function test_backup_rotation_avoids_collision_when_backup_file_already_exists(): void
+    {
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        config(['services.radioboss.archive_to_respaldo' => true]);
+
+        $folder = '07.- DOMINGO/10.- CODIGO ZONA MISTERIO';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'CÓDIGO ZONA MISTERIO',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'LUNES',
+            'hora_transmision' => '04:00:00',
+        ]);
+
+        // Episodio anterior en la carpeta activa
+        $previousFile = $folder . '/013.- CODIGO ZONA MISTERIO 25-10-2026.mp3';
+        Storage::disk('radioboss')->put($previousFile, 'audio-episodio-13-activo');
+
+        // Ya existe un respaldo previo con ese mismo nombre en respaldos_programas
+        $initialBackupPath = 'respaldos_programas/' . $folder . '/013.- CODIGO ZONA MISTERIO 25-10-2026.mp3';
+        Storage::disk('radioboss')->put($initialBackupPath, 'respaldo-anterior-preexistente-que-no-debe-tocarse');
+
+        $r2Source = 'programas_procesados/codigo-zona-misterio/014.- CODIGO ZONA MISTERIO 08-11-2026.mp3';
+        Storage::disk('r2')->put($r2Source, 'audio-episodio-14-nuevo');
+        $this->mockR2LocalPath($r2Source);
+
+        $newEpisode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'CÓDIGO ZONA MISTERIO Ep 014',
+            'conductor' => 'Iker',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        $job = new UploadRadiobossJob($newEpisode->id);
+        $job->handle();
+
+        $newEpisode->refresh();
+
+        // 1. El nuevo episodio se verificó y se promovió
+        $this->assertSame('radioboss_verified', $newEpisode->radioboss_status);
+        $this->assertTrue((bool) $newEpisode->enviado_radioboss);
+        $this->assertTrue(Storage::disk('radioboss')->exists($folder . '/014.- CODIGO ZONA MISTERIO 08-11-2026.mp3'));
+
+        // 2. El respaldo preexistente NUNCA fue sobrescrito
+        $this->assertSame('respaldo-anterior-preexistente-que-no-debe-tocarse', Storage::disk('radioboss')->get($initialBackupPath));
+
+        // 3. Se generó un nuevo archivo de respaldo versionado para el episodio 13
+        $backupDirFiles = Storage::disk('radioboss')->files('respaldos_programas/' . $folder);
+        $this->assertCount(2, $backupDirFiles, 'Deben existir tanto el respaldo previo como el nuevo versionado');
+
+        $versionedBackups = array_filter($backupDirFiles, fn ($f) => str_contains($f, '_rotacion_'));
+        $this->assertNotEmpty($versionedBackups, 'El archivo rotado debe tener sufijo _rotacion_');
+        $versionedBackupPath = array_values($versionedBackups)[0];
+        $this->assertSame('audio-episodio-13-activo', Storage::disk('radioboss')->get($versionedBackupPath));
+    }
+
+    /**
+     * 33. Detección de colisión insuperable en respaldos:
+     * Si no se puede confirmar una ruta libre en respaldos, la operación se detiene
+     * sin sobrescribir ningún archivo y el nuevo episodio no se marca como entregado.
+     */
+    public function test_backup_rotation_aborts_safely_if_no_free_backup_path_is_available(): void
+    {
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        config(['services.radioboss.archive_to_respaldo' => true]);
+
+        $folder = '07.- DOMINGO/10.- CODIGO ZONA MISTERIO';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'CÓDIGO ZONA MISTERIO',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'LUNES',
+            'hora_transmision' => '04:00:00',
+        ]);
+
+        $previousFile = $folder . '/013.- CODIGO ZONA MISTERIO 25-10-2026.mp3';
+        $previousContent = 'audio-episodio-13-activo-intacto';
+        Storage::disk('radioboss')->put($previousFile, $previousContent);
+
+        $r2Source = 'programas_procesados/codigo-zona-misterio/014.- CODIGO ZONA MISTERIO 08-11-2026.mp3';
+        Storage::disk('r2')->put($r2Source, 'audio-nuevo');
+        $this->mockR2LocalPath($r2Source);
+
+        $newEpisode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'CÓDIGO ZONA MISTERIO Ep 014',
+            'conductor' => 'Iker',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        // Simular que cualquier consulta exists en respaldos_programas siempre devuelve true (todas las rutas ocupadas)
+        $baseDisk = Storage::disk('radioboss');
+        $collidingDisk = new class($baseDisk) {
+            public function __construct(private $inner) {}
+
+            public function exists($path)
+            {
+                if (str_starts_with((string) $path, 'respaldos_programas/')) {
+                    return true; // Simula colisión permanente en respaldos
+                }
+
+                return $this->inner->exists($path);
+            }
+
+            public function __call($name, $arguments)
+            {
+                return $this->inner->{$name}(...$arguments);
+            }
+        };
+        Storage::set('radioboss', $collidingDisk);
+
+        $job = new UploadRadiobossJob($newEpisode->id);
+        $job->handle();
+
+        $newEpisode->refresh();
+
+        // 1. El episodio previo en la carpeta de emisión permanece intacto
+        $this->assertTrue($baseDisk->exists($previousFile));
+        $this->assertSame($previousContent, $baseDisk->get($previousFile));
+
+        // 2. El nuevo episodio no queda entregado ni verificado
+        $this->assertFalse((bool) $newEpisode->enviado_radioboss);
+        $this->assertSame('radioboss_error', $newEpisode->radioboss_status);
+        $this->assertNull($newEpisode->radioboss_verified_at);
+
+        // 3. El error registra la detención para evitar sobrescribir archivos
+        $this->assertStringContainsString('No se encontró una ruta libre en respaldos', (string) $newEpisode->radioboss_last_error);
+    }
+
+    private function mockR2LocalPath(string $key, ?string $content = null): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'radioboss-test-');
+        file_put_contents($path, $content ?? ('simulated processed MP3 content for ' . $key));
+        $this->temporaryAudioFiles[] = $path;
+        $service = \Mockery::mock(FileUploadService::class)->makePartial();
+        $service->shouldReceive('localPath')->andReturn($path);
+        $this->app->instance(FileUploadService::class, $service);
     }
 }

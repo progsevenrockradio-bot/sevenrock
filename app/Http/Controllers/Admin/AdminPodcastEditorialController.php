@@ -230,6 +230,8 @@ class AdminPodcastEditorialController extends Controller
             'checks' => $checks,
             'evaluation' => $checks,
             'operationalStates' => $radioProgram->operationalStates(),
+            'radiobossAnalysis' => $radioProgram->radiobossFilenameAnalysis(),
+            'isDelivered' => $radioProgram->isDeliveredToRadioboss(),
         ]);
     }
 
@@ -258,6 +260,8 @@ class AdminPodcastEditorialController extends Controller
             'editorial_summary' => ['nullable', 'string', 'max:1000'],
             'resena' => ['nullable', 'string'],
             'biografia_invitado' => ['nullable', 'string', 'max:500'],
+            'radioboss_custom_filename' => ['nullable', 'string', 'max:255'],
+            'confirm_radioboss_filename' => ['nullable', 'boolean'],
             'imagen_episodio_url' => ['nullable', 'url', 'max:255'],
             'imagen_episodio_file' => ['nullable', 'file', 'image', 'max:10240'],
             'imagen_portada' => ['nullable', 'file', 'image', 'max:10240'],
@@ -274,6 +278,69 @@ class AdminPodcastEditorialController extends Controller
         ], [
             'cover_update_scope.required' => 'Al cambiar la portada debes indicar si solo modifica la ficha (sheet_only) o si también requiere actualizar la portada incrustada y redistribuir el MP3 (reembed_and_redistribute).',
         ]);
+
+        $isAlreadyDelivered = $radioProgram->isDeliveredToRadioboss();
+
+        // Si el episodio ya fue entregado a RadioBOSS, no se permite sobrescritura silenciosa de audio ni renombrado
+        if ($isAlreadyDelivered) {
+            if ($hasNewAudio || ($coverChanged && ($data['cover_update_scope'] ?? '') === 'reembed_and_redistribute')) {
+                return back()->withInput()->withErrors([
+                    'archivo_mp3' => 'El episodio ya fue entregado y verificado en emisión en RadioBOSS. Para sustituir el audio físico o redistribuir una nueva versión, debe tramitarse como una nueva versión independiente.',
+                ]);
+            }
+
+            if (! empty($data['radioboss_custom_filename'])) {
+                $incomingRadioName = trim((string) $data['radioboss_custom_filename']);
+                $existingRemoteName = basename((string) data_get($radioProgram->radioboss_metadata, 'remote_path', ''));
+                if ($existingRemoteName !== '' && $incomingRadioName !== $existingRemoteName) {
+                    return back()->withInput()->withErrors([
+                        'radioboss_custom_filename' => "El archivo ya fue entregado a RadioBOSS como '{$existingRemoteName}'. No se permite renombrar silenciosamente un archivo ya emitido.",
+                    ]);
+                }
+            }
+
+            // Actualización puramente editorial: ficha pública, web y catálogo
+            $radioProgram->live_title = trim((string) $data['live_title']);
+            if (array_key_exists('editorial_summary', $data)) {
+                $radioProgram->editorial_summary = trim((string) ($data['editorial_summary'] ?? '')) ?: null;
+            }
+            if (array_key_exists('resena', $data)) {
+                $resena = trim((string) ($data['resena'] ?? '')) ?: null;
+                $radioProgram->resena = $resena;
+                $radioProgram->live_description = $resena;
+                $radioProgram->comentario_episodio = $resena;
+            }
+            if (array_key_exists('biografia_invitado', $data)) {
+                $radioProgram->biografia_invitado = trim((string) ($data['biografia_invitado'] ?? '')) ?: null;
+            }
+            if (! empty($data['schedule_inclusion_status'])) {
+                $radioProgram->schedule_inclusion_status = (string) $data['schedule_inclusion_status'];
+            }
+
+            $radioProgram->save();
+
+            $this->auditService->record($radioProgram, 'ADMIN_EDITORIAL_POST_DELIVERY_UPDATED', 'El administrador actualizó los datos editoriales de un episodio ya entregado.', [
+                'admin_id' => Auth::id(),
+                'live_title' => $radioProgram->live_title,
+                'has_guest_bio' => ! empty($radioProgram->biografia_invitado),
+                'audio_reprocessed' => false,
+            ]);
+
+            return redirect()
+                ->route('admin.podcast-uploads.editorial.show', $radioProgram)
+                ->with('status', 'Cambios editoriales (título de emisión, resumen, reseña e invitado) guardados correctamente. El archivo ya entregado en emisión se mantuvo intacto sin resubidas ni reprocesamiento.');
+        }
+
+        // Validación y confirmación técnica del nombre remoto de RadioBOSS antes de la entrega
+        if (! empty($data['radioboss_custom_filename'])) {
+            $customRadioName = trim((string) $data['radioboss_custom_filename']);
+            if (! \App\Support\Radio\RadioBossPathValidator::isSafeRemoteName($customRadioName)) {
+                return back()->withInput()->withErrors([
+                    'radioboss_custom_filename' => 'El nombre técnico para RadioBOSS solo puede contener caracteres ASCII alfanuméricos, guiones, puntos y espacios, y debe terminar en .mp3.',
+                ]);
+            }
+            $radioProgram->setConfirmedRadiobossFilename($customRadioName);
+        }
 
         $coverScope = (string) ($data['cover_update_scope'] ?? 'sheet_only');
         $requiresAudioReplacementOrReembed = $hasNewAudio || ($coverChanged && $coverScope === 'reembed_and_redistribute');
@@ -494,6 +561,18 @@ class AdminPodcastEditorialController extends Controller
                 return $request->expectsJson()
                     ? response()->json(['success' => false, 'code' => 'already_approved', 'message' => $msg], 409)
                     : back()->withErrors(['version' => $msg]);
+            }
+
+            if ($request->filled('radioboss_custom_filename')) {
+                $customName = trim((string) $request->input('radioboss_custom_filename'));
+                if (! \App\Support\Radio\RadioBossPathValidator::isSafeRemoteName($customName)) {
+                    $msg = 'El nombre técnico para RadioBOSS solo puede contener caracteres ASCII alfanuméricos, guiones, puntos y espacios, y debe terminar en .mp3.';
+
+                    return $request->expectsJson()
+                        ? response()->json(['success' => false, 'code' => 'invalid_radioboss_filename', 'message' => $msg], 422)
+                        : back()->withErrors(['radioboss_custom_filename' => $msg]);
+                }
+                $locked->setConfirmedRadiobossFilename($customName);
             }
 
             $this->executeEditorialApproval($locked, $adminUser, 'admin_panel');
