@@ -23,9 +23,9 @@ class CommunityWallController extends Controller
             ->latest()
             ->paginate(20);
 
-        // Fetch recommended/featured bands for the sidebar
+        // Fetch recommended/featured bands for the sidebar (visible talents only)
         $featuredBands = Talent::query()
-            ->where('subscription_status', 'active')
+            ->publiclyVisible()
             ->orderByDesc('is_featured')
             ->orderByDesc('interacts')
             ->limit(5)
@@ -80,6 +80,10 @@ class CommunityWallController extends Controller
     {
         $exclusiveMedia = TalentMedia::query()
             ->where('is_exclusive', true)
+            ->where('status', 'approved')
+            ->whereHas('talent', function ($q): void {
+                $q->publiclyVisible();
+            })
             ->with('talent')
             ->latest()
             ->paginate(12);

@@ -237,8 +237,10 @@ class MediaController extends Controller
             $folder = "talents/{$talent->id}/media/{$validated['type']}";
             $fileUploadService = app(FileUploadService::class);
 
+            $isExclusive = $request->boolean('is_exclusive');
             $isPrivateDoc = $validated['type'] === 'document';
-            $targetDisk = $isPrivateDoc ? 'r2_private' : 'r2';
+            $isPrivate = $isPrivateDoc || $isExclusive;
+            $targetDisk = $isPrivate ? 'r2_private' : 'r2';
 
             if ($targetDisk === 'r2_private' && ! $fileUploadService->isR2PrivateConfigured()) {
                 throw new \RuntimeException('El almacenamiento privado R2 no está configurado explícitamente (R2_PRIVATE_BUCKET ausente).');
@@ -257,17 +259,21 @@ class MediaController extends Controller
                 'filename' => $file->getClientOriginalName(),
                 'disk' => $targetDisk,
                 'backblaze_key' => $upload['key'],
-                'url' => $isPrivateDoc ? route('talents.media.download', ['id' => 0]) : $upload['url'],
+                'url' => $upload['url'],
                 'title' => $validated['title'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'mime_type' => $mime,
                 'size' => $fileSize,
-                'is_exclusive' => $request->boolean('is_exclusive'),
+                'is_exclusive' => $isExclusive,
                 'status' => $isPending ? 'pending' : 'approved',
             ]);
 
-            // Para documentos privados: la URL de acceso debe ser exclusivamente la ruta de descarga autenticada
-            if ($isPrivateDoc) {
+            // Para archivos privados o exclusivos: la URL de acceso es la ruta protegida autenticada
+            if ($isExclusive) {
+                $media->update([
+                    'url' => route('talents.media.stream', ['id' => $media->id]),
+                ]);
+            } elseif ($isPrivateDoc) {
                 $media->update([
                     'url' => route('talents.media.download', ['id' => $media->id]),
                 ]);
@@ -317,15 +323,71 @@ class MediaController extends Controller
         return redirect()->route('talents.media.index')->with('status', $statusMsg);
     }
 
+    public function stream(string $id, Request $request): StreamedResponse
+    {
+        /** @var \App\Models\Talent|null $talent */
+        $talent = Auth::guard('talent')->user();
+        $webUser = Auth::guard('web')->user();
+        $isAdmin = (bool) ($webUser?->isAdmin() ?? false);
+
+        $media = TalentMedia::query()->whereKey((int) $id)->firstOrFail();
+
+        // Control estricto de autorización por tipo y exclusividad
+        if ($media->is_exclusive) {
+            $isOwner = $talent && (int) $talent->id === (int) $media->talent_id;
+            $isAuthenticatedUser = $webUser !== null;
+            if (! $isAdmin && ! $isOwner && ! $isAuthenticatedUser) {
+                abort(403, 'Contenido exclusivo para usuarios registrados o afiliados.');
+            }
+        } elseif ($media->type === 'document') {
+            $isOwner = $talent && (int) $talent->id === (int) $media->talent_id;
+            if (! $isAdmin && ! $isOwner) {
+                abort(403, 'No tienes autorización para acceder a este documento.');
+            }
+        }
+
+        $disk = $media->resolvedDisk();
+        if (! $disk) {
+            abort(404, 'Este archivo no tiene un disco de almacenamiento demostrado.');
+        }
+        $storage = Storage::disk($disk);
+
+        if (! $storage->exists($media->backblaze_key)) {
+            abort(404, 'El archivo solicitado no se encuentra en el almacenamiento.');
+        }
+
+        $mime = $media->mime_type ?: $storage->mimeType($media->backblaze_key) ?: 'application/octet-stream';
+        $stream = $storage->readStream($media->backblaze_key);
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+
+        return response()->stream(function () use ($stream): void {
+            fpassthru($stream);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }, 200, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => $disposition . '; filename="' . addslashes($media->filename) . '"',
+            'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
+        ]);
+    }
+
     public function download(string $id): StreamedResponse
     {
         /** @var \App\Models\Talent|null $talent */
         $talent = Auth::guard('talent')->user();
-        $isAdmin = (bool) (Auth::guard('web')->user()?->isAdmin() ?? false);
+        $webUser = Auth::guard('web')->user();
+        $isAdmin = (bool) ($webUser?->isAdmin() ?? false);
 
         $media = TalentMedia::query()->whereKey((int) $id)->firstOrFail();
 
-        if (! $isAdmin && (! $talent || (int) $talent->id !== (int) $media->talent_id)) {
+        if ($media->is_exclusive) {
+            $isOwner = $talent && (int) $talent->id === (int) $media->talent_id;
+            $isAuthenticatedUser = $webUser !== null;
+            if (! $isAdmin && ! $isOwner && ! $isAuthenticatedUser) {
+                abort(403, 'Contenido exclusivo para usuarios registrados o afiliados.');
+            }
+        } elseif (! $isAdmin && (! $talent || (int) $talent->id !== (int) $media->talent_id)) {
             abort(403, 'No tienes autorización para acceder a este archivo.');
         }
 

@@ -39,7 +39,10 @@ class PublicProfileController extends Controller
                 $q->where('status', 'approved')->whereIn('type', ['mp3', 'photo', 'video']);
             }])
             ->with(['media' => function ($q): void {
-                $q->where('status', 'approved')->where('type', 'mp3')->latest();
+                $q->where('status', 'approved')
+                  ->where('type', 'mp3')
+                  ->where('is_exclusive', false)
+                  ->latest();
             }]);
 
         if ($search = trim((string) $request->input('search', ''))) {
@@ -129,21 +132,21 @@ class PublicProfileController extends Controller
             $excludeIds = array_merge($excludeIds, $relatedByStyle->pluck('id')->toArray());
         }
 
-        // 2. Related by Name (first letter match)
+        // 2. Related by Name (first letter match, visible talents only)
         $firstLetter = substr(trim($talent->band_name), 0, 1);
         $relatedByName = Talent::query()
             ->whereNotIn('id', $excludeIds)
-            ->where('subscription_status', 'active')
+            ->publiclyVisible()
             ->where('band_name', 'like', $firstLetter . '%')
             ->limit(2)
             ->get();
 
         $excludeIds = array_merge($excludeIds, $relatedByName->pluck('id')->toArray());
 
-        // 3. Recommended (featured or most popular active talents)
+        // 3. Recommended (featured or most popular active visible talents)
         $recommended = Talent::query()
             ->whereNotIn('id', $excludeIds)
-            ->where('subscription_status', 'active')
+            ->publiclyVisible()
             ->orderByDesc('is_featured')
             ->orderByDesc('interacts')
             ->limit(2)

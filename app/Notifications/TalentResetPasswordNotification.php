@@ -41,3 +41,4 @@ class TalentResetPasswordNotification extends Notification
             ->salutation('Un saludo cordial,\nEl equipo de Seven Rock Radio');
     }
 }
+

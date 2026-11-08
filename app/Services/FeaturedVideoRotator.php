@@ -69,9 +69,12 @@ class FeaturedVideoRotator
             }
         }
 
-        // c) talent_media
+        // c) talent_media (approved, non-exclusive, publicly visible bands)
         $talentMedias = TalentMedia::query()
             ->where('type', 'video')
+            ->where('status', 'approved')
+            ->where('is_exclusive', false)
+            ->whereHas('talent', fn ($q) => $q->publiclyVisible())
             ->whereNotNull('url')
             ->where('url', '!=', '')
             ->with('talent')

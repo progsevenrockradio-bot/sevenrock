@@ -56,6 +56,7 @@ class AuthController extends Controller
             'referral_code'        => ['nullable', 'string', 'max:32'],
             'country'              => ['nullable', 'string', 'max:100'],
             'contact_phone'        => ['nullable', 'string', 'max:50'],
+            'terms'                => ['required', 'accepted'],
             'facebook_screenshot'  => ['nullable', function (string $attribute, mixed $value, \Closure $fail): void {
                 if ($value instanceof \Illuminate\Http\UploadedFile) {
                     $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
@@ -89,6 +90,8 @@ class AuthController extends Controller
             'email.unique'       => 'Este correo electrónico ya tiene una cuenta registrada.',
             'password.confirmed' => 'La confirmación de la contraseña no coincide.',
             'password.min'       => 'La contraseña debe tener al menos 8 caracteres.',
+            'terms.required'     => 'Debes leer y aceptar los Términos y Condiciones y la Política de Privacidad para crear una cuenta.',
+            'terms.accepted'     => 'Debes leer y aceptar los Términos y Condiciones y la Política de Privacidad para crear una cuenta.',
         ]);
 
         $bandName = $validated['band_name'];
@@ -147,6 +150,12 @@ class AuthController extends Controller
                 'contact_phone'        => $validated['contact_phone'] ?? null,
                 'facebook_screenshot'  => $facebookScreenshot,
                 'instagram_screenshot' => $instagramScreenshot,
+                'terms_accepted_at'    => now(),
+                'terms_version'        => 'v1_2026-11',
+                'notification_preferences' => [
+                    'terms_accepted_at' => now()->toIso8601String(),
+                    'terms_version' => 'v1_2026-11',
+                ],
             ]);
 
             $talent->subscriptions()->create([

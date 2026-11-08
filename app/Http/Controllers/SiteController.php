@@ -524,7 +524,9 @@ class SiteController extends Controller
         if (Schema::hasTable('talent_media') && Schema::hasTable('talents')) {
             $videos = \App\Models\TalentMedia::query()
                 ->where('type', 'video')
-                ->whereHas('talent', fn ($q) => $q->where('subscription_status', 'active'))
+                ->where('status', 'approved')
+                ->where('is_exclusive', false)
+                ->whereHas('talent', fn ($q) => $q->publiclyVisible())
                 ->with('talent')
                 ->latest()
                 ->get();

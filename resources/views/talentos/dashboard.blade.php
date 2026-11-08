@@ -194,6 +194,18 @@
             </div>
         </div>
 
+        @if ($talent && ! $talent->hasVerifiedEmail())
+            <div class="border border-amber-500/20 bg-amber-500/5 p-4 rounded-sm flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="text-xl">✉️</span>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-amber-300">Cuenta pendiente de verificación de correo</p>
+                        <p class="text-xs text-[#8b8b8b] mt-0.5">Para vincular y gestionar tus maquetas enviadas con este correo ({{ $talent->email }}), debes acreditar la titularidad verificando tu correo.</p>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @if (($submissions ?? collect())->isNotEmpty())
             <div class="border border-white/10 bg-[#10161b] p-4 sm:p-6">
                 <div class="flex items-center justify-between border-b border-white/10 pb-3">

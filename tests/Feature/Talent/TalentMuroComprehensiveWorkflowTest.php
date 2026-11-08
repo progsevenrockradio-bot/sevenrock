@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Talent;
 
+use App\Mail\ContentApprovedMail;
 use App\Mail\TalentMaterialDeletedMail;
+use App\Models\CommunityPost;
 use App\Models\NewRelease;
 use App\Models\Talent;
 use App\Models\TalentMedia;
@@ -105,6 +107,7 @@ class TalentMuroComprehensiveWorkflowTest extends TestCase
             'password' => 'Secret1234!',
             'plan' => 'free',
             'subscription_status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         // 4. Comprobar que la relación submissions vincula la maqueta propia y no la ajena
@@ -131,6 +134,7 @@ class TalentMuroComprehensiveWorkflowTest extends TestCase
             'password' => 'OldPassword123!',
             'plan' => 'free',
             'subscription_status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         // 1. Ver formulario de solicitud
@@ -188,6 +192,7 @@ class TalentMuroComprehensiveWorkflowTest extends TestCase
             'password' => 'Password123!',
             'plan' => 'free',
             'subscription_status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         $response = $this->post(route('talents.password.update'), [
@@ -281,6 +286,7 @@ class TalentMuroComprehensiveWorkflowTest extends TestCase
             'password' => 'password123',
             'plan' => 'free',
             'subscription_status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         $media = TalentMedia::query()->create([
@@ -319,6 +325,7 @@ class TalentMuroComprehensiveWorkflowTest extends TestCase
             'password' => 'password123',
             'plan' => 'free',
             'subscription_status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         $response = $this->post(route('talents.login.store'), [
@@ -328,5 +335,285 @@ class TalentMuroComprehensiveWorkflowTest extends TestCase
         ]);
 
         $response->assertRedirect('/talentos/media');
+    }
+
+    public function test_unverified_talent_registration_does_not_reveal_historical_submissions_until_verified(): void
+    {
+        // 1. Simular maqueta previa en la base de datos
+        $priorSubmission = TrackSubmission::query()->create([
+            'band_name' => 'Banda Secreta',
+            'song_title' => 'Maqueta Confidencial',
+            'contact_email' => 'artista@secreto.es',
+            'file_path' => 'submissions/secreto.mp3',
+            'status' => 'approved',
+            'published_to_hub' => false,
+        ]);
+
+        // 2. Registrar cuenta con ese correo ajeno desde el formulario público
+        $registerResponse = $this->post(route('talents.register.store'), [
+            'band_name' => 'Banda Que Intenta Suplantar',
+            'email' => 'artista@secreto.es',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+            'plan' => 'free',
+            'terms' => '1',
+        ]);
+        $registerResponse->assertRedirect(route('talents.dashboard'));
+
+        $talent = Talent::query()->where('email', 'artista@secreto.es')->first();
+        $this->assertNotNull($talent);
+        $this->assertNull($talent->email_verified_at);
+
+        // 3. Comprobar que submissions() no revela la maqueta mientras la cuenta no esté verificada
+        $this->assertSame(0, $talent->submissions()->count());
+
+        // 4. Comprobar que en el dashboard NO aparece la maqueta histórica y se muestra aviso de verificación
+        $dashboardResponse = $this->actingAs($talent, 'talent')->get(route('talents.dashboard'));
+        $dashboardResponse->assertStatus(200);
+        $dashboardResponse->assertDontSee('Maqueta Confidencial');
+        $dashboardResponse->assertSee('Cuenta pendiente de verificación de correo');
+
+        // 5. Una vez verificado el correo, las maquetas se vinculan legítimamente
+        $talent->email_verified_at = now();
+        $talent->save();
+
+        $this->assertSame(1, $talent->submissions()->count());
+        $verifiedDashboardResponse = $this->actingAs($talent, 'talent')->get(route('talents.dashboard'));
+        $verifiedDashboardResponse->assertSee('Maqueta Confidencial');
+        $verifiedDashboardResponse->assertDontSee('Cuenta pendiente de verificación de correo');
+    }
+
+    public function test_registration_requires_terms_acceptance_and_records_evidence(): void
+    {
+        Mail::fake();
+
+        // 1. Envío sin marcar términos debe ser rechazado
+        $responseNoTerms = $this->post(route('talents.register.store'), [
+            'band_name' => 'Banda Sin Terminos',
+            'email' => 'sinterminos@example.com',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+            'plan' => 'free',
+        ]);
+        $responseNoTerms->assertSessionHasErrors(['terms']);
+
+        // 2. Envío con término = 0 debe ser rechazado
+        $responseZeroTerms = $this->post(route('talents.register.store'), [
+            'band_name' => 'Banda Terminos Cero',
+            'email' => 'cero@example.com',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+            'plan' => 'free',
+            'terms' => '0',
+        ]);
+        $responseZeroTerms->assertSessionHasErrors(['terms']);
+
+        // 3. Envío con términos aceptados se procesa y guarda evidencia
+        $responseAccepted = $this->post(route('talents.register.store'), [
+            'band_name' => 'Banda Con Terminos Aceptados',
+            'email' => 'conterminos@example.com',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+            'plan' => 'free',
+            'terms' => '1',
+        ]);
+        $responseAccepted->assertRedirect(route('talents.dashboard'));
+
+        $talent = Talent::query()->where('email', 'conterminos@example.com')->first();
+        $this->assertNotNull($talent);
+        $this->assertNotNull($talent->terms_accepted_at);
+        $this->assertSame('v1_2026-11', $talent->terms_version);
+        $this->assertIsArray($talent->notification_preferences);
+        $this->assertSame('v1_2026-11', $talent->notification_preferences['terms_version']);
+    }
+
+    public function test_admin_can_approve_pending_media_and_notify_artist(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $talent = Talent::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'band_name' => 'Banda Aprobacion Media',
+            'email' => 'aprobacion@example.com',
+            'password' => 'password123',
+            'plan' => 'free',
+            'subscription_status' => 'active',
+            'email_verified_at' => now(),
+            'is_hidden' => false,
+        ]);
+
+        $media = TalentMedia::query()->create([
+            'talent_id' => $talent->id,
+            'type' => 'mp3',
+            'filename' => 'tema_inédito.mp3',
+            'title' => 'Tema Inédito Editorial',
+            'mime_type' => 'audio/mpeg',
+            'disk' => 'r2',
+            'backblaze_key' => 'talents/1/media/mp3/tema.mp3',
+            'url' => 'https://r2.sevenrockradio.com/tema.mp3',
+            'status' => 'pending',
+            'size' => 2048,
+        ]);
+
+        // 1. No debe aparecer en el perfil público aún
+        $publicResponse = $this->get('/muro-del-rock/' . rawurlencode($talent->band_name));
+        $publicResponse->assertStatus(200);
+        $publicResponse->assertDontSee('Tema Inédito Editorial');
+
+        // 2. Admin aprueba el archivo
+        $approveResponse = $this->actingAs($admin, 'web')
+            ->post(route('admin.talents.media.approve', $media));
+
+        $approveResponse->assertRedirect();
+
+        // 3. Comprobar actualización en base de datos
+        $media->refresh();
+        $this->assertSame('approved', $media->status);
+
+        // 4. Correo de aprobación enviado
+        Mail::assertSent(ContentApprovedMail::class, function ($mail) use ($talent) {
+            return $mail->hasTo($talent->email);
+        });
+
+        // 5. Ahora sí aparece en el perfil público
+        $publicAfterResponse = $this->get('/muro-del-rock/' . rawurlencode($talent->band_name));
+        $publicAfterResponse->assertStatus(200);
+        $publicAfterResponse->assertSee('Tema Inédito Editorial');
+    }
+
+    public function test_exclusive_media_stored_in_private_disk_and_blocks_unauthorized_guests(): void
+    {
+        $band = Talent::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'band_name' => 'Banda Exclusiva VIP',
+            'email' => 'vip@example.com',
+            'password' => 'password123',
+            'plan' => 'pro',
+            'subscription_status' => 'active',
+            'email_verified_at' => now(),
+            'is_hidden' => false,
+        ]);
+
+        // Simular archivo físico en r2_private
+        Storage::disk('r2_private')->put('talents/exclusive/track_vip.mp3', 'AUDIO_DATA_BYTES');
+
+        $media = TalentMedia::query()->create([
+            'talent_id' => $band->id,
+            'type' => 'mp3',
+            'filename' => 'track_vip.mp3',
+            'title' => 'Pista VIP Solo Afiliados',
+            'mime_type' => 'audio/mpeg',
+            'disk' => 'r2_private',
+            'backblaze_key' => 'talents/exclusive/track_vip.mp3',
+            'url' => route('talents.media.stream', ['id' => 999]),
+            'is_exclusive' => true,
+            'status' => 'approved',
+            'size' => 1024,
+        ]);
+
+        // 1. Invitado intenta reproducir el streaming directo: debe recibir 403 Forbidden
+        $guestResponse = $this->get(route('talents.media.stream', ['id' => $media->id]));
+        $guestResponse->assertStatus(403);
+
+        // 2. Usuario web autenticado (afiliado / suscriptor) accede al streaming: debe recibir 200 OK
+        $fan = User::factory()->create();
+        $fanResponse = $this->actingAs($fan, 'web')->get(route('talents.media.stream', ['id' => $media->id]));
+        $fanResponse->assertStatus(200);
+
+        // 3. Dueño de la banda accede al streaming: debe recibir 200 OK
+        $ownerResponse = $this->actingAs($band, 'talent')->get(route('talents.media.stream', ['id' => $media->id]));
+        $ownerResponse->assertStatus(200);
+
+        // 4. Administrador accede al streaming: debe recibir 200 OK
+        $admin = User::factory()->create(['is_admin' => true]);
+        $adminResponse = $this->actingAs($admin, 'web')->get(route('talents.media.stream', ['id' => $media->id]));
+        $adminResponse->assertStatus(200);
+    }
+
+    public function test_hidden_talents_are_excluded_from_all_recommendations_and_public_queries(): void
+    {
+        $visibleBand = Talent::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'band_name' => 'Banda Visible y Activa',
+            'email' => 'visible@example.com',
+            'password' => 'password123',
+            'plan' => 'free',
+            'subscription_status' => 'active',
+            'email_verified_at' => now(),
+            'is_hidden' => false,
+            'bio' => 'Banda de rock alternativo',
+        ]);
+
+        $hiddenBand = Talent::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'band_name' => 'Banda Oculta Confidencial',
+            'email' => 'oculta@example.com',
+            'password' => 'password123',
+            'plan' => 'free',
+            'subscription_status' => 'active',
+            'email_verified_at' => now(),
+            'is_hidden' => true,
+            'bio' => 'Banda de rock alternativo oculta',
+        ]);
+
+        TalentMedia::query()->create([
+            'talent_id' => $hiddenBand->id,
+            'type' => 'mp3',
+            'filename' => 'oculta.mp3',
+            'title' => 'Pista de Banda Oculta',
+            'mime_type' => 'audio/mpeg',
+            'disk' => 'r2_private',
+            'backblaze_key' => 'talents/hidden/oculta.mp3',
+            'url' => 'https://r2.sevenrockradio.com/oculta.mp3',
+            'is_exclusive' => true,
+            'status' => 'approved',
+            'size' => 1024,
+        ]);
+
+        // 1. En la ficha de la banda visible, la banda oculta NO debe aparecer recomendada
+        $profileResponse = $this->get('/muro-del-rock/' . rawurlencode($visibleBand->band_name));
+        $profileResponse->assertStatus(200);
+        $profileResponse->assertDontSee('Banda Oculta Confidencial');
+
+        // 2. En el sidebar del Muro de Comunidad, la banda oculta NO debe figurar
+        $fan = User::factory()->create();
+        $muroResponse = $this->actingAs($fan, 'web')->get(route('comunidad.muro'));
+        $muroResponse->assertStatus(200);
+        $muroResponse->assertDontSee('Banda Oculta Confidencial');
+
+        // 3. En la sección de Exclusivos, el material de la banda oculta NO debe figurar
+        $exclusivosResponse = $this->actingAs($fan, 'web')->get(route('comunidad.exclusivos'));
+        $exclusivosResponse->assertStatus(200);
+        $exclusivosResponse->assertDontSee('Pista de Banda Oculta');
+    }
+
+    public function test_profile_shows_clean_empty_states_without_soundhelix_or_demo_photos(): void
+    {
+        $band = Talent::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'band_name' => 'Banda Sin Material Aún',
+            'email' => 'sinmaterial@example.com',
+            'password' => 'password123',
+            'plan' => 'free',
+            'subscription_status' => 'active',
+            'email_verified_at' => now(),
+            'is_hidden' => false,
+        ]);
+
+        $response = $this->get('/muro-del-rock/' . rawurlencode($band->band_name));
+        $response->assertStatus(200);
+
+        // Debe mostrar estados vacíos auténticos
+        $response->assertSee('Sin pistas publicadas');
+        $response->assertSee('Esta banda aún no ha publicado pistas de audio en su perfil.');
+        $response->assertSee('Sin fotografías');
+        $response->assertSee('Esta banda aún no ha compartido fotografías en su galería.');
+
+        // NUNCA debe contener canciones de SoundHelix ni fotos demo en el HTML
+        $response->assertDontSee('SoundHelix');
+        $response->assertDontSee('Canción de Rock Demo');
+        $response->assertDontSee('muro-del-rock-banner.webp');
     }
 }

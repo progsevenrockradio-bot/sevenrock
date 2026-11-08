@@ -75,7 +75,7 @@ class PromoterCodeTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('2 / 2');
-        $response->assertSee('Tope Alcanzado');
+        $response->assertSee('Tope Cupo');
     }
 
     /** @test */

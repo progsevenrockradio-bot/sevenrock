@@ -25,7 +25,7 @@ final class FeaturedTalentService
         $limit = max(1, $limit);
 
         return Talent::query()
-            ->where('subscription_status', 'active')
+            ->publiclyVisible()
             ->orderByDesc('interacts')
             ->orderByDesc('id')
             ->limit($limit)

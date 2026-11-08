@@ -62,7 +62,7 @@ class PromoterCodeController extends Controller
             'owner_name' => $validated['owner_name'],
             'owner_email' => $validated['owner_email'],
             'owner_type' => $validated['owner_type'],
-            'campaign' => $validated['campaign'] ?: 'pilot_2026',
+            'campaign' => !empty($validated['campaign']) ? $validated['campaign'] : 'pilot_2026',
             'max_bands' => $maxBands,
             'assigned_talent_id' => $validated['assigned_talent_id'] ?? null,
             'notes' => $validated['notes'] ?? null,

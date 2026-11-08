@@ -166,47 +166,6 @@
                 $audioFiles = $media->where('type', 'mp3')->values();
                 $photoFiles = $media->where('type', 'photo')->values();
                 $otherMedia = $media->where('type', 'video')->values();
-
-                // Fallback de demostración cuando el artista aún no ha subido archivos multimedia
-                if ($audioFiles->isEmpty()) {
-                    $audioFiles = collect([
-                        (object)[
-                            'url' => 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-                            'title' => 'Canción de Rock Demo 1',
-                            'filename' => 'demo-1.mp3'
-                        ],
-                        (object)[
-                            'url' => 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-                            'title' => 'Riff Potente Demo 2',
-                            'filename' => 'demo-2.mp3'
-                        ],
-                        (object)[
-                            'url' => 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-                            'title' => 'Balada Acústica Demo 3',
-                            'filename' => 'demo-3.mp3'
-                        ]
-                    ]);
-                }
-                if ($photoFiles->isEmpty()) {
-                    $photoFiles = collect([
-                        (object)[
-                            'url' => asset('assets/lucille/muro-del-rock-banner.webp'),
-                            'title' => 'Foto Demo 1'
-                        ],
-                        (object)[
-                            'url' => asset('assets/lucille/dark-background.webp'),
-                            'title' => 'Foto Demo 2'
-                        ],
-                        (object)[
-                            'url' => asset('assets/lucille/beatles_t_shirt.jpeg'),
-                            'title' => 'Foto Demo 3'
-                        ],
-                        (object)[
-                            'url' => asset('assets/lucille/logo.png'),
-                            'title' => 'Foto Demo 4'
-                        ]
-                    ]);
-                }
             @endphp
             <div class="grid gap-6 lg:grid-cols-[1.2fr_.8fr] mt-8 items-start">
                 <!-- Left Column: Biography, Media, Store, etc. -->
@@ -400,68 +359,77 @@
                 <!-- Right Column: Player, Gallery, Likes, Comments -->
                 <div class="space-y-6">
                     <!-- Music Player Panel -->
-                    @if ($audioFiles->isNotEmpty())
-                        <div class="border border-white/10 bg-[#141417] rounded-sm p-5 md:p-6 shadow-sm" x-data="audioPlaylist()">
-                            <h3 class="font-display text-lg uppercase tracking-[.12em] text-white border-b border-white/10 pb-2.5 mb-4">Reproductor</h3>
-                            <!-- Player UI -->
-                            <div class="bg-[#101012] rounded-sm p-4 border border-white/10 mb-4">
-                                <div class="flex items-center gap-4">
-                                    <button type="button" @click="togglePlay()" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-sm bg-[var(--lucille-accent)] text-white hover:brightness-110 transition-all shadow-sm" aria-label="Reproducir/Pausar">
-                                        <template x-if="!playing">
-                                            <svg class="h-5 w-5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                        </template>
-                                        <template x-if="playing">
-                                            <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                                        </template>
-                                    </button>
-                                    <div class="min-w-0 flex-1">
-                                        <p class="line-clamp-1 text-sm font-bold text-white uppercase tracking-wider" x-text="currentTrackTitle">Selecciona una pista</p>
-                                        <div class="mt-2 flex items-center gap-3">
-                                            <input type="range" min="0" max="100" :value="duration ? (currentTime / duration) * 100 : 0" @input="seek($event)" class="lucille-range-slider flex-1" :disabled="!currentTrackUrl">
-                                            <span class="text-[10px] text-[#8b8b8b] font-mono shrink-0" x-text="formatTime(currentTime) + ' / ' + (duration ? formatTime(duration) : '0:00')">0:00 / 0:00</span>
+                    <div class="border border-white/10 bg-[#141417] rounded-sm p-5 md:p-6 shadow-sm">
+                        <h3 class="font-display text-lg uppercase tracking-[.12em] text-white border-b border-white/10 pb-2.5 mb-4">Reproductor</h3>
+                        @if ($audioFiles->isNotEmpty())
+                            <div x-data="audioPlaylist()">
+                                <!-- Player UI -->
+                                <div class="bg-[#101012] rounded-sm p-4 border border-white/10 mb-4">
+                                    <div class="flex items-center gap-4">
+                                        <button type="button" @click="togglePlay()" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-sm bg-[var(--lucille-accent)] text-white hover:brightness-110 transition-all shadow-sm" aria-label="Reproducir/Pausar">
+                                            <template x-if="!playing">
+                                                <svg class="h-5 w-5 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                            </template>
+                                            <template x-if="playing">
+                                                <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                            </template>
+                                        </button>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="line-clamp-1 text-sm font-bold text-white uppercase tracking-wider" x-text="currentTrackTitle">Selecciona una pista</p>
+                                            <div class="mt-2 flex items-center gap-3">
+                                                <input type="range" min="0" max="100" :value="duration ? (currentTime / duration) * 100 : 0" @input="seek($event)" class="lucille-range-slider flex-1" :disabled="!currentTrackUrl">
+                                                <span class="text-[10px] text-[#8b8b8b] font-mono shrink-0" x-text="formatTime(currentTime) + ' / ' + (duration ? formatTime(duration) : '0:00')">0:00 / 0:00</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <!-- Playlist -->
-                            <div class="space-y-1.5 max-h-[250px] overflow-y-auto pr-1">
-                                @foreach ($audioFiles as $index => $item)
-                                    @if (!empty($item->is_exclusive) && !Auth::guard('web')->check() && !Auth::guard('talent')->check())
-                                        <div class="w-full text-left flex items-center justify-between p-2.5 rounded-sm border border-white/5 bg-[#101012] text-[#8b8b8b]">
-                                            <div class="flex items-center gap-2">
-                                                <span>🔒</span>
-                                                <span class="text-xs font-semibold text-[#8b8b8b]">Exclusivo para Afiliados</span>
-                                            </div>
-                                            <a href="{{ route('afiliados.register') }}" class="text-[9px] uppercase tracking-wider text-[var(--lucille-accent)] hover:underline font-mono">Acceder</a>
-                                        </div>
-                                    @else
-                                        <button type="button" @click="playTrack({{ $index }}, '{{ $item->url }}', '{{ addslashes($item->title ?: $item->filename) }}')" 
-                                            class="w-full text-left flex items-center justify-between p-2.5 rounded-sm border transition-colors group"
-                                            :class="currentIndex === {{ $index }} ? 'border-[var(--lucille-accent)]/50 bg-[var(--lucille-accent)]/10' : 'border-white/5 bg-[#101012] hover:border-white/15'">
-                                            <div class="flex items-start gap-2.5 flex-1 min-w-0 pr-2">
-                                                <span class="text-xs font-mono shrink-0 mt-0.5" :class="currentIndex === {{ $index }} ? 'text-[var(--lucille-accent)]' : 'text-[#8b8b8b]'">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</span>
-                                                <span class="text-xs line-clamp-1" :class="currentIndex === {{ $index }} ? 'text-white font-semibold' : 'text-[#b5b5b5] group-hover:text-white'">{{ $item->title ?: $item->filename }}</span>
-                                            </div>
-                                            <template x-if="currentIndex === {{ $index }} && playing">
-                                                <div class="flex items-end gap-[2px] h-3.5 shrink-0 ml-2">
-                                                    <div class="w-1 h-2 bg-[var(--lucille-accent)] animate-pulse"></div>
-                                                    <div class="w-1 h-3.5 bg-[var(--lucille-accent)] animate-pulse" style="animation-delay: 150ms"></div>
-                                                    <div class="w-1 h-2.5 bg-[var(--lucille-accent)] animate-pulse" style="animation-delay: 300ms"></div>
+                                <!-- Playlist -->
+                                <div class="space-y-1.5 max-h-[250px] overflow-y-auto pr-1">
+                                    @foreach ($audioFiles as $index => $item)
+                                        @if (!empty($item->is_exclusive) && !Auth::guard('web')->check() && !Auth::guard('talent')->check())
+                                            <div class="w-full text-left flex items-center justify-between p-2.5 rounded-sm border border-white/5 bg-[#101012] text-[#8b8b8b]">
+                                                <div class="flex items-center gap-2">
+                                                    <span>🔒</span>
+                                                    <span class="text-xs font-semibold text-[#8b8b8b]">Exclusivo para Afiliados</span>
                                                 </div>
-                                            </template>
-                                        </button>
-                                    @endif
-                                @endforeach
+                                                <a href="{{ route('afiliados.register') }}" class="text-[9px] uppercase tracking-wider text-[var(--lucille-accent)] hover:underline font-mono">Acceder</a>
+                                            </div>
+                                        @else
+                                            <button type="button" @click="playTrack({{ $index }}, '{{ $item->url }}', '{{ addslashes($item->title ?: $item->filename) }}')" 
+                                                class="w-full text-left flex items-center justify-between p-2.5 rounded-sm border transition-colors group"
+                                                :class="currentIndex === {{ $index }} ? 'border-[var(--lucille-accent)]/50 bg-[var(--lucille-accent)]/10' : 'border-white/5 bg-[#101012] hover:border-white/15'">
+                                                <div class="flex items-start gap-2.5 flex-1 min-w-0 pr-2">
+                                                    <span class="text-xs font-mono shrink-0 mt-0.5" :class="currentIndex === {{ $index }} ? 'text-[var(--lucille-accent)]' : 'text-[#8b8b8b]'">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</span>
+                                                    <span class="text-xs line-clamp-1" :class="currentIndex === {{ $index }} ? 'text-white font-semibold' : 'text-[#b5b5b5] group-hover:text-white'">{{ $item->title ?: $item->filename }}</span>
+                                                </div>
+                                                <template x-if="currentIndex === {{ $index }} && playing">
+                                                    <div class="flex items-end gap-[2px] h-3.5 shrink-0 ml-2">
+                                                        <div class="w-1 h-2 bg-[var(--lucille-accent)] animate-pulse"></div>
+                                                        <div class="w-1 h-3.5 bg-[var(--lucille-accent)] animate-pulse" style="animation-delay: 150ms"></div>
+                                                        <div class="w-1 h-2.5 bg-[var(--lucille-accent)] animate-pulse" style="animation-delay: 300ms"></div>
+                                                    </div>
+                                                </template>
+                                            </button>
+                                        @endif
+                                    @endforeach
+                                </div>
+                                <!-- Audio element (hidden) -->
+                                <audio x-ref="audioPlayer" @durationchange="duration = $event.target.duration" @timeupdate="currentTime = $event.target.currentTime" @ended="nextTrack()"></audio>
                             </div>
-                            <!-- Audio element (hidden) -->
-                            <audio x-ref="audioPlayer" @durationchange="duration = $event.target.duration" @timeupdate="currentTime = $event.target.currentTime" @ended="nextTrack()"></audio>
-                        </div>
-                    @endif
+                        @else
+                            <div class="rounded-sm border border-dashed border-white/10 bg-[#101012] p-6 text-center">
+                                <span class="text-2xl opacity-60">🎵</span>
+                                <p class="mt-2 text-xs font-semibold uppercase tracking-wider text-[#dcdcdc]">Sin pistas publicadas</p>
+                                <p class="mt-1 text-xs text-[#8b8b8b]">Esta banda aún no ha publicado pistas de audio en su perfil.</p>
+                            </div>
+                        @endif
+                    </div>
 
                     <!-- Image Gallery Panel -->
-                    @if ($photoFiles->isNotEmpty())
-                        <div class="border border-white/10 bg-[#141417] rounded-sm p-5 md:p-6 shadow-sm" 
-                             x-data="{ 
+                    <div class="border border-white/10 bg-[#141417] rounded-sm p-5 md:p-6 shadow-sm">
+                        <h3 class="font-display text-lg uppercase tracking-[.12em] text-white border-b border-white/10 pb-2.5 mb-4">Galería</h3>
+                        @if ($photoFiles->isNotEmpty())
+                            <div x-data="{ 
                                  lightboxOpen: false, 
                                  activeIndex: 0,
                                  photos: {{ json_encode($photoFiles->map(fn($p) => ['url' => $p->url, 'title' => (string) $p->title])->values()->all()) }},
@@ -472,17 +440,16 @@
                                      if (this.activeIndex > 0) this.activeIndex--;
                                  }
                              }">
-                            <h3 class="font-display text-lg uppercase tracking-[.12em] text-white border-b border-white/10 pb-2.5 mb-4">Galería</h3>
-                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2.5">
-                                @foreach ($photoFiles as $index => $photo)
-                                    <button type="button" @click="activeIndex = {{ $index }}; lightboxOpen = true" class="group relative aspect-square overflow-hidden rounded-sm bg-[#101012] border border-white/10 hover:border-[var(--lucille-accent)]/60 transition-colors focus:outline-none">
-                                        <img src="{{ $photo->url }}" alt="{{ $photo->title }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
-                                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                            <svg class="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
-                                        </div>
-                                    </button>
-                                @endforeach
-                            </div>
+                                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                                    @foreach ($photoFiles as $index => $photo)
+                                        <button type="button" @click="activeIndex = {{ $index }}; lightboxOpen = true" class="group relative aspect-square overflow-hidden rounded-sm bg-[#101012] border border-white/10 hover:border-[var(--lucille-accent)]/60 transition-colors focus:outline-none">
+                                            <img src="{{ $photo->url }}" alt="{{ $photo->title }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                <svg class="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                                            </div>
+                                        </button>
+                                    @endforeach
+                                </div>
                             
                             <!-- Lightbox Modal -->
                             <template x-teleport="body">
@@ -536,8 +503,14 @@
                                     </div>
                                 </div>
                             </template>
-                        </div>
-                    @endif
+                        @else
+                            <div class="rounded-sm border border-dashed border-white/10 bg-[#101012] p-6 text-center">
+                                <span class="text-2xl opacity-60">📷</span>
+                                <p class="mt-2 text-xs font-semibold uppercase tracking-wider text-[#dcdcdc]">Sin fotografías</p>
+                                <p class="mt-1 text-xs text-[#8b8b8b]">Esta banda aún no ha compartido fotografías en su galería.</p>
+                            </div>
+                        @endif
+                    </div>
 
                     <!-- Like Button & Comment Form Panel -->
                     <div class="border border-white/10 bg-[#141417] rounded-sm p-5 md:p-6 shadow-sm space-y-5">

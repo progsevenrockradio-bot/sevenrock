@@ -75,6 +75,7 @@ class TalentReferralPilotTest extends TestCase
             'password_confirmation' => 'Password123!',
             'plan' => 'free',
             'referral_code' => $promoter->code,
+            'terms' => '1',
         ]);
         $responseFree->assertRedirect();
 
@@ -95,6 +96,7 @@ class TalentReferralPilotTest extends TestCase
             'password_confirmation' => 'Password123!',
             'plan' => 'basic',
             'referral_code' => $promoter->code,
+            'terms' => '1',
         ]);
         $responseBasic->assertRedirect();
 

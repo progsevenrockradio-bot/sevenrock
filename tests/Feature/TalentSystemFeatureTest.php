@@ -226,6 +226,7 @@ class TalentSystemFeatureTest extends TestCase
             'password_confirmation' => 'Secret1234!',
             'plan'                  => 'free',
             'referral_code'         => 'ALPHA123',
+            'terms'                 => '1',
         ]);
 
         $newTalent = Talent::where('email', 'nuevo@test.com')->first();
@@ -459,6 +460,7 @@ class TalentSystemFeatureTest extends TestCase
             'plan'                  => 'free',
             'facebook_screenshot'   => null,
             'instagram_screenshot'  => null,
+            'terms'                 => '1',
         ])->assertRedirect(route('talents.dashboard'));
 
         Mail::assertNotSent(TalentPendingApprovalMail::class);
@@ -475,6 +477,7 @@ class TalentSystemFeatureTest extends TestCase
             'password_confirmation' => 'Password123!',
             'plan'                  => 'free',
             'facebook_screenshot'   => 'talents/screenshots/facebook_fb.jpg',
+            'terms'                 => '1',
         ])->assertRedirect(route('talents.dashboard'));
 
         Mail::assertSent(TalentPendingApprovalMail::class, function ($mail) {

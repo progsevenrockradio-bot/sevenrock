@@ -463,6 +463,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/', [AdminTalentAdminController::class, 'index'])->name('index');
         Route::patch('/{talent}/toggle-featured', [AdminTalentAdminController::class, 'toggleFeatured'])->name('toggle-featured');
         Route::get('/media', [AdminTalentAdminController::class, 'media'])->name('media');
+        Route::post('/media/{media}/approve', [AdminTalentAdminController::class, 'approveMedia'])->name('media.approve');
+        Route::post('/media/{media}/reject', [AdminTalentAdminController::class, 'rejectMedia'])->name('media.reject');
         Route::delete('/media/{media}', [AdminTalentAdminController::class, 'deleteMedia'])->name('media.destroy');
         Route::get('/{talent}/edit', [AdminTalentAdminController::class, 'edit'])->name('edit');
         Route::put('/{talent}', [AdminTalentAdminController::class, 'update'])->name('update');
@@ -622,7 +624,6 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
         Route::get('/media', [TalentMediaController::class, 'index'])->name('media.index');
         Route::post('/media/upload', [TalentMediaController::class, 'upload'])->name('media.upload');
         Route::post('/media', [TalentMediaController::class, 'store'])->name('media.store');
-        Route::get('/media/{id}/download', [TalentMediaController::class, 'download'])->name('media.download');
         Route::delete('/media/{id}', [TalentMediaController::class, 'destroy'])->name('media.destroy');
         Route::prefix('albums')->name('albums.')->group(function (): void {
             Route::get('/', [TalentAlbumController::class, 'index'])->name('index');
@@ -634,6 +635,10 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
         });
         Route::post('/logout', [TalentAuthController::class, 'logout'])->name('logout');
     });
+
+    // Rutas de entrega y descarga de medios con autorización estricta
+    Route::get('/media/{id}/stream', [TalentMediaController::class, 'stream'])->name('media.stream');
+    Route::get('/media/{id}/download', [TalentMediaController::class, 'download'])->name('media.download');
 
     Route::get('/{bandName}', function (string $bandName) {
         return redirect()->to('/muro-del-rock/' . rawurlencode($bandName), 301);

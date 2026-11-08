@@ -59,6 +59,8 @@ class Talent extends Authenticatable
         'country',
         'contact_phone',
         'rejection_reason',
+        'terms_accepted_at',
+        'terms_version',
     ];
 
     protected $hidden = [
@@ -74,6 +76,7 @@ class Talent extends Authenticatable
             'is_hidden' => 'boolean',
             'expires_grace_at' => 'datetime',
             'email_verified_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
             'password' => 'hashed',
             'social_links' => 'array',
             'payment_links' => 'array',
@@ -188,12 +191,24 @@ class Talent extends Authenticatable
         return $this->belongsTo(User::class);
     }
 
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->email_verified_at !== null;
+    }
+
     /**
      * Maquetas y envíos de música previos vinculados de forma fiable mediante correo electrónico.
+     * Solo se exponen si el artista ha demostrado el control efectivo de su correo electrónico (email_verified_at).
      */
     public function submissions(): HasMany
     {
-        return $this->hasMany(TrackSubmission::class, 'contact_email', 'email');
+        $relation = $this->hasMany(TrackSubmission::class, 'contact_email', 'email');
+
+        if (! $this->hasVerifiedEmail()) {
+            return $relation->whereRaw('1 = 0');
+        }
+
+        return $relation;
     }
 
     public function subscriptions(): HasMany

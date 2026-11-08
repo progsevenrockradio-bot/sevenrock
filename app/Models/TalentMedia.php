@@ -35,6 +35,19 @@ class TalentMedia extends Model
         ];
     }
 
+    public function getUrlAttribute(?string $value): ?string
+    {
+        if ($this->id && $this->is_exclusive) {
+            return route('talents.media.stream', ['id' => $this->id]);
+        }
+
+        if ($this->id && $this->type === 'document' && filled($value)) {
+            return route('talents.media.download', ['id' => $this->id]);
+        }
+
+        return $value;
+    }
+
     public function isImage(): bool
     {
         return $this->type === 'photo';

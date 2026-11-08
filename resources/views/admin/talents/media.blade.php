@@ -140,12 +140,36 @@
 
                     <div class="flex items-center justify-between text-[11px] text-gray-400 border-t border-white/5 pt-2">
                         <span>Subido: {{ $item->created_at?->format('d/m/Y H:i') ?? 'N/D' }}</span>
-                        @if ($item->is_exclusive)
-                            <span class="text-[#c32720] font-semibold">Exclusivo afiliados</span>
-                        @endif
+                        <div class="flex items-center gap-2">
+                            @if ($item->status === 'approved')
+                                <span class="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-300">Aprobado</span>
+                            @elseif ($item->status === 'rejected')
+                                <span class="rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] text-red-300">Rechazado</span>
+                            @else
+                                <span class="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-300">Pendiente</span>
+                            @endif
+                            @if ($item->is_exclusive)
+                                <span class="text-[#c32720] font-semibold">Exclusivo afiliados</span>
+                            @endif
+                        </div>
                     </div>
 
-                    <div class="flex items-center justify-between gap-2 pt-1">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        @if ($item->status === 'pending')
+                            <form method="POST" action="{{ route('admin.talents.media.approve', $item) }}" class="inline">
+                                @csrf
+                                <button type="submit" class="inline-flex h-9 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                    Aprobar
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.talents.media.reject', $item) }}" class="inline">
+                                @csrf
+                                <button type="submit" class="inline-flex h-9 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 text-xs font-medium text-amber-300 hover:bg-amber-500/20 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                    Rechazar
+                                </button>
+                            </form>
+                        @endif
+
                         @if (!$isPrivateDocument && filled($item->url))
                             <a href="{{ $item->url }}" target="_blank" rel="noreferrer" class="inline-flex h-9 flex-1 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#c32720]">
                                 {{ $item->type === 'photo' ? 'Ver imagen' : 'Abrir archivo' }}
@@ -187,6 +211,7 @@
                         <th scope="col" class="px-4 py-3">Vista previa y archivo</th>
                         <th scope="col" class="px-3 py-3">Banda propietaria</th>
                         <th scope="col" class="px-3 py-3">Tipo de archivo</th>
+                        <th scope="col" class="px-3 py-3">Estado</th>
                         <th scope="col" class="px-3 py-3">Fecha de subida</th>
                         <th scope="col" class="px-4 py-3 text-right">Acciones</th>
                     </tr>
@@ -269,11 +294,41 @@
                                     @endif
                                 </div>
                             </td>
+                            <td class="px-3 py-3 whitespace-nowrap">
+                                @if ($item->status === 'approved')
+                                    <span class="inline-flex items-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-300">
+                                        Aprobado
+                                    </span>
+                                @elseif ($item->status === 'rejected')
+                                    <span class="inline-flex items-center rounded-md border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-300">
+                                        Rechazado
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-300">
+                                        Pendiente
+                                    </span>
+                                @endif
+                            </td>
                             <td class="px-3 py-3 whitespace-nowrap text-gray-300">
                                 {{ $item->created_at?->format('d/m/Y H:i') ?? 'N/D' }}
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-right">
                                 <div class="inline-flex items-center justify-end gap-2">
+                                    @if ($item->status === 'pending')
+                                        <form method="POST" action="{{ route('admin.talents.media.approve', $item) }}" class="inline">
+                                            @csrf
+                                            <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                                Aprobar
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ route('admin.talents.media.reject', $item) }}" class="inline">
+                                            @csrf
+                                            <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                                Rechazar
+                                            </button>
+                                        </form>
+                                    @endif
+
                                     @if (!$isPrivateDocument && filled($item->url))
                                         <a href="{{ $item->url }}" target="_blank" rel="noreferrer" class="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#c32720]">
                                             {{ $item->type === 'photo' ? 'Ver imagen' : 'Abrir' }}
@@ -299,7 +354,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-10 text-center text-xs text-gray-400">
+                            <td colspan="6" class="px-4 py-10 text-center text-xs text-gray-400">
                                 No se encontraron archivos subidos por bandas con los filtros seleccionados.
                             </td>
                         </tr>

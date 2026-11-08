@@ -456,6 +456,95 @@ class TalentAdminController extends Controller
         ]);
     }
 
+    public function approveMedia(TalentMedia $media): RedirectResponse
+    {
+        $media->loadMissing('talent');
+
+        $before = $media->getOriginal();
+        $media->update(['status' => 'approved']);
+
+        if ($media->talent && filled($media->talent->email)) {
+            try {
+                Mail::to($media->talent->email)->send(new ContentApprovedMail($media));
+            } catch (Throwable $e) {
+                Log::warning('TalentAdminController::approveMedia: no se pudo enviar correo de aprobación', [
+                    'media_id' => $media->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $moderationItem = \App\Models\ModerationItem::query()
+            ->where('subject_type', TalentMedia::class)
+            ->where('subject_id', $media->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($moderationItem) {
+            $moderationItem->update([
+                'status' => 'approved',
+                'decided_by' => Auth::id(),
+                'decided_at' => now(),
+                'decision_note' => 'Aprobado desde la gestión de archivos de bandas',
+            ]);
+        }
+
+        try {
+            app(\App\Services\AuditTrailService::class)->recordModel(
+                'talent.media.approved',
+                $media,
+                $before,
+                $media->fresh()?->toArray() ?? [],
+                [],
+                ['action' => 'approve', 'admin_id' => Auth::id()],
+                'info'
+            );
+        } catch (Throwable $e) {
+            Log::warning('TalentAdminController::approveMedia: fallo de auditoría', ['error' => $e->getMessage()]);
+        }
+
+        return back()->with('status', 'Archivo aprobado y publicado. Se ha notificado al artista.');
+    }
+
+    public function rejectMedia(TalentMedia $media): RedirectResponse
+    {
+        $media->loadMissing('talent');
+
+        $before = $media->getOriginal();
+        $media->update(['status' => 'rejected']);
+
+        $moderationItem = \App\Models\ModerationItem::query()
+            ->where('subject_type', TalentMedia::class)
+            ->where('subject_id', $media->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($moderationItem) {
+            $moderationItem->update([
+                'status' => 'rejected',
+                'decided_by' => Auth::id(),
+                'decided_at' => now(),
+                'decision_note' => 'Rechazado desde la gestión de archivos de bandas',
+            ]);
+        }
+
+        try {
+            app(\App\Services\AuditTrailService::class)->recordModel(
+                'talent.media.rejected',
+                $media,
+                $before,
+                $media->fresh()?->toArray() ?? [],
+                [],
+                ['action' => 'reject', 'admin_id' => Auth::id()],
+                'warning'
+            );
+        } catch (Throwable $e) {
+            Log::warning('TalentAdminController::rejectMedia: fallo de auditoría', ['error' => $e->getMessage()]);
+        }
+
+        return back()->with('status', 'Archivo rechazado.');
+    }
+
     public function deleteMedia(TalentMedia $media): RedirectResponse
     {
         $media->loadMissing('talent');
