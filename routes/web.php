@@ -40,6 +40,7 @@ use App\Http\Controllers\Talent\SubscriptionController as TalentSubscriptionCont
 use App\Http\Controllers\Talent\NotificationController as TalentNotificationController;
 use App\Http\Controllers\Talent\AlbumController as TalentAlbumController;
 use App\Http\Controllers\Talent\PublicProfileController as TalentPublicProfileController;
+use App\Http\Controllers\Talent\VerificationController as TalentVerificationController;
 use App\Http\Controllers\AffiliateAuthController;
 use App\Http\Controllers\CommunityWallController;
 use App\Http\Controllers\Admin\ContractController as AdminContractController;
@@ -465,6 +466,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/media', [AdminTalentAdminController::class, 'media'])->name('media');
         Route::post('/media/{media}/approve', [AdminTalentAdminController::class, 'approveMedia'])->name('media.approve');
         Route::post('/media/{media}/reject', [AdminTalentAdminController::class, 'rejectMedia'])->name('media.reject');
+        Route::post('/media/{media}/resend-notice', [AdminTalentAdminController::class, 'resendMediaApprovalNotice'])->name('media.resend-notice');
         Route::delete('/media/{media}', [AdminTalentAdminController::class, 'deleteMedia'])->name('media.destroy');
         Route::get('/{talent}/edit', [AdminTalentAdminController::class, 'edit'])->name('edit');
         Route::put('/{talent}', [AdminTalentAdminController::class, 'update'])->name('update');
@@ -604,6 +606,8 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
     });
 
     Route::middleware(['talent'])->group(function (): void {
+        Route::get('/email/verify', [TalentVerificationController::class, 'notice'])->name('verification.notice');
+        Route::post('/email/verification-notification', [TalentVerificationController::class, 'resend'])->middleware('throttle:6,1')->name('verification.send');
         Route::get('/dashboard', [TalentDashboardController::class, 'index'])->name('dashboard');
         Route::prefix('store')->name('store.')->group(function (): void {
             Route::get('/', [TalentProductController::class, 'index'])->name('index');
@@ -635,6 +639,9 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
         });
         Route::post('/logout', [TalentAuthController::class, 'logout'])->name('logout');
     });
+
+    // Verificación de correo electrónico con enlace temporal firmado
+    Route::get('/email/verify/{id}/{hash}', [TalentVerificationController::class, 'verify'])->name('verification.verify');
 
     // Rutas de entrega y descarga de medios con autorización estricta
     Route::get('/media/{id}/stream', [TalentMediaController::class, 'stream'])->name('media.stream');

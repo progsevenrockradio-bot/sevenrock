@@ -90,6 +90,11 @@ class Talent extends Authenticatable
             ->where('subscription_status', 'active');
     }
 
+    public function isPubliclyVisible(): bool
+    {
+        return ! $this->is_hidden && $this->subscription_status === 'active';
+    }
+
     public function scopeByPlan(Builder $query, string $plan): Builder
     {
         return $query->where('plan', $plan);
@@ -194,6 +199,23 @@ class Talent extends Authenticatable
     public function hasVerifiedEmail(): bool
     {
         return $this->email_verified_at !== null;
+    }
+
+    public function getEmailForVerification(): string
+    {
+        return (string) $this->email;
+    }
+
+    public function markEmailAsVerified(): bool
+    {
+        return $this->forceFill([
+            'email_verified_at' => $this->freshTimestamp(),
+        ])->save();
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new \App\Notifications\TalentVerifyEmailNotification());
     }
 
     /**

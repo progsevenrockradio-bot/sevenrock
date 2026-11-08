@@ -36,6 +36,12 @@
             </div>
         @endif
 
+        @if (session('status_warning'))
+            <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200" role="alert">
+                {{ session('status_warning') }}
+            </div>
+        @endif
+
         {{-- Barra de filtros --}}
         <form method="GET" action="{{ route('admin.talents.media') }}" class="rounded-xl border border-white/10 bg-[#101012] p-3.5">
             <div class="grid gap-3 sm:grid-cols-[1.4fr_1fr_auto] items-end">
@@ -329,7 +335,16 @@
                                         </form>
                                     @endif
 
-                                    @if (!$isPrivateDocument && filled($item->url))
+                                    @if ($item->status === 'approved' && $item->talent && filled($item->talent->email))
+                                        <form method="POST" action="{{ route('admin.talents.media.resend-notice', $item) }}" class="inline">
+                                            @csrf
+                                            <button type="submit" class="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-gray-300 hover:bg-white/[0.08] hover:text-white" title="Reenviar correo de aprobación al artista">
+                                                Reenviar aviso
+                                            </button>
+                                        </form>
+                                    @endif
+
+                                    @if (filled($item->url))
                                         <a href="{{ $item->url }}" target="_blank" rel="noreferrer" class="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-gray-200 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#c32720]">
                                             {{ $item->type === 'photo' ? 'Ver imagen' : 'Abrir' }}
                                         </a>

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Talent;
 use App\Http\Controllers\Controller;
 use App\Models\TalentMedia;
 use App\Services\FileUploadService;
+use App\Services\TalentMediaAuthorizationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -239,8 +240,18 @@ class MediaController extends Controller
 
             $isExclusive = $request->boolean('is_exclusive');
             $isPrivateDoc = $validated['type'] === 'document';
-            $isPrivate = $isPrivateDoc || $isExclusive;
-            $targetDisk = $isPrivate ? 'r2_private' : 'r2';
+            $isPending = app(\App\Services\ModerationService::class)->needsModeration('media');
+            $isProtected = $isPrivateDoc || $isExclusive || $isPending;
+
+            // Documentos privados y contenido exclusivo requieren estrictamente r2_private
+            // Archivos públicos pendientes usan r2_private si está configurado, o r2
+            if ($isPrivateDoc || $isExclusive) {
+                $targetDisk = 'r2_private';
+            } elseif ($isPending && $fileUploadService->isR2PrivateConfigured()) {
+                $targetDisk = 'r2_private';
+            } else {
+                $targetDisk = 'r2';
+            }
 
             if ($targetDisk === 'r2_private' && ! $fileUploadService->isR2PrivateConfigured()) {
                 throw new \RuntimeException('El almacenamiento privado R2 no está configurado explícitamente (R2_PRIVATE_BUCKET ausente).');
@@ -250,8 +261,6 @@ class MediaController extends Controller
             }
 
             $upload = $fileUploadService->upload($file, $folder, $targetDisk);
-
-            $isPending = app(\App\Services\ModerationService::class)->needsModeration('media');
 
             $media = TalentMedia::query()->create([
                 'talent_id' => $talent->id,
@@ -268,14 +277,14 @@ class MediaController extends Controller
                 'status' => $isPending ? 'pending' : 'approved',
             ]);
 
-            // Para archivos privados o exclusivos: la URL de acceso es la ruta protegida autenticada
-            if ($isExclusive) {
+            // Para archivos privados, exclusivos o pendientes: la URL almacenada nunca expone el enlace directo de almacenamiento
+            if ($isProtected || $targetDisk === 'r2_private') {
+                $endpoint = $isPrivateDoc
+                    ? route('talents.media.download', ['id' => $media->id])
+                    : route('talents.media.stream', ['id' => $media->id]);
+
                 $media->update([
-                    'url' => route('talents.media.stream', ['id' => $media->id]),
-                ]);
-            } elseif ($isPrivateDoc) {
-                $media->update([
-                    'url' => route('talents.media.download', ['id' => $media->id]),
+                    'url' => $endpoint,
                 ]);
             }
 
@@ -323,28 +332,16 @@ class MediaController extends Controller
         return redirect()->route('talents.media.index')->with('status', $statusMsg);
     }
 
-    public function stream(string $id, Request $request): StreamedResponse
+    public function stream(string $id, Request $request, TalentMediaAuthorizationService $authService): StreamedResponse
     {
         /** @var \App\Models\Talent|null $talent */
         $talent = Auth::guard('talent')->user();
         $webUser = Auth::guard('web')->user();
-        $isAdmin = (bool) ($webUser?->isAdmin() ?? false);
 
         $media = TalentMedia::query()->whereKey((int) $id)->firstOrFail();
 
-        // Control estricto de autorización por tipo y exclusividad
-        if ($media->is_exclusive) {
-            $isOwner = $talent && (int) $talent->id === (int) $media->talent_id;
-            $isAuthenticatedUser = $webUser !== null;
-            if (! $isAdmin && ! $isOwner && ! $isAuthenticatedUser) {
-                abort(403, 'Contenido exclusivo para usuarios registrados o afiliados.');
-            }
-        } elseif ($media->type === 'document') {
-            $isOwner = $talent && (int) $talent->id === (int) $media->talent_id;
-            if (! $isAdmin && ! $isOwner) {
-                abort(403, 'No tienes autorización para acceder a este documento.');
-            }
-        }
+        // Centralización estricta de autorización de acceso
+        $authService->authorize($media, $webUser, $talent);
 
         $disk = $media->resolvedDisk();
         if (! $disk) {
@@ -372,24 +369,16 @@ class MediaController extends Controller
         ]);
     }
 
-    public function download(string $id): StreamedResponse
+    public function download(string $id, TalentMediaAuthorizationService $authService): StreamedResponse
     {
         /** @var \App\Models\Talent|null $talent */
         $talent = Auth::guard('talent')->user();
         $webUser = Auth::guard('web')->user();
-        $isAdmin = (bool) ($webUser?->isAdmin() ?? false);
 
         $media = TalentMedia::query()->whereKey((int) $id)->firstOrFail();
 
-        if ($media->is_exclusive) {
-            $isOwner = $talent && (int) $talent->id === (int) $media->talent_id;
-            $isAuthenticatedUser = $webUser !== null;
-            if (! $isAdmin && ! $isOwner && ! $isAuthenticatedUser) {
-                abort(403, 'Contenido exclusivo para usuarios registrados o afiliados.');
-            }
-        } elseif (! $isAdmin && (! $talent || (int) $talent->id !== (int) $media->talent_id)) {
-            abort(403, 'No tienes autorización para acceder a este archivo.');
-        }
+        // Centralización estricta de autorización de descarga
+        $authService->authorize($media, $webUser, $talent);
 
         $disk = $media->resolvedDisk();
         if (! $disk) {

@@ -19,6 +19,7 @@ use App\Services\TalentSubscriptionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
@@ -458,52 +459,119 @@ class TalentAdminController extends Controller
 
     public function approveMedia(TalentMedia $media): RedirectResponse
     {
-        $media->loadMissing('talent');
+        $mediaId = (int) $media->id;
 
-        $before = $media->getOriginal();
-        $media->update(['status' => 'approved']);
+        // Protección transaccional con lockForUpdate contra doble clic / concurrencia
+        $result = DB::transaction(function () use ($mediaId): array {
+            /** @var TalentMedia|null $lockedMedia */
+            $lockedMedia = TalentMedia::query()->whereKey($mediaId)->lockForUpdate()->first();
+            if (! $lockedMedia) {
+                return ['status' => 'not_found', 'media' => null];
+            }
 
-        if ($media->talent && filled($media->talent->email)) {
+            if ($lockedMedia->status === 'approved') {
+                return ['status' => 'already_approved', 'media' => $lockedMedia];
+            }
+
+            $before = $lockedMedia->getOriginal();
+            $lockedMedia->update(['status' => 'approved']);
+
+            $moderationItem = \App\Models\ModerationItem::query()
+                ->where('subject_type', TalentMedia::class)
+                ->where('subject_id', $lockedMedia->id)
+                ->where('status', 'pending')
+                ->first();
+
+            if ($moderationItem) {
+                $moderationItem->update([
+                    'status' => 'approved',
+                    'decided_by' => Auth::id(),
+                    'decided_at' => now(),
+                    'decision_note' => 'Aprobado desde la gestión de archivos de bandas',
+                ]);
+            }
+
             try {
-                Mail::to($media->talent->email)->send(new ContentApprovedMail($media));
+                app(\App\Services\AuditTrailService::class)->recordModel(
+                    'talent.media.approved',
+                    $lockedMedia,
+                    $before,
+                    $lockedMedia->fresh()?->toArray() ?? [],
+                    [],
+                    ['action' => 'approve', 'admin_id' => Auth::id()],
+                    'info'
+                );
             } catch (Throwable $e) {
-                Log::warning('TalentAdminController::approveMedia: no se pudo enviar correo de aprobación', [
-                    'media_id' => $media->id,
-                    'error' => $e->getMessage(),
+                Log::warning('TalentAdminController::approveMedia: fallo de auditoría', ['error' => $e->getMessage()]);
+            }
+
+            return ['status' => 'approved_now', 'media' => $lockedMedia];
+        });
+
+        if ($result['status'] === 'not_found') {
+            abort(404);
+        }
+
+        if ($result['status'] === 'already_approved') {
+            return back()->with('status', 'El archivo ya fue aprobado previamente.');
+        }
+
+        /** @var TalentMedia $approvedMedia */
+        $approvedMedia = $result['media'];
+        $approvedMedia->loadMissing('talent');
+
+        $mailSent = false;
+        $mailError = null;
+
+        if ($approvedMedia->talent && filled($approvedMedia->talent->email)) {
+            try {
+                Mail::to($approvedMedia->talent->email)->send(new ContentApprovedMail($approvedMedia));
+                $mailSent = true;
+            } catch (Throwable $e) {
+                $mailError = $e->getMessage();
+                Log::error('TalentAdminController::approveMedia: no se pudo enviar correo de aprobación', [
+                    'media_id' => $approvedMedia->id,
+                    'email' => $approvedMedia->talent->email,
+                    'error' => $mailError,
                 ]);
             }
         }
 
-        $moderationItem = \App\Models\ModerationItem::query()
-            ->where('subject_type', TalentMedia::class)
-            ->where('subject_id', $media->id)
-            ->where('status', 'pending')
-            ->first();
+        if (! $mailSent) {
+            $warningMsg = filled($mailError)
+                ? 'Archivo aprobado y publicado, pero falló el envío de la notificación por correo al artista. Puedes reintentar el aviso.'
+                : 'Archivo aprobado y publicado. El artista no cuenta con correo registrado para recibir la notificación.';
 
-        if ($moderationItem) {
-            $moderationItem->update([
-                'status' => 'approved',
-                'decided_by' => Auth::id(),
-                'decided_at' => now(),
-                'decision_note' => 'Aprobado desde la gestión de archivos de bandas',
-            ]);
+            return back()->with('status_warning', $warningMsg);
+        }
+
+        return back()->with('status', 'Archivo aprobado y publicado. Se ha notificado al artista por correo electrónico.');
+    }
+
+    public function resendMediaApprovalNotice(TalentMedia $media): RedirectResponse
+    {
+        $media->loadMissing('talent');
+
+        if ($media->status !== 'approved') {
+            return back()->withErrors(['error' => 'Solo se puede enviar notificación para archivos ya aprobados.']);
+        }
+
+        if (! $media->talent || empty($media->talent->email)) {
+            return back()->withErrors(['error' => 'El artista no tiene una dirección de correo válida configurada.']);
         }
 
         try {
-            app(\App\Services\AuditTrailService::class)->recordModel(
-                'talent.media.approved',
-                $media,
-                $before,
-                $media->fresh()?->toArray() ?? [],
-                [],
-                ['action' => 'approve', 'admin_id' => Auth::id()],
-                'info'
-            );
+            Mail::to($media->talent->email)->send(new ContentApprovedMail($media));
+            return back()->with('status', 'Notificación de aprobación enviada correctamente al artista.');
         } catch (Throwable $e) {
-            Log::warning('TalentAdminController::approveMedia: fallo de auditoría', ['error' => $e->getMessage()]);
-        }
+            Log::error('TalentAdminController::resendMediaApprovalNotice: error reenviando correo', [
+                'media_id' => $media->id,
+                'email' => $media->talent->email,
+                'error' => $e->getMessage(),
+            ]);
 
-        return back()->with('status', 'Archivo aprobado y publicado. Se ha notificado al artista.');
+            return back()->with('status_warning', 'No se pudo enviar la notificación por correo al artista: ' . $e->getMessage());
+        }
     }
 
     public function rejectMedia(TalentMedia $media): RedirectResponse

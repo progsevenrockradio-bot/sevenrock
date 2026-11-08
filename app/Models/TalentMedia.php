@@ -37,15 +37,21 @@ class TalentMedia extends Model
 
     public function getUrlAttribute(?string $value): ?string
     {
-        if ($this->id && $this->is_exclusive) {
-            return route('talents.media.stream', ['id' => $this->id]);
+        if (! $this->id) {
+            return $value;
         }
 
-        if ($this->id && $this->type === 'document' && filled($value)) {
+        // Los documentos se canalizan siempre por su endpoint de descarga protegida
+        if ($this->type === 'document') {
             return route('talents.media.download', ['id' => $this->id]);
         }
 
-        return $value;
+        // Cualquier archivo no aprobado, exclusivo o alojado en almacenamiento privado se sirve por la ruta protegida
+        if ($this->status !== 'approved' || $this->is_exclusive || $this->disk === 'r2_private') {
+            return route('talents.media.stream', ['id' => $this->id]);
+        }
+
+        return $value ?: route('talents.media.stream', ['id' => $this->id]);
     }
 
     public function isImage(): bool

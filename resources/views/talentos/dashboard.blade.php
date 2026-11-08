@@ -195,7 +195,7 @@
         </div>
 
         @if ($talent && ! $talent->hasVerifiedEmail())
-            <div class="border border-amber-500/20 bg-amber-500/5 p-4 rounded-sm flex items-center justify-between gap-3">
+            <div class="border border-amber-500/20 bg-amber-500/5 p-4 rounded-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                     <span class="text-xl">✉️</span>
                     <div>
@@ -203,6 +203,12 @@
                         <p class="text-xs text-[#8b8b8b] mt-0.5">Para vincular y gestionar tus maquetas enviadas con este correo ({{ $talent->email }}), debes acreditar la titularidad verificando tu correo.</p>
                     </div>
                 </div>
+                <form action="{{ route('talents.verification.send') }}" method="POST" class="shrink-0">
+                    @csrf
+                    <button type="submit" class="lucille-button text-xs py-1.5 px-3">
+                        Reenviar verificación
+                    </button>
+                </form>
             </div>
         @endif
 

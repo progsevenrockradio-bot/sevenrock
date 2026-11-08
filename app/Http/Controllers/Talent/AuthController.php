@@ -198,6 +198,12 @@ class AuthController extends Controller
 
         if (filled($talent->email)) {
             Mail::to($talent->email)->queue(new WelcomeTalentMail($talent));
+
+            try {
+                $talent->sendEmailVerificationNotification();
+            } catch (Throwable $e) {
+                Log::warning("AuthController@register: error enviando notificación de verificación de correo: " . $e->getMessage());
+            }
         }
 
         // Tarea 1 / Regla 10: Enviar aviso al admin con enlaces de aprobación si cuenta con capturas
