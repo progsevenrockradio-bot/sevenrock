@@ -187,7 +187,7 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
             }
         }
 
-        $baseName = basename(str_replace('\\', '/', $sourcePath));
+        $baseName = self::resolveRemoteBaseName($sourcePath);
         $destinationPath = trim($folder, '/\\') . '/' . $baseName;
         $destinationPath = trim(str_replace(['//', '\\'], ['/', '/'], $destinationPath), '/');
 
@@ -378,7 +378,7 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                 }
 
                 $freshFolder = $this->resolveRemoteFolder($locked);
-                $freshBaseName = basename(str_replace('\\', '/', $sourcePath));
+                $freshBaseName = self::resolveRemoteBaseName($sourcePath);
                 $expectedPath = trim($freshFolder, '/\\') . '/' . $freshBaseName;
                 $expectedPath = trim(str_replace(['//', '\\'], ['/', '/'], $expectedPath), '/');
 
@@ -990,5 +990,21 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
             'current_version' => (int) ($radioProgram->editorial_version ?: 1),
             'remote_path' => $destinationPath,
         ]);
+    }
+
+    /**
+     * Resuelve el nombre base remoto transliterado a ASCII para RadioBOSS.
+     * Convierte diacríticos y acentos (ej. CÓDIGO -> CODIGO, FANÁTICOS -> FANATICOS)
+     * manteniendo intactos el archivo fuente en R2, metadatos y Archive.org,
+     * para garantizar compatibilidad estricta con el demonio FTP y el comando SIZE.
+     */
+    public static function resolveRemoteBaseName(string $sourcePath): string
+    {
+        $rawBaseName = basename(str_replace('\\', '/', trim($sourcePath)));
+        $asciiName = (string) Str::ascii($rawBaseName);
+        $sanitized = preg_replace('/[\/\\\\:*?"<>|]/', '-', $asciiName);
+        $sanitized = trim((string) preg_replace('/\s+/', ' ', $sanitized));
+
+        return $sanitized !== '' ? $sanitized : 'episode.mp3';
     }
 }

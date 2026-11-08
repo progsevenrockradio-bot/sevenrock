@@ -44,6 +44,7 @@ class RadioBossDeliveryPipelineTest extends TestCase
 
     protected function tearDown(): void
     {
+        Cache::flush();
         Carbon::setTestNow();
         parent::tearDown();
     }
@@ -646,6 +647,7 @@ class RadioBossDeliveryPipelineTest extends TestCase
         ]);
 
         // El conductor entregó a las 16:30 Caracas (media hora ANTES del cierre a las 17:00)
+        Carbon::setTestNow(Carbon::parse('2026-10-31 16:30:00', 'America/Caracas'));
         $onTimeEpisode = RadioProgram::create([
             'master_program_id' => $master->id,
             'submitted_by_user_id' => 88,
@@ -1709,5 +1711,122 @@ class RadioBossDeliveryPipelineTest extends TestCase
         $this->assertTrue((bool) $ep->enviado_radioboss);
         $this->assertTrue(Storage::disk('radioboss')->exists($folder . '/089.- POLUCION 31-10-2026.mp3'));
         $this->assertTrue(Storage::disk('radioboss')->exists('respaldos_programas/' . $folder . '/088.- POLUCION 24-10-2026.mp3'));
+    }
+
+    /**
+     * 25. Regresión RadioBOSS: Nombres con acentos/diacríticos (ej. CÓDIGO ZONA MISTERIO)
+     * deben ser transliterados a ASCII (CODIGO) exclusivamente para el destino y temporal en RadioBOSS,
+     * conservando intacto el archivo en R2, base de datos y metadatos.
+     */
+    public function test_accented_program_name_transliterates_to_ascii_for_radioboss(): void
+    {
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+
+        $folder = '07.- DOMINGO/10.- CODIGO ZONA MISTERIO';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'CÓDIGO ZONA MISTERIO',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'LUNES',
+            'hora_transmision' => '03:00:00',
+        ]);
+
+        $r2Path = 'programas_procesados/codigo-zona-misterio/014.- CÓDIGO ZONA MISTERIO 08-11-2026.mp3';
+        $content = 'misterio-audio-content-231mb-test';
+        Storage::disk('r2')->put($r2Path, $content);
+
+        $episode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'CÓDIGO ZONA MISTERIO Ep 14',
+            'conductor' => 'Locutor Misterio',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Path,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        $job = new UploadRadiobossJob($episode->id);
+        $job->handle();
+
+        $episode->refresh();
+
+        // Verificaciones de estado en RadioBOSS
+        $this->assertSame('radioboss_verified', $episode->radioboss_status, (string) $episode->radioboss_last_error);
+        $this->assertTrue((bool) $episode->enviado_radioboss);
+
+        // La ruta remota en RadioBOSS DEBE estar transliterada a ASCII sin tildes: CÓDIGO -> CODIGO
+        $expectedRemoteAscii = $folder . '/014.- CODIGO ZONA MISTERIO 08-11-2026.mp3';
+        $this->assertTrue(Storage::disk('radioboss')->exists($expectedRemoteAscii));
+        $this->assertFalse(Storage::disk('radioboss')->exists($folder . '/014.- CÓDIGO ZONA MISTERIO 08-11-2026.mp3'));
+
+        // El registro de metadata remota debe almacenar exactamente la ruta ASCII
+        $this->assertSame($expectedRemoteAscii, $episode->radioboss_metadata['remote_path']);
+
+        // El archivo fuente en R2 y en la base de datos DEBE permanecer intacto con su nombre original
+        $this->assertSame($r2Path, $episode->archivo_mp3);
+        $this->assertTrue(Storage::disk('r2')->exists($r2Path));
+
+        // Idempotencia: una reejecución debe detectar el archivo verificado y completarse sin errores
+        $idempotentJob = new UploadRadiobossJob($episode->id);
+        $idempotentJob->handle();
+
+        $episode->refresh();
+        $this->assertSame('radioboss_verified', $episode->radioboss_status);
+        $this->assertSame($expectedRemoteAscii, $episode->radioboss_metadata['remote_path']);
+    }
+
+    /**
+     * 26. Regresión RadioBOSS: Nombres puramente ASCII (ej. TROVADOR URBANO)
+     * conservan exactamente su nombre sin modificaciones.
+     */
+    public function test_ascii_program_name_is_preserved_identically_for_radioboss(): void
+    {
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+
+        $folder = '07.- DOMINGO/14.- TROVADOR URBANO';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'TROVADOR URBANO',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'LUNES',
+            'hora_transmision' => '03:00:00',
+        ]);
+
+        $r2Path = 'programas_procesados/trovador-urbano/200.- TROVADOR URBANO 08-11-2026.mp3';
+        $content = 'trovador-audio-content-117mb-test';
+        Storage::disk('r2')->put($r2Path, $content);
+
+        $episode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'TROVADOR URBANO Ep 200',
+            'conductor' => 'David Calderon',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Path,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        $job = new UploadRadiobossJob($episode->id);
+        $job->handle();
+
+        $episode->refresh();
+
+        $this->assertSame('radioboss_verified', $episode->radioboss_status, (string) $episode->radioboss_last_error);
+        $this->assertTrue((bool) $episode->enviado_radioboss);
+
+        // El destino en RadioBOSS coincide exactamente con el nombre ASCII
+        $expectedRemotePath = $folder . '/200.- TROVADOR URBANO 08-11-2026.mp3';
+        $this->assertTrue(Storage::disk('radioboss')->exists($expectedRemotePath));
+        $this->assertSame($expectedRemotePath, $episode->radioboss_metadata['remote_path']);
+
+        // Idempotencia: una reejecución debe conservarse verificada
+        $idempotentJob = new UploadRadiobossJob($episode->id);
+        $idempotentJob->handle();
+
+        $episode->refresh();
+        $this->assertSame('radioboss_verified', $episode->radioboss_status);
+        $this->assertSame($expectedRemotePath, $episode->radioboss_metadata['remote_path']);
     }
 }

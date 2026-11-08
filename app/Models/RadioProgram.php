@@ -214,6 +214,11 @@ class RadioProgram extends Model
         return 'programas_procesados/' . $this->storageFolderSlug() . '/' . $this->buildCanonicalFilename();
     }
 
+    public function radiobossRemoteFilename(): string
+    {
+        return \App\Jobs\UploadRadiobossJob::resolveRemoteBaseName((string) ($this->archivo_mp3 ?: $this->buildCanonicalFilename()));
+    }
+
     public static function isProcessedStoragePath(?string $path): bool
     {
         $normalized = ltrim(str_replace('\\', '/', trim((string) $path)), '/');

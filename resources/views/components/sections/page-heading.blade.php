@@ -27,9 +27,13 @@
         <h1 class="lucille-page-title">{!! formatear_titulo($title) !!}</h1>
         @if ($subtitle)
             <p class="lucille-page-subtitle">{{ $subtitle }}</p>
+        @elseif ($slot->isNotEmpty())
+            <div class="lucille-page-subtitle">
+                {{ $slot }}
+            </div>
         @endif
-        @if ($slot->isNotEmpty())
-            <div class="mt-5 text-sm italic text-[#757575]">
+        @if ($subtitle && $slot->isNotEmpty())
+            <div class="mt-3 text-xs text-[#757575] max-w-2xl mx-auto">
                 {{ $slot }}
             </div>
         @endif

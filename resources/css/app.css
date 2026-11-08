@@ -1480,59 +1480,73 @@
         position: relative;
         margin-inline: auto;
         max-width: 1180px;
-        padding: 200px 20px 110px;
+        padding: 136px 20px 40px;
         text-align: center;
         z-index: 10;
     }
 
     .lucille-page-heading.no-subtitle .lucille-page-heading-inner {
-        padding-top: 140px;
-        padding-bottom: 50px;
+        padding-top: 136px;
+        padding-bottom: 40px;
     }
 
     .lucille-page-heading.no-subtitle.has-cpt-tax .lucille-page-heading-inner {
-        padding-top: 190px;
-        padding-bottom: 100px;
+        padding-top: 140px;
+        padding-bottom: 50px;
     }
 
     .lucille-page-title {
         color: #fff;
         font-family: var(--font-display);
-        font-size: clamp(26px, 6vw, 92px);
+        font-size: clamp(28px, 4.2vw, 52px);
         font-weight: 700;
-        line-height: 1.1;
+        line-height: 1.18;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
         word-break: break-word;
         overflow-wrap: break-word;
+        text-wrap: balance;
+        max-width: 960px;
+        margin-inline: auto;
+        margin-block: 0;
     }
 
     .lucille-page-subtitle {
         margin-top: 14px;
-        color: var(--color-lucille-accent);
-        font-family: var(--font-display);
-        font-size: clamp(24px, 4vw, 46px);
-        font-weight: 300;
-        line-height: 1.15;
-        text-transform: uppercase;
+        margin-inline: auto;
+        max-width: 42rem;
+        color: #9aa7b1;
+        font-family: var(--font-sans);
+        font-size: clamp(14px, 1.4vw, 15px);
+        font-weight: 400;
+        line-height: 1.55;
+        letter-spacing: 0.02em;
+        text-transform: none;
+        text-wrap: pretty;
     }
 
     .lucille-page-heading--compact .lucille-page-heading-inner {
-        padding: 132px 20px 44px;
+        padding: 136px 20px 40px;
     }
 
     .lucille-page-heading--compact .lucille-page-title {
-        font-size: clamp(26px, 4.2vw, 52px);
+        font-size: clamp(28px, 4.2vw, 52px);
         letter-spacing: 0.08em;
+        line-height: 1.18;
     }
 
     .lucille-page-heading--compact .lucille-page-subtitle {
-        margin-top: 10px;
-        color: #b8b8b8;
+        margin-top: 14px;
+        margin-inline: auto;
+        max-width: 42rem;
+        color: #9aa7b1;
         font-family: var(--font-sans);
-        font-size: clamp(13px, 1.5vw, 15px);
+        font-size: clamp(14px, 1.4vw, 15px);
         font-weight: 400;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.02em;
+        line-height: 1.55;
         text-transform: none;
+        text-wrap: pretty;
     }
 
     .lucille-cpt-meta {
@@ -5846,8 +5860,8 @@
         }
 
         .lucille-page-heading-inner {
-            padding-top: 150px;
-            padding-bottom: 70px;
+            padding-top: 112px;
+            padding-bottom: 28px;
         }
 
         .lucille-event-link {

@@ -5,11 +5,11 @@
         <div class="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat pointer-events-none opacity-20 mix-blend-luminosity" style="background-image: -webkit-image-set(url('{{ asset('assets/lucille/dark-background.webp') }}') 1x, url('{{ asset('assets/lucille/dark-background.jpg') }}') 1x); background-image: image-set(url('{{ asset('assets/lucille/dark-background.webp') }}') type('image/webp'), url('{{ asset('assets/lucille/dark-background.jpg') }}') type('image/jpeg'));"></div>
         <div class="fixed inset-0 z-0 bg-gradient-to-b from-[#121215]/80 via-[#121215]/90 to-[#121215] pointer-events-none"></div>
 
-        <section class="relative z-10 mx-auto max-w-[1180px] px-4 sm:px-6 pt-28 md:pt-36 pb-20">
+        <section class="relative z-10 mx-auto max-w-[1180px] px-4 sm:px-6 pt-28 md:pt-[136px] pb-20">
             <!-- Section Header Banner with H1 -->
-            <div class="mb-8 w-full flex flex-col items-center justify-center">
-                <h1 class="font-display text-3xl sm:text-4xl md:text-5xl uppercase font-bold tracking-[.12em] text-[#dcdcdc] text-center mb-2">Muro del Rock</h1>
-                <p class="text-sm md:text-base text-[#8b8b8b] text-center max-w-2xl mb-6">Directorio y catálogo oficial de bandas y artistas independientes de Seven Rock Radio. ¿Buscas dejar saludos o interactuar en directo con los oyentes? Visita el <a href="{{ route('comunidad.muro') }}" class="text-[var(--lucille-accent-readable,#ff5b52)] hover:underline font-semibold">Muro de la Comunidad</a>.</p>
+            <div class="mb-8 w-full flex flex-col items-center justify-center text-center">
+                <h1 class="lucille-page-title text-center">{!! formatear_titulo('Muro del Rock') !!}</h1>
+                <p class="lucille-page-subtitle text-center mb-6">Directorio y catálogo oficial de bandas y artistas independientes de Seven Rock Radio. ¿Buscas dejar saludos o interactuar en directo con los oyentes? Visita el <a href="{{ route('comunidad.muro') }}" class="text-[var(--lucille-accent-readable,#ff5b52)] hover:underline font-semibold">Muro de la Comunidad</a>.</p>
                 <picture class="w-full">
                     <source srcset="{{ asset('assets/lucille/muro-del-rock-banner.webp') }}" type="image/webp">
                     <img src="{{ \App\Models\ThemeSetting::current()->talents_banner_url }}"
