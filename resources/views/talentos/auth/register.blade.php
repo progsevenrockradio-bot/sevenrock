@@ -34,8 +34,8 @@
                     {{-- Form Fields Grid --}}
                     <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                         <div>
-                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre de banda</label>
-                            <input name="band_name" value="{{ old('band_name', old('name')) }}" class="lucille-product-field w-full rounded-[8px] @if($errors->has('band_name') || $errors->has('name')) border-red-500/50 @endif" placeholder="Ej. Los Prisioneros">
+                            <label class="mb-2 block text-xs uppercase tracking-[.18em] text-[#7b7b7b]">Nombre de la banda o artista</label>
+                            <input name="band_name" value="{{ old('band_name', old('name')) }}" class="lucille-product-field w-full rounded-[8px] @if($errors->has('band_name') || $errors->has('name')) border-red-500/50 @endif" placeholder="Ej. Los Prisioneros o Nombre Artístico">
                             @error('band_name')
                                 <span class="mt-1.5 block text-[10px] text-red-400 uppercase tracking-wider font-mono">{{ $message }}</span>
                             @else
@@ -137,6 +137,19 @@
                             @endforeach
                         </div>
                         @error('plan')
+                            <span class="mt-1.5 block text-[10px] text-red-400 uppercase tracking-wider font-mono">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    {{-- Términos, Condiciones y Privacidad --}}
+                    <div class="border-t border-white/5 pt-4">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" name="terms" value="1" required class="mt-1 h-4 w-4 rounded border-white/20 bg-black/40 text-[var(--lucille-accent)] focus:ring-[var(--lucille-accent)]">
+                            <span class="text-xs text-[#8b8b8b] leading-relaxed">
+                                He leído y acepto los <a href="{{ route('copyright-policy') }}" target="_blank" class="text-[#dcdcdc] underline hover:text-[var(--lucille-accent)]">Términos y Condiciones</a> y la <a href="{{ route('privacy-policy') }}" target="_blank" class="text-[#dcdcdc] underline hover:text-[var(--lucille-accent)]">Política de Privacidad</a> de Seven Rock Radio.
+                            </span>
+                        </label>
+                        @error('terms')
                             <span class="mt-1.5 block text-[10px] text-red-400 uppercase tracking-wider font-mono">{{ $message }}</span>
                         @enderror
                     </div>

@@ -19,10 +19,19 @@ class TalentMediaUploadTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config([
+            'filesystems.disks.r2_private.key' => 'test-key',
+            'filesystems.disks.r2_private.secret' => 'test-secret',
+            'filesystems.disks.r2_private.endpoint' => 'https://test.r2.cloudflarestorage.com',
+            'filesystems.disks.r2_private.bucket' => 'test-private-bucket',
+        ]);
+        Storage::fake('r2');
+        Storage::fake('r2_private');
+        Storage::fake('public');
         Storage::fake('backblaze');
     }
 
-    public function test_free_plan_enforces_max_three_songs_limit(): void
+    public function test_free_plan_enforces_max_two_songs_limit(): void
     {
         $talent = Talent::query()->create([
             'user_id' => User::factory()->create()->id,
@@ -33,27 +42,27 @@ class TalentMediaUploadTest extends TestCase
             'subscription_status' => 'active',
         ]);
 
-        // Upload 3 songs (the limit for free plan)
-        for ($i = 1; $i <= 3; $i++) {
+        // Upload 2 songs (the limit for free plan)
+        for ($i = 1; $i <= 2; $i++) {
             $response = $this->actingAs($talent, 'talent')
                 ->post(route('talents.media.upload'), [
                     'type' => 'mp3',
                     'title' => "Song {$i}",
-                    'file' => UploadedFile::fake()->create("song{$i}.mp3", 100), // 100 KB
+                    'file' => UploadedFile::fake()->create("song{$i}.mp3", 100, 'audio/mpeg'), // 100 KB
                 ]);
             $response->assertRedirect(route('talents.media.index'));
         }
 
-        // Try uploading a 4th song (which should exceed the limit)
+        // Try uploading a 3rd song (which should exceed the limit)
         $response = $this->actingAs($talent, 'talent')
             ->post(route('talents.media.upload'), [
                 'type' => 'mp3',
-                'title' => 'Song 4',
-                'file' => UploadedFile::fake()->create('song4.mp3', 100),
+                'title' => 'Song 3',
+                'file' => UploadedFile::fake()->create('song3.mp3', 100, 'audio/mpeg'),
             ]);
 
         $response->assertSessionHasErrors(['type']);
-        $this->assertEquals(3, TalentMedia::query()->where('talent_id', $talent->id)->where('type', 'mp3')->count());
+        $this->assertEquals(2, TalentMedia::query()->where('talent_id', $talent->id)->where('type', 'mp3')->count());
     }
 
     public function test_free_plan_enforces_twelve_megabytes_limit_per_file(): void

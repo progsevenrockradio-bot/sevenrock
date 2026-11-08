@@ -8,6 +8,7 @@ use App\Exceptions\DuplicatePaymentOperationException;
 use App\Http\Controllers\Controller;
 use App\Mail\ContentApprovedMail;
 use App\Mail\TalentApprovedMail;
+use App\Mail\TalentMaterialDeletedMail;
 use App\Models\Talent;
 use App\Models\TalentMedia;
 use App\Models\TalentSubscription;
@@ -455,25 +456,37 @@ class TalentAdminController extends Controller
         ]);
     }
 
-    public function deleteMedia(TalentMedia $media, BackblazeService $backblaze): RedirectResponse
+    public function deleteMedia(TalentMedia $media): RedirectResponse
     {
         $media->loadMissing('talent');
 
         if ($media->talent && filled($media->talent->email)) {
-            Mail::to($media->talent->email)->send(new ContentApprovedMail($media));
+            try {
+                Mail::to($media->talent->email)->send(new TalentMaterialDeletedMail($media->talent));
+            } catch (Throwable $e) {
+                Log::warning('TalentAdminController::deleteMedia: no se pudo enviar aviso por correo', [
+                    'media_id' => $media->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         if (filled($media->backblaze_key)) {
             try {
-                $backblaze->delete($media->backblaze_key);
-            } catch (\Throwable) {
-                //
+                $targetDisk = $media->resolvedDisk() ?? 'r2';
+                app(\App\Services\FileUploadService::class)->delete($media->backblaze_key, $targetDisk);
+            } catch (Throwable $e) {
+                Log::warning('TalentAdminController::deleteMedia: fallo al eliminar del almacenamiento en nube', [
+                    'media_id' => $media->id,
+                    'key' => $media->backblaze_key,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
 
         $media->delete();
 
-        return back()->with('status', 'Contenido eliminado.');
+        return back()->with('status', 'Contenido eliminado y artista notificado.');
     }
 
     private function syncSubscription(Talent $talent, string $plan, string $status): void

@@ -178,9 +178,22 @@ class Talent extends Authenticatable
         return $code;
     }
 
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\TalentResetPasswordNotification((string) $token));
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Maquetas y envíos de música previos vinculados de forma fiable mediante correo electrónico.
+     */
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(TrackSubmission::class, 'contact_email', 'email');
     }
 
     public function subscriptions(): HasMany

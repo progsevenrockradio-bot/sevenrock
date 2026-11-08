@@ -12,6 +12,7 @@ use App\Mail\WelcomeTalentMail;
 use App\Mail\TalentPendingApprovalMail;
 use App\Support\TalentPlan;
 use App\Services\TalentReferralService;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
@@ -39,7 +42,11 @@ class AuthController extends Controller
     public function register(Request $request): RedirectResponse
     {
         $rawBandName = trim((string) ($request->input('band_name') ?? $request->input('name', '')));
-        $request->merge(['band_name' => $rawBandName]);
+        $rawEmail = strtolower(trim((string) $request->input('email', '')));
+        $request->merge([
+            'band_name' => $rawBandName,
+            'email'     => $rawEmail,
+        ]);
 
         $validated = $request->validate([
             'band_name'            => ['required', 'string', 'max:255', Rule::unique('talents', 'band_name')],
@@ -215,6 +222,9 @@ class AuthController extends Controller
 
     public function login(Request $request): RedirectResponse
     {
+        $rawEmail = strtolower(trim((string) $request->input('email', '')));
+        $request->merge(['email' => $rawEmail]);
+
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
@@ -245,5 +255,81 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('talents.login');
+    }
+
+    public function showForgotPasswordForm(): View
+    {
+        return view('talentos.auth.forgot-password');
+    }
+
+    public function sendResetLinkEmail(Request $request): RedirectResponse
+    {
+        $rawEmail = strtolower(trim((string) $request->input('email', '')));
+        $request->merge(['email' => $rawEmail]);
+
+        $request->validate([
+            'email' => ['required', 'email'],
+        ], [
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.email' => 'Introduce una dirección de correo válida.',
+        ]);
+
+        Password::broker('talents')->sendResetLink(
+            $request->only('email')
+        );
+
+        // Previene enumeración de cuentas devolviendo mensaje idéntico siempre
+        return back()->with('status', 'Si ese correo electrónico está registrado en nuestro sistema, recibirás un enlace para restablecer tu contraseña.');
+    }
+
+    public function showResetPasswordForm(Request $request, string $token): View
+    {
+        return view('talentos.auth.reset-password', [
+            'token' => $token,
+            'email' => $request->query('email'),
+        ]);
+    }
+
+    public function resetPassword(Request $request): RedirectResponse
+    {
+        $rawEmail = strtolower(trim((string) $request->input('email', '')));
+        $request->merge(['email' => $rawEmail]);
+
+        $request->validate([
+            'token' => ['required'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'token.required' => 'El enlace de restablecimiento no contiene un token válido.',
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'password.required' => 'La nueva contraseña es obligatoria.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.confirmed' => 'La confirmación de la contraseña no coincide.',
+        ]);
+
+        $status = Password::broker('talents')->reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (Talent $talent, string $password): void {
+                $talent->forceFill([
+                    'password' => $password,
+                ])->setRememberToken(Str::random(60));
+
+                $talent->save();
+
+                if ($talent->user_id && ($user = $talent->user)) {
+                    $user->forceFill([
+                        'password' => Hash::make($password),
+                    ])->save();
+                }
+
+                event(new PasswordReset($talent));
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return redirect()->route('talents.login')->with('status', 'Contraseña restablecida correctamente. Ya puedes iniciar sesión.');
+        }
+
+        return back()->withErrors(['email' => __($status)]);
     }
 }

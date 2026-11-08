@@ -108,4 +108,12 @@ class TrackSubmission extends Model
     {
         return $this->hasOne(SubmissionMuroFollowup::class, 'track_submission_id');
     }
+
+    /**
+     * Talento registrado vinculado mediante correo electrónico estricto.
+     */
+    public function talent(): BelongsTo
+    {
+        return $this->belongsTo(Talent::class, 'contact_email', 'email');
+    }
 }

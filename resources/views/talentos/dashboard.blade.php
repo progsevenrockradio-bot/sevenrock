@@ -193,5 +193,44 @@
                 </div>
             </div>
         </div>
+
+        @if (($submissions ?? collect())->isNotEmpty())
+            <div class="border border-white/10 bg-[#10161b] p-4 sm:p-6">
+                <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div>
+                        <h2 class="font-display text-xl uppercase tracking-[.12em] text-[#dcdcdc]">Tus Maquetas Enviadas a la Radio</h2>
+                        <p class="mt-1 text-xs text-[#7b7b7b]">Envíos de audio registrados con tu dirección de correo ({{ $talent->email }}).</p>
+                    </div>
+                    <span class="rounded-sm bg-white/5 px-2.5 py-1 text-xs text-[#dcdcdc] font-mono">{{ $submissions->count() }} envío(s)</span>
+                </div>
+                <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach ($submissions as $sub)
+                        <div class="border border-[#2b2b2b] bg-[#151515] p-4 rounded-sm flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs text-[var(--lucille-accent)] uppercase tracking-wider font-semibold font-display">Maqueta</span>
+                                    <span class="text-[11px] px-2 py-0.5 rounded-sm font-mono {{ match($sub->status) { 'approved' => 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30', 'rejected' => 'bg-red-500/20 text-red-300 border border-red-500/30', default => 'bg-amber-500/20 text-amber-300 border border-amber-500/30' } }}">
+                                        {{ match($sub->status) { 'approved' => 'Aprobada', 'rejected' => 'Rechazada', default => 'En revisión' } }}
+                                    </span>
+                                </div>
+                                <h3 class="mt-2 font-display text-base text-white uppercase tracking-wide truncate" title="{{ $sub->song_title }}">{{ $sub->song_title }}</h3>
+                                <p class="text-xs text-[#7b7b7b] mt-0.5">Enviada el {{ $sub->created_at?->format('d/m/Y') }}</p>
+                            </div>
+                            <div class="mt-3 pt-2 border-t border-[#2b2b2b] flex items-center justify-between text-xs">
+                                @if ($sub->published_to_hub && $sub->release)
+                                    <a href="{{ route('releases.show', $sub->release->slug) }}" target="_blank" class="text-[var(--lucille-accent)] hover:underline inline-flex items-center gap-1 font-semibold">
+                                        Escuchar en Catálogo ↗
+                                    </a>
+                                @elseif ($sub->status === 'approved')
+                                    <span class="text-[#7b7b7b] text-[11px]">En cola de publicación</span>
+                                @else
+                                    <span class="text-[#7b7b7b] text-[11px]">En revisión editorial</span>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </section>
 </x-layouts.talent>

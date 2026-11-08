@@ -204,14 +204,14 @@ class MediaController extends Controller
             $usedVal = (int) ($allowedSpec['used'] ?? 0);
             $pluralName = $allowedSpec['plural'] ?? $validated['type'];
 
-            if ($allowedSpec && ! $allowedSpec['included']) {
+            if ($allowedSpec && ! ($allowedSpec['included'] ?? true)) {
                 $quotaError = ($validated['type'] === 'video')
                     ? 'Tu plan actual no incluye la subida de archivos de vídeo (puedes añadir enlaces a YouTube en tu perfil).'
                     : "El tipo {$allowedSpec['name']} no está incluido en tu plan actual.";
             } elseif ($validated['type'] === 'mp3') {
-                $quotaError = "Has alcanzado el límite de {$limitVal} canciones permitidas en tu plan (actualmente tienes {$usedVal}). Para subir una nueva canción debes sustituir o eliminar una existente o actualizar tu plan.";
+                $quotaError = "Tu plan ya alcanzó el límite de {$limitVal} canciones permitidas en tu plan (actualmente tienes {$usedVal}). Para subir una nueva canción debes sustituir o eliminar una existente o actualizar tu plan.";
             } else {
-                $quotaError = "Has alcanzado el límite de {$limitVal} {$pluralName} permitidas en tu plan (actualmente tienes {$usedVal}). Para subir nuevo contenido debes sustituir o eliminar uno existente o actualizar tu plan.";
+                $quotaError = "Tu plan ya alcanzó el límite de {$limitVal} {$pluralName} permitidas en tu plan (actualmente tienes {$usedVal}). Para subir nuevo contenido debes sustituir o eliminar uno existente o actualizar tu plan.";
             }
 
             if ($request->expectsJson()) {

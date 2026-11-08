@@ -35,9 +35,11 @@ class PublicProfileController extends Controller
     {
         $query = Talent::query()
             ->publiclyVisible()
-            ->withCount('media')
+            ->withCount(['media' => function ($q): void {
+                $q->where('status', 'approved')->whereIn('type', ['mp3', 'photo', 'video']);
+            }])
             ->with(['media' => function ($q): void {
-                $q->where('type', 'mp3')->latest();
+                $q->where('status', 'approved')->where('type', 'mp3')->latest();
             }]);
 
         if ($search = trim((string) $request->input('search', ''))) {
@@ -149,7 +151,7 @@ class PublicProfileController extends Controller
 
         return view('talentos.public.profile', [
             'talent' => $talent,
-            'media' => $talent->media()->latest()->get(),
+            'media' => $talent->media()->where('status', 'approved')->whereIn('type', ['mp3', 'photo', 'video'])->latest()->get(),
             'products' => $talent->products()->published()->latest()->get(),
             'likesCount' => $talent->interactions()->where('type', 'like')->count(),
             'viewsCount' => $talent->interactions()->where('type', 'view')->count(),

@@ -595,6 +595,10 @@ Route::prefix('talentos')->name('talents.')->group(function (): void {
         Route::post('/register', [TalentAuthController::class, 'register'])->name('register.store')->middleware([\App\Http\Middleware\PreventSpamWithHoneypot::class]);
         Route::get('/login', [TalentAuthController::class, 'showLoginForm'])->name('login');
         Route::post('/login', [TalentAuthController::class, 'login'])->name('login.store')->middleware('throttle:login');
+        Route::get('/forgot-password', [TalentAuthController::class, 'showForgotPasswordForm'])->name('password.request');
+        Route::post('/forgot-password', [TalentAuthController::class, 'sendResetLinkEmail'])->name('password.email')->middleware('throttle:6,1');
+        Route::get('/reset-password/{token}', [TalentAuthController::class, 'showResetPasswordForm'])->name('password.reset');
+        Route::post('/reset-password', [TalentAuthController::class, 'resetPassword'])->name('password.update');
     });
 
     Route::middleware(['talent'])->group(function (): void {

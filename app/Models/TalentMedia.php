@@ -24,6 +24,7 @@ class TalentMedia extends Model
         'mime_type',
         'size',
         'is_exclusive',
+        'status',
     ];
 
     protected function casts(): array

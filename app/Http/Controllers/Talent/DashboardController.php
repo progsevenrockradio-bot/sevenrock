@@ -31,6 +31,8 @@ class DashboardController extends Controller
         $storageLimitMb = (int) ($plan['storage_mb'] ?? 0);
         $storageUsedMb = (float) $usage['storage_used_mb'];
 
+        $submissions = $talent ? $talent->submissions()->with('release')->latest()->get() : collect();
+
         return view('talentos.dashboard', [
             'talent' => $talent,
             'plan' => $planMeta,
@@ -38,6 +40,7 @@ class DashboardController extends Controller
             'usage' => $usage,
             'subscription' => $subscription,
             'media' => $media,
+            'submissions' => $submissions,
             'storageProgress' => $storageLimitMb > 0
                 ? min(100, (int) round(($storageUsedMb / $storageLimitMb) * 100))
                 : 0,

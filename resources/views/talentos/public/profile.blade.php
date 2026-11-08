@@ -165,7 +165,7 @@
             @php
                 $audioFiles = $media->where('type', 'mp3')->values();
                 $photoFiles = $media->where('type', 'photo')->values();
-                $otherMedia = $media->whereNotIn('type', ['mp3', 'photo'])->values();
+                $otherMedia = $media->where('type', 'video')->values();
 
                 // Fallback de demostración cuando el artista aún no ha subido archivos multimedia
                 if ($audioFiles->isEmpty()) {
