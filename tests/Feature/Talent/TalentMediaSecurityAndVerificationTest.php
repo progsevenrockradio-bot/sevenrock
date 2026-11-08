@@ -10,7 +10,9 @@ use App\Models\TalentMedia;
 use App\Models\TrackSubmission;
 use App\Models\User;
 use App\Notifications\TalentVerifyEmailNotification;
+use App\Services\FileUploadService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -457,5 +459,129 @@ class TalentMediaSecurityAndVerificationTest extends TestCase
             ->assertSessionHas('status', 'Notificación de aprobación enviada correctamente al artista.');
 
         Mail::assertSent(ContentApprovedMail::class, 1);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 7. Pruebas de protección de almacenamiento, ciclo y ausencia de huérfanos
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function test_pending_upload_without_private_storage_configured_is_rejected(): void
+    {
+        $this->mock(\App\Services\ModerationService::class, function ($mock) {
+            $mock->shouldReceive('needsModeration')->with('media')->andReturn(true);
+        });
+
+        config(['filesystems.disks.r2_private.bucket' => '']);
+
+        $songFile = UploadedFile::fake()->create('nueva_cancion.mp3', 2048, 'audio/mpeg');
+
+        $response = $this->actingAs($this->ownerTalent, 'talent')
+            ->from(route('talents.media.index'))
+            ->post(route('talents.media.upload'), [
+                'type' => 'mp3',
+                'title' => 'Canción Pendiente Sin Almacenamiento Privado',
+                'file' => $songFile,
+            ]);
+
+        $response->assertSessionHasErrors('file');
+        $errorMsg = session('errors')->first('file');
+        $this->assertStringContainsString('R2_PRIVATE_BUCKET ausente', $errorMsg);
+    }
+
+    public function test_rejected_upload_leaves_no_orphaned_files_or_database_records(): void
+    {
+        $this->mock(\App\Services\ModerationService::class, function ($mock) {
+            $mock->shouldReceive('needsModeration')->with('media')->andReturn(true);
+        });
+
+        config(['filesystems.disks.r2_private.bucket' => '']);
+
+        $initialMediaCount = TalentMedia::query()->count();
+        $initialModerationCount = \App\Models\ModerationItem::query()->count();
+
+        $songFile = UploadedFile::fake()->create('cancion_abortada.mp3', 1024, 'audio/mpeg');
+
+        $this->actingAs($this->ownerTalent, 'talent')
+            ->post(route('talents.media.upload'), [
+                'type' => 'mp3',
+                'title' => 'Canción que debe abortar',
+                'file' => $songFile,
+            ]);
+
+        // Cero registros creados en base de datos
+        $this->assertEquals($initialMediaCount, TalentMedia::query()->count());
+        $this->assertEquals($initialModerationCount, \App\Models\ModerationItem::query()->count());
+
+        // Cero archivos huérfanos creados en disco público o privado
+        $this->assertEmpty(Storage::disk('r2')->allFiles('talents'));
+        $this->assertEmpty(Storage::disk('r2_private')->allFiles('talents'));
+    }
+
+    public function test_full_lifecycle_access_after_approval_rejection_and_band_hiding(): void
+    {
+        // 1. Objeto subido a r2_private en estado pending
+        $media = $this->createMediaFile($this->ownerTalent, 'mp3', 'pending', false, 'r2_private');
+
+        // Estado PENDIENTE: Visitante recibe 403, Propietario recibe 200
+        auth()->guard('talent')->logout();
+        $this->get(route('talents.media.stream', ['id' => $media->id]))->assertStatus(403);
+
+        $this->actingAs($this->ownerTalent, 'talent')
+            ->get(route('talents.media.stream', ['id' => $media->id]))->assertStatus(200);
+
+        // 2. APROBACIÓN: Visitante recibe 200
+        $media->update(['status' => 'approved']);
+        auth()->guard('talent')->logout();
+        $this->get(route('talents.media.stream', ['id' => $media->id]))->assertStatus(200);
+
+        // 3. OCULTACIÓN DE BANDA: Visitante recibe 403, Propietario recibe 200
+        $this->ownerTalent->update(['is_hidden' => true]);
+        auth()->guard('talent')->logout();
+        $this->get(route('talents.media.stream', ['id' => $media->id]))->assertStatus(403);
+
+        $this->actingAs($this->ownerTalent, 'talent')
+            ->get(route('talents.media.stream', ['id' => $media->id]))->assertStatus(200);
+
+        // 4. RECHAZO: Restaurar visibilidad de banda pero rechazar el archivo: Visitante recibe 403
+        $this->ownerTalent->update(['is_hidden' => false]);
+        $media->update(['status' => 'rejected']);
+        auth()->guard('talent')->logout();
+        $this->get(route('talents.media.stream', ['id' => $media->id]))->assertStatus(403);
+
+        $this->actingAs($this->ownerTalent, 'talent')
+            ->get(route('talents.media.stream', ['id' => $media->id]))->assertStatus(200);
+    }
+
+    public function test_difference_between_internal_route_protection_and_direct_storage_access(): void
+    {
+        $fileUploadService = app(FileUploadService::class);
+
+        $privateMedia = $this->createMediaFile($this->ownerTalent, 'mp3', 'approved', false, 'r2_private');
+
+        // 1. Para objetos en r2_private, FileUploadService::url() devuelve cadena vacía (no existe URL pública de almacenamiento)
+        $this->assertSame('', $fileUploadService->url($privateMedia->backblaze_key, 'r2_private'));
+
+        // 2. En el modelo, el mutador getUrlAttribute devuelve la ruta interna controlada
+        $this->assertEquals(route('talents.media.stream', ['id' => $privateMedia->id]), $privateMedia->url);
+
+        // 3. Para un objeto histórico en r2 público con URL directa guardada, el mutador getUrlAttribute
+        // fuerza la ruta interna si el archivo es exclusivo o no aprobado
+        $historicalPendingMedia = TalentMedia::create([
+            'talent_id' => $this->ownerTalent->id,
+            'type' => 'mp3',
+            'filename' => 'historico.mp3',
+            'disk' => 'r2',
+            'backblaze_key' => 'talents/historico.mp3',
+            'url' => 'https://pub-sevenrock.r2.dev/talents/historico.mp3',
+            'mime_type' => 'audio/mpeg',
+            'size' => 1024,
+            'is_exclusive' => true,
+            'status' => 'pending',
+        ]);
+
+        // Laravel no expone la URL directa antigua en la vista
+        $this->assertEquals(route('talents.media.stream', ['id' => $historicalPendingMedia->id]), $historicalPendingMedia->url);
+        // Aunque la columna raw de BD contiene la URL directa original (demostrando que se requiere regularización física en storage)
+        $this->assertEquals('https://pub-sevenrock.r2.dev/talents/historico.mp3', $historicalPendingMedia->getRawOriginal('url'));
     }
 }

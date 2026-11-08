@@ -241,51 +241,72 @@ class MediaController extends Controller
             $isExclusive = $request->boolean('is_exclusive');
             $isPrivateDoc = $validated['type'] === 'document';
             $isPending = app(\App\Services\ModerationService::class)->needsModeration('media');
-            $isProtected = $isPrivateDoc || $isExclusive || $isPending;
+            $requiresPrivate = $isPrivateDoc || $isExclusive || $isPending;
 
-            // Documentos privados y contenido exclusivo requieren estrictamente r2_private
-            // Archivos públicos pendientes usan r2_private si está configurado, o r2
-            if ($isPrivateDoc || $isExclusive) {
-                $targetDisk = 'r2_private';
-            } elseif ($isPending && $fileUploadService->isR2PrivateConfigured()) {
-                $targetDisk = 'r2_private';
-            } else {
-                $targetDisk = 'r2';
-            }
+            // Todo material que requiera privacidad o moderación DEBE almacenarse de forma privada (sin fallback a r2 público)
+            $targetDisk = $requiresPrivate ? 'r2_private' : 'r2';
 
             if ($targetDisk === 'r2_private' && ! $fileUploadService->isR2PrivateConfigured()) {
-                throw new \RuntimeException('El almacenamiento privado R2 no está configurado explícitamente (R2_PRIVATE_BUCKET ausente).');
+                $storageError = 'El almacenamiento privado R2 no está configurado explícitamente (R2_PRIVATE_BUCKET ausente). No se permite subir material que requiera moderación o privacidad.';
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => $storageError, 'errors' => ['file' => [$storageError]]], 422);
+                }
+                return back()->withInput()->withErrors(['file' => $storageError]);
             }
+
             if ($targetDisk === 'r2' && ! $fileUploadService->isR2Configured() && ! app()->environment('testing')) {
-                throw new \RuntimeException('El servicio de almacenamiento en la nube R2 no está disponible.');
+                $storageError = 'El servicio de almacenamiento en la nube R2 no está disponible.';
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => $storageError, 'errors' => ['file' => [$storageError]]], 422);
+                }
+                return back()->withInput()->withErrors(['file' => $storageError]);
             }
 
             $upload = $fileUploadService->upload($file, $folder, $targetDisk);
 
-            $media = TalentMedia::query()->create([
-                'talent_id' => $talent->id,
-                'type' => $validated['type'],
-                'filename' => $file->getClientOriginalName(),
-                'disk' => $targetDisk,
-                'backblaze_key' => $upload['key'],
-                'url' => $upload['url'],
-                'title' => $validated['title'] ?? null,
-                'description' => $validated['description'] ?? null,
-                'mime_type' => $mime,
-                'size' => $fileSize,
-                'is_exclusive' => $isExclusive,
-                'status' => $isPending ? 'pending' : 'approved',
-            ]);
-
-            // Para archivos privados, exclusivos o pendientes: la URL almacenada nunca expone el enlace directo de almacenamiento
-            if ($isProtected || $targetDisk === 'r2_private') {
-                $endpoint = $isPrivateDoc
-                    ? route('talents.media.download', ['id' => $media->id])
-                    : route('talents.media.stream', ['id' => $media->id]);
-
-                $media->update([
-                    'url' => $endpoint,
+            try {
+                $media = TalentMedia::query()->create([
+                    'talent_id' => $talent->id,
+                    'type' => $validated['type'],
+                    'filename' => $file->getClientOriginalName(),
+                    'disk' => $targetDisk,
+                    'backblaze_key' => $upload['key'],
+                    'url' => $upload['url'],
+                    'title' => $validated['title'] ?? null,
+                    'description' => $validated['description'] ?? null,
+                    'mime_type' => $mime,
+                    'size' => $fileSize,
+                    'is_exclusive' => $isExclusive,
+                    'status' => $isPending ? 'pending' : 'approved',
                 ]);
+
+                // Para archivos privados, exclusivos o pendientes: la URL almacenada nunca expone el enlace directo de almacenamiento
+                if ($requiresPrivate || $targetDisk === 'r2_private') {
+                    $endpoint = $isPrivateDoc
+                        ? route('talents.media.download', ['id' => $media->id])
+                        : route('talents.media.stream', ['id' => $media->id]);
+
+                    $media->update([
+                        'url' => $endpoint,
+                    ]);
+                }
+
+                app(\App\Services\ModerationService::class)->registerIfRequired('media', [
+                    'subject_type' => TalentMedia::class,
+                    'subject_id' => $media->id,
+                    'title' => "Archivo multimedia de talento: {$media->title}",
+                    'summary' => "Tipo: {$media->type}",
+                    'submitter_name' => $talent->band_name,
+                    'submitter_email' => $talent->email,
+                ]);
+            } catch (\Throwable $dbException) {
+                // Eliminar archivo subido para evitar archivos huérfanos si la persistencia falla
+                try {
+                    $fileUploadService->delete($upload['key'], $targetDisk);
+                } catch (\Throwable) {
+                    // Limpieza tolerante a fallos
+                }
+                throw $dbException;
             }
 
             app(\App\Services\ModerationService::class)->registerIfRequired('media', [
