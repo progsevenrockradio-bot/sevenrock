@@ -511,6 +511,21 @@ final class PodcastUploadController extends Controller
 
         $isTemporaryDownload = str_starts_with($localPath, storage_path('app/tmp/'));
 
+        if (PHP_OS_FAMILY === 'Windows' && ! is_readable($localPath)) {
+            return response()->streamDownload(function () use ($localPath, $isTemporaryDownload) {
+                $stream = @fopen($localPath, 'rb');
+                if (is_resource($stream)) {
+                    fpassthru($stream);
+                    fclose($stream);
+                }
+                if ($isTemporaryDownload && is_file($localPath)) {
+                    @unlink($localPath);
+                }
+            }, $downloadName, [
+                'Content-Type' => 'audio/mpeg',
+            ]);
+        }
+
         return response()->download($localPath, $downloadName)->deleteFileAfterSend($isTemporaryDownload);
     }
 

@@ -27,7 +27,7 @@ final class MasterProgramFactory extends Factory
             'program_code' => substr($codePrefix, 0, 12),
             'code_prefix' => substr($codePrefix, 0, 12),
             'conductor' => $this->faker->name(),
-            'dia_transmision' => $this->faker->randomElement(['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO']),
+            'dia_transmision' => 'LUNES',
             'hora_transmision' => $this->faker->time('H:i:s'),
             'timezone' => 'America/Caracas',
             'duracion_minutos' => 120,

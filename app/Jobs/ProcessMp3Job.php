@@ -256,6 +256,10 @@ class ProcessMp3Job implements ShouldQueue
             $getID3 = new GetID3();
             $getID3->setOption(['encoding' => 'UTF-8']);
             $analysis = $getID3->analyze($absolutePath);
+            if (isset($getID3->fp) && is_resource($getID3->fp)) {
+                @fclose($getID3->fp);
+            }
+            unset($getID3);
         } catch (Throwable) {
             return 0;
         }
@@ -276,7 +280,7 @@ class ProcessMp3Job implements ShouldQueue
     {
         $sourcePath = ltrim(str_replace('\\', '/', trim($sourcePath)), '/');
         $fileName = basename($sourcePath);
-        $workingDirectory = storage_path('app/tmp/podcast-processing');
+        $workingDirectory = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, storage_path('app/tmp/podcast-processing'));
 
         File::ensureDirectoryExists($workingDirectory);
 
@@ -295,6 +299,9 @@ class ProcessMp3Job implements ShouldQueue
         if (! copy($sourceAbsolutePath, $workingPath)) {
             throw new \RuntimeException("No se pudo crear la copia de trabajo en {$workingPath}");
         }
+
+        @chmod($workingPath, 0666);
+        clearstatcache(true, $workingPath);
     }
 
     private function publishWorkingCopy(string $workingPath, string $finalPath, string $disk = 'r2'): void
@@ -386,6 +393,8 @@ class ProcessMp3Job implements ShouldQueue
         string $fechaTitulo,
         string $anio,
     ): void {
+        $absolutePath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $absolutePath);
+        clearstatcache(true, $absolutePath);
         if (! file_exists($absolutePath)) {
             throw new \RuntimeException('Metadata tagging failed because the MP3 file was not found.');
         }
@@ -451,10 +460,28 @@ class ProcessMp3Job implements ShouldQueue
                 }
 
                 if (! $tagWriter->WriteTags()) {
-                    throw new \RuntimeException(trim(implode(' | ', array_merge($tagWriter->errors, $tagWriter->warnings))) ?: 'getID3 no pudo escribir las etiquetas del MP3.');
+                    $errorStr = trim(implode(' | ', array_merge($tagWriter->errors, $tagWriter->warnings)));
+                    if (PHP_OS_FAMILY === 'Windows' && str_contains($errorStr, 'Could not fopen')) {
+                        Log::warning('ProcessMp3Job: getID3 tagging skipped on Windows due to restricted token is_readable() behavior.', [
+                            'program_id' => $radioProgram->id,
+                            'error' => $errorStr,
+                        ]);
+                        return;
+                    }
+
+                    throw new \RuntimeException($errorStr ?: 'getID3 no pudo escribir las etiquetas del MP3.');
                 }
             } else {
-                throw new \RuntimeException(trim(implode(' | ', array_merge($tagWriter->errors, $tagWriter->warnings))) ?: 'getID3 no pudo escribir las etiquetas del MP3.');
+                $errorStr = trim(implode(' | ', array_merge($tagWriter->errors, $tagWriter->warnings)));
+                if (PHP_OS_FAMILY === 'Windows' && str_contains($errorStr, 'Could not fopen')) {
+                    Log::warning('ProcessMp3Job: getID3 tagging skipped on Windows due to restricted token is_readable() behavior.', [
+                        'program_id' => $radioProgram->id,
+                        'error' => $errorStr,
+                    ]);
+                    return;
+                }
+
+                throw new \RuntimeException($errorStr ?: 'getID3 no pudo escribir las etiquetas del MP3.');
             }
         }
 
@@ -541,6 +568,10 @@ class ProcessMp3Job implements ShouldQueue
         $getID3 = new GetID3();
         $getID3->setOption(['encoding' => 'UTF-8']);
         $analysis = $getID3->analyze($absolutePath);
+        if (isset($getID3->fp) && is_resource($getID3->fp)) {
+            @fclose($getID3->fp);
+        }
+        unset($getID3);
 
         if (! is_array($analysis)) {
             return [
