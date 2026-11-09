@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Support\Radio\RadioBossPathValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
@@ -29,6 +30,8 @@ class RadioBossFilenameAndPostDeliveryEditorialTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        Cache::flush();
 
         $compiledPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'sevenrock-view-cache';
         if (! is_dir($compiledPath)) {

@@ -35,6 +35,8 @@ class RadioBossDeliveryPipelineTest extends TestCase
     {
         parent::setUp();
 
+        Cache::flush();
+
         $compiledPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'sevenrock-view-cache';
         if (! is_dir($compiledPath)) {
             mkdir($compiledPath, 0777, true);
@@ -210,6 +212,9 @@ class RadioBossDeliveryPipelineTest extends TestCase
 
         $master = MasterProgram::factory()->create([
             'nombre' => 'Metal Storm',
+            'dia_transmision' => 'DOMINGO',
+            'hora_transmision' => '04:00:00',
+            'duracion_minutos' => 120,
             'ruta_ftp' => 'Programas/MetalStorm',
         ]);
 
@@ -986,6 +991,9 @@ class RadioBossDeliveryPipelineTest extends TestCase
 
         $master = MasterProgram::factory()->create([
             'nombre' => 'Polución',
+            'dia_transmision' => 'JUEVES',
+            'hora_transmision' => '18:00:00',
+            'duracion_minutos' => 120,
             'ruta_ftp' => '04.- JUEVES\18.- POLUCION*1', // Formato exacto del evento de RadioBOSS
         ]);
 
@@ -1078,6 +1086,9 @@ class RadioBossDeliveryPipelineTest extends TestCase
 
         $master = MasterProgram::factory()->create([
             'nombre' => 'Rock al Palo',
+            'dia_transmision' => 'MARTES',
+            'hora_transmision' => '22:00:00',
+            'duracion_minutos' => 120,
             'ruta_ftp' => '02.- MARTES/15.- ROCK AL PALO',
         ]);
 
