@@ -270,6 +270,7 @@ class MuroDelRockIntegrationTest extends TestCase
         // Simular que FileUploadService lanza excepción por fallo en R2
         $mockUploadService = $this->createMock(FileUploadService::class);
         $mockUploadService->method('isR2Configured')->willReturn(true);
+        $mockUploadService->method('isR2PrivateConfigured')->willReturn(true);
         $mockUploadService->method('upload')->willThrowException(new \RuntimeException('Connection timeout to Cloudflare R2'));
         $this->app->instance(FileUploadService::class, $mockUploadService);
 

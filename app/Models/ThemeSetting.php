@@ -651,6 +651,11 @@ class ThemeSetting extends Model
 
     protected static ?self $currentSettings = null;
 
+    public static function clearCache(): void
+    {
+        self::$currentSettings = null;
+    }
+
     public static function current(): self
     {
         if (self::$currentSettings !== null) {

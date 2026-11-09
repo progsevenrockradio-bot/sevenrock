@@ -7,13 +7,17 @@ namespace App\Http\Controllers\Talent;
 use App\Http\Controllers\Controller;
 use App\Models\TalentMedia;
 use App\Services\FileUploadService;
+use App\Services\ModerationService;
+use App\Services\PendingStorageCleanupService;
 use App\Services\TalentMediaAuthorizationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -237,10 +241,12 @@ class MediaController extends Controller
         try {
             $folder = "talents/{$talent->id}/media/{$validated['type']}";
             $fileUploadService = app(FileUploadService::class);
+            $moderationService = app(ModerationService::class);
+            $pendingCleanupService = app(PendingStorageCleanupService::class);
 
             $isExclusive = $request->boolean('is_exclusive');
             $isPrivateDoc = $validated['type'] === 'document';
-            $isPending = app(\App\Services\ModerationService::class)->needsModeration('media');
+            $isPending = $moderationService->needsModeration('media');
             $requiresPrivate = $isPrivateDoc || $isExclusive || $isPending;
 
             // Todo material que requiera privacidad o moderación DEBE almacenarse de forma privada (sin fallback a r2 público)
@@ -262,61 +268,128 @@ class MediaController extends Controller
                 return back()->withInput()->withErrors(['file' => $storageError]);
             }
 
+            $operationId = (string) Str::uuid();
             $upload = $fileUploadService->upload($file, $folder, $targetDisk);
+            $uploadedKey = (string) $upload['key'];
 
             try {
-                $media = TalentMedia::query()->create([
-                    'talent_id' => $talent->id,
-                    'type' => $validated['type'],
-                    'filename' => $file->getClientOriginalName(),
-                    'disk' => $targetDisk,
-                    'backblaze_key' => $upload['key'],
-                    'url' => $upload['url'],
-                    'title' => $validated['title'] ?? null,
-                    'description' => $validated['description'] ?? null,
-                    'mime_type' => $mime,
-                    'size' => $fileSize,
-                    'is_exclusive' => $isExclusive,
-                    'status' => $isPending ? 'pending' : 'approved',
-                ]);
+                $result = DB::transaction(function () use (
+                    $talent,
+                    $validated,
+                    $file,
+                    $targetDisk,
+                    $uploadedKey,
+                    $upload,
+                    $mime,
+                    $fileSize,
+                    $isExclusive,
+                    $isPending,
+                    $requiresPrivate,
+                    $isPrivateDoc,
+                    $moderationService
+                ): array {
+                    $media = TalentMedia::query()->create([
+                        'talent_id' => $talent->id,
+                        'type' => $validated['type'],
+                        'filename' => $file->getClientOriginalName(),
+                        'disk' => $targetDisk,
+                        'backblaze_key' => $uploadedKey,
+                        'url' => $upload['url'],
+                        'title' => $validated['title'] ?? null,
+                        'description' => $validated['description'] ?? null,
+                        'mime_type' => $mime,
+                        'size' => $fileSize,
+                        'is_exclusive' => $isExclusive,
+                        'status' => $isPending ? 'pending' : 'approved',
+                    ]);
 
-                // Para archivos privados, exclusivos o pendientes: la URL almacenada nunca expone el enlace directo de almacenamiento
-                if ($requiresPrivate || $targetDisk === 'r2_private') {
-                    $endpoint = $isPrivateDoc
-                        ? route('talents.media.download', ['id' => $media->id])
-                        : route('talents.media.stream', ['id' => $media->id]);
+                    // Para archivos privados, exclusivos o pendientes: la URL almacenada nunca expone el enlace directo de almacenamiento
+                    if ($requiresPrivate || $targetDisk === 'r2_private') {
+                        $endpoint = $isPrivateDoc
+                            ? route('talents.media.download', ['id' => $media->id])
+                            : route('talents.media.stream', ['id' => $media->id]);
 
-                    $media->update([
-                        'url' => $endpoint,
+                        $media->update([
+                            'url' => $endpoint,
+                        ]);
+                    }
+
+                    $moderationItem = null;
+                    if ($isPending) {
+                        $moderationItem = $moderationService->registerIfRequired('media', [
+                            'subject_type' => TalentMedia::class,
+                            'subject_id' => $media->id,
+                            'title' => "Archivo multimedia de talento: {$media->title}",
+                            'summary' => "Tipo: {$media->type}",
+                            'submitter_name' => $talent->band_name,
+                            'submitter_email' => $talent->email,
+                        ], false);
+
+                        // Si la moderación es obligatoria y su registro falla o devuelve null, no dar por completada la subida
+                        if ($moderationItem === null) {
+                            throw new \RuntimeException('No se pudo registrar la solicitud de moderación editorial requerida.');
+                        }
+                    }
+
+                    return [
+                        'media' => $media,
+                        'moderationItem' => $moderationItem,
+                    ];
+                });
+
+                $media = $result['media'];
+                $moderationItem = $result['moderationItem'];
+
+                // Notificación única despachada estrictamente tras la confirmación exitosa de la transacción (after-commit)
+                if ($moderationItem !== null) {
+                    try {
+                        $moderationService->notify($moderationItem);
+                    } catch (\Throwable $notifyEx) {
+                        Log::warning('Fallo en notificación post-commit de moderación editorial', [
+                            'item_id' => $moderationItem->id,
+                            'error' => $notifyEx->getMessage(),
+                        ]);
+                    }
+                }
+            } catch (\Throwable $persistenceException) {
+                // Compensación del almacenamiento: verificar si la clave física está compartida con otro registro existente
+                $isShared = TalentMedia::query()
+                    ->where('disk', $targetDisk)
+                    ->where('backblaze_key', $uploadedKey)
+                    ->exists();
+
+                if (! $isShared) {
+                    $deleted = false;
+                    $deleteError = null;
+
+                    try {
+                        $deleted = $fileUploadService->delete($uploadedKey, $targetDisk);
+                        if (! $deleted) {
+                            $deleteError = 'FileUploadService::delete retornó false.';
+                        }
+                    } catch (\Throwable $delEx) {
+                        $deleteError = $delEx->getMessage();
+                    }
+
+                    if (! $deleted || $deleteError !== null) {
+                        $pendingCleanupService->record(
+                            disk: $targetDisk,
+                            storageKey: $uploadedKey,
+                            operationId: $operationId,
+                            reason: 'compensation_after_db_failure',
+                            error: $deleteError
+                        );
+                    }
+                } else {
+                    Log::info('Compensación omitida: la clave física está referenciada por otro registro existente.', [
+                        'operation_id' => $operationId,
+                        'disk' => $targetDisk,
+                        'key' => $uploadedKey,
                     ]);
                 }
 
-                app(\App\Services\ModerationService::class)->registerIfRequired('media', [
-                    'subject_type' => TalentMedia::class,
-                    'subject_id' => $media->id,
-                    'title' => "Archivo multimedia de talento: {$media->title}",
-                    'summary' => "Tipo: {$media->type}",
-                    'submitter_name' => $talent->band_name,
-                    'submitter_email' => $talent->email,
-                ]);
-            } catch (\Throwable $dbException) {
-                // Eliminar archivo subido para evitar archivos huérfanos si la persistencia falla
-                try {
-                    $fileUploadService->delete($upload['key'], $targetDisk);
-                } catch (\Throwable) {
-                    // Limpieza tolerante a fallos
-                }
-                throw $dbException;
+                throw $persistenceException;
             }
-
-            app(\App\Services\ModerationService::class)->registerIfRequired('media', [
-                'subject_type' => TalentMedia::class,
-                'subject_id' => $media->id,
-                'title' => "Archivo multimedia de talento: {$media->title}",
-                'summary' => "Tipo: {$media->type}",
-                'submitter_name' => $talent->band_name,
-                'submitter_email' => $talent->email,
-            ]);
         } catch (\Throwable $e) {
             Log::error('Talent Media Upload Failed', [
                 'talent_id' => $talent->id,

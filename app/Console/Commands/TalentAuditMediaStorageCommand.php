@@ -20,9 +20,51 @@ class TalentAuditMediaStorageCommand extends Command
         $this->info('================================================================');
         $this->info('  AUDITORÍA EN MODO LECTURA: ALMACENAMIENTO DE MEDIOS DE TALENTOS');
         $this->info('================================================================');
-        $this->line('Esta herramienta examina los registros existentes para detectar');
-        $this->line('archivos históricos que pudieran tener URLs públicas previas.');
+        $this->line('Esta herramienta examina la configuración y los registros existentes');
+        $this->line('para detectar discrepancias de privacidad y archivos históricos.');
         $this->line('NO se moverá, modificará ni eliminará ningún archivo físico.');
+        $this->newLine();
+
+        // 1. Estado de Configuración y Caché del Entorno
+        $isConfigCached = app()->configurationIsCached();
+        $envPath = app()->environmentFilePath();
+        $envExists = file_exists($envPath);
+
+        $this->info('--- 1. CONFIGURACIÓN EFECTIVA Y CACHÉ DEL ENTORNO ---');
+        $this->line('Configuración cacheada (bootstrap/cache/config.php): ' . ($isConfigCached ? 'SÍ (ACTIVA - variables .env ignoradas hasta config:clear)' : 'NO (Carga dinámica directa desde .env y config)'));
+        $this->line('Archivo .env local/servidor: ' . ($envExists ? 'PRESENTE' : 'NO ENCONTRADO'));
+        $this->newLine();
+
+        // 2. Auditoría de Buckets R2 y Aislamiento Privado
+        $r2Bucket = (string) config('filesystems.disks.r2.bucket');
+        $r2Url = (string) config('filesystems.disks.r2.url');
+        $r2PrivateBucket = (string) config('filesystems.disks.r2_private.bucket');
+        $r2PrivateUrl = (string) config('filesystems.disks.r2_private.url');
+        $r2PrivateVisibility = (string) config('filesystems.disks.r2_private.visibility');
+
+        $fileUploadService = app(\App\Services\FileUploadService::class);
+        $isR2Configured = $fileUploadService->isR2Configured();
+        $isR2PrivateConfigured = $fileUploadService->isR2PrivateConfigured();
+
+        $this->info('--- 2. AISLAMIENTO Y PRIVACIDAD DE BUCKETS R2 ---');
+        $this->line("Disco R2 Público:  Bucket = [{$r2Bucket}], URL pública = [{$r2Url}], Configurado = " . ($isR2Configured ? 'SÍ' : 'NO'));
+        $this->line("Disco R2 Privado:  Bucket = [{$r2PrivateBucket}], URL pública = " . ($r2PrivateUrl !== '' ? "[¡ALERTA! {$r2PrivateUrl}]" : '[NINGUNA - Seguro]') . ", Visibilidad = [{$r2PrivateVisibility}], Configurado = " . ($isR2PrivateConfigured ? 'SÍ' : 'NO'));
+
+        if ($r2Bucket !== '' && $r2PrivateBucket !== '') {
+            if ($r2Bucket === $r2PrivateBucket) {
+                $this->error('¡CRÍTICO! El bucket privado R2_PRIVATE_BUCKET es IDÉNTICO al bucket público CLOUDFLARE_R2_BUCKET. No existe aislamiento físico.');
+            } else {
+                $this->info("Aislamiento físico verificado: [{$r2PrivateBucket}] es estrictamente distinto de [{$r2Bucket}].");
+            }
+        } elseif ($r2PrivateBucket === '') {
+            $this->warn('R2_PRIVATE_BUCKET no está configurado explícitamente en el entorno.');
+        }
+
+        if ($r2PrivateUrl === '') {
+            $this->info('Privacidad confirmada: r2_private no tiene base URL pública ni dominio r2.dev configurado.');
+        } else {
+            $this->warn("Atención: r2_private expone base URL [{$r2PrivateUrl}]. Debe ser nula para evitar acceso público directo.");
+        }
         $this->newLine();
 
         try {

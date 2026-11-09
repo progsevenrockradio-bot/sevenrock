@@ -64,7 +64,18 @@ class TalentAuditMediaStorageTest extends TestCase
             'size' => 2048,
         ]);
 
+        config([
+            'filesystems.disks.r2.bucket' => 'sevenrock-public-bucket',
+            'filesystems.disks.r2.url' => 'https://pub-sevenrock.r2.dev',
+            'filesystems.disks.r2_private.bucket' => 'sevenrock-private-bucket',
+            'filesystems.disks.r2_private.url' => '',
+            'filesystems.disks.r2_private.visibility' => 'private',
+        ]);
+
         $this->artisan('talent:audit-media-storage')
+            ->expectsOutputToContain('CONFIGURACIÓN EFECTIVA Y CACHÉ DEL ENTORNO')
+            ->expectsOutputToContain('AISLAMIENTO Y PRIVACIDAD DE BUCKETS R2')
+            ->expectsOutputToContain('Aislamiento físico verificado: [sevenrock-private-bucket] es estrictamente distinto de [sevenrock-public-bucket].')
             ->expectsOutputToContain('Total de registros en talent_media: 3')
             ->expectsOutputToContain('Objetos que requieren regularización segura: 2')
             ->assertSuccessful();

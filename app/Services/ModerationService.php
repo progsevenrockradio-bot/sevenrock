@@ -31,16 +31,16 @@ class ModerationService
      * Registra un ítem de moderación solo si la configuración del sistema lo requiere.
      * Si no, asume que el contenido ya está aprobado.
      */
-    public function registerIfRequired(string $type, array $data): ?ModerationItem
+    public function registerIfRequired(string $type, array $data, bool $notifyImmediately = true): ?ModerationItem
     {
         if (!$this->needsModeration($type)) {
             return null;
         }
 
-        return $this->register($type, $data);
+        return $this->register($type, $data, $notifyImmediately);
     }
 
-    public function register(string $type, array $data): ?ModerationItem
+    public function register(string $type, array $data, bool $notifyImmediately = true): ?ModerationItem
     {
         try {
             $settings = ThemeSetting::current();
@@ -50,11 +50,6 @@ class ModerationService
             $typeSetting = 'moderation_require_' . $type;
             $requiresApproval = filter_var($settings->{$typeSetting} ?? true, FILTER_VALIDATE_BOOLEAN);
 
-            // Si está apagado general, o para este tipo, y no es evento importado, 
-            // igual registramos pero como aprobado directamente?
-            // El prompt dice: "Si un tipo no tiene sentido bloquearlo, el aviso se manda igual pero el contenido sigue su curso: se controla con el interruptor del punto 6."
-            // Así que si no requiere aprobación, el status que le daremos al sujeto será distinto en su propio controller, pero aquí lo guardamos en pending para el panel o lo podemos auto-aprobar si queremos. El prompt pide guardar todo como pending en la base de datos de moderation_items, y el "aviso se manda igual pero el contenido sigue su curso".
-            
             // Comprobar agrupación para anti-ruido
             $minutes = (int) ($settings->moderation_digest_minutes ?? 10);
             
@@ -72,13 +67,10 @@ class ModerationService
                 'status' => 'pending',
             ]);
 
-            // Comprobar si debemos avisar (anti-ruido)
-            // Agrupar avisos: si hay varios items del mismo tipo en los últimos $minutes, podríamos
-            // evitar enviar el correo aquí y dejarlo para un digest. Por ahora el prompt dice
-            // "si entran varias cosas del mismo tipo en 10 minutos, agrupa en un solo correo".
-            // Para simplificar, enviaremos notificaciones individuales a menos que construyamos un cron digest.
-            // Para cumplir rápido: mandamos el correo directamente si no queremos sobrecomplicar.
-            $this->notify($item);
+            // Despachar notificación
+            if ($notifyImmediately) {
+                $this->notify($item);
+            }
 
             return $item;
         } catch (\Throwable $e) {
@@ -99,7 +91,14 @@ class ModerationService
             if ($settings?->notification_email) $emails->push($settings->notification_email);
             if ($settings?->notification_copy_email) $emails->push($settings->notification_copy_email);
             
-            $adminEmails = User::where('role', 'admin')->pluck('email');
+            $adminEmails = User::query()
+                ->where(function ($q) {
+                    $q->where('is_admin', true);
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'role')) {
+                        $q->orWhere('role', 'admin');
+                    }
+                })
+                ->pluck('email');
             $emails = $emails->merge($adminEmails);
 
             if ($settings?->moderation_extra_emails) {
