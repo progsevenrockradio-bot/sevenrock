@@ -32,6 +32,7 @@ class RadioBossFilenameAndPostDeliveryEditorialTest extends TestCase
         parent::setUp();
 
         Cache::flush();
+        Carbon::setTestNow(Carbon::parse('2026-06-17 12:00:00', 'America/Caracas'));
 
         $compiledPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'sevenrock-view-cache';
         if (! is_dir($compiledPath)) {
