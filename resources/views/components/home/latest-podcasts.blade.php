@@ -126,7 +126,15 @@
         ];
     };
 
-    $featured = $normalizeEpisode(data_get($podcasts, 'featured', []));
+    $featuredData = data_get($podcasts, 'featured');
+    if (! is_array($featuredData) || empty($featuredData)) {
+        $firstRaw = data_get($podcasts, 'episodes.0');
+        $featured = is_array($firstRaw) && ! empty($firstRaw)
+            ? $normalizeEpisode($firstRaw)
+            : $normalizeEpisode([]);
+    } else {
+        $featured = $normalizeEpisode($featuredData);
+    }
     $episodeIdentity = static function (array $episode): string {
         $parts = [
             trim((string) ($episode['src'] ?? '')),
@@ -558,22 +566,22 @@
 >
     <div class="flex flex-col gap-6 md:gap-8">
         {{-- Fila superior: Carátula del episodio seleccionado (izq) y Listado de episodios alineado en altura (der) --}}
-        <div class="grid items-stretch gap-6 md:gap-8 lg:grid-cols-[minmax(300px,440px)_minmax(0,1fr)]">
-            {{-- Columna izquierda: Carátula del episodio seleccionado --}}
-            <div class="lucille-flat-surface flex items-center justify-center overflow-hidden bg-lucille-surface">
+        <div class="grid items-stretch gap-6 md:gap-8 lg:grid-cols-[minmax(300px,440px)_minmax(0,1fr)] lg:h-[380px]">
+            {{-- Columna izquierda: Carátula del episodio seleccionado (fijada a la altura de la fila superior en escritorio) --}}
+            <div class="lucille-flat-surface flex h-full items-center justify-center overflow-hidden bg-lucille-surface lg:h-[380px]">
                 <img
                     :src="activeEpisode.image"
                     x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ $fallbackImage }}'; }"
                     :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
                     width="1280"
                     height="720"
-                    class="block h-full max-h-[360px] w-full object-contain sm:max-h-[380px] lg:max-h-[380px]"
+                    class="block h-full max-h-[360px] w-full object-contain sm:max-h-[380px] lg:h-full lg:max-h-[380px]"
                     loading="lazy"
                 >
             </div>
 
             {{-- Columna derecha: Encabezado + Listado de episodios ampliado cuyo borde inferior coincide con el de la carátula --}}
-            <div class="flex h-full min-w-0 flex-col">
+            <div class="flex h-full min-w-0 flex-col lg:h-[380px]">
                 {{-- Encabezado de la lista --}}
                 <div class="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-lucille-line/20 pb-2">
                     <span class="font-display text-xs uppercase tracking-[.22em] text-lucille-heading">Últimos episodios</span>

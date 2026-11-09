@@ -55,16 +55,16 @@ class HomeLayoutTest extends TestCase
         }
         file_put_contents(base_path('scratch/candidate_home_viewable.html'), $html);
 
-        // Aserciones de estructura para Programación (next-program)
-        $this->assertStringContainsString('aria-label="Parrilla de', $html);
+        // 1. Aserciones de estructura para Programación (next-program)
+        $this->assertStringContainsString('aria-label="Programas en parrilla de programación"', $html);
         $this->assertStringContainsString('activeProgram.title', $html);
         $this->assertStringContainsString('activeProgram.schedule', $html);
         $this->assertStringContainsString('activeProgram.summary', $html);
 
-        // Aserciones de estructura para Podcasts (latest-podcasts)
+        // 2. Aserciones de estructura para Podcasts (latest-podcasts)
         $this->assertStringContainsString('aria-label="Últimos episodios de podcast"', $html);
         $this->assertStringContainsString('activeEpisode.title', $html);
-        $this->assertStringContainsString('activeEpisode.audio', $html);
+        $this->assertStringContainsString('x-ref="audio"', $html);
         $this->assertStringContainsString('lucille-range-slider', $html);
     }
 }

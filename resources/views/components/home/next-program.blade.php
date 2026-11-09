@@ -168,20 +168,20 @@
 >
     <div class="flex flex-col gap-6 md:gap-7">
         {{-- Fila superior: Imagen del programa seleccionado (izq) y Parrilla/Listado con scroll alineado en altura (der) --}}
-        <div class="grid items-stretch gap-6 md:gap-8 lg:grid-cols-[minmax(320px,460px)_minmax(0,1fr)]">
-            {{-- Columna izquierda: Imagen del programa seleccionado --}}
-            <div class="lucille-flat-surface flex items-center justify-center overflow-hidden bg-lucille-surface">
+        <div class="grid items-stretch gap-6 md:gap-8 lg:grid-cols-[minmax(320px,460px)_minmax(0,1fr)] lg:h-[380px]">
+            {{-- Columna izquierda: Imagen del programa seleccionado (fijada a la altura de la fila superior en escritorio) --}}
+            <div class="lucille-flat-surface flex h-full items-center justify-center overflow-hidden bg-lucille-surface lg:h-[380px]">
                 <img
                     :src="activeProgram.image"
                     x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ asset('assets/lucille/pedalboard-1511069_1920.jpg') }}'; }"
                     :alt="activeProgram.title || 'Próximo programa'"
-                    class="block h-full max-h-[360px] w-full object-contain sm:max-h-[380px] lg:max-h-[380px]"
+                    class="block h-full max-h-[360px] w-full object-contain sm:max-h-[380px] lg:h-full lg:max-h-[380px]"
                     loading="lazy"
                 >
             </div>
 
             {{-- Columna derecha: Encabezado + Listado con desplazamiento vertical que termina alineado con el borde inferior de la imagen --}}
-            <div class="flex h-full min-w-0 flex-col">
+            <div class="flex h-full min-w-0 flex-col lg:h-[380px]">
                 {{-- Encabezado de la parrilla y zona horaria --}}
                 <div class="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-lucille-line/20 pb-2">
                     <span class="font-display text-xs uppercase tracking-[.22em] text-lucille-heading">Parrilla de programación</span>
@@ -189,7 +189,7 @@
                 </div>
 
                 {{-- Listado scrollable: en escritorio llena la altura restante (flex-1 min-h-0) alineándose con la imagen; en móvil altura moderada --}}
-                <div class="custom-scrollbar max-h-[240px] divide-y divide-white/8 overflow-y-auto border-t border-b border-lucille-line/20 lg:max-h-none lg:min-h-0 lg:flex-1" role="list" aria-label="Programas en parrilla">
+                <div class="custom-scrollbar max-h-[240px] divide-y divide-white/8 overflow-y-auto border-t border-b border-lucille-line/20 lg:max-h-none lg:min-h-0 lg:flex-1" role="list" aria-label="Programas en parrilla de programación">
                     @foreach ($allProgramSlots as $idx => $slot)
                         @php
                             $isPrimarySlot = $programIdentity($slot) === $heroIdentity;
