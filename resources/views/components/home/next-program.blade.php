@@ -166,28 +166,30 @@
         },
     }"
 >
-    <div class="grid items-start gap-7 lg:grid-cols-[1.2fr_0.8fr] lg:gap-10">
-        {{-- 1. Columna izquierda: Área de portada con mayor presencia visual, manteniendo imagen íntegra y proporción original sin bandas artificiales --}}
-        <div class="lucille-flat-surface overflow-hidden bg-[#0e0e11]">
-            <img
-                :src="activeProgram.image"
-                x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ asset('assets/lucille/pedalboard-1511069_1920.jpg') }}'; }"
-                :alt="activeProgram.title || 'Próximo programa'"
-                class="block h-auto max-h-[420px] w-full object-contain"
-                loading="lazy"
-            >
-        </div>
+    <div class="flex flex-col gap-6 md:gap-7">
+        {{-- Fila superior: Imagen del programa seleccionado (izq) y Parrilla/Listado con scroll alineado en altura (der) --}}
+        <div class="grid items-stretch gap-6 md:gap-8 lg:grid-cols-[minmax(320px,460px)_minmax(0,1fr)]">
+            {{-- Columna izquierda: Imagen del programa seleccionado --}}
+            <div class="lucille-flat-surface flex items-center justify-center overflow-hidden bg-lucille-surface">
+                <img
+                    :src="activeProgram.image"
+                    x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ asset('assets/lucille/pedalboard-1511069_1920.jpg') }}'; }"
+                    :alt="activeProgram.title || 'Próximo programa'"
+                    class="block h-full max-h-[360px] w-full object-contain sm:max-h-[380px] lg:max-h-[380px]"
+                    loading="lazy"
+                >
+            </div>
 
-        {{-- 2. Columna derecha: Arriba lista compacta con altura equilibrada, debajo ficha y descripción del programa seleccionado --}}
-        <div class="flex min-w-0 flex-col gap-3.5">
-            {{-- Arriba: Lista compacta de programas (altura visible ajustada para equilibrar columnas) --}}
-            <div>
-                <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1">
-                    <span class="font-display text-xs uppercase tracking-[.22em] text-[#dcdcdc]">Parrilla de programación</span>
-                    <span class="text-[11px] text-[#9a9a9a]">Zona horaria: {{ $program['timezone'] ?? 'America/Caracas' }}</span>
+            {{-- Columna derecha: Encabezado + Listado con desplazamiento vertical que termina alineado con el borde inferior de la imagen --}}
+            <div class="flex h-full min-w-0 flex-col">
+                {{-- Encabezado de la parrilla y zona horaria --}}
+                <div class="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-lucille-line/20 pb-2">
+                    <span class="font-display text-xs uppercase tracking-[.22em] text-lucille-heading">Parrilla de programación</span>
+                    <span class="text-[11px] text-lucille-body">Zona horaria: {{ $program['timezone'] ?? 'America/Caracas' }}</span>
                 </div>
 
-                <div class="custom-scrollbar max-h-[132px] divide-y divide-white/8 overflow-y-auto border-t border-b border-white/10" role="list" aria-label="Programas en parrilla">
+                {{-- Listado scrollable: en escritorio llena la altura restante (flex-1 min-h-0) alineándose con la imagen; en móvil altura moderada --}}
+                <div class="custom-scrollbar max-h-[240px] divide-y divide-white/8 overflow-y-auto border-t border-b border-lucille-line/20 lg:max-h-none lg:min-h-0 lg:flex-1" role="list" aria-label="Programas en parrilla">
                     @foreach ($allProgramSlots as $idx => $slot)
                         @php
                             $isPrimarySlot = $programIdentity($slot) === $heroIdentity;
@@ -201,7 +203,7 @@
                         <button
                             type="button"
                             role="listitem"
-                            class="lucille-flat-row flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                            class="lucille-flat-row flex w-full items-center justify-between gap-3 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent transition-colors"
                             :class="isActiveProgram(@js($slot)) ? 'lucille-flat-row--active' : ''"
                             :aria-pressed="isActiveProgram(@js($slot)) ? 'true' : 'false'"
                             @click="selectProgram(@js($slot))"
@@ -218,12 +220,12 @@
                                             {!! $slot['title_html'] ?? e($slot['title'] ?? 'Programa') !!}
                                         </span>
                                         @if ($isPrimarySlot)
-                                            <span class="inline-flex items-center border border-lucille-accent/60 bg-lucille-accent/15 px-1.5 py-0.5 font-display text-[9px] uppercase tracking-[.14em] text-[#ff7a73]">
+                                            <span class="inline-flex items-center border border-lucille-accent/60 bg-lucille-accent/15 px-1.5 py-0.5 font-display text-[9px] uppercase tracking-[.14em] text-[var(--lucille-accent-readable,#ff7a73)]">
                                                 {{ $slotBadge }}
                                             </span>
                                         @endif
                                     </div>
-                                    <div class="flex flex-wrap items-center gap-x-2 text-[11px] text-[#9e9e9e]">
+                                    <div class="flex flex-wrap items-center gap-x-2 text-[11px] text-lucille-body">
                                         <span>{{ $slot['host'] ?? 'Seven Rock Radio' }}</span>
                                         @if (!empty($slot['schedule']) || !empty($slot['time']))
                                             <span class="text-white/25" aria-hidden="true">·</span>
@@ -233,103 +235,103 @@
                                 </div>
                             </div>
 
-                            <span class="shrink-0 font-display text-[10px] uppercase tracking-[.16em] text-[#9a9a9a]" x-text="isActiveProgram(@js($slot)) ? 'Seleccionado' : 'Ver ficha'"></span>
+                            <span class="shrink-0 font-display text-[10px] uppercase tracking-[.16em] text-lucille-body" x-text="isActiveProgram(@js($slot)) ? 'Seleccionado' : 'Ver ficha'"></span>
                         </button>
                     @endforeach
                 </div>
             </div>
-
-            {{-- Debajo de la lista: Información y descripción visible del programa seleccionado --}}
-            <article class="lucille-flat-surface p-3.5 md:p-4" aria-live="polite">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span
-                            class="inline-flex min-h-[20px] items-center border px-2 font-display text-[10px] uppercase tracking-[.15em]"
-                            :class="isOriginalProgram(activeProgram)
-                                ? (activeStatusLabel() === 'En vivo' ? 'border-lucille-accent bg-lucille-accent text-white' : 'border-lucille-accent/60 bg-lucille-accent/10 text-white')
-                                : 'border-white/20 bg-white/5 text-[#d4d4d4]'"
-                            x-text="activeStatusLabel()"
-                        ></span>
-
-                        <template x-if="isOriginalProgram(activeProgram) && activeProgram.tipo_emision === 'en_vivo'">
-                            <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#ff5b52]">
-                                <span class="relative flex h-2 w-2">
-                                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-lucille-accent opacity-75"></span>
-                                    <span class="relative inline-flex h-2 w-2 rounded-full bg-lucille-accent"></span>
-                                </span>
-                                Directo
-                            </span>
-                        </template>
-
-                        <template x-if="activeProgram.tipo_emision === 'retransmision'">
-                            <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#b5b5b5]">
-                                Retransmisión
-                            </span>
-                        </template>
-                    </div>
-
-                    <div class="flex items-center gap-3">
-                        <template x-if="!isOriginalProgram(activeProgram)">
-                            <button
-                                type="button"
-                                class="text-[11px] font-medium text-[#ff7a73] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
-                                @click="restoreOriginalProgram()"
-                            >
-                                Volver al horario actual
-                            </button>
-                        </template>
-
-                        <a
-                            class="lucille-button-solid !min-h-[30px] !px-3 !text-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                            :href="activeProgram.button?.url || '{{ route('programs') }}'"
-                            x-text="activeProgram.button?.label || 'Ver programación'"
-                        ></a>
-                    </div>
-                </div>
-
-                <div class="mt-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                    <h3
-                        class="font-display text-[19px] uppercase leading-[1.05] tracking-[.1em] text-white md:text-[22px]"
-                        x-html="activeProgram.title_html || formatearTituloJS(activeProgram.title || '')"
-                    ></h3>
-
-                    <div class="flex flex-wrap items-center gap-x-2 text-[12px]">
-                        <span class="font-medium text-[#dcdcdc]" x-text="formatTimeClean(activeProgram.schedule || activeProgram.time || 'Programación continua')"></span>
-                        <span class="text-white/25" aria-hidden="true">·</span>
-                        <span class="font-display text-[12px] uppercase tracking-[.12em] text-[var(--lucille-accent-readable,#ff5b52)]" x-text="activeProgram.host || 'Seven Rock Radio'"></span>
-                    </div>
-                </div>
-
-                {{-- Descripción editorial visible automáticamente (con extracto + Leer más si es larga) --}}
-                <template x-if="activeProgram.summary">
-                    <div class="mt-2.5 border-t border-white/10 pt-2.5">
-                        <p class="text-[13px] leading-5 text-[#c4c4c4]" x-text="visibleSummary()"></p>
-                        <template x-if="hasLongSummary()">
-                            <button
-                                type="button"
-                                class="mt-1 inline-flex items-center gap-1 font-display text-[11px] uppercase tracking-[.14em] text-[var(--lucille-accent-readable,#ff5b52)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
-                                :aria-expanded="descExpanded ? 'true' : 'false'"
-                                @click="descExpanded = !descExpanded"
-                            >
-                                <span x-text="descExpanded ? 'Mostrar menos' : 'Leer más'"></span>
-                            </button>
-                        </template>
-                    </div>
-                </template>
-
-                <template x-if="isOriginalProgram(activeProgram) && activeProgram.enlace_en_vivo">
-                    <div class="mt-2.5 border-t border-white/10 pt-2.5">
-                        <a
-                            :href="activeProgram.enlace_en_vivo"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="inline-flex min-h-[30px] items-center border border-white/20 px-3 font-display text-[10px] uppercase tracking-[.12em] text-[#dcdcdc] transition-colors hover:border-lucille-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
-                        >
-                            Enlace de transmisión
-                        </a>
-                    </div>
-                </template>
-            </article>
         </div>
+
+        {{-- Fila inferior: Ficha informativa a todo el ancho (abarca bajo la imagen y el listado) --}}
+        <article class="lucille-flat-surface w-full p-4 sm:p-5 md:p-6" aria-live="polite">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span
+                        class="inline-flex min-h-[22px] items-center border px-2.5 font-display text-[10px] uppercase tracking-[.15em]"
+                        :class="isOriginalProgram(activeProgram)
+                            ? (activeStatusLabel() === 'En vivo' ? 'border-lucille-accent bg-lucille-accent text-white' : 'border-lucille-accent/60 bg-lucille-accent/10 text-white')
+                            : 'border-white/20 bg-white/5 text-[#d4d4d4]'"
+                        x-text="activeStatusLabel()"
+                    ></span>
+
+                    <template x-if="isOriginalProgram(activeProgram) && activeProgram.tipo_emision === 'en_vivo'">
+                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--lucille-accent-readable,#ff5b52)]">
+                            <span class="relative flex h-2 w-2">
+                                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-lucille-accent opacity-75"></span>
+                                <span class="relative inline-flex h-2 w-2 rounded-full bg-lucille-accent"></span>
+                            </span>
+                            Directo
+                        </span>
+                    </template>
+
+                    <template x-if="activeProgram.tipo_emision === 'retransmision'">
+                        <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-lucille-body">
+                            Retransmisión
+                        </span>
+                    </template>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <template x-if="!isOriginalProgram(activeProgram)">
+                        <button
+                            type="button"
+                            class="text-[11px] font-medium text-[var(--lucille-accent-readable,#ff5b52)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                            @click="restoreOriginalProgram()"
+                        >
+                            Volver al horario actual
+                        </button>
+                    </template>
+
+                    <a
+                        class="lucille-button-solid !min-h-[32px] !px-4 !text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                        :href="activeProgram.button?.url || '{{ route('programs') }}'"
+                        x-text="activeProgram.button?.label || 'Ver programación'"
+                    ></a>
+                </div>
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1.5 border-t border-lucille-line/15 pt-3">
+                <h3
+                    class="font-display text-[20px] uppercase leading-tight tracking-[.1em] text-lucille-heading sm:text-[22px] md:text-[26px]"
+                    x-html="activeProgram.title_html || formatearTituloJS(activeProgram.title || '')"
+                ></h3>
+
+                <div class="flex flex-wrap items-center gap-x-2 text-[13px]">
+                    <span class="font-medium text-lucille-heading" x-text="formatTimeClean(activeProgram.schedule || activeProgram.time || 'Programación continua')"></span>
+                    <span class="text-white/25" aria-hidden="true">·</span>
+                    <span class="font-display text-[13px] uppercase tracking-[.12em] text-[var(--lucille-accent-readable,#ff5b52)]" x-text="activeProgram.host || 'Seven Rock Radio'"></span>
+                </div>
+            </div>
+
+            {{-- Descripción editorial visible (con extracto + Leer más si es larga) --}}
+            <template x-if="activeProgram.summary">
+                <div class="mt-3 border-t border-lucille-line/15 pt-3">
+                    <p class="text-[13px] sm:text-[14px] leading-6 text-lucille-body" x-text="visibleSummary()"></p>
+                    <template x-if="hasLongSummary()">
+                        <button
+                            type="button"
+                            class="mt-1.5 inline-flex items-center gap-1 font-display text-[11px] uppercase tracking-[.14em] text-[var(--lucille-accent-readable,#ff5b52)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                            :aria-expanded="descExpanded ? 'true' : 'false'"
+                            @click="descExpanded = !descExpanded"
+                        >
+                            <span x-text="descExpanded ? 'Mostrar menos' : 'Leer más'"></span>
+                        </button>
+                    </template>
+                </div>
+            </template>
+
+            <template x-if="isOriginalProgram(activeProgram) && activeProgram.enlace_en_vivo">
+                <div class="mt-3 border-t border-lucille-line/15 pt-3">
+                    <a
+                        :href="activeProgram.enlace_en_vivo"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex min-h-[30px] items-center border border-white/20 px-3 font-display text-[10px] uppercase tracking-[.12em] text-lucille-heading transition-colors hover:border-lucille-accent hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                    >
+                        Enlace de transmisión
+                    </a>
+                </div>
+            </template>
+        </article>
     </div>
 </div>

@@ -556,36 +556,38 @@
         },
     }"
 >
-    <div class="grid items-start gap-8 lg:grid-cols-[minmax(280px,460px)_minmax(0,1fr)] lg:gap-12">
-        {{-- 1. Columna izquierda: Portada completa sin recorte ni marcos decorativos añadidos --}}
-        <div class="flex w-full items-start justify-center lg:sticky lg:top-24">
-            <img
-                :src="activeEpisode.image"
-                x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ $fallbackImage }}'; }"
-                :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
-                width="1280"
-                height="720"
-                fetchpriority="high"
-                class="block h-auto max-h-[440px] w-full object-contain object-top"
-            >
-        </div>
+    <div class="flex flex-col gap-6 md:gap-8">
+        {{-- Fila superior: Carátula del episodio seleccionado (izq) y Listado de episodios alineado en altura (der) --}}
+        <div class="grid items-stretch gap-6 md:gap-8 lg:grid-cols-[minmax(300px,440px)_minmax(0,1fr)]">
+            {{-- Columna izquierda: Carátula del episodio seleccionado --}}
+            <div class="lucille-flat-surface flex items-center justify-center overflow-hidden bg-lucille-surface">
+                <img
+                    :src="activeEpisode.image"
+                    x-on:error="if (!$el.dataset.fallbackApplied) { $el.dataset.fallbackApplied = '1'; $el.src = '{{ $fallbackImage }}'; }"
+                    :alt="activeEpisode.program || activeEpisode.title || 'Podcast'"
+                    width="1280"
+                    height="720"
+                    class="block h-full max-h-[360px] w-full object-contain sm:max-h-[380px] lg:max-h-[380px]"
+                    loading="lazy"
+                >
+            </div>
 
-        {{-- 2. Columna derecha: Arriba lista compacta de episodios, debajo ficha, reproductor y descripción visible --}}
-        <div class="flex min-w-0 flex-col gap-5">
-            {{-- Arriba: Lista compacta de episodios --}}
-            <div>
-                <div class="mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1.5">
-                    <span class="font-display text-xs uppercase tracking-[.22em] text-[#dcdcdc]">Últimos episodios</span>
-                    <span class="text-[11px] text-[#9a9a9a]">Selecciona un episodio para ver su ficha</span>
+            {{-- Columna derecha: Encabezado + Listado de episodios ampliado cuyo borde inferior coincide con el de la carátula --}}
+            <div class="flex h-full min-w-0 flex-col">
+                {{-- Encabezado de la lista --}}
+                <div class="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-lucille-line/20 pb-2">
+                    <span class="font-display text-xs uppercase tracking-[.22em] text-lucille-heading">Últimos episodios</span>
+                    <span class="text-[11px] text-lucille-body">Selecciona un episodio para escuchar o ver su ficha</span>
                 </div>
 
+                {{-- Listado scrollable de episodios: en escritorio ocupa flex-1 min-h-0 para alinearse exactamente al borde inferior de la carátula --}}
                 @if ($allEpisodesList !== [])
-                    <div class="custom-scrollbar max-h-[184px] divide-y divide-white/8 overflow-y-auto border-t border-b border-white/10" role="list" aria-label="Últimos episodios de podcast">
+                    <div class="custom-scrollbar max-h-[260px] divide-y divide-white/8 overflow-y-auto border-t border-b border-lucille-line/20 lg:max-h-none lg:min-h-0 lg:flex-1" role="list" aria-label="Últimos episodios de podcast">
                         @foreach ($allEpisodesList as $episode)
                             <button
                                 type="button"
                                 role="listitem"
-                                class="lucille-flat-row flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                                class="lucille-flat-row flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent transition-colors"
                                 :class="isActiveEpisode(@js($episode)) ? 'lucille-flat-row--active' : ''"
                                 :aria-pressed="isActiveEpisode(@js($episode)) ? 'true' : 'false'"
                                 @click="selectEpisode(@js($episode))"
@@ -602,7 +604,7 @@
                                                 {!! formatear_titulo($episode['program']) !!}
                                             </span>
                                             @if (!empty($episode['date']))
-                                                <span class="text-[11px] text-[#9a9a9a]">{{ $episode['date'] }}</span>
+                                                <span class="text-[11px] text-lucille-body">{{ $episode['date'] }}</span>
                                             @endif
                                         </div>
                                         <div class="mt-0.5 truncate text-[12px] text-[#b0b0b0]">
@@ -613,77 +615,81 @@
 
                                 <span
                                     class="shrink-0 font-display text-[10px] uppercase tracking-[.16em]"
-                                    :class="isActiveEpisode(@js($episode)) ? 'text-[var(--lucille-accent-readable,#ff5b52)]' : 'text-[#9a9a9a]'"
+                                    :class="isActiveEpisode(@js($episode)) ? 'text-[var(--lucille-accent-readable,#ff5b52)] font-bold' : 'text-lucille-body'"
                                     x-text="isActiveEpisode(@js($episode)) ? (playing ? 'Sonando' : 'Activo') : 'Seleccionar'"
                                 ></span>
                             </button>
                         @endforeach
                     </div>
                 @else
-                    <div class="lucille-flat-surface px-5 py-8 text-sm text-[#9a9a9a]">
+                    <div class="lucille-flat-surface px-5 py-8 text-sm text-lucille-body">
                         No hay episodios listos todavía.
                     </div>
                 @endif
             </div>
+        </div>
 
-            {{-- Debajo de la lista: Ficha del episodio, reproductor integrado y descripción editorial visible automáticamente --}}
-            <article class="lucille-flat-surface p-5 md:p-6" aria-live="polite">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <span class="font-display text-[11px] uppercase tracking-[.2em] text-[var(--lucille-accent-readable,#ff5b52)]" x-text="activeEpisode.host || 'Seven Rock Radio'"></span>
-                    <span class="text-[11px] uppercase tracking-[.16em] text-[#a3a3a3]" x-text="activeEpisode.date || 'Archivo de podcast'"></span>
-                </div>
+        {{-- Fila inferior: Ficha completa del episodio, reproductor y descripción a todo el ancho --}}
+        <article class="lucille-flat-surface w-full p-4 sm:p-5 md:p-6" aria-live="polite">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-lucille-line/15 pb-2.5">
+                <span class="font-display text-[11px] uppercase tracking-[.2em] text-[var(--lucille-accent-readable,#ff5b52)]" x-text="activeEpisode.host || 'Seven Rock Radio'"></span>
+                <span class="text-[11px] uppercase tracking-[.16em] text-lucille-body" x-text="activeEpisode.date || 'Archivo de podcast'"></span>
+            </div>
 
+            <div class="mt-3">
                 <h3
-                    class="mt-1.5 font-display text-[22px] uppercase leading-[1.05] tracking-[.1em] text-white md:text-[26px]"
+                    class="font-display text-[22px] uppercase leading-tight tracking-[.1em] text-lucille-heading md:text-[28px]"
                     x-html="formatearTituloJS(activeEpisode.program || activeEpisode.title)"
                 ></h3>
 
                 <p
-                    class="mt-1.5 text-[15px] font-semibold leading-snug text-[#e2e2e2]"
+                    class="mt-1 text-[15px] sm:text-[16px] font-semibold leading-snug text-[#e2e2e2]"
                     x-text="activeEpisode.episode_title || 'Episodio destacado'"
                 ></p>
+            </div>
 
-                {{-- Descripción editorial visible automáticamente junto a la ficha (sin exigir pulsar «Más información») --}}
-                <template x-if="activeEpisode.summary">
-                    <div class="mt-3 border-t border-white/10 pt-3">
-                        <p class="text-[13px] leading-6 text-[#c4c4c4]" x-text="visibleSummary()"></p>
-                        <template x-if="hasLongSummary()">
-                            <button
-                                type="button"
-                                class="mt-1.5 inline-flex items-center gap-1 font-display text-[11px] uppercase tracking-[.14em] text-[var(--lucille-accent-readable,#ff5b52)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
-                                :aria-expanded="descExpanded ? 'true' : 'false'"
-                                @click="descExpanded = !descExpanded"
-                            >
-                                <span x-text="descExpanded ? 'Mostrar menos' : 'Leer más'"></span>
-                            </button>
-                        </template>
-                    </div>
-                </template>
-
-                {{-- Reproductor integrado junto a la ficha y descripción del episodio --}}
-                <x-home.repro-seven />
-
-                {{-- Metadatos disponibles y enlace discreto «Ver episodio» --}}
-                <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
-                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#9e9e9e]">
-                        <span><strong class="font-semibold text-[#cfcfcf]">Programa:</strong> <span x-text="activeEpisode.program"></span></span>
-                        <span><strong class="font-semibold text-[#cfcfcf]">Presenta:</strong> <span x-text="activeEpisode.host"></span></span>
-                        <template x-if="activeEpisode.date">
-                            <span><strong class="font-semibold text-[#cfcfcf]">Fecha:</strong> <span x-text="activeEpisode.date"></span></span>
-                        </template>
-                    </div>
-
-                    <template x-if="activeEpisode.program_url">
-                        <a
-                            :href="activeEpisode.program_url"
-                            class="inline-flex min-h-[28px] items-center gap-1.5 font-display text-[11px] uppercase tracking-[.16em] text-[#dcdcdc] transition-colors hover:text-[var(--lucille-accent-readable,#ff5b52)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+            {{-- Descripción editorial con espacio y toggle si es extensa --}}
+            <template x-if="activeEpisode.summary">
+                <div class="mt-3 border-t border-lucille-line/15 pt-3">
+                    <p class="text-[13px] sm:text-[14px] leading-6 text-lucille-body" x-text="visibleSummary()"></p>
+                    <template x-if="hasLongSummary()">
+                        <button
+                            type="button"
+                            class="mt-1.5 inline-flex items-center gap-1 font-display text-[11px] uppercase tracking-[.14em] text-[var(--lucille-accent-readable,#ff5b52)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                            :aria-expanded="descExpanded ? 'true' : 'false'"
+                            @click="descExpanded = !descExpanded"
                         >
-                            <span>Ver episodio</span>
-                            <span aria-hidden="true">&rarr;</span>
-                        </a>
+                            <span x-text="descExpanded ? 'Mostrar menos' : 'Leer más'"></span>
+                        </button>
                     </template>
                 </div>
-            </article>
-        </div>
+            </template>
+
+            {{-- Reproductor integrado aprovechando todo el ancho disponible --}}
+            <div class="mt-4">
+                <x-home.repro-seven />
+            </div>
+
+            {{-- Metadatos disponibles y enlace discreto «Ver episodio» --}}
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-lucille-line/15 pt-3">
+                <div class="flex flex-wrap gap-x-5 gap-y-1.5 text-[12px] text-lucille-body">
+                    <span><strong class="font-semibold text-lucille-heading">Programa:</strong> <span x-text="activeEpisode.program"></span></span>
+                    <span><strong class="font-semibold text-lucille-heading">Presenta:</strong> <span x-text="activeEpisode.host"></span></span>
+                    <template x-if="activeEpisode.date">
+                        <span><strong class="font-semibold text-lucille-heading">Fecha:</strong> <span x-text="activeEpisode.date"></span></span>
+                    </template>
+                </div>
+
+                <template x-if="activeEpisode.program_url">
+                    <a
+                        :href="activeEpisode.program_url"
+                        class="inline-flex min-h-[30px] items-center gap-1.5 font-display text-[11px] uppercase tracking-[.16em] text-lucille-heading transition-colors hover:text-[var(--lucille-accent-readable,#ff5b52)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lucille-accent"
+                    >
+                        <span>Ver episodio completo</span>
+                        <span aria-hidden="true">&rarr;</span>
+                    </a>
+                </template>
+            </div>
+        </article>
     </div>
 </div>
