@@ -62,18 +62,12 @@ class ProcessIncomingEmails extends Command
         }
 
         $aiManager = app(\App\Services\AiParserManager::class);
-        if (! $aiManager->hasAnyProvider()) {
-            $this->error('No hay ningún proveedor de IA configurado en los Ajustes del Tema (Gemini u OpenRouter).');
-            $this->sendAdminAlert(
-                'ai_api_key_missing', 
-                '⚠️ Error Crítico: Proveedor de IA faltante en SevenRockRadio', 
-                'El cron de procesamiento de correos se ha detenido porque no hay ningún proveedor de IA configurado (Gemini u OpenRouter) en los Ajustes del Tema.', 
-                $settings
-            );
-            throw new \Exception("AI provider missing");
+        $hasAiProvider = $aiManager->hasAnyProvider();
+        if (! $hasAiProvider) {
+            $this->warn('Aviso: No hay ningún proveedor de IA configurado en los Ajustes del Tema (Gemini u OpenRouter). Los correos estructurados de Darth Vader y formatos deterministas se procesarán con normalidad.');
+        } else {
+            Cache::forget('admin_alert_sent_ai_api_key_missing');
         }
-
-        Cache::forget('admin_alert_sent_ai_api_key_missing');
 
         $activeAccounts = MarketingMailAccount::query()->where('is_active', true)->get();
         $accountsToProcess = [];
@@ -133,7 +127,7 @@ class ProcessIncomingEmails extends Command
                     'host'          => $accountData['host'],
                     'port'          => $accountData['port'],
                     'encryption'    => $accountData['encryption'],
-                    'validate_cert' => config('services.imap.validate_cert', false),
+                    'validate_cert' => config('services.imap.validate_cert', true),
                     'username'      => $accountData['username'],
                     'password'      => $accountData['password'],
                     'protocol'      => 'imap'
@@ -149,7 +143,33 @@ class ProcessIncomingEmails extends Command
                     $this->info("Buscando correos de los últimos {$days} días (incluye leídos)...");
                     $messages = $folder->query()->since(now()->subDays($days))->get();
                 } else {
-                    $messages = $folder->query()->unseen()->get();
+                    $unseenCollection = $folder->query()->unseen()->get();
+                    $messageMap = [];
+                    foreach ($unseenCollection as $m) {
+                        $messageMap[(string) $m->getMessageId()] = $m;
+                    }
+
+                    // Recuperar también correos recientes (últimas 48h) que pudieran haber sido marcados
+                    // como leídos manualmente pero que aún no han sido procesados en BD
+                    try {
+                        $recentCollection = $folder->query()->since(now()->subDays(2))->get();
+                        foreach ($recentCollection as $m) {
+                            $mId = (string) $m->getMessageId();
+                            if (! isset($messageMap[$mId])) {
+                                $alreadyProcessed = DB::table('processed_emails')
+                                    ->where('message_id', $mId)
+                                    ->where('status', '!=', 'failed')
+                                    ->exists();
+                                if (! $alreadyProcessed) {
+                                    $messageMap[$mId] = $m;
+                                }
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        // Continuar con los unseen si la consulta since falla
+                    }
+
+                    $messages = array_values($messageMap);
                 }
                 $messagesRead = count($messages);
 
@@ -306,435 +326,480 @@ class ProcessIncomingEmails extends Command
                     continue;
                 }
 
-                // Comprobar si es un correo especial
-                $isDarkVader = $isDarkVaderAgent;
-                $subjectLower = mb_strtolower($subject);
-                $isEfemerides = $isDarkVaderAgent && (
-                    str_starts_with($subjectLower, 'hoy en el rock') || 
-                    str_contains($subjectLower, 'efeméride') || 
-                    str_contains($subjectLower, 'efemerides')
-                );
-                $isNoticiaRock = $isDarkVaderAgent && !$isEfemerides;
+                // ── CIRCUITO EDITORIAL DARTH VADER (DETERMINISTA, SIN IA, MODO BORRADOR) ─────
+                $dvParser = app(\App\Services\EditorialDarthVaderParser::class);
+                $isDv1Payload = $dvParser->isDv1Format($subject, $body);
 
-                Log::info("ProcessIncomingEmails: Tipo de correo Dark Vader detectado.", [
-                    'is_dark_vader'   => $isDarkVader,
-                    'is_efemerides'   => $isEfemerides,
-                    'is_noticia_rock' => $isNoticiaRock,
-                    'subject'         => $subject,
-                ]);
-
-                $parser = app(GeminiContentParser::class);
-
-                // ── PROCESAMIENTO DIRECTO PARA DARK VADER (sin Gemini, sin consumo de cuota) ─────
-
-                // Efemérides: un post independiente por cada evento del día
-                if ($isEfemerides) {
-                    $this->info("[DARK VADER] Procesando Efemérides directamente (sin Gemini)...");
-                    $preparedBody = preg_replace('/<(?:br|\/p|\/div|\/li|\/tr|\/h[1-6])[^>]*>/i', "\n", $body) ?? $body;
-                    $plainBody = strip_tags($preparedBody);
-                    $plainBody = html_entity_decode($plainBody, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-                    // ── Estrategia 1: items numerados (1. texto, 2. texto, 1.- texto, 🎸 1. ...) ──────────
-                    $lines = array_values(array_filter(
-                        array_map('trim', preg_split('/\r?\n/', $plainBody) ?: [])
-                    ));
-
-                    $itemPattern = '/^(?:[\x{1F300}-\x{1FFFF}\x{2600}-\x{27BF}]\s*)?(?:\[?\d+[.)\-\]]+|\d+\s*[-–—])\s*/u';
-
-                    $items = [];
-                    $current = null;
-                    foreach ($lines as $line) {
-                        if (preg_match($itemPattern, $line)) {
-                            if ($current !== null) {
-                                $items[] = $current;
-                            }
-                            $current = $line;
-                        } elseif ($current !== null && $line !== '') {
-                            $current .= ' ' . $line; // línea de continuación del mismo item
-                        }
-                    }
-                    if ($current !== null) {
-                        $items[] = $current;
-                    }
-
-                    // ── Estrategia 2: fallback — separar por doble salto de línea ──────────
-                    if (count($items) < 2) {
-                        $chunks = preg_split('/\n{2,}|\r\n{2,}/', $plainBody) ?: [];
-                        $items  = array_values(array_filter(array_map('trim', $chunks)));
-                    }
-
-                    if (empty($items)) {
-                        $this->warn("Efemérides: cuerpo vacío tras parsear. Saltando.");
-                        $this->recordProcessedEmail($messageId, $subject, 'failed');
-                        if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
-                        continue;
-                    }
-
-                    $this->info("Efemérides: " . count($items) . " evento(s) detectado(s).");
-                    $status = $settings->email_auto_publish ? 'published' : 'draft';
-                    $efemCreadas = 0;
-
-                    foreach ($items as $item) {
-                        // Quitar el prefijo numérico y los emojis para obtener el título real
-                        $cleanItem = preg_replace($itemPattern, '', $item) ?? $item;
-                        $cleanItem = preg_replace('/^[\x{1F300}-\x{1FFFF}\x{2600}-\x{27BF}]\s*/u', '', $cleanItem) ?? $cleanItem;
-                        $cleanItem = trim($cleanItem);
-
-                        if ($cleanItem === '' || strlen($cleanItem) < 8) continue;
-
-                        // Título = todo el texto hasta el primer punto final (máx 120 chars)
-                        // Esto evita títulos kilométricos
-                        $efTitle = $cleanItem;
-                        if (preg_match('/^(.{10,120}?[.!?])\s/u', $cleanItem, $m)) {
-                            $efTitle = rtrim($m[1], '.!?');
-                        } elseif (mb_strlen($cleanItem) > 100) {
-                            // Cortar por longitud si no hay punto
-                            $efTitle = Str::limit($cleanItem, 100, '');
-                            // Cortar en la última palabra completa
-                            $efTitle = preg_replace('/\s+\S+$/', '', $efTitle) ?: $efTitle;
-                        }
-                        $efTitle = trim($efTitle, ' .,;:—-');
-
-                        if ($efTitle === '' || strlen($efTitle) < 5) continue;
-
-                        // Contenido = el texto completo del item
-                        if (Post::where('title', $efTitle)->exists()) {
-                            $this->info("Ignorando efeméride duplicada: {$efTitle}");
-                            continue;
-                        }
-
-                        $baseSlug = Str::slug($efTitle);
-                        $slug = $baseSlug; $suffix = 1;
-                        while (DB::table('posts')->where('slug', $slug)->exists()) {
-                            $slug = $baseSlug . '-' . $suffix++;
-                        }
-
-                        $cleanItemSave = $this->limpiarContenidoDeCorreo($cleanItem);
-
-                        // 1. Evaluar restricciones de embargo y confidencialidad sobre el texto y asunto original
-                        $scheduleManager = app(\App\Services\ReleaseScheduleManager::class);
-                        $scheduleEf = $scheduleManager->evaluateSchedule($subject, $cleanItem, now());
-
-                        // 2. Saneamiento estricto de seguridad
-                        $sanitizer = app(\App\Services\EmailContentSanitizer::class);
-                        $sanitizerFailed = false;
-                        try {
-                            $sanitizedEf = $sanitizer->sanitize($cleanItemSave);
-                            if (!isset($sanitizedEf['clean_html']) || !isset($sanitizedEf['clean_text'])) {
-                                $sanitizerFailed = true;
-                                $cleanContentEf = '<p>[CONTENIDO RETENIDO POR SEGURIDAD EDITORIAL: Fallo de contrato en saneamiento de efeméride.]</p>';
-                            } else {
-                                $cleanContentEf = $sanitizedEf['clean_html'];
-                            }
-                        } catch (\Throwable $e) {
-                            $sanitizerFailed = true;
-                            $cleanContentEf = '<p>[CONTENIDO RETENIDO POR SEGURIDAD EDITORIAL: Excepción en saneamiento de efeméride.]</p>';
-                        }
-
-                        // 3. Persistencia atómica de Post y EmailPostSanitizedMeta
-                        DB::beginTransaction();
-                        try {
-                            $post = Post::create([
-                                'title'          => $efTitle,
-                                'slug'           => $slug,
-                                'content'        => $cleanContentEf,
-                                'excerpt'        => Post::sanitizeExcerpt($cleanContentEf, $cleanContentEf, 160),
-                                'status'         => 'draft',
-                                'is_published'   => false,
-                                'published_at'   => now(),
-                                'featured_image' => null,
-                                'source_url'     => null,
-                                'source_name'    => null,
-                                'image_source'   => null,
-                                'categories'     => ['Hoy en el Rock'],
-                                'author_email'   => $senderEmail,
-                                'source_subject' => $subject,
-                            ]);
-
-                            $this->syncTaxonomies(
-                                $post,
-                                ['Hoy en el Rock'],
-                                $this->extractHashtags($efTitle . ' ' . $cleanContentEf)
-                            );
-
-                            // Control de seguridad centralizado
-                            $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
-                            $safetyResult = $safetyValidator->validatePost($post);
-
-                            $isEmbargoActive = $scheduleEf['is_embargo_active'];
-                            $embargoUntil = $scheduleEf['embargo_until'];
-                            $publishPermittedAt = $scheduleEf['publish_permitted_at'];
-
-                            $securityStatus = 'passed';
-                            if ($sanitizerFailed) {
-                                $securityStatus = 'held_security';
-                            } elseif (! $safetyResult['is_safe']) {
-                                $securityStatus = 'needs_review';
-                            } elseif ($isEmbargoActive) {
-                                $securityStatus = 'held_embargo';
-                            }
-
-                            \App\Models\EmailPostSanitizedMeta::create([
-                                'post_id'              => $post->id,
-                                'source_message_id'    => $messageId . '-ef-' . $efemCreadas,
-                                'sender_email'         => $senderEmail,
-                                'source_subject'       => $subject,
-                                'received_at'          => now(),
-                                'embargo_until'        => $embargoUntil,
-                                'publish_permitted_at' => $publishPermittedAt,
-                                'is_embargo_active'    => (bool) $isEmbargoActive,
-                                'security_status'      => $securityStatus,
-                                'incident_reason'      => ! empty($safetyResult['violations']) ? implode(' | ', $safetyResult['violations']) : ($sanitizerFailed ? 'Fallo de saneamiento en efeméride' : null),
-                            ]);
-
-                            // Publicar ÚNICAMENTE si auto_publish está habilitado Y no hay fallos de saneador, es seguro y no hay embargo
-                            $canPublish = ($status === 'published') && !$sanitizerFailed && $safetyResult['is_safe'] && !$isEmbargoActive;
-                            if ($canPublish) {
-                                $post->update([
-                                    'status'       => 'published',
-                                    'is_published' => true,
-                                ]);
-                            }
-
-                            DB::commit();
-                        } catch (\Throwable $e) {
-                            DB::rollBack();
-                            Log::error("ProcessIncomingEmails: Fallo atómico al persistir efeméride Dark Vader.", [
-                                'message_id' => $messageId,
-                                'code'       => $e->getCode(),
-                            ]);
-                            $this->recordProcessedEmail($messageId, $subject, 'failed_metadata', 'Fallo al guardar metadatos de efeméride');
-                            if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
-                            continue 2;
-                        }
-                        $this->info("[OK] Efeméride creada: {$efTitle}");
-                        $efemCreadas++;
-                    }
-
-                    $this->info("Efemérides procesadas: {$efemCreadas} de " . count($items) . " evento(s).");
-                    $this->recordProcessedEmail($messageId, $subject, 'processed');
+                // Si un remitente NO legítimo intenta enviar formato DV-1
+                if ($isDv1Payload && ! $isDarkVaderAgent) {
+                    $this->warn("[SEGURIDAD] Correo con formato DV-1 de remitente no autorizado como Darth Vader: {$senderEmail}. Reteniendo para revisión.");
+                    Log::warning("ProcessIncomingEmails: Intento de envío DV-1 por remitente no autenticado.", [
+                        'sender'     => $senderEmail,
+                        'message_id' => $messageId,
+                        'subject'    => $subject,
+                    ]);
+                    $this->createDraftFallbackPost($message, $body, $subject, $senderEmail, $messageId, $settings, "Formato DV-1 rechazado: remitente no autenticado ({$senderEmail})");
+                    $this->recordProcessedEmail($messageId, $subject, 'unauthorized_dv1');
                     $message->setFlag('SEEN');
                     if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
                     continue;
                 }
 
-                // ── PROCESAMIENTO DIRECTO PARA NOTICIAS ROCK (sin IA, sin coste) ─────
-                if ($isNoticiaRock) {
-                    // El correo del agente ya trae la noticia estructurada. Pasar esto por la IA
-                    // hace depender la publicación de tener saldo y encarece cada noticia.
-                    $this->info("[DARK VADER] Procesando Noticia Rock directamente (sin IA)...");
+                if ($isDarkVaderAgent) {
+                    $detectedFormat = $dvParser->detectFormat($subject, $body);
+                    $this->info("[DARK VADER] Formato editorial detectado: {$detectedFormat} para asunto: {$subject}");
 
-                    $newsLimit = (int) ($settings->email_daily_news_limit ?? 9999);
-                    if ($postsCreatedToday >= $newsLimit) {
-                        $this->warn("Límite diario de noticias alcanzado ({$newsLimit}/{$newsLimit}). El correo quedará pendiente para mañana.");
+                    Log::info("ProcessIncomingEmails: Procesando correo de Darth Vader.", [
+                        'format'     => $detectedFormat,
+                        'subject'    => $subject,
+                        'message_id' => $messageId,
+                    ]);
+
+                    // ── CASO A: CONTRATO ESTRUCTURADO DV-1 ─────────────────────────
+                    if ($detectedFormat === \App\Services\EditorialDarthVaderParser::FORMAT_DV1) {
+                        $parsedDv1 = $dvParser->parseDv1($subject, $body);
+                        $batchId = $parsedDv1['batch_id'];
+                        $totalDeclared = $parsedDv1['total_declared'];
+                        $totalExtracted = $parsedDv1['total_extracted'];
+                        $discrepancyNote = $parsedDv1['has_count_discrepancy'] ? $parsedDv1['discrepancy_message'] : null;
+
+                        if ($discrepancyNote) {
+                            $this->warn("[DISCREPANCIA LOTE] {$discrepancyNote}");
+                            Log::warning("ProcessIncomingEmails: {$discrepancyNote}");
+                        }
+
+                        $elementsProcessed = 0;
+
+                        foreach ($parsedDv1['elements'] as $elem) {
+                            $elemId = $elem['id'];
+                            $elemType = $elem['tipo'];
+                            $elemTitle = $elem['titulo'];
+                            $elemText = $elem['texto'];
+                            $elemEventDate = $elem['fecha_acontecimiento'];
+                            $elemArtist = $elem['artista_banda'];
+                            $elemSources = is_array($elem['fuentes']) ? implode(', ', $elem['fuentes']) : (string) $elem['fuentes'];
+                            $elemImage = $elem['imagen_url'];
+                            $elemImageCredit = $elem['imagen_credito'];
+                            $elemNeedsReview = (bool) $elem['revision_requerida'];
+                            $elemReviewReason = $elem['motivo_revision'];
+                            $elemCorrectsId = $elem['corrige_id'];
+
+                            // 1. Manejo de correcciones (CORRIGE_ID)
+                            if (! empty($elemCorrectsId)) {
+                                $targetMeta = \App\Models\EmailPostSanitizedMeta::where('element_id', $elemCorrectsId)
+                                    ->orWhere('source_message_id', $elemCorrectsId)
+                                    ->first();
+
+                                if ($targetMeta && $targetMeta->post) {
+                                    $this->info("[CORRECCIÓN] Elemento {$elemId} corrige al post previo ID {$targetMeta->post_id} (ref {$elemCorrectsId}).");
+
+                                    $cleanText = $this->limpiarContenidoDeCorreo($elemText);
+                                    $sanitizer = app(\App\Services\EmailContentSanitizer::class);
+                                    $sanitized = $sanitizer->sanitize($cleanText);
+                                    $cleanHtml = $sanitized['clean_html'] ?? $cleanText;
+
+                                    $targetPost = $targetMeta->post;
+                                    $targetPost->update([
+                                        'title'   => $elemTitle ?: $targetPost->title,
+                                        'content' => $cleanHtml,
+                                        'excerpt' => Post::sanitizeExcerpt($cleanHtml, $cleanHtml, 160),
+                                    ]);
+
+                                    $correctionNote = "\n[CORRECCIÓN]: Actualizado por {$elemId} del lote {$batchId} el " . now()->toDateTimeString();
+                                    $targetMeta->update([
+                                        'corrects_element_id'      => $elemCorrectsId,
+                                        'editorial_notes'          => trim(($targetMeta->editorial_notes ?? '') . $correctionNote),
+                                        'superseded_by_message_id' => $messageId . '-' . $elemId,
+                                    ]);
+
+                                    $elementsProcessed++;
+                                    continue;
+                                } else {
+                                    $this->warn("[CORRECCIÓN NO ENCONTRADA] No se encontró el post con ID/ref {$elemCorrectsId}. Se creará como nuevo borrador con advertencia.");
+                                    $elemNeedsReview = true;
+                                    $elemReviewReason = trim("Referencia de corrección {$elemCorrectsId} no hallada en el sistema. " . ($elemReviewReason ?? ''));
+                                }
+                            }
+
+                            // 2. Deduplicación por Lote e Item ID
+                            $alreadyExists = \App\Models\EmailPostSanitizedMeta::where('batch_id', $batchId)
+                                ->where('element_id', $elemId)
+                                ->exists();
+
+                            if ($alreadyExists) {
+                                $this->info("[DUPLICADO] Omitiendo elemento ya registrado: {$batchId} / {$elemId}");
+                                continue;
+                            }
+
+                            // 3. Control de límites diarios
+                            $isHeldByLimit = false;
+                            $limitReason = null;
+                            if ($elemType === 'EFEMERIDE') {
+                                $efemLimit = (int) ($settings->email_daily_efemerides_limit ?? 9999);
+                                $efemCreatedToday = Post::whereDate('created_at', today())
+                                    ->whereHas('taxonomies', fn($t) => $t->where('name', 'Hoy en el Rock'))
+                                    ->count();
+                                if ($efemCreatedToday >= $efemLimit) {
+                                    $isHeldByLimit = true;
+                                    $limitReason = "Límite diario de efemérides alcanzado ({$efemLimit}/{$efemLimit})";
+                                }
+                            } else {
+                                $newsLimit = (int) ($settings->email_daily_news_limit ?? 9999);
+                                if ($postsCreatedToday >= $newsLimit) {
+                                    $isHeldByLimit = true;
+                                    $limitReason = "Límite diario de noticias alcanzado ({$newsLimit}/{$newsLimit})";
+                                }
+                            }
+
+                            // 4. Saneamiento estricto de contenido
+                            $cleanText = $this->limpiarContenidoDeCorreo($elemText);
+                            $sanitizer = app(\App\Services\EmailContentSanitizer::class);
+                            $sanitizerFailed = false;
+                            $sanitizerReason = null;
+
+                            try {
+                                $sanitized = $sanitizer->sanitize($cleanText);
+                                if (! isset($sanitized['clean_html']) || ! isset($sanitized['clean_text'])) {
+                                    $sanitizerFailed = true;
+                                    $sanitizerReason = 'Incumplimiento de contrato en saneador para elemento DV-1';
+                                    $cleanHtml = '<p>[CONTENIDO RETENIDO POR SEGURIDAD: Fallo de saneamiento]</p>';
+                                } else {
+                                    $cleanHtml = $sanitized['clean_html'];
+                                }
+                            } catch (\Throwable $e) {
+                                $sanitizerFailed = true;
+                                $sanitizerReason = 'Excepción en saneador: ' . $e->getMessage();
+                                $cleanHtml = '<p>[CONTENIDO RETENIDO POR SEGURIDAD: Excepción de saneamiento]</p>';
+                            }
+
+                            // 5. Slug único
+                            $baseSlug = Str::slug($elemTitle);
+                            $slug = $baseSlug ?: 'item-' . Str::random(8);
+                            $suffix = 1;
+                            while (DB::table('posts')->where('slug', $slug)->exists()) {
+                                $slug = ($baseSlug ?: 'item') . '-' . $suffix++;
+                            }
+
+                            // 6. Imagen de portada
+                            $featuredImageUrl = $elemImage;
+                            $imageSource = $elemImage ? 'darth_vader_dv1' : null;
+                            $imageFetchError = null;
+
+                            if (! $featuredImageUrl && $elemType === 'NOTICIA') {
+                                $firstSourceUrl = ! empty($elem['fuentes'][0]) ? $elem['fuentes'][0] : null;
+                                $resolverInfo = app(\App\Services\PostImageResolver::class)->resolveForPost([
+                                    'message'       => $message,
+                                    'body'          => $elemText,
+                                    'source_url'    => $firstSourceUrl,
+                                    'subject'       => $elemTitle,
+                                    'clean_title'   => $elemTitle,
+                                    'is_dark_vader' => true,
+                                    'artist_name'   => $elemArtist,
+                                ]);
+                                $featuredImageUrl = $resolverInfo['url'] ?? null;
+                                $imageSource = $resolverInfo['source'] ?? null;
+                                $imageFetchError = $resolverInfo['error_reason'] ?? null;
+                                $elemImageCredit = $elemImageCredit ?: ($resolverInfo['credit'] ?? null);
+                            }
+
+                            // 7. Persistencia atómica de Post y EmailPostSanitizedMeta
+                            DB::beginTransaction();
+                            try {
+                                $categoryName = ($elemType === 'EFEMERIDE') ? 'Hoy en el Rock' : 'Noticias Rock';
+
+                                $post = Post::create([
+                                    'title'             => $elemTitle,
+                                    'slug'              => $slug,
+                                    'content'           => $cleanHtml,
+                                    'excerpt'           => Post::sanitizeExcerpt($cleanHtml, $cleanHtml, 160),
+                                    'status'            => 'draft', // SIEMPRE BORRADOR en esta fase
+                                    'is_published'      => false,   // NUNCA AUTO-PUBLICAR en esta fase
+                                    'published_at'      => now(),   // Fecha de publicación preservada
+                                    'featured_image'    => $featuredImageUrl,
+                                    'source_url'        => ! empty($elem['fuentes'][0]) ? $elem['fuentes'][0] : null,
+                                    'source_name'       => $elemSources ?: 'Darth Vader Editorial',
+                                    'image_source'      => $imageSource,
+                                    'image_fetch_error' => $imageFetchError,
+                                    'categories'        => [$categoryName],
+                                    'author_email'      => $senderEmail,
+                                    'source_subject'    => $subject,
+                                ]);
+
+                                $this->syncTaxonomies($post, [$categoryName], $this->extractHashtags($elemTitle . ' ' . $cleanHtml));
+
+                                // Validación de seguridad
+                                $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+                                $safetyResult = $safetyValidator->validatePost($post);
+
+                                $securityStatus = 'passed';
+                                $incidentReason = null;
+
+                                if ($sanitizerFailed) {
+                                    $securityStatus = 'held_security';
+                                    $incidentReason = $sanitizerReason;
+                                } elseif ($elemNeedsReview) {
+                                    $securityStatus = 'needs_review';
+                                    $incidentReason = $elemReviewReason ?: 'Revisión editorial solicitada por Darth Vader';
+                                } elseif (! $safetyResult['is_safe']) {
+                                    $securityStatus = 'needs_review';
+                                    $incidentReason = implode(' | ', $safetyResult['violations']);
+                                } elseif ($isHeldByLimit) {
+                                    $securityStatus = 'needs_review';
+                                    $incidentReason = $limitReason;
+                                }
+
+                                $editorialNotes = [];
+                                if ($discrepancyNote) {
+                                    $editorialNotes[] = "[ADVERTENCIA LOTE]: " . $discrepancyNote;
+                                }
+                                if ($isHeldByLimit) {
+                                    $editorialNotes[] = "[LÍMITE]: " . $limitReason;
+                                }
+                                if ($elemReviewReason) {
+                                    $editorialNotes[] = "[NOTA DV]: " . $elemReviewReason;
+                                }
+
+                                \App\Models\EmailPostSanitizedMeta::create([
+                                    'post_id'              => $post->id,
+                                    'source_message_id'    => $messageId . '-' . $elemId,
+                                    'batch_id'             => $batchId,
+                                    'element_id'           => $elemId,
+                                    'sender_email'         => $senderEmail,
+                                    'source_subject'       => $subject,
+                                    'received_at'          => now(),
+                                    'event_date'           => $elemEventDate, // Almacena fecha histórica sin sobreescribir published_at
+                                    'artist_name'          => $elemArtist,
+                                    'sources'              => $elemSources,
+                                    'image_credit'         => $elemImageCredit,
+                                    'security_status'      => $securityStatus,
+                                    'incident_reason'      => $incidentReason,
+                                    'editorial_notes'      => ! empty($editorialNotes) ? implode("\n", $editorialNotes) : null,
+                                    'corrects_element_id'  => $elemCorrectsId,
+                                ]);
+
+                                DB::commit();
+                                $elementsProcessed++;
+                                $this->info("[DV-1 OK] Elemento {$elemId} ({$elemType}) guardado como borrador (ID: {$post->id}): {$elemTitle}");
+                            } catch (\Throwable $e) {
+                                DB::rollBack();
+                                Log::error("ProcessIncomingEmails: Fallo atómico al persistir elemento DV-1 {$elemId}.", [
+                                    'batch_id'   => $batchId,
+                                    'element_id' => $elemId,
+                                    'error'      => $e->getMessage(),
+                                ]);
+                                $this->warn("[FALLO ELEMENTO DV-1] Fallo al guardar elemento {$elemId}: {$e->getMessage()}. Continuando con el resto del lote.");
+                            }
+                        }
+
+                        $this->info("[DV-1 FINALIZADO] Lote {$batchId}: procesados {$elementsProcessed} elemento(s).");
+                        $this->recordProcessedEmail($messageId, $subject, 'processed');
+                        $message->setFlag('SEEN');
                         if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
                         continue;
                     }
 
-                    // 1. Extraer título normalizado (limpiando prefijos tipo Noticia: o Noticias:)
-                    $noticiaTitle = TextNormalizer::normalizeTitle($subject);
-                    $noticiaTitle = preg_replace('/^noticias?:\s*/iu', '', $noticiaTitle);
-                    $noticiaTitle = trim($noticiaTitle);
+                    // ── CASO B: EFEMÉRIDES LEGADAS (HOY EN EL ROCK) ────────────────
+                    if ($detectedFormat === \App\Services\EditorialDarthVaderParser::FORMAT_LEGACY_EFEMERIDES) {
+                        $legacyItems = $dvParser->parseLegacyEfemerides($subject, $body);
 
-                    // 2. Extraer FUENTE antes de limpiar el cuerpo
-                    $sourceUrl = app(\App\Services\PostImageResolver::class)->extractSourceUrl($body);
-
-                    // 3. Limpiar contenido del cuerpo
-                    $cleanContent = $this->limpiarContenidoDeCorreo($body);
-
-                    // 4. Validar cuerpo no vacío
-                    $isBodyEmpty = trim(strip_tags($cleanContent)) === '';
-                    $status = ($settings->email_auto_publish && !$isBodyEmpty) ? 'published' : 'draft';
-
-                    if ($isBodyEmpty) {
-                        $this->warn("[DARK VADER] El cuerpo de la noticia quedó vacío tras limpiarlo. Se creará como borrador.");
-                        $this->sendAdminAlert(
-                            'dark_vader_empty_body',
-                            '⚠️ Noticia de Dark Vader con cuerpo vacío',
-                            "El correo '{$subject}' de Dark Vader quedó con el cuerpo vacío tras limpiarlo. Se guardó como borrador (draft) para revisión manual.",
-                            $settings
-                        );
-                    }
-
-                    // 5. Deduplicación
-                    $normalizedSlug = TextNormalizer::normalizeSlug($noticiaTitle);
-                    $originalSubjectNormalized = TextNormalizer::normalizeSlug($subject);
-                    $windowHours = (int) config('services.dedupe.window_hours', 48);
-                    $minShared = (int) config('services.dedupe.entity_min_shared', 2);
-                    $recentPosts = Post::where('created_at', '>=', now()->subHours($windowHours))->get();
-                    $isDuplicate = false;
-                    $similarPostId = null;
-
-                    foreach ($recentPosts as $recent) {
-                        $recentSubjectNorm = TextNormalizer::normalizeSlug($recent->source_subject ?? '');
-                        if ($recentSubjectNorm !== '' && $recentSubjectNorm === $originalSubjectNormalized) {
-                            $isDuplicate = true;
-                            $similarPostId = $recent->id;
-                            break;
-                        }
-
-                        $recentNormSlug = TextNormalizer::normalizeSlug($recent->title);
-                        if ($recentNormSlug === $normalizedSlug) {
-                            $isDuplicate = true;
-                            $similarPostId = $recent->id;
-                            break;
-                        }
-
-                        $shared = \App\Support\EntityMatcher::sharedEntities($recent->title, $noticiaTitle);
-                        if (count($shared) >= $minShared) {
-                            $isDuplicate = true;
-                            $similarPostId = $recent->id;
-                            break;
-                        }
-                    }
-
-                    if ($isDuplicate) {
-                        $this->info("[DARK VADER] Ignorando noticia duplicada (similar a post ID: {$similarPostId})");
-                        Log::info("ProcessIncomingEmails: Noticia Dark Vader duplicada ignorada.", [
-                            'title' => $noticiaTitle,
-                            'subject' => $subject,
-                            'similar_to_post_id' => $similarPostId,
-                        ]);
-                    } else {
-                        // 6. Generar slug único
-                        $baseSlug = Str::slug($noticiaTitle);
-                        $slug = $baseSlug;
-                        $suffix = 1;
-                        while (DB::table('posts')->where('slug', $slug)->exists()) {
-                            $slug = $baseSlug . '-' . $suffix++;
-                        }
-
-                        // 7. Resolver imagen usando la línea FUENTE:
-                        $resolverInfo = app(\App\Services\PostImageResolver::class)->resolveForPost([
-                            'message'       => $message,
-                            'body'          => $body,
-                            'source_url'    => $sourceUrl,
-                            'subject'       => $subject,
-                            'clean_title'   => $noticiaTitle,
-                            'is_dark_vader' => true,
-                            'artist_name'   => null,
-                        ]);
-
-                        $featuredImageUrl = $resolverInfo['url'] ?? null;
-                        $imageFetchError = $resolverInfo['error_reason'] ?? null;
-
-                        // Saneamiento de contenido y evaluación de restricciones
-                        $sanitizer = app(\App\Services\EmailContentSanitizer::class);
-                        $sanitizerFailed = false;
-                        $sanitizerReason = null;
-                        try {
-                            $sanitizedNoticia = $sanitizer->sanitize($cleanContent);
-                            if (!isset($sanitizedNoticia['clean_html']) || !isset($sanitizedNoticia['clean_text'])) {
-                                $sanitizerFailed = true;
-                                $sanitizerReason = 'Incumplimiento de contrato: EmailContentSanitizer no devolvió clean_html o clean_text';
-                                $cleanContentNoticia = '<p>[CONTENIDO RETENIDO POR SEGURIDAD EDITORIAL: Fallo en saneador de contenidos]</p>';
-                            } else {
-                                $cleanContentNoticia = $sanitizedNoticia['clean_html'];
-                            }
-                        } catch (\Throwable $e) {
-                            $sanitizerFailed = true;
-                            $sanitizerReason = 'Excepción en EmailContentSanitizer: ' . $e->getMessage();
-                            $cleanContentNoticia = '<p>[CONTENIDO RETENIDO POR SEGURIDAD EDITORIAL: Error durante el saneamiento]</p>';
-                        }
-
-                        // Evaluación determinista de restricciones temporales desde asunto y cuerpo originales
-                        $scheduleManager = app(\App\Services\ReleaseScheduleManager::class);
-                        $schedule = $scheduleManager->evaluateSchedule($subject, $body, now());
-                        $isEmbargoActive = (bool) ($schedule['is_embargo_active'] ?? false);
-                        $embargoUntil = $schedule['embargo_until'] ?? null;
-                        $publishPermittedAt = $schedule['publish_permitted_at'] ?? now();
-
-                        DB::beginTransaction();
-                        try {
-                            $post = Post::create([
-                                'title'              => $noticiaTitle,
-                                'slug'               => $slug,
-                                'content'            => $cleanContentNoticia,
-                                'excerpt'            => Post::sanitizeExcerpt($cleanContentNoticia, $cleanContentNoticia, 160),
-                                'status'             => 'draft', // Creado como borrador antes de validar
-                                'is_published'       => false,
-                                'published_at'       => now(),
-                                'featured_image'     => $featuredImageUrl,
-                                'source_url'         => $sourceUrl ?: ($resolverInfo['article_url'] ?? null),
-                                'source_name'        => $resolverInfo['credit'] ?? null,
-                                'image_source'       => $resolverInfo['source'] ?? null,
-                                'image_fetch_error'  => $imageFetchError,
-                                'categories'         => ['Noticias Rock'],
-                                'author_email'       => $senderEmail,
-                                'source_subject'     => $subject,
-                            ]);
-
-                            $this->syncTaxonomies($post, ['Noticias Rock'], $this->extractHashtags($noticiaTitle . ' ' . $cleanContentNoticia));
-
-                            // Control de seguridad centralizado
-                            $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
-                            $safetyResult = $safetyValidator->validatePost($post);
-
-                            $securityStatus = 'passed';
-                            $incidentReason = null;
-                            if ($sanitizerFailed) {
-                                $securityStatus = 'held_security';
-                                $incidentReason = $sanitizerReason;
-                            } elseif (!$safetyResult['is_safe']) {
-                                $securityStatus = 'needs_review';
-                                $incidentReason = implode(' | ', $safetyResult['violations']);
-                            } elseif ($isEmbargoActive) {
-                                $securityStatus = 'held_embargo';
-                                $incidentReason = 'Material bajo embargo editorial detectado en correo original';
-                            }
-
-                            \App\Models\EmailPostSanitizedMeta::create([
-                                'post_id'              => $post->id,
-                                'source_message_id'    => $messageId,
-                                'sender_email'         => $senderEmail,
-                                'source_subject'       => $subject,
-                                'received_at'          => now(),
-                                'musical_release_date' => $schedule['musical_release_date'] ?? null,
-                                'embargo_until'        => $embargoUntil,
-                                'publish_permitted_at' => $publishPermittedAt,
-                                'is_embargo_active'    => $isEmbargoActive,
-                                'security_status'      => $securityStatus,
-                                'incident_reason'      => $incidentReason,
-                            ]);
-
-                            // Publicar ÚNICAMENTE si auto_publish está activo Y no hubo fallo de saneador, es seguro y no está embargado
-                            $canPublish = ($status === 'published') && !$sanitizerFailed && $safetyResult['is_safe'] && !$isEmbargoActive;
-                            $finalStatus = $canPublish ? 'published' : 'draft';
-
-                            if ($canPublish) {
-                                $post->update([
-                                    'status'       => 'published',
-                                    'is_published' => true,
-                                ]);
-                            }
-
-                            DB::commit();
-                        } catch (\Throwable $e) {
-                            DB::rollBack();
-                            Log::error("ProcessIncomingEmails: Fallo atómico al persistir noticia Dark Vader.", [
-                                'message_id' => $messageId,
-                                'code'       => $e->getCode(),
-                            ]);
-                            $this->recordProcessedEmail($messageId, $subject, 'failed_metadata', 'Fallo al guardar metadatos de noticia');
+                        if (empty($legacyItems)) {
+                            $this->warn("Efemérides legadas: cuerpo vacío tras parsear. Reteniendo como borrador de revisión.");
+                            $this->createDraftFallbackPost($message, $body, $subject, $senderEmail, $messageId, $settings, "Efemérides legadas vacías tras parseo");
+                            $this->recordProcessedEmail($messageId, $subject, 'processed');
+                            $message->setFlag('SEEN');
                             if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
                             continue;
                         }
 
-                        $this->info("[DARK VADER] Noticia procesada directamente (sin IA) — id {$post->id} — estado {$finalStatus} — título {$noticiaTitle}");
-                        Log::info("[DARK VADER] Noticia procesada directamente (sin IA) — id {$post->id} — título {$noticiaTitle}", [
-                            'post_id' => $post->id,
-                            'title'   => $noticiaTitle,
-                            'status'  => $finalStatus,
-                            'image'   => $featuredImageUrl,
-                        ]);
-                    }
- 
-                    $this->recordProcessedEmail($messageId, $subject, 'processed');
+                        $efemCreadas = 0;
+                        foreach ($legacyItems as $item) {
+                            $efTitle = $item['titulo'];
+                            $efText = $item['texto'];
+                            $efYear = $item['fecha_acontecimiento'];
 
-                    $message->setFlag('SEEN');
-                    if ($tempMp3Path && file_exists($tempMp3Path)) {
-                        @unlink($tempMp3Path);
+                            if (Post::where('title', $efTitle)->exists()) {
+                                $this->info("Ignorando efeméride duplicada: {$efTitle}");
+                                continue;
+                            }
+
+                            $cleanText = $this->limpiarContenidoDeCorreo($efText);
+                            $sanitizer = app(\App\Services\EmailContentSanitizer::class);
+                            $sanitizerFailed = false;
+                            try {
+                                $sanitized = $sanitizer->sanitize($cleanText);
+                                $cleanHtml = $sanitized['clean_html'] ?? $cleanText;
+                            } catch (\Throwable $e) {
+                                $sanitizerFailed = true;
+                                $cleanHtml = '<p>[CONTENIDO RETENIDO POR SEGURIDAD: Error de saneamiento]</p>';
+                            }
+
+                            $baseSlug = Str::slug($efTitle) ?: 'efemeride-' . Str::random(6);
+                            $slug = $baseSlug; $suffix = 1;
+                            while (DB::table('posts')->where('slug', $slug)->exists()) {
+                                $slug = $baseSlug . '-' . $suffix++;
+                            }
+
+                            DB::beginTransaction();
+                            try {
+                                $post = Post::create([
+                                    'title'          => $efTitle,
+                                    'slug'           => $slug,
+                                    'content'        => $cleanHtml,
+                                    'excerpt'        => Post::sanitizeExcerpt($cleanHtml, $cleanHtml, 160),
+                                    'status'         => 'draft', // SIEMPRE BORRADOR
+                                    'is_published'   => false,
+                                    'published_at'   => now(),
+                                    'featured_image' => null,
+                                    'source_url'     => null,
+                                    'source_name'    => 'Darth Vader Efemérides',
+                                    'categories'     => ['Hoy en el Rock'],
+                                    'author_email'   => $senderEmail,
+                                    'source_subject' => $subject,
+                                ]);
+
+                                $this->syncTaxonomies($post, ['Hoy en el Rock'], $this->extractHashtags($efTitle . ' ' . $cleanHtml));
+
+                                $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+                                $safetyResult = $safetyValidator->validatePost($post);
+
+                                $securityStatus = $sanitizerFailed ? 'held_security' : ($safetyResult['is_safe'] ? 'passed' : 'needs_review');
+
+                                \App\Models\EmailPostSanitizedMeta::create([
+                                    'post_id'           => $post->id,
+                                    'source_message_id' => $messageId . '-ef-' . $efemCreadas,
+                                    'sender_email'      => $senderEmail,
+                                    'source_subject'    => $subject,
+                                    'received_at'       => now(),
+                                    'event_date'        => $efYear,
+                                    'security_status'   => $securityStatus,
+                                    'incident_reason'   => ! $safetyResult['is_safe'] ? implode(' | ', $safetyResult['violations']) : ($sanitizerFailed ? 'Fallo en saneador de efeméride' : null),
+                                ]);
+
+                                DB::commit();
+                                $efemCreadas++;
+                                $this->info("[OK] Efeméride legada creada en borrador: {$efTitle}");
+                            } catch (\Throwable $e) {
+                                DB::rollBack();
+                                Log::error("ProcessIncomingEmails: Fallo atómico en efeméride legada.", ['error' => $e->getMessage()]);
+                            }
+                        }
+
+                        $this->info("Efemérides legadas procesadas: {$efemCreadas} de " . count($legacyItems) . " evento(s).");
+                        $this->recordProcessedEmail($messageId, $subject, 'processed');
+                        $message->setFlag('SEEN');
+                        if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                        continue;
                     }
+
+                    // ── CASO C: NOTICIA LEGADA ────────────────────────────────────
+                    if ($detectedFormat === \App\Services\EditorialDarthVaderParser::FORMAT_LEGACY_NOTICIA) {
+                        $parsedNoticia = $dvParser->parseLegacyNoticia($subject, $body);
+                        $noticiaTitle = $parsedNoticia['titulo'];
+                        $sourceUrl = $parsedNoticia['fuente_url'] ?: app(\App\Services\PostImageResolver::class)->extractSourceUrl($body);
+
+                        $cleanContent = $this->limpiarContenidoDeCorreo($body);
+                        $isBodyEmpty = trim(strip_tags($cleanContent)) === '';
+
+                        // Deduplicación por slug o similitud
+                        $normalizedSlug = TextNormalizer::normalizeSlug($noticiaTitle);
+                        $recentPosts = Post::where('created_at', '>=', now()->subHours(48))->get();
+                        $isDuplicate = false;
+
+                        foreach ($recentPosts as $recent) {
+                            if (TextNormalizer::normalizeSlug($recent->title) === $normalizedSlug) {
+                                $isDuplicate = true;
+                                break;
+                            }
+                        }
+
+                        if ($isDuplicate) {
+                            $this->info("[DARK VADER] Ignorando noticia legada duplicada: {$noticiaTitle}");
+                        } else {
+                            $baseSlug = Str::slug($noticiaTitle) ?: 'noticia-' . Str::random(6);
+                            $slug = $baseSlug; $suffix = 1;
+                            while (DB::table('posts')->where('slug', $slug)->exists()) {
+                                $slug = $baseSlug . '-' . $suffix++;
+                            }
+
+                            $resolverInfo = app(\App\Services\PostImageResolver::class)->resolveForPost([
+                                'message'       => $message,
+                                'body'          => $body,
+                                'source_url'    => $sourceUrl,
+                                'subject'       => $subject,
+                                'clean_title'   => $noticiaTitle,
+                                'is_dark_vader' => true,
+                                'artist_name'   => null,
+                            ]);
+
+                            $sanitizer = app(\App\Services\EmailContentSanitizer::class);
+                            $sanitizerFailed = false;
+                            try {
+                                $sanitized = $sanitizer->sanitize($cleanContent);
+                                $cleanHtml = $sanitized['clean_html'] ?? $cleanContent;
+                            } catch (\Throwable $e) {
+                                $sanitizerFailed = true;
+                                $cleanHtml = '<p>[CONTENIDO RETENIDO POR SEGURIDAD: Error de saneamiento]</p>';
+                            }
+
+                            DB::beginTransaction();
+                            try {
+                                $post = Post::create([
+                                    'title'             => $noticiaTitle,
+                                    'slug'              => $slug,
+                                    'content'           => $cleanHtml,
+                                    'excerpt'           => Post::sanitizeExcerpt($cleanHtml, $cleanHtml, 160),
+                                    'status'            => 'draft', // SIEMPRE BORRADOR
+                                    'is_published'      => false,
+                                    'published_at'      => now(),
+                                    'featured_image'    => $resolverInfo['url'] ?? null,
+                                    'source_url'        => $sourceUrl ?: ($resolverInfo['article_url'] ?? null),
+                                    'source_name'       => $resolverInfo['credit'] ?? 'Darth Vader Noticias',
+                                    'image_source'      => $resolverInfo['source'] ?? null,
+                                    'image_fetch_error' => $resolverInfo['error_reason'] ?? null,
+                                    'categories'        => ['Noticias Rock'],
+                                    'author_email'      => $senderEmail,
+                                    'source_subject'    => $subject,
+                                ]);
+
+                                $this->syncTaxonomies($post, ['Noticias Rock'], $this->extractHashtags($noticiaTitle . ' ' . $cleanHtml));
+
+                                $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+                                $safetyResult = $safetyValidator->validatePost($post);
+
+                                $securityStatus = $sanitizerFailed ? 'held_security' : ($safetyResult['is_safe'] ? 'passed' : 'needs_review');
+
+                                \App\Models\EmailPostSanitizedMeta::create([
+                                    'post_id'           => $post->id,
+                                    'source_message_id' => $messageId,
+                                    'sender_email'      => $senderEmail,
+                                    'source_subject'    => $subject,
+                                    'received_at'       => now(),
+                                    'security_status'   => $securityStatus,
+                                    'incident_reason'   => ! $safetyResult['is_safe'] ? implode(' | ', $safetyResult['violations']) : ($sanitizerFailed ? 'Fallo en saneador de noticia' : null),
+                                ]);
+
+                                DB::commit();
+                                $this->info("[DARK VADER] Noticia legada guardada en borrador: {$noticiaTitle}");
+                            } catch (\Throwable $e) {
+                                DB::rollBack();
+                                Log::error("ProcessIncomingEmails: Fallo atómico en noticia legada.", ['error' => $e->getMessage()]);
+                            }
+                        }
+
+                        $this->recordProcessedEmail($messageId, $subject, 'processed');
+                        $message->setFlag('SEEN');
+                        if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                        continue;
+                    }
+
+                    // ── CASO D: FORMATO DESCONOCIDO O NO RECONOCIDO ────────────────
+                    // Si el formato no coincide con DV-1 ni con los patrones reconocidos,
+                    // retener el contenido completo como borrador con motivo needs_review.
+                    $this->warn("[DARK VADER FORMATO DESCONOCIDO] Reteniendo correo completo como borrador para revisión humana: {$subject}");
+                    $this->createDraftFallbackPost($message, $body, $subject, $senderEmail, $messageId, $settings, "Formato no estructurado o ambiguo de Darth Vader (retenido para revisión humana)");
+                    $this->recordProcessedEmail($messageId, $subject, 'processed');
+                    $message->setFlag('SEEN');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
                     continue;
                 }
 
