@@ -136,15 +136,15 @@ class SiteController extends Controller
         $noticiasRock = $this->safeValue(
             fn () => Post::query()
                 ->published()
-                ->whereJsonContains('categories', 'Noticias Rock')
                 ->where(function ($q) {
-                    $q->where('author_email', 'dark.vader.agent@gmail.com')
-                      ->orWhereNull('author_email');
+                    $q->whereJsonContains('categories', 'Noticias Rock')
+                      ->orWhereHas('taxonomies', fn ($t) => $t->where('name', 'Noticias Rock'));
                 })
                 ->where('content', 'not like', '%html,body,table%')
                 ->where('excerpt', 'not like', '%html,body,table%')
                 ->where('excerpt', 'not like', '%mso-table-lspace%')
                 ->orderByDesc('published_at')
+                ->orderByDesc('id')
                 ->take(4)
                 ->get(),
             collect()

@@ -35,12 +35,31 @@
                         <div class="lucille-flat-surface p-4 flex flex-col justify-between transition-colors duration-200 hover:border-lucille-accent/40 group relative cursor-pointer">
                             <a href="{{ route('posts.single', ['year' => $post->published_at->format('Y'), 'month' => $post->published_at->format('m'), 'day' => $post->published_at->format('d'), 'slug' => $post->slug]) }}" class="absolute inset-0 z-30" aria-label="Leer más sobre {{ $post->title }}"></a>
                             <div>
-                                <div class="relative aspect-[4/3] overflow-hidden bg-[#111]">
-                                    <img src="{{ $post->featured_image_url ?: asset('assets/lucille/logo.png') }}"
-                                         alt="{{ $post->title }}"
-                                         onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ asset('assets/lucille/logo.png') }}'; }"
-                                         class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                         loading="lazy" decoding="async">
+                                <div class="relative aspect-[4/3] overflow-hidden bg-lucille-surface border border-lucille-line/20">
+                                    @if ($post->featured_image_url)
+                                        <img src="{{ $post->featured_image_url }}"
+                                             alt="{{ $post->title }}"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                             class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                             loading="lazy" decoding="async">
+                                        <div class="hidden h-full w-full flex-col items-center justify-center p-4 bg-lucille-surface text-center border border-lucille-line/20">
+                                            <div class="w-8 h-8 rounded-full bg-lucille-accent/10 border border-lucille-accent/30 flex items-center justify-center mb-2">
+                                                <svg class="w-4 h-4 text-lucille-accent" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+                                            </div>
+                                            <span class="text-[9px] uppercase tracking-[.25em] text-lucille-accent font-bold mb-1">Seven Rock Radio</span>
+                                            <span class="font-display text-sm uppercase tracking-wider text-lucille-heading line-clamp-2 px-2">{{ $post->title }}</span>
+                                            <span class="text-[8px] uppercase tracking-[.15em] text-lucille-body mt-1.5">Cobertura Editorial</span>
+                                        </div>
+                                    @else
+                                        <div class="h-full w-full flex flex-col items-center justify-center p-4 bg-lucille-surface text-center border border-lucille-line/20 group-hover:border-lucille-accent/40 transition-colors">
+                                            <div class="w-8 h-8 rounded-full bg-lucille-accent/10 border border-lucille-accent/30 flex items-center justify-center mb-2">
+                                                <svg class="w-4 h-4 text-lucille-accent" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+                                            </div>
+                                            <span class="text-[9px] uppercase tracking-[.25em] text-lucille-accent font-bold mb-1">Seven Rock Radio</span>
+                                            <span class="font-display text-sm uppercase tracking-wider text-lucille-heading line-clamp-2 px-2">{{ $post->title }}</span>
+                                            <span class="text-[8px] uppercase tracking-[.15em] text-lucille-body mt-1.5">Nota Editorial</span>
+                                        </div>
+                                    @endif
                                     @if ($post->en_memoria)
                                         <x-luto :nombre="$post->en_memoria_nombre" />
                                     @endif
