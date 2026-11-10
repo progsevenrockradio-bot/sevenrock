@@ -212,7 +212,7 @@ MD;
         $processor = app(EditorialBatchProcessor::class);
         $result = $processor->process($payload);
 
-        $this->assertTrue($result['success']);
+        $this->assertTrue($result['success'], json_encode($result));
         $this->assertSame(1, $result['created']);
 
         $post = Post::where('slug', 'iron-maiden-anuncia-fechas-de-su-gira-50-aniversario-en-estadios')->first();
@@ -763,5 +763,45 @@ MD;
         $this->assertNotNull(Post::where('title', 'Primer Elemento Valido Que Debe Persistir')->first());
         $this->assertNotNull(Post::where('title', 'Tercer Elemento Valido Posterior')->first());
         $this->assertNull(Post::where('title', 'Segundo Elemento Que Sufrira Error De Persistencia')->first());
+    }
+
+    public function test_batch_processor_stores_full_image_attribution_exceeding_30_chars(): void
+    {
+        $longCredit = 'Foto: Tilly antoine / Wikimedia Commons (CC BY-SA 4.0)';
+        $this->assertGreaterThan(30, mb_strlen($longCredit));
+
+        $payload = <<<MD
+FORMATO: DV-1
+LOTE_ID: BATCH-LONG-CREDIT
+TOTAL_ELEMENTOS: 1
+
+=== INICIO ELEMENTO ===
+ID: BATCH-LONG-CREDIT-E01
+TIPO: NOTICIA
+FECHA_EDITORIAL: 2026-11-10
+TITULO: Banda Legendaria Con Credito De Imagen Extenso
+TEXTO:
+Texto de prueba con atribucion fotografica detallada que supera ampliamente los 30 caracteres.
+FUENTES:
+- https://test.com
+IMAGEN_URL: storage/posts/covers/test.jpg
+IMAGEN_CREDITO: {$longCredit}
+REVISION_REQUERIDA: NO
+=== FIN ELEMENTO ===
+MD;
+
+        $processor = app(EditorialBatchProcessor::class);
+        $result = $processor->process($payload);
+
+        $this->assertTrue($result['success'], json_encode($result));
+        $this->assertSame(1, $result['created']);
+
+        $post = Post::where('slug', 'banda-legendaria-con-credito-de-imagen-extenso')->first();
+        $this->assertNotNull($post);
+        $this->assertSame($longCredit, $post->image_source);
+
+        $meta = EmailPostSanitizedMeta::where('element_id', 'BATCH-LONG-CREDIT-E01')->first();
+        $this->assertNotNull($meta);
+        $this->assertSame($longCredit, $meta->image_credit);
     }
 }

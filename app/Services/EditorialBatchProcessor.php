@@ -288,7 +288,10 @@ class EditorialBatchProcessor
                 $post->content = $htmlContent;
                 $post->excerpt = Str::limit(strip_tags($text), 220, '...');
                 $post->source_name = 'Darth Vader / Agencia Editorial';
-                $post->source_subject = "[DV-1] {$title}";
+                $post->source_subject = Str::limit("[DV-1] {$title}", 255, '');
+
+                $safeImageCredit = $imageCredit ? Str::limit((string) $imageCredit, 500, '') : null;
+                $safeImageAlt = $imageAlt ? Str::limit((string) $imageAlt, 500, '') : null;
 
                 if ($imagePath) {
                     if (Schema::hasColumn('posts', 'featured_image_path')) {
@@ -297,12 +300,12 @@ class EditorialBatchProcessor
                     if (Schema::hasColumn('posts', 'featured_image')) {
                         $post->featured_image = $imagePath;
                     }
-                    $post->image_source = $imageCredit;
+                    $post->image_source = $safeImageCredit;
                 }
 
                 // Persistir image_alt si existe la columna en posts
                 if (Schema::hasColumn('posts', 'image_alt')) {
-                    $post->image_alt = $imageAlt;
+                    $post->image_alt = $safeImageAlt;
                 }
 
                 $post->save();
@@ -324,14 +327,14 @@ class EditorialBatchProcessor
                 $meta->element_id = $elemId;
                 $meta->payload_hash = $payloadHash;
                 $meta->sender_email = $senderEmail;
-                $meta->source_subject = "[DV-1] {$title}";
+                $meta->source_subject = Str::limit("[DV-1] {$title}", 255, '');
                 $meta->received_at = now();
-                $meta->artist_name = $artist;
+                $meta->artist_name = $artist ? Str::limit((string) $artist, 255, '') : null;
                 $meta->event_date = $elem['fecha_acontecimiento'] ?? null;
                 $meta->sources = json_encode($fuentes, JSON_UNESCAPED_SLASHES);
-                $meta->image_credit = $imageCredit;
+                $meta->image_credit = $safeImageCredit;
                 if (Schema::hasColumn('email_post_sanitized_meta', 'image_alt')) {
-                    $meta->image_alt = $imageAlt;
+                    $meta->image_alt = $safeImageAlt;
                 }
                 $meta->editorial_notes = $revisionRequerida
                     ? "[REVISION_REQUERIDA] " . ($motivoRevision ?: 'Pendiente de validación editorial')
