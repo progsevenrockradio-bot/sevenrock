@@ -578,7 +578,12 @@
                                 <button type="button" @click="quickViewTab = 'summary'" :class="quickViewTab === 'summary' ? 'border-b-2 border-[#c32720] text-white' : 'text-gray-400 hover:text-white'" class="pb-2 px-3">Resumen</button>
                                 <button type="button" @click="quickViewTab = 'content'" :class="quickViewTab === 'content' ? 'border-b-2 border-[#c32720] text-white' : 'text-gray-400 hover:text-white'" class="pb-2 px-3">Contenido</button>
                                 <button type="button" @click="quickViewTab = 'media'" :class="quickViewTab === 'media' ? 'border-b-2 border-[#c32720] text-white' : 'text-gray-400 hover:text-white'" class="pb-2 px-3">Multimedia</button>
-                                <button type="button" @click="quickViewTab = 'security'" :class="quickViewTab === 'security' ? 'border-b-2 border-[#c32720] text-white' : 'text-gray-400 hover:text-white'" class="pb-2 px-3">Auditoría IA</button>
+                                <button type="button" @click="quickViewTab = 'security'" :class="quickViewTab === 'security' ? 'border-b-2 border-[#c32720] text-white' : 'text-gray-400 hover:text-white'" class="pb-2 px-3 inline-flex items-center gap-1.5">
+                                    <span>Auditoría & Fuentes</span>
+                                    <template x-if="quickViewData.meta && quickViewData.meta.has_pending_sources">
+                                        <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30" x-text="quickViewData.meta.pending_sources.length"></span>
+                                    </template>
+                                </button>
                             </div>
 
                             {{-- Pestaña 1: Resumen --}}
@@ -667,6 +672,33 @@
                                     </div>
                                 </template>
                             </div>
+
+                            {{-- Bloque visible de fuentes pendientes antes de confirmar --}}
+                            <template x-if="quickViewData.meta && quickViewData.meta.has_pending_sources">
+                                <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                                            <svg class="w-4 h-4 shrink-0 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                            Fuentes pendientes de aprobación expresa
+                                        </span>
+                                        <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-amber-500/20 text-amber-200 border border-amber-500/30" x-text="quickViewData.meta.pending_sources.length + ' pendientes'"></span>
+                                    </div>
+                                    <p class="text-[11px] text-gray-300">
+                                        Para publicar este artículo, verifica y autoriza las siguientes direcciones externas consultadas:
+                                    </p>
+                                    <ul class="space-y-1.5 mt-2">
+                                        <template x-for="url in quickViewData.meta.pending_sources" :key="url">
+                                            <li class="flex items-center justify-between gap-2 p-2 rounded bg-black/40 border border-amber-500/20 text-[11px] font-mono text-amber-200/90 break-all">
+                                                <div class="flex items-center gap-1.5 min-w-0">
+                                                    <span class="text-amber-400 font-bold shrink-0">•</span>
+                                                    <a :href="url" target="_blank" rel="noopener noreferrer" class="hover:text-white underline hover:no-underline truncate" x-text="url"></a>
+                                                </div>
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">Pendiente</span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </template>
 
                             {{-- Botones de Acción al pie del Drawer --}}
                             <div class="border-t border-white/10 pt-4 flex flex-wrap items-center justify-between gap-3">
