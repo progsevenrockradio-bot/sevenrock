@@ -235,6 +235,8 @@ class AdminEditorialController extends Controller
                     'incident_reason'      => $cleanIncidentReason,
                     'editorial_notes'      => $cleanEditorialNotes,
                     'redacted_materials'   => $safeRedactedLinks,
+                    'sources'              => is_array($meta?->sources) ? $meta->sources : (json_decode((string) ($meta?->sources ?? ''), true) ?: []),
+                    'approved_urls'        => $meta?->approved_urls ?? [],
                 ],
                 'media_inventory'      => $mediaInventory,
                 'source'               => [
@@ -317,6 +319,54 @@ class AdminEditorialController extends Controller
                             ? response()->json(['success' => false, 'message' => $msg, 'code' => 'active_embargo'], 422)
                             : back()->with('error', $msg);
                     }
+                }
+            }
+
+            // 3.1 Registrar URLs aprobadas si vienen en la petición o si se solicita aprobar las fuentes verificadas
+            if ($request->has('approved_urls') || $request->boolean('approve_verified_sources')) {
+                if (! $meta) {
+                    $meta = new EmailPostSanitizedMeta();
+                    $meta->post_id = $lockedPost->id;
+                    $meta->security_status = 'sanitized';
+                }
+
+                $candidateUrls = [];
+                if ($request->has('approved_urls')) {
+                    $candidateUrls = array_merge($candidateUrls, (array) $request->input('approved_urls'));
+                }
+                if ($request->boolean('approve_verified_sources') && ! empty($meta->sources)) {
+                    $decoded = is_array($meta->sources) ? $meta->sources : json_decode((string) $meta->sources, true);
+                    if (is_array($decoded)) {
+                        $candidateUrls = array_merge($candidateUrls, $decoded);
+                    }
+                }
+
+                $validApproved = [];
+                foreach ($candidateUrls as $rawCandidate) {
+                    $candidate = trim((string) $rawCandidate);
+                    if ($candidate === '') {
+                        continue;
+                    }
+
+                    // Bloqueo estricto de credenciales en URL
+                    if (parse_url($candidate, PHP_URL_USER) !== null || parse_url($candidate, PHP_URL_PASS) !== null) {
+                        continue;
+                    }
+
+                    // Bloqueo estricto de SSRF, esquemas no permitidos, enlaces privados o embargo
+                    $cl = $this->safetyValidator->getLinkClassifier()->classify($candidate);
+                    if (in_array($cl['classification'], ['suspicious', 'restricted_private', 'under_embargo'], true)) {
+                        continue;
+                    }
+
+                    $validApproved[] = $candidate;
+                }
+
+                if (! empty($validApproved)) {
+                    $existing = is_array($meta->approved_urls) ? $meta->approved_urls : [];
+                    $meta->approved_urls = array_values(array_unique(array_merge($existing, $validApproved)));
+                    $meta->save();
+                    $lockedPost->setRelation('sanitizedMeta', $meta);
                 }
             }
 
@@ -437,6 +487,49 @@ class AdminEditorialController extends Controller
                     : back()->with('error', $msg);
             }
 
+            // 2.1 Registrar URLs aprobadas si vienen en la petición o si se solicita aprobar las fuentes verificadas
+            if ($request->has('approved_urls') || $request->boolean('approve_verified_sources')) {
+                if (! $meta) {
+                    $meta = new EmailPostSanitizedMeta();
+                    $meta->post_id = $lockedPost->id;
+                    $meta->security_status = 'sanitized';
+                }
+
+                $candidateUrls = [];
+                if ($request->has('approved_urls')) {
+                    $candidateUrls = array_merge($candidateUrls, (array) $request->input('approved_urls'));
+                }
+                if ($request->boolean('approve_verified_sources') && ! empty($meta->sources)) {
+                    $decoded = is_array($meta->sources) ? $meta->sources : json_decode((string) $meta->sources, true);
+                    if (is_array($decoded)) {
+                        $candidateUrls = array_merge($candidateUrls, $decoded);
+                    }
+                }
+
+                $validApproved = [];
+                foreach ($candidateUrls as $rawCandidate) {
+                    $candidate = trim((string) $rawCandidate);
+                    if ($candidate === '') {
+                        continue;
+                    }
+                    if (parse_url($candidate, PHP_URL_USER) !== null || parse_url($candidate, PHP_URL_PASS) !== null) {
+                        continue;
+                    }
+                    $cl = $this->safetyValidator->getLinkClassifier()->classify($candidate);
+                    if (in_array($cl['classification'], ['suspicious', 'restricted_private', 'under_embargo'], true)) {
+                        continue;
+                    }
+                    $validApproved[] = $candidate;
+                }
+
+                if (! empty($validApproved)) {
+                    $existing = is_array($meta->approved_urls) ? $meta->approved_urls : [];
+                    $meta->approved_urls = array_values(array_unique(array_merge($existing, $validApproved)));
+                    $meta->save();
+                    $lockedPost->setRelation('sanitizedMeta', $meta);
+                }
+            }
+
             // 3. Validación de seguridad (respetando fecha programada posterior al embargo)
             $safety = $this->safetyValidator->validatePost($lockedPost, $scheduledAt);
             if (!$safety['is_safe']) {
@@ -484,6 +577,90 @@ class AdminEditorialController extends Controller
                 ? response()->json(['success' => false, 'message' => 'Error interno al programar la publicación.'], 500)
                 : back()->with('error', 'Error interno al programar la publicación.');
         }
+    }
+
+    /**
+     * Acción: Registrar aprobación editorial de URLs concretas verificadas para una noticia.
+     */
+    public function approveUrls(Request $request, Post $post): JsonResponse|RedirectResponse
+    {
+        $this->ensureAuthorized();
+        $this->ensureFromEmailPipeline($post);
+
+        $urlsInput = $request->input('urls', $request->input('approved_urls', []));
+        if (is_string($urlsInput)) {
+            $urlsInput = array_filter(array_map('trim', preg_split('/\r?\n|,/', $urlsInput) ?: []));
+        }
+
+        if (empty($urlsInput) && $request->boolean('approve_verified_sources')) {
+            $meta = $post->sanitizedMeta;
+            if ($meta && ! empty($meta->sources)) {
+                $decoded = is_array($meta->sources) ? $meta->sources : json_decode((string) $meta->sources, true);
+                if (is_array($decoded)) {
+                    $urlsInput = $decoded;
+                }
+            }
+        }
+
+        if (empty($urlsInput) || ! is_array($urlsInput)) {
+            $msg = 'Debe indicar al menos una URL concreta para aprobar.';
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $msg], 422)
+                : back()->with('error', $msg);
+        }
+
+        $meta = $post->sanitizedMeta ?: new EmailPostSanitizedMeta(['post_id' => $post->id, 'security_status' => 'sanitized']);
+
+        $approvedList = [];
+        $rejectedList = [];
+
+        foreach ($urlsInput as $rawCandidate) {
+            $candidate = trim((string) $rawCandidate);
+            if ($candidate === '') {
+                continue;
+            }
+
+            // 1. Bloqueo estricto de credenciales en URL
+            if (parse_url($candidate, PHP_URL_USER) !== null || parse_url($candidate, PHP_URL_PASS) !== null) {
+                $rejectedList[] = "La URL '{$this->maskSensitiveData($candidate)}' contiene credenciales no permitidas.";
+                continue;
+            }
+
+            // 2. Bloqueo estricto de SSRF, esquemas no permitidos, enlaces privados o embargo
+            $cl = $this->safetyValidator->getLinkClassifier()->classify($candidate);
+            if (in_array($cl['classification'], ['suspicious', 'restricted_private', 'under_embargo'], true)) {
+                $rejectedList[] = "La URL '{$cl['redacted_url']}' no es admisible para aprobación ({$cl['reason']}).";
+                continue;
+            }
+
+            $approvedList[] = $candidate;
+        }
+
+        if (! empty($approvedList)) {
+            $existing = is_array($meta->approved_urls) ? $meta->approved_urls : [];
+            $meta->approved_urls = array_values(array_unique(array_merge($existing, $approvedList)));
+            $meta->save();
+
+            $this->auditTrail->recordModel(
+                event: 'editorial_urls_approved',
+                model: $post,
+                before: ['approved_urls' => $existing],
+                after: ['approved_urls' => $meta->approved_urls],
+                context: ['actor_id' => auth()->id(), 'count' => count($approvedList)]
+            );
+        }
+
+        if (! empty($rejectedList)) {
+            $msg = implode('; ', $rejectedList);
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $msg, 'approved' => $approvedList, 'rejected' => $rejectedList], 422)
+                : back()->with('error', $msg);
+        }
+
+        $msg = count($approvedList) . ' URL(s) verificada(s) y aprobada(s) para esta noticia.';
+        return $request->wantsJson()
+            ? response()->json(['success' => true, 'message' => $msg, 'approved_urls' => $meta->approved_urls])
+            : back()->with('success', $msg);
     }
 
     /**
@@ -662,6 +839,43 @@ class AdminEditorialController extends Controller
                                 $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => "Bajo embargo activo hasta {$meta->embargo_until->format('d/m/Y H:i')}."];
                                 continue;
                             }
+                        }
+                    }
+
+                    // Registrar URLs aprobadas si se solicita
+                    if ($request->has('approved_urls') || $request->boolean('approve_verified_sources')) {
+                        if (! $meta) {
+                            $meta = new EmailPostSanitizedMeta();
+                            $meta->post_id = $post->id;
+                            $meta->security_status = 'sanitized';
+                        }
+                        $candidateUrls = [];
+                        if ($request->has('approved_urls')) {
+                            $candidateUrls = array_merge($candidateUrls, (array) $request->input('approved_urls'));
+                        }
+                        if ($request->boolean('approve_verified_sources') && ! empty($meta->sources)) {
+                            $decoded = is_array($meta->sources) ? $meta->sources : json_decode((string) $meta->sources, true);
+                            if (is_array($decoded)) {
+                                $candidateUrls = array_merge($candidateUrls, $decoded);
+                            }
+                        }
+                        $validApproved = [];
+                        foreach ($candidateUrls as $rawCandidate) {
+                            $candidate = trim((string) $rawCandidate);
+                            if ($candidate === '' || parse_url($candidate, PHP_URL_USER) !== null || parse_url($candidate, PHP_URL_PASS) !== null) {
+                                continue;
+                            }
+                            $cl = $this->safetyValidator->getLinkClassifier()->classify($candidate);
+                            if (in_array($cl['classification'], ['suspicious', 'restricted_private', 'under_embargo'], true)) {
+                                continue;
+                            }
+                            $validApproved[] = $candidate;
+                        }
+                        if (! empty($validApproved)) {
+                            $existing = is_array($meta->approved_urls) ? $meta->approved_urls : [];
+                            $meta->approved_urls = array_values(array_unique(array_merge($existing, $validApproved)));
+                            $meta->save();
+                            $post->setRelation('sanitizedMeta', $meta);
                         }
                     }
 

@@ -257,6 +257,7 @@
                 <form action="{{ route('admin.editorial.bulk-action') }}" method="POST" @submit="isSubmitting = true">
                     @csrf
                     <input type="hidden" name="action" value="approve">
+                    <input type="hidden" name="approve_verified_sources" value="1">
                     <template x-for="id in selectedPosts" :key="id">
                         <input type="hidden" name="post_ids[]" :value="id">
                     </template>
@@ -503,6 +504,7 @@
                                         @if (!$post->is_published && $post->status !== 'published')
                                             <form action="{{ route('admin.editorial.approve', $post) }}" method="POST" class="inline" onsubmit="return confirm('¿Aprobar y publicar inmediatamente esta noticia?')">
                                                 @csrf
+                                                <input type="hidden" name="approve_verified_sources" value="1">
                                                 <button 
                                                     type="submit" 
                                                     class="inline-flex items-center justify-center h-7 px-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 text-xs font-medium"
@@ -632,6 +634,24 @@
                                     <div>Correo: <span class="text-gray-300" x-text="quickViewData.author_email"></span></div>
                                     <div>Estado: <span class="font-bold uppercase tracking-wider" x-text="quickViewData.source.status"></span></div>
                                 </div>
+
+                                <template x-if="quickViewData.meta && quickViewData.meta.sources && quickViewData.meta.sources.length > 0">
+                                    <div class="rounded-xl border border-white/10 p-4 bg-white/[0.02] space-y-2">
+                                        <div class="text-[10px] uppercase text-gray-400 font-semibold">Fuentes Consultadas y Aprobación Editorial</div>
+                                        <ul class="space-y-1.5 mt-2">
+                                            <template x-for="sourceUrl in quickViewData.meta.sources" :key="sourceUrl">
+                                                <li class="flex items-center justify-between gap-2 p-1.5 rounded border border-white/5 bg-white/[0.01]">
+                                                    <span class="text-gray-300 font-mono text-[11px] truncate" x-text="sourceUrl"></span>
+                                                    <span 
+                                                        class="text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0"
+                                                        :class="(quickViewData.meta.approved_urls && quickViewData.meta.approved_urls.includes(sourceUrl)) ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'"
+                                                        x-text="(quickViewData.meta.approved_urls && quickViewData.meta.approved_urls.includes(sourceUrl)) ? 'Aprobada' : 'Pendiente'"
+                                                    ></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </template>
                             </div>
 
                             {{-- Botones de Acción al pie del Drawer --}}
@@ -643,6 +663,7 @@
                                 <div class="flex items-center gap-2">
                                     <form :action="'/admin/editorial/' + quickViewData.id + '/approve'" method="POST" onsubmit="return confirm('¿Aprobar y publicar ahora?')">
                                         @csrf
+                                        <input type="hidden" name="approve_verified_sources" value="1">
                                         <button type="submit" class="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
                                             ✅ Publicar Ahora
                                         </button>

@@ -52,7 +52,7 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="font-display text-2xl sm:text-3xl uppercase tracking-wider text-[#dcdcdc] flex items-center gap-3">
-                    <span>Incidencias y Rectificaciones</span>
+                    <span>Incidencias y Rectificaciones Editoriales</span>
                     @if ($counts['urgent'] > 0)
                         <span class="text-xs px-2.5 py-0.5 rounded-full border border-rose-500/40 bg-rose-950/60 text-rose-200 font-sans uppercase font-bold animate-pulse">
                             🚨 {{ $counts['urgent'] }} Urgente(s)

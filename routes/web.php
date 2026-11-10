@@ -275,6 +275,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/', 'index')->name('index');
         Route::get('/{post}/quick-view', 'quickView')->name('quick-view');
         Route::post('/{post}/approve', 'approve')->name('approve');
+        Route::post('/{post}/approve-urls', 'approveUrls')->name('approve-urls');
         Route::post('/{post}/schedule', 'schedule')->name('schedule');
         Route::post('/{post}/reject', 'reject')->name('reject');
         Route::post('/{post}/hold', 'hold')->name('hold');

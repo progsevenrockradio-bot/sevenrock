@@ -72,13 +72,18 @@ class LinkSecurityClassifier
 
         // 1. Chequeo de seguridad: esquemas maliciosos o SSRF/redes privadas
         if ($this->isSuspiciousOrInternal($unwrapped)) {
+            $reason = 'ssrf_or_malicious_scheme_detected';
+            if (parse_url($unwrapped, PHP_URL_USER) !== null || parse_url($unwrapped, PHP_URL_PASS) !== null) {
+                $reason = 'credentials_in_url';
+            }
+
             return [
                 'url'                => $url,
                 'unwrapped_url'      => $unwrapped,
                 'redacted_url'       => $redacted,
                 'classification'     => 'suspicious',
                 'is_allowed_in_post' => false,
-                'reason'             => 'ssrf_or_malicious_scheme_detected',
+                'reason'             => $reason,
             ];
         }
 
@@ -196,6 +201,9 @@ class LinkSecurityClassifier
      */
     public function redactUrl(string $url): string
     {
+        // Enmascarar credenciales de usuario/contraseña en la URL
+        $url = (string) preg_replace('#^(https?://)([^:/@\s]+)(?::([^@\s]*))?@#i', '$1***:***@', $url);
+
         $parts = parse_url($url);
         if (! isset($parts['query'])) {
             // Ocultar secret tokens en rutas de SoundCloud
@@ -256,8 +264,15 @@ class LinkSecurityClassifier
             return true;
         }
 
+        // Credenciales incrustadas (http://user:pass@host)
+        $user = parse_url($url, PHP_URL_USER);
+        $pass = parse_url($url, PHP_URL_PASS);
+        if ($user !== null || $pass !== null) {
+            return true;
+        }
+
         $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
-        if ($host === '' || $host === 'localhost' || $host === '127.0.0.1' || $host === '::1') {
+        if ($host === '' || $host === 'localhost' || $host === '127.0.0.1' || $host === '::1' || $host === '0.0.0.0') {
             return true;
         }
 

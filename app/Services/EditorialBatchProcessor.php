@@ -332,6 +332,9 @@ class EditorialBatchProcessor
                 $meta->artist_name = $artist ? Str::limit((string) $artist, 255, '') : null;
                 $meta->event_date = $elem['fecha_acontecimiento'] ?? null;
                 $meta->sources = json_encode($fuentes, JSON_UNESCAPED_SLASHES);
+                if (Schema::hasColumn('email_post_sanitized_meta', 'approved_urls') && ! empty($fuentes) && ! $revisionRequerida) {
+                    $meta->approved_urls = $fuentes;
+                }
                 $meta->image_credit = $safeImageCredit;
                 if (Schema::hasColumn('email_post_sanitized_meta', 'image_alt')) {
                     $meta->image_alt = $safeImageAlt;
