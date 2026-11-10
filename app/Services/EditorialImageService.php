@@ -64,23 +64,27 @@ class EditorialImageService
         }
 
         // 2. Caso B: Ficha de Wikimedia Commons o Wikipedia (resolución de API y licencia)
-        $downloadUrl = $raw;
-        $resolvedCredit = $declaredCredit;
-
-        if ($this->isWikimediaPageUrl($raw)) {
-            $metaResult = $this->resolveFromWikimediaCommonsApi($raw, $declaredCredit);
-            if (! $metaResult['success']) {
-                return [
-                    'success' => false,
-                    'path'    => null,
-                    'credit'  => $declaredCredit,
-                    'error'   => "Validación de Wikimedia Commons: " . $metaResult['error'],
-                ];
-            }
-
-            $downloadUrl = $metaResult['download_url'];
-            $resolvedCredit = $metaResult['credit'] ?: $declaredCredit;
+        if (! $this->isWikimediaPageUrl($raw)) {
+            return [
+                'success' => false,
+                'path'    => null,
+                'credit'  => $declaredCredit,
+                'error'   => "URL directa sin acreditación de permiso ('{$raw}'). Solo se automatizan imágenes nuevas a partir de fichas originales de Wikimedia Commons con metadatos verificados.",
+            ];
         }
+
+        $metaResult = $this->resolveFromWikimediaCommonsApi($raw, $declaredCredit);
+        if (! $metaResult['success']) {
+            return [
+                'success' => false,
+                'path'    => null,
+                'credit'  => $declaredCredit,
+                'error'   => "Validación de Wikimedia Commons: " . $metaResult['error'],
+            ];
+        }
+
+        $downloadUrl = $metaResult['download_url'];
+        $resolvedCredit = $metaResult['credit'] ?: $declaredCredit;
 
         // 3. Validación de seguridad inicial contra SSRF
         $securityCheck = $this->validateSafeRemoteUrl($downloadUrl);

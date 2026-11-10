@@ -288,13 +288,53 @@ MARKDOWN;
         imagedestroy($img);
 
         Http::fake([
-            'https://upload.wikimedia.org/wikipedia/commons/ghost-photo-batch1.jpg' => Http::response($imgData, 200, ['Content-Type' => 'image/jpeg']),
-            'https://upload.wikimedia.org/wikipedia/commons/ghost-photo-batch2.jpg' => Http::response($imgData, 200, ['Content-Type' => 'image/jpeg']),
+            'https://commons.wikimedia.org/w/api.php?*Ghost_Batch1.jpg*' => Http::response([
+                'query' => [
+                    'pages' => [
+                        '101' => [
+                            'title' => 'File:Ghost_Batch1.jpg',
+                            'imageinfo' => [
+                                [
+                                    'url' => 'https://upload.wikimedia.org/wikipedia/commons/ghost-direct-batch1.jpg',
+                                    'size' => strlen($imgData),
+                                    'extmetadata' => [
+                                        'Artist' => ['value' => 'Photographer One'],
+                                        'LicenseShortName' => ['value' => 'CC BY-SA 4.0'],
+                                        'LicenseUrl' => ['value' => 'https://creativecommons.org/licenses/by-sa/4.0'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+            'https://commons.wikimedia.org/w/api.php?*Ghost_Batch2.jpg*' => Http::response([
+                'query' => [
+                    'pages' => [
+                        '102' => [
+                            'title' => 'File:Ghost_Batch2.jpg',
+                            'imageinfo' => [
+                                [
+                                    'url' => 'https://upload.wikimedia.org/wikipedia/commons/ghost-direct-batch2.jpg',
+                                    'size' => strlen($imgData),
+                                    'extmetadata' => [
+                                        'Artist' => ['value' => 'Photographer Two'],
+                                        'LicenseShortName' => ['value' => 'CC BY-SA 4.0'],
+                                        'LicenseUrl' => ['value' => 'https://creativecommons.org/licenses/by-sa/4.0'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+            'https://upload.wikimedia.org/wikipedia/commons/ghost-direct-batch1.jpg' => Http::response($imgData, 200, ['Content-Type' => 'image/jpeg']),
+            'https://upload.wikimedia.org/wikipedia/commons/ghost-direct-batch2.jpg' => Http::response($imgData, 200, ['Content-Type' => 'image/jpeg']),
         ]);
 
         // Lote 1: DV-20261111-01, E01
         $res1 = $service->resolveAndStore(
-            'https://upload.wikimedia.org/wikipedia/commons/ghost-photo-batch1.jpg',
+            'https://commons.wikimedia.org/wiki/File:Ghost_Batch1.jpg',
             'DV-20261111-01',
             'DV-20261111-01-E01',
             'ghost-confirma-nuevo-album',
@@ -307,7 +347,7 @@ MARKDOWN;
 
         // Lote 2: DV-20261112-01, E01 (Mismo ID corto de elemento y mismo slug)
         $res2 = $service->resolveAndStore(
-            'https://upload.wikimedia.org/wikipedia/commons/ghost-photo-batch2.jpg',
+            'https://commons.wikimedia.org/wiki/File:Ghost_Batch2.jpg',
             'DV-20261112-01',
             'DV-20261112-01-E01',
             'ghost-confirma-nuevo-album',
@@ -328,6 +368,66 @@ MARKDOWN;
 
         $this->assertFileExists($file1);
         $this->assertFileExists($file2);
+    }
+
+    public function test_direct_image_url_without_commons_sheet_is_not_downloaded_and_marked_pending(): void
+    {
+        // Interceptar todas las llamadas HTTP
+        Http::fake();
+
+        $payload = <<<'MARKDOWN'
+FORMATO: DV-1
+LOTE_ID: DV-20261115-01
+FECHA_EDITORIAL: 2026-11-15
+ZONA_HORARIA: Europe/Madrid
+TOTAL_ELEMENTOS: 1
+MODO: BORRADOR
+
+=== INICIO ELEMENTO ===
+ID: DV-20261115-01-E01
+TIPO: NOTICIA
+ARTISTA_BANDA: Iron Maiden
+TITULO: Iron Maiden confirma concierto masivo en Sudamerica
+FECHA_EDITORIAL: 2026-11-15
+TEXTO:
+La dama de hierro anuncia fecha oficial para su gira mundial de estadios.
+FUENTES:
+- https://ironmaiden.com/tour
+IMAGEN_URL: https://upload.wikimedia.org/wikipedia/commons/direct-unverified-photo.jpg
+IMAGEN_CREDITO: Foto directa no verificada
+IMAGEN_ALT: Bruce Dickinson en concierto
+REVISION_REQUERIDA: NO
+=== FIN ELEMENTO ===
+MARKDOWN;
+
+        $processor = app(EditorialBatchProcessor::class);
+        $result = $processor->process($payload, [], 'msg-direct-url-test');
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(1, $result['created']);
+
+        // 1. Verificación de seguridad y economía de red: CERO peticiones HTTP enviadas
+        Http::assertNothingSent();
+
+        // 2. El borrador se crea y se conserva intacto
+        $post = Post::where('slug', 'iron-maiden-confirma-concierto-masivo-en-sudamerica')->first();
+        $this->assertNotNull($post);
+        $this->assertSame('draft', $post->status);
+        $this->assertFalse((bool) $post->is_published);
+
+        // 3. No se asignó imagen descargada (featured_image permanece null)
+        $this->assertNull($post->featured_image);
+
+        // 4. El crédito declarado se conserva para la revisión editorial
+        $this->assertSame('Foto directa no verificada', $post->image_source);
+
+        // 5. Metadatos marcan el pendiente visible de imagen
+        $meta = EmailPostSanitizedMeta::where('element_id', 'DV-20261115-01-E01')->first();
+        $this->assertNotNull($meta);
+        $this->assertSame('needs_review', $meta->security_status);
+        $this->assertStringContainsString('IMAGEN_PENDIENTE', (string) $meta->editorial_notes);
+        $this->assertStringContainsString('URL directa sin acreditación de permiso', (string) $meta->editorial_notes);
+        $this->assertStringContainsString('URL directa sin acreditación de permiso', (string) $meta->incident_reason);
     }
 
     public function test_controlled_clock_schedule_arrival_at_0307_and_processing_at_0315_with_idempotency(): void
@@ -379,7 +479,7 @@ La banda sueca Ghost ha confirmado oficialmente que entrara al estudio de grabac
 Tobias Forge explico que el concepto musical explorara terrenos mas oscuros con una produccion sinfonica de gran envergadura.
 FUENTES:
 - https://blabbermouth.net/news/ghost-new-album-2027
-IMAGEN_URL: https://upload.wikimedia.org/wikipedia/commons/ghost-photo.jpg
+IMAGEN_URL: https://commons.wikimedia.org/wiki/File:Ghost_Live_2026.jpg
 IMAGEN_CREDITO: Foto: Rock Magazine / Wikimedia Commons (CC BY-SA 4.0)
 IMAGEN_ALT: Tobias Forge de Ghost en directo
 REVISION_REQUERIDA: NO
@@ -397,7 +497,7 @@ Un dia como hoy en Glasgow nace Angus Young, legendario guitarrista lider y cofu
 Su estilo inconfundible con la Gibson SG y su uniforme colegial se convirtieron en un icono eterno del rock and roll.
 FUENTES:
 - https://es.wikipedia.org/wiki/Angus_Young
-IMAGEN_URL: https://example.com/broken-image-404.jpg
+IMAGEN_URL: https://commons.wikimedia.org/wiki/File:Angus_Young_Broken_404.jpg
 IMAGEN_CREDITO: Foto no disponible
 IMAGEN_ALT: Angus Young con su guitarra
 REVISION_REQUERIDA: NO
@@ -418,8 +518,28 @@ MARKDOWN;
         imagedestroy($img);
 
         Http::fake([
+            'https://commons.wikimedia.org/w/api.php?*Ghost_Live_2026.jpg*' => Http::response([
+                'query' => [
+                    'pages' => [
+                        '201' => [
+                            'title' => 'File:Ghost_Live_2026.jpg',
+                            'imageinfo' => [
+                                [
+                                    'url' => 'https://upload.wikimedia.org/wikipedia/commons/ghost-photo.jpg',
+                                    'size' => strlen($validJpgData),
+                                    'extmetadata' => [
+                                        'Artist' => ['value' => 'Rock Magazine'],
+                                        'LicenseShortName' => ['value' => 'CC BY-SA 4.0'],
+                                        'LicenseUrl' => ['value' => 'https://creativecommons.org/licenses/by-sa/4.0'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+            'https://commons.wikimedia.org/w/api.php?*Angus_Young_Broken_404.jpg*' => Http::response('Not Found', 404),
             'https://upload.wikimedia.org/wikipedia/commons/ghost-photo.jpg' => Http::response($validJpgData, 200, ['Content-Type' => 'image/jpeg']),
-            'https://example.com/broken-image-404.jpg' => Http::response('Not Found', 404),
         ]);
 
         // 3. Simular reloj a las 03:15 Europe/Madrid (segunda consulta periódica)
