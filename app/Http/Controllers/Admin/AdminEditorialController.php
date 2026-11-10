@@ -237,6 +237,10 @@ class AdminEditorialController extends Controller
                     'redacted_materials'   => $safeRedactedLinks,
                     'sources'              => is_array($meta?->sources) ? $meta->sources : (json_decode((string) ($meta?->sources ?? ''), true) ?: []),
                     'approved_urls'        => $meta?->approved_urls ?? [],
+                    'pending_sources'      => $this->safetyValidator->getPendingUnapprovedSources($post),
+                    'has_pending_sources'  => ! empty($this->safetyValidator->getPendingUnapprovedSources($post)),
+                    'approved_at'          => $meta?->approved_at?->format('d/m/Y H:i'),
+                    'approved_by'          => $meta?->approver?->name ?? ($meta?->approved_by ? "Usuario #{$meta->approved_by}" : null),
                 ],
                 'media_inventory'      => $mediaInventory,
                 'source'               => [
@@ -322,8 +326,9 @@ class AdminEditorialController extends Controller
                 }
             }
 
-            // 3.1 Registrar URLs aprobadas si vienen en la petición o si se solicita aprobar las fuentes verificadas
-            if ($request->has('approved_urls') || $request->boolean('approve_verified_sources')) {
+            // 3.1 Acción Explícita: «Aprobar estas fuentes y publicar»
+            // Registra usuario, fecha y URLs aprobadas de forma explícita sin consentimiento oculto
+            if ($request->boolean('approve_explicit_sources') || $request->has('approved_urls')) {
                 if (! $meta) {
                     $meta = new EmailPostSanitizedMeta();
                     $meta->post_id = $lockedPost->id;
@@ -331,14 +336,10 @@ class AdminEditorialController extends Controller
                 }
 
                 $candidateUrls = [];
-                if ($request->has('approved_urls')) {
+                if ($request->has('sources_to_approve')) {
+                    $candidateUrls = array_merge($candidateUrls, (array) $request->input('sources_to_approve'));
+                } elseif ($request->has('approved_urls')) {
                     $candidateUrls = array_merge($candidateUrls, (array) $request->input('approved_urls'));
-                }
-                if ($request->boolean('approve_verified_sources') && ! empty($meta->sources)) {
-                    $decoded = is_array($meta->sources) ? $meta->sources : json_decode((string) $meta->sources, true);
-                    if (is_array($decoded)) {
-                        $candidateUrls = array_merge($candidateUrls, $decoded);
-                    }
                 }
 
                 $validApproved = [];
@@ -363,10 +364,25 @@ class AdminEditorialController extends Controller
                 }
 
                 if (! empty($validApproved)) {
-                    $existing = is_array($meta->approved_urls) ? $meta->approved_urls : [];
-                    $meta->approved_urls = array_values(array_unique(array_merge($existing, $validApproved)));
+                    $meta->registerApprovedUrls($validApproved, auth()->id());
                     $meta->save();
                     $lockedPost->setRelation('sanitizedMeta', $meta);
+
+                    $this->auditTrail->recordModel(
+                        event: 'editorial_sources_explicitly_approved',
+                        model: $lockedPost,
+                        before: ['approved_urls' => $meta->getOriginal('approved_urls')],
+                        after: [
+                            'approved_urls' => $meta->approved_urls,
+                            'approved_at'   => $meta->approved_at?->toIso8601String(),
+                            'approved_by'   => $meta->approved_by,
+                        ],
+                        context: [
+                            'action'   => 'approve_explicit_sources_and_publish',
+                            'actor_id' => auth()->id(),
+                            'count'    => count($validApproved),
+                        ]
+                    );
                 }
             }
 
@@ -487,8 +503,8 @@ class AdminEditorialController extends Controller
                     : back()->with('error', $msg);
             }
 
-            // 2.1 Registrar URLs aprobadas si vienen en la petición o si se solicita aprobar las fuentes verificadas
-            if ($request->has('approved_urls') || $request->boolean('approve_verified_sources')) {
+            // 2.1 Acción Explícita: Registrar URLs aprobadas si se autorizan explícitamente
+            if ($request->boolean('approve_explicit_sources') || $request->has('approved_urls')) {
                 if (! $meta) {
                     $meta = new EmailPostSanitizedMeta();
                     $meta->post_id = $lockedPost->id;
@@ -496,14 +512,10 @@ class AdminEditorialController extends Controller
                 }
 
                 $candidateUrls = [];
-                if ($request->has('approved_urls')) {
+                if ($request->has('sources_to_approve')) {
+                    $candidateUrls = array_merge($candidateUrls, (array) $request->input('sources_to_approve'));
+                } elseif ($request->has('approved_urls')) {
                     $candidateUrls = array_merge($candidateUrls, (array) $request->input('approved_urls'));
-                }
-                if ($request->boolean('approve_verified_sources') && ! empty($meta->sources)) {
-                    $decoded = is_array($meta->sources) ? $meta->sources : json_decode((string) $meta->sources, true);
-                    if (is_array($decoded)) {
-                        $candidateUrls = array_merge($candidateUrls, $decoded);
-                    }
                 }
 
                 $validApproved = [];
@@ -523,8 +535,7 @@ class AdminEditorialController extends Controller
                 }
 
                 if (! empty($validApproved)) {
-                    $existing = is_array($meta->approved_urls) ? $meta->approved_urls : [];
-                    $meta->approved_urls = array_values(array_unique(array_merge($existing, $validApproved)));
+                    $meta->registerApprovedUrls($validApproved, auth()->id());
                     $meta->save();
                     $lockedPost->setRelation('sanitizedMeta', $meta);
                 }
@@ -638,14 +649,18 @@ class AdminEditorialController extends Controller
 
         if (! empty($approvedList)) {
             $existing = is_array($meta->approved_urls) ? $meta->approved_urls : [];
-            $meta->approved_urls = array_values(array_unique(array_merge($existing, $approvedList)));
+            $meta->registerApprovedUrls($approvedList, auth()->id());
             $meta->save();
 
             $this->auditTrail->recordModel(
                 event: 'editorial_urls_approved',
                 model: $post,
                 before: ['approved_urls' => $existing],
-                after: ['approved_urls' => $meta->approved_urls],
+                after: [
+                    'approved_urls' => $meta->approved_urls,
+                    'approved_at'   => $meta->approved_at?->toIso8601String(),
+                    'approved_by'   => $meta->approved_by,
+                ],
                 context: ['actor_id' => auth()->id(), 'count' => count($approvedList)]
             );
         }
@@ -842,22 +857,18 @@ class AdminEditorialController extends Controller
                         }
                     }
 
-                    // Registrar URLs aprobadas si se solicita
-                    if ($request->has('approved_urls') || $request->boolean('approve_verified_sources')) {
+                    // Acción Explícita: Registrar URLs aprobadas si se autorizan explícitamente
+                    if ($request->boolean('approve_explicit_sources') || $request->has('approved_urls')) {
                         if (! $meta) {
                             $meta = new EmailPostSanitizedMeta();
                             $meta->post_id = $post->id;
                             $meta->security_status = 'sanitized';
                         }
                         $candidateUrls = [];
-                        if ($request->has('approved_urls')) {
+                        if ($request->has('sources_to_approve')) {
+                            $candidateUrls = array_merge($candidateUrls, (array) $request->input('sources_to_approve'));
+                        } elseif ($request->has('approved_urls')) {
                             $candidateUrls = array_merge($candidateUrls, (array) $request->input('approved_urls'));
-                        }
-                        if ($request->boolean('approve_verified_sources') && ! empty($meta->sources)) {
-                            $decoded = is_array($meta->sources) ? $meta->sources : json_decode((string) $meta->sources, true);
-                            if (is_array($decoded)) {
-                                $candidateUrls = array_merge($candidateUrls, $decoded);
-                            }
                         }
                         $validApproved = [];
                         foreach ($candidateUrls as $rawCandidate) {
@@ -872,8 +883,7 @@ class AdminEditorialController extends Controller
                             $validApproved[] = $candidate;
                         }
                         if (! empty($validApproved)) {
-                            $existing = is_array($meta->approved_urls) ? $meta->approved_urls : [];
-                            $meta->approved_urls = array_values(array_unique(array_merge($existing, $validApproved)));
+                            $meta->registerApprovedUrls($validApproved, auth()->id());
                             $meta->save();
                             $post->setRelation('sanitizedMeta', $meta);
                         }

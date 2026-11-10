@@ -18,6 +18,12 @@ return new class extends Migration
                 if (! Schema::hasColumn('email_post_sanitized_meta', 'approved_urls')) {
                     $table->json('approved_urls')->nullable()->after('sources');
                 }
+                if (! Schema::hasColumn('email_post_sanitized_meta', 'approved_at')) {
+                    $table->timestamp('approved_at')->nullable()->after('approved_urls');
+                }
+                if (! Schema::hasColumn('email_post_sanitized_meta', 'approved_by')) {
+                    $table->unsignedBigInteger('approved_by')->nullable()->after('approved_at');
+                }
             });
         }
     }
@@ -29,11 +35,20 @@ return new class extends Migration
     {
         if (Schema::hasTable('email_post_sanitized_meta')) {
             Schema::table('email_post_sanitized_meta', function (Blueprint $table) {
+                $columns = [];
+                if (Schema::hasColumn('email_post_sanitized_meta', 'approved_by')) {
+                    $columns[] = 'approved_by';
+                }
+                if (Schema::hasColumn('email_post_sanitized_meta', 'approved_at')) {
+                    $columns[] = 'approved_at';
+                }
                 if (Schema::hasColumn('email_post_sanitized_meta', 'approved_urls')) {
-                    $table->dropColumn('approved_urls');
+                    $columns[] = 'approved_urls';
+                }
+                if (! empty($columns)) {
+                    $table->dropColumn($columns);
                 }
             });
         }
     }
 };
-

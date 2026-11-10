@@ -431,5 +431,23 @@ class Post extends Model
         return !empty($this->source_subject)
             || ($this->relationLoaded('sanitizedMeta') ? $this->sanitizedMeta !== null : $this->sanitizedMeta()->exists());
     }
+
+    /**
+     * Obtiene las fuentes que aún no han sido aprobadas editorialmente.
+     *
+     * @return array<int, string>
+     */
+    public function getPendingSources(): array
+    {
+        return app(\App\Services\EmailSafetyValidator::class)->getPendingUnapprovedSources($this);
+    }
+
+    /**
+     * Comprueba si el post tiene fuentes pendientes de aprobación.
+     */
+    public function hasPendingSources(): bool
+    {
+        return ! empty($this->getPendingSources());
+    }
 }
 

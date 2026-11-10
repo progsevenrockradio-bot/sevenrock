@@ -297,14 +297,53 @@ class EmailSafetyValidator
             ];
         }
 
-        // 4. Normalización si es URL absoluta local (apuntando al dominio de la app o localhost en dev)
+        // 4. Chequeo de direcciones internas / loopback / privadas cuando viene como URL absoluta
         $hasScheme = (bool) preg_match('#^https?://#i', $clean);
         if ($hasScheme) {
             $host = strtolower(parse_url($clean, PHP_URL_HOST) ?? '');
-            $appHost = strtolower(parse_url((string) config('app.url', ''), PHP_URL_HOST) ?? '');
-            $isLocalDomain = in_array($host, array_filter(['localhost', '127.0.0.1', '::1', $appHost, 'sevenrockradio.com', 'www.sevenrockradio.com']), true);
+            $cleanHost = trim($host, '[]');
 
-            if ($isLocalDomain) {
+            // Detección de loopback, localhost, cloud metadata y redes privadas
+            $isLoopbackOrLocalhost = in_array($cleanHost, ['localhost', '127.0.0.1', '::1', '0.0.0.0'], true)
+                || in_array($host, ['localhost', '127.0.0.1', '::1', '[::1]', '0.0.0.0'], true)
+                || str_ends_with($host, '.localhost')
+                || str_ends_with($host, '.local')
+                || str_ends_with($host, '.internal');
+
+            $isCloudMetadata = ($cleanHost === '169.254.169.254' || str_starts_with($cleanHost, '169.254.'));
+
+            $isPrivateIp = false;
+            if (filter_var($cleanHost, FILTER_VALIDATE_IP)) {
+                $isPrivateIp = ! filter_var($cleanHost, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
+            }
+
+            // En producción, rechazo categórico de localhost, loopback y redes privadas antes de normalizar
+            if ($isCloudMetadata || $isPrivateIp || (app()->environment('production') && $isLoopbackOrLocalhost)) {
+                return [
+                    'is_safe'         => false,
+                    'violation'       => "Imagen destacada sospechosa o apuntando a dirección interna/SSRF ('{$host}').",
+                    'normalized_path' => null,
+                ];
+            }
+
+            // Solo se admite normalizar si la URL pertenece estrictamente al dominio público configurado
+            $configuredAppHost = strtolower(parse_url((string) config('app.url', ''), PHP_URL_HOST) ?? '');
+            $allowedPublicHosts = array_values(array_filter(array_unique([
+                $configuredAppHost,
+                'sevenrockradio.com',
+                'www.sevenrockradio.com',
+            ])));
+
+            if (in_array($host, $allowedPublicHosts, true)) {
+                // En producción jamás se normaliza si el host configurado fuera localhost/loopback
+                if ($isLoopbackOrLocalhost && app()->environment('production')) {
+                    return [
+                        'is_safe'         => false,
+                        'violation'       => "Imagen destacada no puede utilizar direcciones de loopback o localhost en producción.",
+                        'normalized_path' => null,
+                    ];
+                }
+
                 $path = parse_url($clean, PHP_URL_PATH) ?? '';
                 $clean = ltrim($path, '/');
                 $hasScheme = false;
@@ -317,7 +356,7 @@ class EmailSafetyValidator
 
             // Prefijos autorizados para almacenamiento público de portadas y medios
             $allowedPrefixes = [
-                'storage/posts/',
+                'storage/',
                 'posts/',
                 'storage/catalog/',
                 'catalog/',
@@ -325,13 +364,16 @@ class EmailSafetyValidator
                 'covers/',
                 'assets/',
                 'images/',
+                'uploads/',
             ];
 
-            $isAllowedPrefix = false;
-            foreach ($allowedPrefixes as $prefix) {
-                if (str_starts_with($relPath, $prefix)) {
-                    $isAllowedPrefix = true;
-                    break;
+            $isAllowedPrefix = (! str_contains($relPath, '/'));
+            if (! $isAllowedPrefix) {
+                foreach ($allowedPrefixes as $prefix) {
+                    if (str_starts_with($relPath, $prefix)) {
+                        $isAllowedPrefix = true;
+                        break;
+                    }
                 }
             }
 
@@ -473,6 +515,75 @@ class EmailSafetyValidator
         $fragment = isset($parsed['fragment']) && $parsed['fragment'] !== '' ? '#' . $parsed['fragment'] : '';
 
         return "{$scheme}://{$host}{$portStr}{$path}{$query}{$fragment}";
+    }
+
+    /**
+     * Devuelve la lista de URLs concretas presentes en el contenido o metadatos de un post
+     * que requieren aprobación editorial y que aún NO han sido aprobadas.
+     *
+     * @return array<int, string>
+     */
+    public function getPendingUnapprovedSources(Post $post): array
+    {
+        $rawContent = $post->content;
+        $content = '';
+        if (is_array($rawContent)) {
+            foreach ($rawContent as $block) {
+                if (is_string($block)) {
+                    $content .= $block . ' ';
+                } elseif (is_array($block) && isset($block['value'])) {
+                    $content .= (string) $block['value'] . ' ';
+                } else {
+                    $content .= json_encode($block, JSON_UNESCAPED_SLASHES) . ' ';
+                }
+            }
+        } else {
+            $content = (string) $rawContent;
+        }
+
+        $pending = [];
+        $approvedUrls = $this->resolveApprovedUrls($post);
+
+        // 1. Escanear enlaces en el HTML del contenido
+        if (preg_match_all('/<a\s+[^>]*href=["\']([^"\']+)["\']/i', $content, $matches)) {
+            foreach ($matches[1] as $href) {
+                $href = trim($href);
+                if ($href === '') {
+                    continue;
+                }
+
+                $classified = $this->linkClassifier->classify($href);
+
+                // Enlaces a la web externa no verificados requieren aprobación previa
+                if ($classified['classification'] === 'unverified_public') {
+                    if (! $this->isUrlApproved($href, $approvedUrls)) {
+                        $pending[] = $href;
+                    }
+                }
+            }
+        }
+
+        // 2. Comprobar fuentes registradas en sanitizedMeta si las hubiere
+        $meta = $post->relationLoaded('sanitizedMeta')
+            ? $post->sanitizedMeta
+            : EmailPostSanitizedMeta::where('post_id', $post->id)->first();
+
+        if ($meta && ! empty($meta->sources)) {
+            $decodedSources = is_array($meta->sources) ? $meta->sources : json_decode((string) $meta->sources, true);
+            if (is_array($decodedSources)) {
+                foreach ($decodedSources as $src) {
+                    $src = trim((string) $src);
+                    if ($src !== '') {
+                        $classified = $this->linkClassifier->classify($src);
+                        if ($classified['classification'] === 'unverified_public' && ! $this->isUrlApproved($src, $approvedUrls)) {
+                            $pending[] = $src;
+                        }
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($pending));
     }
 }
 

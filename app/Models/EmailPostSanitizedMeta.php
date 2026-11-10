@@ -24,6 +24,8 @@ class EmailPostSanitizedMeta extends Model
         'artist_name',
         'sources',
         'approved_urls',
+        'approved_at',
+        'approved_by',
         'image_credit',
         'image_alt',
         'embargo_until',
@@ -48,17 +50,19 @@ class EmailPostSanitizedMeta extends Model
             'publish_permitted_at' => 'datetime',
             'is_embargo_active'    => 'boolean',
             'approved_urls'        => 'array',
+            'approved_at'          => 'datetime',
+            'approved_by'          => 'integer',
             'redacted_links'       => 'array',
             'media_inventory'      => 'array',
         ];
     }
 
     /**
-     * Registra URLs concretas verificadas como aprobadas para esta publicación.
+     * Registra URLs concretas verificadas como aprobadas para esta publicación con autoría y fecha.
      *
      * @param array<int, string> $urls
      */
-    public function registerApprovedUrls(array $urls): void
+    public function registerApprovedUrls(array $urls, ?int $userId = null): void
     {
         $existing = is_array($this->approved_urls) ? $this->approved_urls : [];
         $clean = [];
@@ -69,6 +73,15 @@ class EmailPostSanitizedMeta extends Model
             }
         }
         $this->approved_urls = array_values(array_unique(array_merge($existing, $clean)));
+        $this->approved_at = now();
+        if ($userId) {
+            $this->approved_by = $userId;
+        }
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function post(): BelongsTo

@@ -257,7 +257,6 @@
                 <form action="{{ route('admin.editorial.bulk-action') }}" method="POST" @submit="isSubmitting = true">
                     @csrf
                     <input type="hidden" name="action" value="approve">
-                    <input type="hidden" name="approve_verified_sources" value="1">
                     <template x-for="id in selectedPosts" :key="id">
                         <input type="hidden" name="post_ids[]" :value="id">
                     </template>
@@ -502,17 +501,27 @@
                                         </a>
 
                                         @if (!$post->is_published && $post->status !== 'published')
-                                            <form action="{{ route('admin.editorial.approve', $post) }}" method="POST" class="inline" onsubmit="return confirm('¿Aprobar y publicar inmediatamente esta noticia?')">
-                                                @csrf
-                                                <input type="hidden" name="approve_verified_sources" value="1">
+                                            @if ($post->hasPendingSources())
                                                 <button 
-                                                    type="submit" 
-                                                    class="inline-flex items-center justify-center h-7 px-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 text-xs font-medium"
-                                                    title="Aprobar y Publicar Ahora"
+                                                    type="button" 
+                                                    @click="openQuickView({{ $post->id }})"
+                                                    class="inline-flex items-center justify-center h-7 px-2 rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-medium"
+                                                    title="Revisar fuentes pendientes antes de publicar"
                                                 >
-                                                    Publicar
+                                                    Revisar Fuentes
                                                 </button>
-                                            </form>
+                                            @else
+                                                <form action="{{ route('admin.editorial.approve', $post) }}" method="POST" class="inline" onsubmit="return confirm('¿Aprobar y publicar inmediatamente esta noticia?')">
+                                                    @csrf
+                                                    <button 
+                                                        type="submit" 
+                                                        class="inline-flex items-center justify-center h-7 px-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 text-xs font-medium"
+                                                        title="Aprobar y Publicar Ahora"
+                                                    >
+                                                        Publicar
+                                                    </button>
+                                                </form>
+                                            @endif
                                         @endif
                                     </div>
                                 </td>
@@ -650,6 +659,11 @@
                                                 </li>
                                             </template>
                                         </ul>
+                                        <template x-if="quickViewData.meta && quickViewData.meta.approved_at">
+                                            <div class="text-[11px] text-emerald-400 pt-2 border-t border-white/5">
+                                                Aprobadas por <strong x-text="quickViewData.meta.approved_by || 'Editor'"></strong> el <span x-text="quickViewData.meta.approved_at"></span>.
+                                            </div>
+                                        </template>
                                     </div>
                                 </template>
                             </div>
@@ -661,13 +675,29 @@
                                 </a>
 
                                 <div class="flex items-center gap-2">
-                                    <form :action="'/admin/editorial/' + quickViewData.id + '/approve'" method="POST" onsubmit="return confirm('¿Aprobar y publicar ahora?')">
-                                        @csrf
-                                        <input type="hidden" name="approve_verified_sources" value="1">
-                                        <button type="submit" class="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
-                                            ✅ Publicar Ahora
-                                        </button>
-                                    </form>
+                                    {{-- Opción A: Si hay fuentes pendientes -> Acción explícita «Aprobar estas fuentes y publicar» --}}
+                                    <template x-if="quickViewData.meta && quickViewData.meta.has_pending_sources">
+                                        <form :action="'/admin/editorial/' + quickViewData.id + '/approve'" method="POST" onsubmit="return confirm('¿Aprobar explícitamente las fuentes mostradas y publicar ahora?')">
+                                            @csrf
+                                            <input type="hidden" name="approve_explicit_sources" value="1">
+                                            <template x-for="url in quickViewData.meta.pending_sources" :key="url">
+                                                <input type="hidden" name="sources_to_approve[]" :value="url">
+                                            </template>
+                                            <button type="submit" class="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold">
+                                                ✅ Aprobar estas fuentes y publicar
+                                            </button>
+                                        </form>
+                                    </template>
+
+                                    {{-- Opción B: Si las fuentes ya están aprobadas o no tiene fuentes pendientes -> Botón normal «Publicar Ahora» --}}
+                                    <template x-if="!quickViewData.meta || !quickViewData.meta.has_pending_sources">
+                                        <form :action="'/admin/editorial/' + quickViewData.id + '/approve'" method="POST" onsubmit="return confirm('¿Aprobar y publicar ahora?')">
+                                            @csrf
+                                            <button type="submit" class="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
+                                                ✅ Publicar Ahora
+                                            </button>
+                                        </form>
+                                    </template>
 
                                     <button type="button" @click="quickViewOpen = false; openSchedule(quickViewData.id)" class="inline-flex items-center justify-center h-8 px-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium">
                                         ⏳ Programar

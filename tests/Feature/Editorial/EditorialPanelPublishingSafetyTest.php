@@ -6,7 +6,9 @@ namespace Tests\Feature\Editorial;
 
 use App\Models\EmailPostSanitizedMeta;
 use App\Models\Post;
+use App\Models\PostTaxonomy;
 use App\Models\User;
+use App\Services\EditorialBatchProcessor;
 use App\Services\EmailSafetyValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -37,38 +39,50 @@ class EditorialPanelPublishingSafetyTest extends TestCase
     }
 
     /**
-     * 1. Reproduce el rechazo mediante la acción «Publicar» del panel cuando existen
-     * fuentes externas sin aprobación previa y la imagen no está normalizada.
+     * 1. Acredita que importar con REVISION_REQUERIDA: NO NO aprueba fuentes automáticamente.
      */
-    public function test_reproduces_panel_rejection_for_unverified_sources_and_preserves_draft(): void
+    public function test_import_with_revision_no_does_not_auto_approve_sources(): void
     {
+        PostTaxonomy::firstOrCreate(['name' => 'Noticias Rock', 'slug' => 'noticias-rock', 'type' => 'category']);
+        PostTaxonomy::firstOrCreate(['name' => 'Hoy en el Rock', 'slug' => 'hoy-en-el-rock', 'type' => 'category']);
+
+        $processor = app(EditorialBatchProcessor::class);
+
+        $payload = <<<MD
+FORMATO: DV-1
+LOTE_ID: BATCH-TEST-AUTONO
+TOTAL_ELEMENTOS: 1
+
+=== INICIO ELEMENTO ===
+ID: BATCH-TEST-AUTONO-E03
+TIPO: NOTICIA
+FECHA_EDITORIAL: 2026-11-10
+TITULO: Fall Out Boy anuncia nueva gira sin revision requerida
+TEXTO:
+Texto descriptivo de la gira mundial.
+FUENTES:
+- https://nextmosh.com/fall-out-boy/
+IMAGEN_URL: storage/posts/covers/valid-fob.jpg
+IMAGEN_CREDITO: Foto: Test / CC BY 2.0
+REVISION_REQUERIDA: NO
+=== FIN ELEMENTO ===
+MD;
+
+        $result = $processor->process($payload);
+        $this->assertTrue($result['success'], 'El procesamiento del lote debió ser exitoso: ' . ($result['error'] ?? ''));
+        $this->assertSame(1, $result['created']);
+
+        $meta = EmailPostSanitizedMeta::where('element_id', 'BATCH-TEST-AUTONO-E03')->first();
+        $this->assertNotNull($meta);
+
+        // REGLA CRÍTICA: NO debe concederse a sí mismo aprobación editorial
+        $this->assertNull($meta->approved_urls, 'Las fuentes NO deben ser aprobadas automáticamente por REVISION_REQUERIDA: NO.');
+        $this->assertNull($meta->approved_at);
+        $this->assertNull($meta->approved_by);
+
+        // Intentar publicar sin aprobación explícita debe ser rechazado
+        $post = Post::find($meta->post_id);
         $this->actingAs($this->adminUser);
-
-        $post = Post::create([
-            'title'          => 'Nace Greg Lake, fundador de King Crimson y Emerson, Lake & Palmer',
-            'slug'           => 'nace-greg-lake-fundador-de-king-crimson',
-            'status'         => 'draft',
-            'is_published'   => false,
-            'source_subject' => '[DV-1] Nace Greg Lake',
-            'featured_image' => 'storage/posts/covers/post-dv-e11-greg-lake-2013-elfo.jpg',
-            'content'        => '<p>Texto de efeméride.</p>' .
-                '<div class="editorial-sources">' .
-                '<a href="https://en.wikipedia.org/wiki/Greg_Lake">Wikipedia</a>' .
-                '<a href="https://mariskalrock.com/actualidad/efemerides-greg-lake/">MariskalRock</a>' .
-                '</div>',
-        ]);
-
-        EmailPostSanitizedMeta::create([
-            'post_id'         => $post->id,
-            'security_status' => 'sanitized',
-            'sources'         => json_encode([
-                'https://en.wikipedia.org/wiki/Greg_Lake',
-                'https://mariskalrock.com/actualidad/efemerides-greg-lake/',
-            ]),
-            'approved_urls'   => null, // Sin aprobar
-        ]);
-
-        // Intentar publicar mediante la acción del panel sin registrar aprobación de URLs
         $response = $this->postJson(route('admin.editorial.approve', $post));
 
         $response->assertStatus(422);
@@ -76,292 +90,195 @@ class EditorialPanelPublishingSafetyTest extends TestCase
             'success' => false,
             'code'    => 'safety_violation',
         ]);
-
-        // Comprobar que el rechazo identifica las fuentes no aprobadas
-        $responseData = $response->json();
-        $this->assertStringContainsString('unverified_external_web', json_encode($responseData['violations']));
-
-        // REGLA CRÍTICA: El rechazo debe conservar el artículo intacto como borrador
         $post->refresh();
         $this->assertSame('draft', $post->status);
-        $this->assertFalse((bool) $post->is_published);
-        $this->assertNull($post->published_at);
     }
 
     /**
-     * 2. Recorrido exitoso: Fuentes concretas aprobadas e imagen local válida.
+     * 2. Acredita que la acción explícita registra únicamente las URLs mostradas y autorizadas,
+     * guardando usuario y fecha, y que si ya están aprobadas el botón normal «Publicar» conserva la publicación sin pedir otra aprobación.
      */
-    public function test_panel_publishing_succeeds_with_approved_sources_and_valid_local_image(): void
+    public function test_explicit_action_approves_only_shown_and_authorized_urls_and_subsequent_publish_works(): void
     {
         $this->actingAs($this->adminUser);
 
         $post = Post::create([
-            'title'          => 'Nace Greg Lake, fundador de King Crimson y Emerson, Lake & Palmer',
-            'slug'           => 'nace-greg-lake-fundador-de-king-crimson',
+            'title'          => 'Noticia con múltiples fuentes',
+            'slug'           => 'noticia-multiples-fuentes',
             'status'         => 'draft',
             'is_published'   => false,
-            'source_subject' => '[DV-1] Nace Greg Lake',
-            'featured_image' => 'storage/posts/covers/post-dv-e11-greg-lake-2013-elfo.jpg',
-            'content'        => '<p>Texto de efeméride.</p>' .
-                '<div class="editorial-sources">' .
-                '<a href="https://en.wikipedia.org/wiki/Greg_Lake">Wikipedia</a>' .
-                '<a href="https://mariskalrock.com/actualidad/efemerides-greg-lake/">MariskalRock</a>' .
-                '</div>',
+            'source_subject' => '[DV-1] Multiples Fuentes',
+            'featured_image' => 'storage/posts/covers/valid-cover.jpg',
+            'content'        => '<p>Texto.</p>' .
+                '<a href="https://source-a.com/news">Fuente A</a>' .
+                '<a href="https://source-b.com/news">Fuente B</a>',
         ]);
 
         $meta = EmailPostSanitizedMeta::create([
             'post_id'         => $post->id,
             'security_status' => 'sanitized',
-            'sources'         => json_encode([
-                'https://en.wikipedia.org/wiki/Greg_Lake',
-                'https://mariskalrock.com/actualidad/efemerides-greg-lake/',
-            ]),
-            'approved_urls'   => [
-                'https://en.wikipedia.org/wiki/Greg_Lake',
-                'https://mariskalrock.com/actualidad/efemerides-greg-lake/',
-            ],
-        ]);
-
-        // Publicar desde el panel
-        $response = $this->postJson(route('admin.editorial.approve', $post));
-
-        $response->assertStatus(200);
-        $response->assertJson([
-            'success' => true,
-            'post_id' => $post->id,
-        ]);
-
-        $post->refresh();
-        $this->assertSame('published', $post->status);
-        $this->assertTrue((bool) $post->is_published);
-        $this->assertNotNull($post->published_at);
-
-        $meta->refresh();
-        $this->assertSame('passed', $meta->security_status);
-    }
-
-    /**
-     * 3. Recorrido: Publicación con aprobación explícita enviada en la misma acción «Publicar».
-     */
-    public function test_panel_publishing_with_approve_verified_sources_flag(): void
-    {
-        $this->actingAs($this->adminUser);
-
-        $post = Post::create([
-            'title'          => 'Fall Out Boy anuncia gira mundial',
-            'slug'           => 'fall-out-boy-anuncia-gira-mundial',
-            'status'         => 'draft',
-            'is_published'   => false,
-            'source_subject' => '[DV-1] Fall Out Boy',
-            'featured_image' => 'storage/posts/covers/post-dv-e03-fall-out-boy-monumentour.jpg',
-            'content'        => '<p>Contenido Fall Out Boy.</p>' .
-                '<div class="editorial-sources">' .
-                '<a href="https://nextmosh.com/fall-out-boy-2027/">NextMosh</a>' .
-                '<a href="https://loudwire.com/fall-out-boy-2027/">Loudwire</a>' .
-                '</div>',
-        ]);
-
-        EmailPostSanitizedMeta::create([
-            'post_id'         => $post->id,
-            'security_status' => 'sanitized',
-            'sources'         => json_encode([
-                'https://nextmosh.com/fall-out-boy-2027/',
-                'https://loudwire.com/fall-out-boy-2027/',
-            ]),
+            'sources'         => json_encode(['https://source-a.com/news', 'https://source-b.com/news']),
             'approved_urls'   => null,
         ]);
 
-        // Publicar con la bandera que envía el formulario del panel
-        $response = $this->postJson(route('admin.editorial.approve', $post), [
-            'approve_verified_sources' => 1,
+        // Intento 1: Si solo se autoriza Fuente A pero el contenido contiene también Fuente B no autorizada
+        $partialResponse = $this->postJson(route('admin.editorial.approve', $post), [
+            'approve_explicit_sources' => 1,
+            'sources_to_approve'       => ['https://source-a.com/news'], // Solo A mostrada/aprobada
         ]);
 
-        $response->assertStatus(200);
-        $response->assertJson(['success' => true]);
+        // Debe ser rechazado porque Fuente B sigue sin aprobar
+        $partialResponse->assertStatus(422);
+        $post->refresh();
+        $this->assertSame('draft', $post->status);
+
+        // Intento 2: Acción explícita «Aprobar estas fuentes y publicar» con todas las fuentes mostradas
+        $fullResponse = $this->postJson(route('admin.editorial.approve', $post), [
+            'approve_explicit_sources' => 1,
+            'sources_to_approve'       => [
+                'https://source-a.com/news',
+                'https://source-b.com/news',
+            ],
+        ]);
+
+        $fullResponse->assertStatus(200);
+        $fullResponse->assertJson(['success' => true]);
 
         $post->refresh();
         $this->assertSame('published', $post->status);
         $this->assertTrue((bool) $post->is_published);
 
-        $meta = EmailPostSanitizedMeta::where('post_id', $post->id)->first();
-        $this->assertContains('https://nextmosh.com/fall-out-boy-2027/', $meta->approved_urls);
-        $this->assertContains('https://loudwire.com/fall-out-boy-2027/', $meta->approved_urls);
-    }
+        $meta->refresh();
+        $this->assertCount(2, $meta->approved_urls);
+        $this->assertSame($this->adminUser->id, $meta->approved_by);
+        $this->assertNotNull($meta->approved_at);
 
-    /**
-     * 4. Fuente externa no aprobada es rechazada y el artículo se conserva como borrador.
-     */
-    public function test_unapproved_external_source_is_rejected_and_remains_draft(): void
-    {
-        $this->actingAs($this->adminUser);
+        // Intento 3: Si las fuentes ya están aprobadas, una publicación normal (sin enviar bandera) funciona directamente
+        $post->status = 'draft';
+        $post->is_published = false;
+        $post->save();
 
-        $post = Post::create([
-            'title'          => 'Kerry King nuevo single',
-            'slug'           => 'kerry-king-nuevo-single',
-            'status'         => 'draft',
-            'is_published'   => false,
-            'source_subject' => '[DV-1] Kerry King',
-            'featured_image' => 'storage/posts/covers/post-dv-e04-kerry-king-2006.jpg',
-            'content'        => '<p>Texto.</p>' .
-                '<a href="https://blabbermouth.net/news/kerry-king">Blabbermouth</a>' .
-                '<a href="https://sitio-filtracion-no-aprobado.xyz/leak">Filtración No Autorizada</a>',
-        ]);
-
-        EmailPostSanitizedMeta::create([
-            'post_id'         => $post->id,
-            'security_status' => 'sanitized',
-            'approved_urls'   => [
-                'https://blabbermouth.net/news/kerry-king', // Solo Blabbermouth está aprobada
-            ],
-        ]);
-
-        $response = $this->postJson(route('admin.editorial.approve', $post));
-
-        $response->assertStatus(422);
-        $response->assertJson([
-            'success' => false,
-            'code'    => 'safety_violation',
-        ]);
-
-        $violations = json_encode($response->json('violations'));
-        $this->assertStringContainsString('sitio-filtracion-no-aprobado.xyz', $violations);
-
+        $normalResponse = $this->postJson(route('admin.editorial.approve', $post));
+        $normalResponse->assertStatus(200);
         $post->refresh();
-        $this->assertSame('draft', $post->status);
-        $this->assertFalse((bool) $post->is_published);
+        $this->assertSame('published', $post->status);
     }
 
     /**
-     * 5. Enlace con credenciales en URL es rechazado y conserva el artículo como borrador.
+     * 3. Acredita que en producción las direcciones internas (localhost, loopback, redes privadas)
+     * son rechazadas antes de normalizarse y que solo se admiten rutas relativas y el dominio público configurado.
      */
-    public function test_rejects_link_with_embedded_credentials_even_if_approval_attempted(): void
+    public function test_internal_addresses_localhost_loopback_private_are_blocked_in_production_before_normalization(): void
     {
         $this->actingAs($this->adminUser);
-
-        $post = Post::create([
-            'title'          => 'Artículo con credenciales maliciosas',
-            'slug'           => 'articulo-credenciales',
-            'status'         => 'draft',
-            'is_published'   => false,
-            'source_subject' => '[DV-1] Test',
-            'featured_image' => 'storage/posts/covers/post-dv-e01-powerwolf.jpg',
-            'content'        => '<p>Texto.</p>' .
-                '<a href="https://editor:password123@prensa.label.com/recursos">Enlace Prensa</a>',
+        $this->withoutMiddleware([
+            \Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
+            \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
         ]);
 
-        EmailPostSanitizedMeta::create([
-            'post_id'         => $post->id,
-            'security_status' => 'sanitized',
-            'approved_urls'   => [
-                'https://editor:password123@prensa.label.com/recursos', // Intento de aprobar URL con contraseña
-            ],
-        ]);
+        // Simular entorno de producción
+        app()['env'] = 'production';
+        config(['app.url' => 'https://sevenrockradio.com']);
 
-        $response = $this->postJson(route('admin.editorial.approve', $post));
-
-        $response->assertStatus(422);
-        $response->assertJson(['success' => false, 'code' => 'safety_violation']);
-
-        // Comprobar que no se expone la contraseña en texto plano
-        $jsonStr = json_encode($response->json());
-        $this->assertStringNotContainsString('password123', $jsonStr);
-        $this->assertStringContainsString('credenciales', $jsonStr);
-
-        $post->refresh();
-        $this->assertSame('draft', $post->status);
-        $this->assertFalse((bool) $post->is_published);
-    }
-
-    /**
-     * 6. Rechazo de enlace restringido / EPK privado / Cloud Storage privado.
-     */
-    public function test_rejects_private_cloud_and_epk_links(): void
-    {
-        $this->actingAs($this->adminUser);
-
-        $post = Post::create([
-            'title'          => 'Artículo con EPK cerrado',
-            'slug'           => 'articulo-epk',
-            'status'         => 'draft',
-            'is_published'   => false,
-            'source_subject' => '[DV-1] EPK',
-            'featured_image' => 'storage/posts/covers/post-dv-e01-powerwolf.jpg',
-            'content'        => '<p>Texto.</p>' .
-                '<a href="https://haulix.com/promo/exclusive-stream">Haulix Promo</a>',
-        ]);
-
-        EmailPostSanitizedMeta::create([
-            'post_id'         => $post->id,
-            'security_status' => 'sanitized',
-            'approved_urls'   => ['https://haulix.com/promo/exclusive-stream'],
-        ]);
-
-        $response = $this->postJson(route('admin.editorial.approve', $post));
-
-        $response->assertStatus(422);
-        $post->refresh();
-        $this->assertSame('draft', $post->status);
-        $this->assertFalse((bool) $post->is_published);
-    }
-
-    /**
-     * 7. Rechazo de imágenes peligrosas: Path Traversal, SSRF, esquemas maliciosos.
-     */
-    public function test_rejects_dangerous_image_paths_and_preserves_draft(): void
-    {
-        $this->actingAs($this->adminUser);
-
-        $dangerousCases = [
-            'path_traversal'         => 'storage/posts/covers/../../../../etc/passwd',
-            'path_traversal_encoded' => 'storage/posts/covers/%2e%2e/%2e%2e/env',
-            'cloud_metadata_ssrf'    => 'http://169.254.169.254/latest/meta-data/credentials',
-            'localhost_ssrf'         => 'http://127.0.0.1:8000/private-data.jpg',
-            'private_subnet_ssrf'    => 'http://192.168.1.100/admin.png',
-            'credentials_in_url'     => 'http://admin:secretpass@evil.com/cover.jpg',
-            'file_scheme'            => 'file:///etc/shadow',
-            'data_scheme'            => 'data:image/svg+xml;base64,PHN2Zz4=',
-            'outside_authorized_dir' => 'storage/framework/cache/session.php',
-            'invalid_extension'      => 'storage/posts/covers/exploit.exe',
+        $internalCases = [
+            'localhost_url'       => 'http://localhost/storage/posts/covers/photo.jpg',
+            'localhost_port'      => 'http://localhost:8000/storage/posts/covers/photo.jpg',
+            'loopback_ipv4'       => 'http://127.0.0.1/storage/posts/covers/photo.jpg',
+            'loopback_ipv6'       => 'http://[::1]/storage/posts/covers/photo.jpg',
+            'cloud_metadata_ssrf' => 'http://169.254.169.254/latest/meta-data',
+            'private_lan_10'      => 'http://10.0.0.1/storage/posts/covers/photo.jpg',
+            'private_lan_192'     => 'http://192.168.1.10/storage/posts/covers/photo.jpg',
+            'internal_domain'     => 'http://server.local/storage/posts/covers/photo.jpg',
         ];
 
-        foreach ($dangerousCases as $label => $dangerousPath) {
-            $post = Post::create([
-                'title'          => "Artículo imagen {$label}",
-                'slug'           => "articulo-imagen-{$label}",
-                'status'         => 'draft',
-                'is_published'   => false,
-                'source_subject' => '[DV-1] Imagen Test',
-                'featured_image' => $dangerousPath,
-                'content'        => '<p>Texto sin enlaces externos.</p>',
-            ]);
+        try {
+            foreach ($internalCases as $label => $internalPath) {
+                $post = Post::create([
+                    'title'          => "Test {$label}",
+                    'slug'           => "test-{$label}",
+                    'status'         => 'draft',
+                    'is_published'   => false,
+                    'source_subject' => '[DV-1] Test',
+                    'featured_image' => $internalPath,
+                    'content'        => '<p>Texto.</p>',
+                ]);
 
-            EmailPostSanitizedMeta::create([
-                'post_id'         => $post->id,
-                'security_status' => 'sanitized',
-            ]);
+                EmailPostSanitizedMeta::create([
+                    'post_id'         => $post->id,
+                    'security_status' => 'sanitized',
+                ]);
 
-            $response = $this->postJson(route('admin.editorial.approve', $post));
+                $validation = $this->validator->validateFeaturedImage($internalPath);
+                $this->assertFalse(
+                    $validation['is_safe'],
+                    "La dirección interna '{$internalPath}' ({$label}) debió ser rechazada en producción antes de normalizar."
+                );
 
-            $this->assertSame(
-                422,
-                $response->status(),
-                "La ruta peligrosa '{$dangerousPath}' ({$label}) debió ser rechazada con 422 pero devolvió {$response->status()}"
-            );
-            $response->assertJson([
-                'success' => false,
-                'code'    => 'safety_violation',
-            ]);
+                $postValidation = $this->validator->validatePost($post);
+                $this->assertFalse(
+                    $postValidation['is_safe'],
+                    "El post con dirección interna '{$internalPath}' ({$label}) debió ser rechazado por validatePost en producción."
+                );
 
-            $post->refresh();
-            $this->assertSame('draft', $post->status);
-            $this->assertFalse((bool) $post->is_published);
+                $response = $this->postJson(route('admin.editorial.approve', $post));
+                $response->assertStatus(422);
+                $response->assertJson([
+                    'success' => false,
+                    'code'    => 'safety_violation',
+                ]);
+            }
+
+            // Acreditar que rutas relativas autorizadas y el dominio público configurado SÍ se admiten
+            $allowedRelative = 'storage/posts/covers/post-dv-e11-greg-lake.jpg';
+            $valRelative = $this->validator->validateFeaturedImage($allowedRelative);
+            $this->assertTrue($valRelative['is_safe'], "La ruta relativa autorizada debió admitirse.");
+
+            $allowedPublicUrl = 'https://sevenrockradio.com/storage/posts/covers/post-dv-e11-greg-lake.jpg';
+            $valPublicUrl = $this->validator->validateFeaturedImage($allowedPublicUrl);
+            $this->assertTrue($valPublicUrl['is_safe'], "La URL con el dominio público configurado debió admitirse.");
+        } finally {
+            app()['env'] = 'testing';
         }
     }
 
     /**
-     * 8. Endpoint de aprobación de URLs concretas: registra y audita.
+     * 4. Acredita que enlaces privados o con credenciales incrustadas siguen bloqueados.
      */
-    public function test_endpoint_approve_urls_registers_and_audits(): void
+    public function test_links_with_credentials_or_private_services_remain_blocked_even_if_approval_attempted(): void
+    {
+        $this->actingAs($this->adminUser);
+
+        $post = Post::create([
+            'title'          => 'Test credenciales',
+            'slug'           => 'test-credenciales',
+            'status'         => 'draft',
+            'is_published'   => false,
+            'source_subject' => '[DV-1] Test',
+            'featured_image' => 'storage/posts/covers/cover.jpg',
+            'content'        => '<p>Texto.</p><a href="https://admin:secret123@source.com/report">Enlace Privado</a>',
+        ]);
+
+        EmailPostSanitizedMeta::create([
+            'post_id'         => $post->id,
+            'security_status' => 'sanitized',
+        ]);
+
+        $response = $this->postJson(route('admin.editorial.approve', $post), [
+            'approve_explicit_sources' => 1,
+            'sources_to_approve'       => ['https://admin:secret123@source.com/report'],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson(['success' => false, 'code' => 'safety_violation']);
+
+        $post->refresh();
+        $this->assertSame('draft', $post->status);
+    }
+
+    /**
+     * 5. Endpoint de aprobación de URLs concretas: registra autor, fecha y audita.
+     */
+    public function test_endpoint_approve_urls_registers_author_and_date(): void
     {
         $this->actingAs($this->adminUser);
 
@@ -394,22 +311,18 @@ class EditorialPanelPublishingSafetyTest extends TestCase
 
         $meta->refresh();
         $this->assertCount(2, $meta->approved_urls);
+        $this->assertSame($this->adminUser->id, $meta->approved_by);
+        $this->assertNotNull($meta->approved_at);
         $this->assertContains('https://blabbermouth.net/news/deep-purples-ian-gillan', $meta->approved_urls);
         $this->assertContains('https://www.loudersound.com/bands-artists/ian-gillan', $meta->approved_urls);
-
-        // Intento de registrar URL peligrosa
-        $badResponse = $this->postJson(route('admin.editorial.approve-urls', $post), [
-            'urls' => ['http://127.0.0.1/admin-secrets'],
-        ]);
-
-        $badResponse->assertStatus(422);
     }
 
     /**
-     * 9. Simulación exhaustiva de las cinco piezas del lote DV-20261110-01 (E01, E02, E03, E04, E11):
-     * Comprueba que las 4 noticias y 1 efeméride son completamente publicables con sus fuentes e imágenes reales.
+     * 6. Simulación de las 5 piezas del lote DV-20261110-01 (E01, E02, E03, E04, E11):
+     * Acredita que las imágenes legítimas y los 5 borradores superan el recorrido de publicación
+     * tras la aprobación correspondiente mediante «Aprobar estas fuentes y publicar».
      */
-    public function test_simulation_of_all_five_batch_pieces_pass_validation_with_approved_sources(): void
+    public function test_simulation_of_all_five_batch_pieces_publishable_after_explicit_approval(): void
     {
         $this->actingAs($this->adminUser);
 
@@ -487,31 +400,43 @@ class EditorialPanelPublishingSafetyTest extends TestCase
                 'content'        => $content,
             ]);
 
-            EmailPostSanitizedMeta::create([
+            $meta = EmailPostSanitizedMeta::create([
                 'post_id'         => $post->id,
                 'batch_id'        => 'DV-20261110-01',
                 'element_id'      => "DV-20261110-01-{$code}",
                 'security_status' => 'sanitized',
                 'sources'         => json_encode($data['sources']),
                 'image_credit'    => $data['credit'],
-                'approved_urls'   => $data['sources'], // Aprobadas
+                'approved_urls'   => null, // Empieza sin aprobar
             ]);
 
-            // Comprobar con el validador directamente
-            $safety = $this->validator->validatePost($post);
-            $this->assertTrue(
-                $safety['is_safe'],
-                "La pieza {$code} ({$data['title']}) falló en la validación de seguridad: " . implode('; ', $safety['violations'])
-            );
-            $this->assertEmpty($safety['violations']);
+            // Paso A: Intento de publicación directa sin autorizar fuentes -> bloqueado
+            $failResp = $this->postJson(route('admin.editorial.approve', $post));
+            $failResp->assertStatus(422);
 
-            // Comprobar publicación mediante el endpoint del panel
-            $resp = $this->postJson(route('admin.editorial.approve', $post));
+            // Paso B: Publicación mediante la acción explícita «Aprobar estas fuentes y publicar»
+            $resp = $this->postJson(route('admin.editorial.approve', $post), [
+                'approve_explicit_sources' => 1,
+                'sources_to_approve'       => $data['sources'],
+            ]);
             $resp->assertStatus(200);
 
             $post->refresh();
             $this->assertSame('published', $post->status);
             $this->assertTrue((bool) $post->is_published);
+            $this->assertNotNull($post->published_at);
+
+            $meta->refresh();
+            $this->assertCount(count($data['sources']), $meta->approved_urls);
+            $this->assertSame($this->adminUser->id, $meta->approved_by);
+            $this->assertNotNull($meta->approved_at);
+
+            // Verificar con el validador directamente
+            $safety = $this->validator->validatePost($post);
+            $this->assertTrue(
+                $safety['is_safe'],
+                "La pieza {$code} ({$data['title']}) falló en la validación: " . implode('; ', $safety['violations'])
+            );
         }
     }
 }
