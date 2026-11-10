@@ -68,6 +68,10 @@ class EditorialSingleMessageTest extends TestCase
         $mockAddressDV = \Mockery::mock(Address::class);
         $mockAddressDV->mail = 'dark.vader.agent@gmail.com';
 
+        $mockHeaderTarget = \Mockery::mock(\Webklex\PHPIMAP\Header::class);
+        $mockHeaderTarget->raw = "Authentication-Results: mx.google.com; dkim=pass header.i=@gmail.com; spf=pass\r\nFrom: dark.vader.agent@gmail.com";
+        $mockMsgTarget->shouldReceive('getHeader')->andReturn($mockHeaderTarget);
+
         $mockMsgTarget->shouldReceive('getMessageId')->andReturn('<179434419672.847527.16732409867263122347@gmail.com>');
         $mockMsgTarget->shouldReceive('getSubject')->andReturn('[PRUEBA][DARTH-VADER][DV-1][2026-11-10][DV-20261110-01]');
         $mockMsgTarget->shouldReceive('getFrom')->andReturn(new PaginatedCollection([$mockAddressDV]));
@@ -83,8 +87,9 @@ class EditorialSingleMessageTest extends TestCase
         $mockMsgSpurious->shouldReceive('getMessageId')->andReturn('<spurious-promo-123@recordlabel.com>');
         $mockMsgSpurious->shouldReceive('getSubject')->andReturn('Promo release');
 
+        $mockQuery->shouldReceive('from')->with('dark.vader.agent@gmail.com')->andReturn($mockQuery);
         $mockQuery->shouldReceive('setFetchOrder')->with('desc')->andReturn($mockQuery);
-        $mockQuery->shouldReceive('limit')->with(50)->andReturn($mockQuery);
+        $mockQuery->shouldReceive('limit')->with(10)->andReturn($mockQuery);
         $mockQuery->shouldReceive('get')->andReturn(new MessageCollection([$mockMsgTarget, $mockMsgSpurious]));
 
         $mockFolder->shouldReceive('query')->andReturn($mockQuery);
@@ -160,3 +165,4 @@ class EditorialSingleMessageTest extends TestCase
         $this->assertSame(0, Post::count());
     }
 }
+

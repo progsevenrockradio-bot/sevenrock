@@ -153,12 +153,28 @@ class EditorialBatchProcessor
             $payloadHash = self::computeStablePayloadHash($elem, $imageMeta);
 
             $rawPath = $imageMeta['path'] ?? $elem['imagen_url'] ?? null;
-            $imagePath = ($rawPath === 'NINGUNA' || $rawPath === 'none' || $rawPath === '') ? null : $rawPath;
-
             $rawCredit = $imageMeta['meta']['credit'] ?? $elem['imagen_credito'] ?? null;
             $imageCredit = ($rawCredit === 'NO_CONFIRMADO' || $rawCredit === 'none' || $rawCredit === '') ? null : $rawCredit;
-
             $imageAlt = $imageMeta['meta']['alt'] ?? $elem['imagen_alt'] ?? $title;
+
+            $imagePath = ($rawPath === 'NINGUNA' || $rawPath === 'none' || $rawPath === '') ? null : $rawPath;
+
+            // Resolución, descarga y optimización de imágenes nuevas si es una URL remota o ficha Wikimedia
+            if (! $isDryRun && ! empty($imagePath) && (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://'))) {
+                $imageService = app(\App\Services\EditorialImageService::class);
+                $imgResult = $imageService->resolveAndStore($imagePath, $elemId, Str::slug($title), $imageCredit);
+
+                if ($imgResult['success'] && ! empty($imgResult['path'])) {
+                    $imagePath = $imgResult['path'];
+                    if (! empty($imgResult['credit']) && empty($imageCredit)) {
+                        $imageCredit = $imgResult['credit'];
+                    }
+                } else {
+                    $imagePath = null;
+                    $revisionRequerida = true;
+                    $motivoRevision = "[IMAGEN_PENDIENTE] " . ($imgResult['error'] ?? 'Fallo de descarga de imagen') . ($motivoRevision ? " | {$motivoRevision}" : "");
+                }
+            }
 
             // Comprobar si ya existe registro previo para (batch_id, element_id)
             $existingMeta = EmailPostSanitizedMeta::where('batch_id', $batchId)
@@ -351,6 +367,9 @@ class EditorialBatchProcessor
                     ? "[REVISION_REQUERIDA] " . ($motivoRevision ?: 'Pendiente de validación editorial')
                     : "[APROBADO_PARA_REVISION] Sin observaciones pendientes";
                 $meta->security_status = $revisionRequerida ? 'needs_review' : 'sanitized';
+                if ($revisionRequerida && $motivoRevision) {
+                    $meta->incident_reason = Str::limit((string) $motivoRevision, 500, '');
+                }
                 $meta->save();
 
                 DB::commit();

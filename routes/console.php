@@ -388,10 +388,9 @@ Schedule::command('podcast:reconcile-pipeline', [
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/podcast-reconcile.log'));
 
-// Procesamiento diario de entregas editoriales estructuradas DV-1 de Darth Vader (exclusivamente como borradores)
+// Procesamiento periódico de entregas editoriales estructuradas DV-1 de Darth Vader (exclusivamente como borradores, cada 15 minutos, sin IA, sin solapamiento)
 Schedule::command('emails:process --only-dv1')
-    ->dailyAt('03:00')
-    ->timezone('Europe/Madrid')
+    ->everyFifteenMinutes()
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/emails-process.log'));
