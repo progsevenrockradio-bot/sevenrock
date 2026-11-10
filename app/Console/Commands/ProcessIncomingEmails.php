@@ -27,7 +27,7 @@ class ProcessIncomingEmails extends Command
      *
      * @var string
      */
-    protected $signature = 'emails:process {--reset : Vaciar el registro de correos procesados antes de iniciar} {--retry-failed : Reintentar los correos que fallaron en el procesamiento} {--days= : Revisar correos de los últimos X días (incluye leídos)}';
+    protected $signature = 'emails:process {--reset : Vaciar el registro de correos procesados antes de iniciar} {--retry-failed : Reintentar los correos que fallaron en el procesamiento} {--days= : Revisar correos de los últimos X días (incluye leídos)} {--message-id= : Procesar exclusivamente el correo con este Message-ID} {--only-dv1 : Procesar exclusivamente entregas DV-1 autenticadas de Darth Vader y descartar otros remitentes}';
 
     /**
      * The console command description.
@@ -55,14 +55,16 @@ class ProcessIncomingEmails extends Command
         }
 
         $settings = ThemeSetting::current();
+        $targetMessageId = trim((string) $this->option('message-id'), '<>');
+        $isOnlyDv1 = (bool) $this->option('only-dv1');
 
-        if (! $settings->email_processing_enabled) {
+        if (! $settings->email_processing_enabled && $targetMessageId === '') {
             $this->info('El procesamiento automático de correos está deshabilitado en los Ajustes del Tema.');
             return 0;
         }
 
         $aiManager = app(\App\Services\AiParserManager::class);
-        if (! $aiManager->hasAnyProvider()) {
+        if (! $isOnlyDv1 && $targetMessageId === '' && ! $aiManager->hasAnyProvider()) {
             $this->error('No hay ningún proveedor de IA configurado en los Ajustes del Tema (Gemini u OpenRouter).');
             $this->sendAdminAlert(
                 'ai_api_key_missing', 
@@ -144,7 +146,10 @@ class ProcessIncomingEmails extends Command
 
                 $folder = $client->getFolder('INBOX');
                 $daysOption = $this->option('days');
-                if ($daysOption) {
+                if ($targetMessageId !== '') {
+                    $this->info("Buscando mensaje específico por Message-ID: <{$targetMessageId}>...");
+                    $messages = $folder->query()->setFetchOrder('desc')->limit(50)->get();
+                } elseif ($daysOption) {
                     $days = max(1, (int) $daysOption);
                     $this->info("Buscando correos de los últimos {$days} días (incluye leídos)...");
                     $messages = $folder->query()->since(now()->subDays($days))->get();
@@ -169,7 +174,12 @@ class ProcessIncomingEmails extends Command
 
                 foreach ($messages as $message) {
                     $messageId = (string) $message->getMessageId();
+                    $cleanMessageId = trim($messageId, '<>');
                     $subject = (string) $message->getSubject();
+
+                    if ($targetMessageId !== '' && $cleanMessageId !== $targetMessageId) {
+                        continue;
+                    }
 
                     try {
                 
@@ -181,6 +191,7 @@ class ProcessIncomingEmails extends Command
                 if (DB::table('processed_emails')->where('message_id', $messageId)->where('status', '!=', 'failed')->exists()) {
                     $this->info("Ignorando correo ya procesado: {$subject}");
                     $message->setFlag('SEEN');
+                    if ($targetMessageId !== '') break;
                     continue;
                 }
 
@@ -232,6 +243,7 @@ class ProcessIncomingEmails extends Command
                     ]);
                     $this->recordProcessedEmail($messageId, $subject, 'blocked_sender');
                     $message->setFlag('SEEN');
+                    if ($targetMessageId !== '') break;
                     continue;
                 }
 
@@ -247,6 +259,7 @@ class ProcessIncomingEmails extends Command
                         }
                         $this->recordProcessedEmail($messageId, $subject, 'spoofing_detected');
                         $message->setFlag('SEEN');
+                        if ($targetMessageId !== '') break;
                         continue;
                     }
                 }
@@ -279,20 +292,22 @@ class ProcessIncomingEmails extends Command
                 $tempMp3Path = null;
                 $tempMp3Name = null;
 
-                foreach ($message->getAttachments() as $attachment) {
-                    $filename = (string) $attachment->getName();
-                    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-                    $content = $attachment->getContent();
+                if (! $isOnlyDv1) {
+                    foreach ($message->getAttachments() as $attachment) {
+                        $filename = (string) $attachment->getName();
+                        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                        $content = $attachment->getContent();
 
-                    if ($ext === 'mp3') {
-                        $tempDir = storage_path('app/temp');
-                        if (! file_exists($tempDir)) {
-                            mkdir($tempDir, 0755, true);
+                        if ($ext === 'mp3') {
+                            $tempDir = storage_path('app/temp');
+                            if (! file_exists($tempDir)) {
+                                mkdir($tempDir, 0755, true);
+                            }
+                            $tempMp3Path = $tempDir . '/' . Str::uuid()->toString() . '.mp3';
+                            file_put_contents($tempMp3Path, $content);
+                            $tempMp3Name = $filename;
+                            $this->info("Adjunto de audio detectado y guardado temporalmente: {$filename}");
                         }
-                        $tempMp3Path = $tempDir . '/' . Str::uuid()->toString() . '.mp3';
-                        file_put_contents($tempMp3Path, $content);
-                        $tempMp3Name = $filename;
-                        $this->info("Adjunto de audio detectado y guardado temporalmente: {$filename}");
                     }
                 }
 
@@ -301,13 +316,28 @@ class ProcessIncomingEmails extends Command
                 $body = mb_convert_encoding($body, 'UTF-8', 'UTF-8');
                 $body = iconv('UTF-8', 'UTF-8//IGNORE', $body) ?: $body;
 
+                // ── CIRCUITO EDITORIAL DARTH VADER DV-1 (DETERMINISTA, MODO BORRADOR, AISLADO) ──
+                $dvParser = app(\App\Services\EditorialDarthVaderParser::class);
+
+                // Si hay un archivo adjunto .md con formato DV-1, preferir su contenido limpio
+                foreach ($message->getAttachments() as $attachment) {
+                    $filename = (string) $attachment->getName();
+                    if (str_ends_with(strtolower($filename), '.md')) {
+                        $attContent = (string) $attachment->getContent();
+                        if ($dvParser->isDv1Format($subject, $attContent)) {
+                            $body = $attContent;
+                            $this->info("[DARK VADER DV-1] Contenido extraído del archivo adjunto: {$filename}");
+                            break;
+                        }
+                    }
+                }
+
                 if (trim($body) === '') {
                     $this->warn("El cuerpo del correo está vacío. Saltando correo.");
+                    if ($targetMessageId !== '') break;
                     continue;
                 }
 
-                // ── CIRCUITO EDITORIAL DARTH VADER DV-1 (DETERMINISTA, MODO BORRADOR, AISLADO) ──
-                $dvParser = app(\App\Services\EditorialDarthVaderParser::class);
                 $isDv1Payload = $dvParser->isDv1Format($subject, $body);
 
                 if ($isDv1Payload && ! $isDarkVaderAgent) {
@@ -320,6 +350,7 @@ class ProcessIncomingEmails extends Command
                     $this->recordProcessedEmail($messageId, $subject, 'unauthorized_dv1');
                     $message->setFlag('SEEN');
                     if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    if ($targetMessageId !== '') break;
                     continue;
                 }
 
@@ -337,6 +368,16 @@ class ProcessIncomingEmails extends Command
                     }
                     $message->setFlag('SEEN');
                     if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    if ($targetMessageId !== '') break;
+                    continue;
+                }
+
+                // Si está activo el modo aislamiento estricto solo DV-1, ignorar cualquier otro correo
+                if ($isOnlyDv1) {
+                    $this->info("[AISLAMIENTO DV-1] Correo ignorado: no es una entrega estructurada DV-1 de Darth Vader ({$subject}).");
+                    $message->setFlag('SEEN');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    if ($targetMessageId !== '') break;
                     continue;
                 }
 

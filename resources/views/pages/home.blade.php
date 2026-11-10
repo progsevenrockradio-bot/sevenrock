@@ -109,38 +109,39 @@
     <x-sections.background-band class="home-section-texture home-section-gray">
         <div class="py-8">
             <div class="mx-auto max-w-[1200px] px-6">
-                <div class="relative w-full overflow-hidden rounded-sm border border-[#c32720]/30 bg-black shadow-lg flex flex-col md:block" id="efemerides-ticker">
+                <div class="relative w-full overflow-hidden rounded-sm border border-[#c32720]/30 bg-black shadow-lg flex flex-col md:flex-row md:items-stretch" id="efemerides-ticker">
 
                     {{-- Etiqueta "HOY EN EL ROCK" con control de pausa accesible --}}
-                    <div class="relative w-full py-2.5 flex flex-col items-center justify-center bg-[#c32720] px-5 shadow-[0_4px_15px_rgba(195,39,32,.4)] md:absolute md:left-0 md:top-0 md:h-full md:w-auto md:z-20 md:shadow-[4px_0_20px_rgba(195,39,32,.5)]">
-                        <div class="flex flex-col items-center justify-center text-center">
-                            <span class="whitespace-nowrap font-display text-[10px] uppercase tracking-[.22em] text-white">
+                    <div class="shrink-0 bg-[#c32720] px-4 py-2.5 md:py-0 flex items-center justify-between md:justify-start gap-3 shadow-[0_4px_15px_rgba(195,39,32,.4)] md:shadow-[4px_0_20px_rgba(195,39,32,.5)] z-20 border-b border-[#c32720]/40 md:border-b-0">
+                        <div class="flex flex-col justify-center text-left">
+                            <span class="whitespace-nowrap font-display text-[11px] md:text-[12px] uppercase tracking-[.2em] font-bold text-white leading-tight">
                                 🎸 Hoy en el Rock
                             </span>
-                            <span class="mt-[2px] whitespace-nowrap font-sans text-[7px] uppercase tracking-[.15em] text-white/80">
+                            <span class="whitespace-nowrap font-sans text-[9px] md:text-[10px] uppercase tracking-[.12em] text-white/90 leading-tight mt-0.5">
                                 {{ \Carbon\Carbon::now(config('app.timezone', 'America/Caracas'))->locale('es')->isoFormat('D \d\e MMMM YYYY') }}
                             </span>
-                            <button 
-                                type="button"
-                                id="efem-ticker-toggle"
-                                onclick="toggleEfemTicker()"
-                                aria-pressed="false"
-                                aria-label="Pausar movimiento de efemérides"
-                                class="mt-1 inline-flex h-6 w-6 items-center justify-center rounded text-white/80 transition hover:text-white hover:bg-black/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                            >
-                                <svg id="efem-pause-icon" class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <rect x="6" y="4" width="4" height="16" rx="1"></rect>
-                                    <rect x="14" y="4" width="4" height="16" rx="1"></rect>
-                                </svg>
-                                <svg id="efem-play-icon" class="hidden h-3 w-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                                </svg>
-                            </button>
                         </div>
+                        <button 
+                            type="button"
+                            id="efem-ticker-toggle"
+                            onclick="toggleEfemTicker()"
+                            aria-pressed="false"
+                            aria-label="Pausar movimiento de efemérides"
+                            class="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded text-white/90 transition hover:text-white hover:bg-black/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                        >
+                            <svg id="efem-pause-icon" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+                                <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+                            </svg>
+                            <svg id="efem-play-icon" class="hidden h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                            </svg>
+                        </button>
                     </div>
 
-            {{-- Track animado --}}
-            <div class="efem-track flex items-center gap-0 pl-0 md:pl-[170px]" style="animation: efem-scroll 60s alternate linear infinite;">
+                    {{-- Track animado dentro de contenedor con su propio overflow-hidden --}}
+                    <div class="flex-1 min-w-0 overflow-hidden relative flex items-center">
+                        <div class="efem-track flex items-center gap-0 w-max" style="animation: efem-scroll 60s alternate linear infinite;">
             @php
                 $efemItems = $efemerides->values();
                 // Pre-cargar los tags de cada post (una sola query por post)
@@ -193,6 +194,7 @@
                 @endforeach
             </div>
         </div>
+    </div>
     </div>
     </div>
     </div>
@@ -260,7 +262,7 @@
             animation-play-state: paused !important;
         }
         @media (prefers-reduced-motion: reduce) {
-            #efemerides-ticker {
+            #efemerides-ticker .flex-1 {
                 overflow-x: auto !important;
                 scrollbar-width: thin;
             }

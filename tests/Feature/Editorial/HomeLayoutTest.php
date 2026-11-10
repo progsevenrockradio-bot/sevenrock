@@ -67,4 +67,42 @@ class HomeLayoutTest extends TestCase
         $this->assertStringContainsString('x-ref="audio"', $html);
         $this->assertStringContainsString('lucille-range-slider', $html);
     }
+
+    public function test_efemerides_cintillo_renders_correctly_with_readable_date_and_pause_control(): void
+    {
+        ThemeSetting::current();
+
+        $catEf = PostTaxonomy::firstOrCreate(
+            ['name' => 'Hoy en el Rock', 'type' => 'category'],
+            ['slug' => 'hoy-en-el-rock']
+        );
+
+        $post = Post::create([
+            'title'        => 'Nace Ronnie James Dio en Portsmouth',
+            'slug'         => 'nace-ronnie-james-dio',
+            'content'      => '<p>Efeméride de prueba.</p>',
+            'excerpt'      => 'Ronnie James Dio',
+            'status'       => 'published',
+            'is_published' => true,
+            'published_at' => now(),
+            'author_email' => 'dark.vader.agent@gmail.com',
+            'categories'   => ['Hoy en el Rock'],
+        ]);
+        $post->taxonomies()->sync([$catEf->id]);
+
+        $response = $this->get('/');
+        $response->assertStatus(200);
+
+        $html = $response->getContent();
+
+        // 1. Contenedor y cintillo
+        $this->assertStringContainsString('id="efemerides-ticker"', $html);
+        $this->assertStringContainsString('🎸 Hoy en el Rock', $html);
+        $this->assertStringContainsString('id="efem-ticker-toggle"', $html);
+        $this->assertStringContainsString('aria-label="Pausar movimiento de efemérides"', $html);
+
+        // 2. Control de texto y pista
+        $this->assertStringContainsString('class="efem-track', $html);
+        $this->assertStringContainsString('Nace Ronnie James Dio en Portsmouth', $html);
+    }
 }

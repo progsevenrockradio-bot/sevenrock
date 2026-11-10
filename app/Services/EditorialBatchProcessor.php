@@ -111,6 +111,17 @@ class EditorialBatchProcessor
             }
         }
 
+        // Si no se proporcionó manifiesto de imágenes (ej. recepción directa por correo), intentar resolver manifiesto local preexistente
+        if (empty($imagesManifest)) {
+            $manifestCandidate = storage_path("editorial_batches/{$batchId}/images_installed.json");
+            if (file_exists($manifestCandidate)) {
+                $decodedManifest = json_decode((string) file_get_contents($manifestCandidate), true);
+                if (is_array($decodedManifest)) {
+                    $imagesManifest = $decodedManifest;
+                }
+            }
+        }
+
         // ── 2. PREPARACIÓN DE ENTORNO Y RECURSOS ─────────────────────────────
         $taxNoticias = PostTaxonomy::where('slug', 'noticias-rock')->first();
         $taxEfemerides = PostTaxonomy::where('slug', 'hoy-en-el-rock')->first();

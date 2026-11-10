@@ -388,9 +388,10 @@ Schedule::command('podcast:reconcile-pipeline', [
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/podcast-reconcile.log'));
 
-// Process incoming emails via IMAP every 30 minutes
-Schedule::command('emails:process')
-    ->everyThirtyMinutes()
+// Procesamiento diario de entregas editoriales estructuradas DV-1 de Darth Vader (exclusivamente como borradores)
+Schedule::command('emails:process --only-dv1')
+    ->dailyAt('03:00')
+    ->timezone('Europe/Madrid')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/emails-process.log'));
