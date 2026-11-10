@@ -152,30 +152,6 @@ class EditorialBatchProcessor
             // Calcular hash determinista y canónico del payload del elemento
             $payloadHash = self::computeStablePayloadHash($elem, $imageMeta);
 
-            $rawPath = $imageMeta['path'] ?? $elem['imagen_url'] ?? null;
-            $rawCredit = $imageMeta['meta']['credit'] ?? $elem['imagen_credito'] ?? null;
-            $imageCredit = ($rawCredit === 'NO_CONFIRMADO' || $rawCredit === 'none' || $rawCredit === '') ? null : $rawCredit;
-            $imageAlt = $imageMeta['meta']['alt'] ?? $elem['imagen_alt'] ?? $title;
-
-            $imagePath = ($rawPath === 'NINGUNA' || $rawPath === 'none' || $rawPath === '') ? null : $rawPath;
-
-            // Resolución, descarga y optimización de imágenes nuevas si es una URL remota o ficha Wikimedia
-            if (! $isDryRun && ! empty($imagePath) && (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://'))) {
-                $imageService = app(\App\Services\EditorialImageService::class);
-                $imgResult = $imageService->resolveAndStore($imagePath, $elemId, Str::slug($title), $imageCredit);
-
-                if ($imgResult['success'] && ! empty($imgResult['path'])) {
-                    $imagePath = $imgResult['path'];
-                    if (! empty($imgResult['credit']) && empty($imageCredit)) {
-                        $imageCredit = $imgResult['credit'];
-                    }
-                } else {
-                    $imagePath = null;
-                    $revisionRequerida = true;
-                    $motivoRevision = "[IMAGEN_PENDIENTE] " . ($imgResult['error'] ?? 'Fallo de descarga de imagen') . ($motivoRevision ? " | {$motivoRevision}" : "");
-                }
-            }
-
             // Comprobar si ya existe registro previo para (batch_id, element_id)
             $existingMeta = EmailPostSanitizedMeta::where('batch_id', $batchId)
                 ->where('element_id', $elemId)
@@ -251,7 +227,7 @@ class EditorialBatchProcessor
                         'revision'  => true,
                         'reason'    => 'Borrador existente preservado íntegro: se detectó contenido modificado y se requiere aprobación explícita para actualizar.',
                     ];
-                    continue; // NO continúa hacia la sobrescritura
+                    continue; // NO continúa hacia la sobrescritura ni descarga de imágenes
                 }
 
                 // Si hay aprobación explícita de actualización:
@@ -276,6 +252,45 @@ class EditorialBatchProcessor
                     $createdCount++;
                 }
                 continue;
+            }
+
+            // ── RESOLUCIÓN DE IMAGEN (SOLO PARA ARTÍCULOS QUE SE CREAN O ACTUALIZAN) ──
+            $rawPath = $imageMeta['path'] ?? $elem['imagen_url'] ?? null;
+            $rawCredit = $imageMeta['meta']['credit'] ?? $elem['imagen_credito'] ?? null;
+            $imageCredit = ($rawCredit === 'NO_CONFIRMADO' || $rawCredit === 'none' || $rawCredit === '') ? null : $rawCredit;
+            $imageAlt = $imageMeta['meta']['alt'] ?? $elem['imagen_alt'] ?? $title;
+
+            $isExplicitlyNone = ($rawPath === 'NINGUNA' || $rawPath === 'none');
+            $imagePath = $isExplicitlyNone ? null : $rawPath;
+
+            if ($isExplicitlyNone) {
+                // IMAGEN_URL era NINGUNA o none -> Pendiente visible de imagen
+                $revisionRequerida = true;
+                $motivoRevision = "[IMAGEN_PENDIENTE] Imagen no proporcionada ('{$rawPath}')" . ($motivoRevision ? " | {$motivoRevision}" : "");
+            } elseif (! empty($imagePath) && (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://'))) {
+                $imageService = app(\App\Services\EditorialImageService::class);
+                $imgResult = $imageService->resolveAndStore($imagePath, $batchId, $elemId, Str::slug($title), $imageCredit);
+
+                if ($imgResult['success'] && ! empty($imgResult['path'])) {
+                    $imagePath = $imgResult['path'];
+                    if (! empty($imgResult['credit'])) {
+                        $imageCredit = $imgResult['credit'];
+                    }
+                } else {
+                    $imagePath = null;
+                    $revisionRequerida = true;
+                    $motivoRevision = "[IMAGEN_PENDIENTE] " . ($imgResult['error'] ?? 'Fallo de descarga de imagen') . ($motivoRevision ? " | {$motivoRevision}" : "");
+                }
+            } elseif (! empty($imagePath)) {
+                // Ruta local: validar existencia
+                $storageRelative = str_starts_with($imagePath, 'storage/') ? substr($imagePath, 8) : $imagePath;
+                $fullPath = storage_path('app/public/' . $storageRelative);
+                $publicPath = public_path($imagePath);
+
+                if (! file_exists($fullPath) && ! file_exists($publicPath)) {
+                    $revisionRequerida = true;
+                    $motivoRevision = "[IMAGEN_PENDIENTE] Archivo local no encontrado en disco: '{$rawPath}'" . ($motivoRevision ? " | {$motivoRevision}" : "");
+                }
             }
 
             // ── PERSISTENCIA TRANSACCIONAL POR ELEMENTO ─────────────────────
@@ -320,6 +335,10 @@ class EditorialBatchProcessor
                 $safeImageCredit = $imageCredit ? Str::limit((string) $imageCredit, 500, '') : null;
                 $safeImageAlt = $imageAlt ? Str::limit((string) $imageAlt, 500, '') : null;
 
+                if ($safeImageCredit && Schema::hasColumn('posts', 'image_source')) {
+                    $post->image_source = $safeImageCredit;
+                }
+
                 if ($imagePath) {
                     if (Schema::hasColumn('posts', 'featured_image_path')) {
                         $post->featured_image_path = $imagePath;
@@ -327,7 +346,6 @@ class EditorialBatchProcessor
                     if (Schema::hasColumn('posts', 'featured_image')) {
                         $post->featured_image = $imagePath;
                     }
-                    $post->image_source = $safeImageCredit;
                 }
 
                 // Persistir image_alt si existe la columna en posts

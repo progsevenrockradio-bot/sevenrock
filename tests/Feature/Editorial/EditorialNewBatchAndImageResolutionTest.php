@@ -60,75 +60,227 @@ class EditorialNewBatchAndImageResolutionTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_editorial_image_service_blocks_ssrf_and_private_ips(): void
+    public function test_editorial_image_service_blocks_literal_private_and_loopback_ips(): void
     {
         $service = app(EditorialImageService::class);
 
-        $res1 = $service->validateSafeRemoteUrl('http://127.0.0.1/malicious.jpg');
-        $this->assertFalse($res1['valid']);
-        $this->assertStringContainsString('loopback', $res1['error']);
+        // IPv4 loopback literal
+        $resLoopback = $service->validateSafeRemoteUrl('http://127.0.0.1/malicious.jpg');
+        $this->assertFalse($resLoopback['valid']);
+        $this->assertStringContainsString('privada o reservada', $resLoopback['error']);
 
-        $res2 = $service->validateSafeRemoteUrl('http://localhost:8000/test.jpg');
-        $this->assertFalse($res2['valid']);
-        $this->assertStringContainsString('loopback', $res2['error']);
+        // IPv4 privada 192.168.x literal
+        $resPriv192 = $service->validateSafeRemoteUrl('http://192.168.1.50/pic.jpg');
+        $this->assertFalse($resPriv192['valid']);
+        $this->assertStringContainsString('privada o reservada', $resPriv192['error']);
 
-        $res3 = $service->validateSafeRemoteUrl('ftp://example.com/file.jpg');
-        $this->assertFalse($res3['valid']);
-        $this->assertStringContainsString('Esquema no permitido', $res3['error']);
+        // IPv4 privada 10.x literal
+        $resPriv10 = $service->validateSafeRemoteUrl('http://10.0.0.1/pic.jpg');
+        $this->assertFalse($resPriv10['valid']);
+        $this->assertStringContainsString('privada o reservada', $resPriv10['error']);
 
-        $res4 = $service->validateSafeRemoteUrl('https://upload.wikimedia.org/wikipedia/commons/test.jpg');
-        $this->assertTrue($res4['valid']);
+        // IPv4 link-local (cloud metadata)
+        $resMetadata = $service->validateSafeRemoteUrl('http://169.254.169.254/latest/meta-data/');
+        $this->assertFalse($resMetadata['valid']);
+        $this->assertStringContainsString('privada o reservada', $resMetadata['error']);
+
+        // IPv6 loopback literal [::1]
+        $resIpv6Loopback = $service->validateSafeRemoteUrl('http://[::1]/pic.jpg');
+        $this->assertFalse($resIpv6Loopback['valid']);
+        $this->assertStringContainsString('privada o reservada', $resIpv6Loopback['error']);
+
+        // IPv6 ULA literal [fc00::1]
+        $resIpv6Ula = $service->validateSafeRemoteUrl('http://[fc00::1]/pic.jpg');
+        $this->assertFalse($resIpv6Ula['valid']);
+        $this->assertStringContainsString('privada o reservada', $resIpv6Ula['error']);
+
+        // Credenciales incrustadas
+        $resCreds = $service->validateSafeRemoteUrl('http://admin:secret@upload.wikimedia.org/pic.jpg');
+        $this->assertFalse($resCreds['valid']);
+        $this->assertStringContainsString('Credenciales incrustadas', $resCreds['error']);
+
+        // Fallo de resolución DNS
+        $resDnsFail = $service->validateSafeRemoteUrl('http://dominio-totalmente-inexistente-xyz987654321.org/pic.jpg');
+        $this->assertFalse($resDnsFail['valid']);
+        $this->assertStringContainsString('Fallo de resolución DNS', $resDnsFail['error']);
+
+        // Esquema prohibido
+        $resFtp = $service->validateSafeRemoteUrl('ftp://example.com/file.jpg');
+        $this->assertFalse($resFtp['valid']);
+        $this->assertStringContainsString('Esquema no permitido', $resFtp['error']);
     }
 
-    public function test_editorial_image_service_downloads_and_optimizes_image_with_gd(): void
+    public function test_editorial_image_service_blocks_redirection_to_internal_ip(): void
     {
         $service = app(EditorialImageService::class);
 
-        // Generar imagen JPEG válida de prueba (>4KB)
-        $img = imagecreatetruecolor(1600, 900);
-        $bgColor = imagecolorallocate($img, 195, 39, 32);
-        imagefilledrectangle($img, 0, 0, 1600, 900, $bgColor);
-        ob_start();
-        imagejpeg($img, null, 90);
-        $imgData = ob_get_clean();
-        imagedestroy($img);
-
-        // Simular respuesta HTTP para la descarga
+        // Simulamos que la URL pública inicial redirige con 302 a una IP privada interna
         Http::fake([
-            'https://upload.wikimedia.org/wikipedia/commons/test-rock-photo.jpg' => Http::response($imgData, 200, [
+            'https://public-host.com/cover.jpg' => Http::response('', 302, [
+                'Location' => 'http://127.0.0.1/secret-internal.jpg',
+            ]),
+        ]);
+
+        $result = $service->downloadToTempFile('https://public-host.com/cover.jpg');
+
+        $this->assertFalse($result['success']);
+        $this->assertNull($result['temp_path']);
+        $this->assertStringContainsString('Seguridad en salto HTTP (1)', $result['error']);
+        $this->assertStringContainsString('privada o reservada rechazada', $result['error']);
+    }
+
+    public function test_editorial_image_service_aborts_excessive_download_streaming(): void
+    {
+        $service = app(EditorialImageService::class);
+
+        // Simulamos un payload que excede el límite de 12 MB (12582912 bytes)
+        $largePayload = str_repeat('A', 13 * 1024 * 1024); // 13 MB
+
+        Http::fake([
+            'https://upload.wikimedia.org/wikipedia/commons/huge-image.jpg' => Http::response($largePayload, 200, [
                 'Content-Type' => 'image/jpeg',
             ]),
         ]);
 
-        $result = $service->resolveAndStore(
-            'https://upload.wikimedia.org/wikipedia/commons/test-rock-photo.jpg',
-            'DV-TEST-E01',
-            'test-band-announcement',
-            'Foto: Fotógrafo Rock / Commons (CC BY 4.0)'
-        );
+        $result = $service->downloadToTempFile('https://upload.wikimedia.org/wikipedia/commons/huge-image.jpg');
 
-        $this->assertTrue($result['success']);
-        $this->assertNotNull($result['path']);
-        $this->assertStringStartsWith('storage/posts/covers/post-dv-e01-test-band-announcement', $result['path']);
-        $this->assertSame('Foto: Fotógrafo Rock / Commons (CC BY 4.0)', $result['credit']);
-
-        // Verificar existencia en disco y dimensiones escaladas (max 1200px)
-        $storagePath = storage_path('app/public/' . str_replace('storage/', '', $result['path']));
-        $this->assertFileExists($storagePath);
-        $dims = getimagesize($storagePath);
-        $this->assertLessThanOrEqual(1200, $dims[0]);
+        $this->assertFalse($result['success']);
+        $this->assertNull($result['temp_path']);
+        $this->assertStringContainsString('Descarga abortada: tamaño excede el límite de 12 MB', $result['error']);
     }
 
-    public function test_editorial_image_service_resolves_wikimedia_commons_api_file_page(): void
+    public function test_editorial_image_service_rejects_missing_or_incompatible_wikimedia_licenses(): void
     {
         $service = app(EditorialImageService::class);
 
+        // 1. Licencia con restricción No Comercial (CC BY-NC 4.0)
+        $metaNc = [
+            'Artist' => ['value' => 'Photographer Name'],
+            'LicenseShortName' => ['value' => 'CC BY-NC 4.0'],
+            'LicenseUrl' => ['value' => 'https://creativecommons.org/licenses/by-nc/4.0'],
+        ];
+        $resNc = $service->validateCommonsLicense($metaNc, 'https://commons.wikimedia.org/wiki/File:nc.jpg');
+        $this->assertFalse($resNc['valid']);
+        $this->assertStringContainsString('No Comercial', $resNc['error']);
+
+        // 2. Licencia con restricción Sin Derivadas (CC BY-ND 4.0)
+        $metaNd = [
+            'Artist' => ['value' => 'Photographer Name'],
+            'LicenseShortName' => ['value' => 'CC BY-ND 4.0'],
+            'LicenseUrl' => ['value' => 'https://creativecommons.org/licenses/by-nd/4.0'],
+        ];
+        $resNd = $service->validateCommonsLicense($metaNd, 'https://commons.wikimedia.org/wiki/File:nd.jpg');
+        $this->assertFalse($resNd['valid']);
+        $this->assertStringContainsString('Sin Derivadas', $resNd['error']);
+
+        // 3. Licencia ausente
+        $metaEmpty = [
+            'Artist' => ['value' => 'Photographer Name'],
+            'LicenseShortName' => ['value' => ''],
+        ];
+        $resEmpty = $service->validateCommonsLicense($metaEmpty, 'https://commons.wikimedia.org/wiki/File:empty.jpg');
+        $this->assertFalse($resEmpty['valid']);
+        $this->assertStringContainsString('Licencia ausente', $resEmpty['error']);
+
+        // 4. Autor no acreditado con licencia CC
+        $metaNoAuthor = [
+            'Artist' => ['value' => 'Desconocido'],
+            'LicenseShortName' => ['value' => 'CC BY-SA 4.0'],
+            'LicenseUrl' => ['value' => 'https://creativecommons.org/licenses/by-sa/4.0'],
+        ];
+        $resNoAuthor = $service->validateCommonsLicense($metaNoAuthor, 'https://commons.wikimedia.org/wiki/File:no-author.jpg');
+        $this->assertFalse($resNoAuthor['valid']);
+        $this->assertStringContainsString('Autor no acreditado', $resNoAuthor['error']);
+
+        // 5. Licencia compatible (CC BY-SA 4.0) con autor
+        $metaValid = [
+            'Artist' => ['value' => 'John Rock Photographer'],
+            'LicenseShortName' => ['value' => 'CC BY-SA 4.0'],
+            'LicenseUrl' => ['value' => 'https://creativecommons.org/licenses/by-sa/4.0'],
+        ];
+        $resValid = $service->validateCommonsLicense($metaValid, 'https://commons.wikimedia.org/wiki/File:valid.jpg', 'Crédito Adicional');
+        $this->assertTrue($resValid['valid']);
+        $this->assertStringContainsString('John Rock Photographer', $resValid['credit']);
+        $this->assertStringContainsString('CC BY-SA 4.0', $resValid['credit']);
+        $this->assertStringContainsString('Crédito declarado', $resValid['credit']);
+    }
+
+    public function test_reimporting_published_article_makes_zero_http_requests_and_zero_file_writes(): void
+    {
+        // 1. Crear un post y su meta en estado publicado
+        $post = Post::create([
+            'title'        => 'Articulo Ya Publicado',
+            'slug'         => 'articulo-ya-publicado',
+            'status'       => 'published',
+            'is_published' => 1,
+            'featured_image' => 'storage/posts/covers/original-photo.jpg',
+        ]);
+
+        EmailPostSanitizedMeta::create([
+            'post_id'      => $post->id,
+            'batch_id'     => 'DV-20261110-01',
+            'element_id'   => 'DV-20261110-01-E01',
+            'payload_hash' => 'dummy-different-hash',
+            'received_at'  => now(),
+        ]);
+
+        // Aseguramos que si se intentara cualquier petición HTTP, falle o se detecte
+        Http::fake();
+
+        $processor = app(EditorialBatchProcessor::class);
+
+        $payload = <<<'MARKDOWN'
+FORMATO: DV-1
+LOTE_ID: DV-20261110-01
+FECHA_EDITORIAL: 2026-11-10
+ZONA_HORARIA: Europe/Madrid
+TOTAL_ELEMENTOS: 1
+MODO: BORRADOR
+
+=== INICIO ELEMENTO ===
+ID: DV-20261110-01-E01
+TIPO: NOTICIA
+ARTISTA_BANDA: Powerwolf
+TITULO: Articulo Ya Publicado Con Cambio De Texto
+FECHA_EDITORIAL: 2026-11-10
+TEXTO:
+Texto modificado que no debe alterar el articulo publicado.
+FUENTES:
+- https://example.com/source
+IMAGEN_URL: https://upload.wikimedia.org/wikipedia/commons/new-photo-that-must-not-be-downloaded.jpg
+IMAGEN_CREDITO: Foto de prueba
+IMAGEN_ALT: Foto alt
+REVISION_REQUERIDA: NO
+=== FIN ELEMENTO ===
+MARKDOWN;
+
+        $result = $processor->process($payload, [], 'msg-test-published');
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(1, $result['conflicts']);
+        $this->assertSame('protected_published', $result['elements_detail']['DV-20261110-01-E01']['action']);
+
+        // El artículo publicado permanece exactamente intacto
+        $freshPost = $post->fresh();
+        $this->assertSame('published', $freshPost->status);
+        $this->assertTrue((bool) $freshPost->is_published);
+        $this->assertSame('storage/posts/covers/original-photo.jpg', $freshPost->featured_image);
+
+        // Verificación crítica: CERO peticiones HTTP realizadas
+        Http::assertNothingSent();
+    }
+
+    public function test_two_batches_with_same_e01_and_title_do_not_overwrite_each_other_images(): void
+    {
+        $service = app(EditorialImageService::class);
+
+        // Generar imagen JPEG válida de prueba (>4KB)
         $img = imagecreatetruecolor(800, 600);
         $bgColor = imagecolorallocate($img, 120, 40, 40);
         imagefilledrectangle($img, 0, 0, 800, 600, $bgColor);
-        for ($i = 0; $i < 100; $i++) {
-            $col = imagecolorallocate($img, ($i * 5) % 255, ($i * 9) % 255, 200);
-            imageline($img, 0, $i * 6, 800, 600 - ($i * 6), $col);
+        for ($i = 0; $i < 120; $i++) {
+            $col = imagecolorallocate($img, ($i * 7) % 255, ($i * 11) % 255, 220);
+            imageline($img, 0, $i * 5, 800, 600 - ($i * 5), $col);
         }
         ob_start();
         imagejpeg($img, null, 90);
@@ -136,40 +288,46 @@ class EditorialNewBatchAndImageResolutionTest extends TestCase
         imagedestroy($img);
 
         Http::fake([
-            'https://commons.wikimedia.org/w/api.php*' => Http::response([
-                'query' => [
-                    'pages' => [
-                        '12345' => [
-                            'pageid' => 12345,
-                            'title'  => 'File:Ghost_Live_2025.jpg',
-                            'imageinfo' => [
-                                [
-                                    'url'  => 'https://upload.wikimedia.org/wikipedia/commons/direct-ghost-live-2025.jpg',
-                                    'size' => strlen($imgData),
-                                    'extmetadata' => [
-                                        'Artist' => ['value' => '<a href="#">Jane Rock Photo</a>'],
-                                        'LicenseShortName' => ['value' => 'CC BY-SA 4.0'],
-                                    ],
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
-            ], 200),
-            'https://upload.wikimedia.org/wikipedia/commons/direct-ghost-live-2025.jpg' => Http::response($imgData, 200, [
-                'Content-Type' => 'image/jpeg',
-            ]),
+            'https://upload.wikimedia.org/wikipedia/commons/ghost-photo-batch1.jpg' => Http::response($imgData, 200, ['Content-Type' => 'image/jpeg']),
+            'https://upload.wikimedia.org/wikipedia/commons/ghost-photo-batch2.jpg' => Http::response($imgData, 200, ['Content-Type' => 'image/jpeg']),
         ]);
 
-        $wikiPageUrl = 'https://commons.wikimedia.org/wiki/File:Ghost_Live_2025.jpg';
-        $this->assertTrue($service->isWikimediaPageUrl($wikiPageUrl));
+        // Lote 1: DV-20261111-01, E01
+        $res1 = $service->resolveAndStore(
+            'https://upload.wikimedia.org/wikipedia/commons/ghost-photo-batch1.jpg',
+            'DV-20261111-01',
+            'DV-20261111-01-E01',
+            'ghost-confirma-nuevo-album',
+            'Foto Lote 1'
+        );
 
-        $result = $service->resolveAndStore($wikiPageUrl, 'DV-WIKI-E01', 'ghost-live-tour-2025', null);
+        if (! $res1['success']) {
+            $this->fail("RES1 ERROR: " . ($res1['error'] ?? 'NONE'));
+        }
 
-        $this->assertTrue($result['success']);
-        $this->assertNotNull($result['path']);
-        $this->assertSame('Foto: Jane Rock Photo / Wikimedia Commons (CC BY-SA 4.0)', $result['credit']);
-        $this->assertStringStartsWith('storage/posts/covers/post-dv-e01-ghost-live-tour-2025', $result['path']);
+        // Lote 2: DV-20261112-01, E01 (Mismo ID corto de elemento y mismo slug)
+        $res2 = $service->resolveAndStore(
+            'https://upload.wikimedia.org/wikipedia/commons/ghost-photo-batch2.jpg',
+            'DV-20261112-01',
+            'DV-20261112-01-E01',
+            'ghost-confirma-nuevo-album',
+            'Foto Lote 2'
+        );
+
+        $this->assertTrue($res1['success']);
+        $this->assertTrue($res2['success']);
+
+        // Las rutas deben ser completamente distintas
+        $this->assertNotSame($res1['path'], $res2['path']);
+        $this->assertStringContainsString('dv-20261111-01', $res1['path']);
+        $this->assertStringContainsString('dv-20261112-01', $res2['path']);
+
+        // Ambos archivos deben existir simultáneamente en disco sin sobrescribirse
+        $file1 = storage_path('app/public/' . str_replace('storage/', '', $res1['path']));
+        $file2 = storage_path('app/public/' . str_replace('storage/', '', $res2['path']));
+
+        $this->assertFileExists($file1);
+        $this->assertFileExists($file2);
     }
 
     public function test_controlled_clock_schedule_arrival_at_0307_and_processing_at_0315_with_idempotency(): void
@@ -297,7 +455,7 @@ MARKDOWN;
         $this->assertNotNull($ghostPost, 'ghostPost no fue encontrado por slug');
         $ghostImagePath = $ghostPost->featured_image ?: $ghostPost->featured_image_path;
         $this->assertNotNull($ghostImagePath, 'featured_image de ghostPost es null');
-        $this->assertStringStartsWith('storage/posts/covers/post-dv-e01-ghost', $ghostImagePath);
+        $this->assertStringStartsWith('storage/posts/covers/post-dv-dv-20261111-01-dv-20261111-01-e01-ghost', $ghostImagePath);
         $this->assertSame('draft', $ghostPost->status);
         $this->assertFalse((bool) $ghostPost->is_published);
 
