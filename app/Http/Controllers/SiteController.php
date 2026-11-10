@@ -1157,8 +1157,18 @@ class SiteController extends Controller
                 return redirect()->to($postBySlug->url, 301);
             }
 
-            // Si la noticia no existe, responder 404 (nunca mostrar la última noticia como sustituto)
-            abort(404);
+            // Vista previa autorizada para administradores autenticados
+            if (auth()->check()) {
+                $postDraft = Post::where('slug', $slug)->first();
+                if ($postDraft) {
+                    $post = $postDraft;
+                }
+            }
+
+            if (! $post) {
+                // Si la noticia no existe, responder 404 (nunca mostrar la última noticia como sustituto)
+                abort(404);
+            }
         }
 
         if ($post) {
@@ -1173,6 +1183,8 @@ class SiteController extends Controller
                     'author' => $post->author,
                     'categories' => $post->categoryNames(),
                     'image' => $post->featured_image_url,
+                    'image_source' => $post->image_source,
+                    'image_alt' => $post->image_alt,
                     'facebook_url' => $post->facebook_url,
                     'instagram_url' => $post->instagram_url,
                     'twitter_url' => $post->twitter_url,

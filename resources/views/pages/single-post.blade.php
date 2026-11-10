@@ -146,12 +146,20 @@
                 <main class="lucille-blog-standard-main flex-1 w-full lg:w-3/4 pr-0 lg:pr-4">
                     <article>
                         @if (!empty($post['image']))
-                            <div class="relative embedded-wall-socket mb-6 overflow-hidden rounded-xl border border-white/5 aspect-video bg-[#0c0c0c]">
-                                <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ $post['title'] }}" width="1200" height="675" class="mb-0 w-full h-full object-cover" loading="eager" decoding="async">
-                                @if (data_get($post, 'en_memoria'))
-                                    <x-luto :nombre="data_get($post, 'en_memoria_nombre')" />
+                            <figure class="mb-6">
+                                <div class="relative embedded-wall-socket overflow-hidden rounded-xl border border-white/5 aspect-video bg-[#0c0c0c]">
+                                    <img src="{{ str_starts_with($post['image'], 'http') ? $post['image'] : asset($post['image']) }}" alt="{{ data_get($post, 'image_alt') ?: $post['title'] }}" width="1200" height="675" class="mb-0 w-full h-full object-cover" loading="eager" decoding="async">
+                                    @if (data_get($post, 'en_memoria'))
+                                        <x-luto :nombre="data_get($post, 'en_memoria_nombre')" />
+                                    @endif
+                                </div>
+                                @if (!empty($post['image_source']))
+                                    <figcaption class="mt-2 text-xs text-gray-400 italic font-sans flex items-center gap-1.5">
+                                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-[#c32720]" aria-hidden="true"></span>
+                                        <span>{{ $post['image_source'] }}</span>
+                                    </figcaption>
                                 @endif
-                            </div>
+                            </figure>
                         @endif
 
                         <div class="lucille-single-post-body mt-0 space-y-5 text-[#dcdcdc] font-sans leading-relaxed text-base md:text-lg">

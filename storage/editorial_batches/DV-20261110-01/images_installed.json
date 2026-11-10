@@ -1,0 +1,82 @@
+{
+    "DV-20261110-01-E01": {
+        "path": "storage/posts/covers/post-dv-e01-powerwolf-colmar-2018.jpg",
+        "absolute_path": "C:\\DEV\\Laragon\\laragon\\www\\SevenRockRadio/storage/app/public/posts/covers/post-dv-e01-powerwolf-colmar-2018.jpg",
+        "dimensions": "1200x649",
+        "size_kb": 115.6,
+        "meta": {
+            "filename": "post-dv-e01-powerwolf-colmar-2018.jpg",
+            "url": "https://upload.wikimedia.org/wikipedia/commons/4/46/Powerwolf_%C3%A0_Colmar_en_2018.jpg",
+            "artist": "Tilly antoine",
+            "license": "CC BY-SA 4.0",
+            "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "credit": "Foto: Tilly antoine / Wikimedia Commons (CC BY-SA 4.0)",
+            "alt": "Powerwolf en directo durante su actuación en Colmar en 2018",
+            "is_archive": true
+        }
+    },
+    "DV-20261110-01-E02": {
+        "path": "storage/posts/covers/post-dv-e02-ian-gillan-asier-arco.jpg",
+        "absolute_path": "C:\\DEV\\Laragon\\laragon\\www\\SevenRockRadio/storage/app/public/posts/covers/post-dv-e02-ian-gillan-asier-arco.jpg",
+        "dimensions": "683x1024",
+        "size_kb": 62.5,
+        "meta": {
+            "filename": "post-dv-e02-ian-gillan-asier-arco.jpg",
+            "url": "https://upload.wikimedia.org/wikipedia/commons/9/9d/Ian_Gillan-01.jpg",
+            "artist": "Asier Arco",
+            "license": "CC BY 2.0",
+            "license_url": "https://creativecommons.org/licenses/by/2.0/",
+            "credit": "Foto: Asier Arco / Wikimedia Commons (CC BY 2.0)",
+            "alt": "Ian Gillan, vocalista de Deep Purple, actuando en directo",
+            "is_archive": true
+        }
+    },
+    "DV-20261110-01-E03": {
+        "path": "storage/posts/covers/post-dv-e03-fall-out-boy-monumentour.jpg",
+        "absolute_path": "C:\\DEV\\Laragon\\laragon\\www\\SevenRockRadio/storage/app/public/posts/covers/post-dv-e03-fall-out-boy-monumentour.jpg",
+        "dimensions": "1200x900",
+        "size_kb": 172.3,
+        "meta": {
+            "filename": "post-dv-e03-fall-out-boy-monumentour.jpg",
+            "url": "https://upload.wikimedia.org/wikipedia/commons/f/f1/Fall_out_Boy_Monumentour.jpg",
+            "artist": "Fernando Loz",
+            "license": "CC BY-SA 2.0",
+            "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+            "credit": "Foto: Fernando Loz / Wikimedia Commons (CC BY-SA 2.0)",
+            "alt": "Fall Out Boy durante un concierto de la gira Monumentour",
+            "is_archive": true
+        }
+    },
+    "DV-20261110-01-E04": {
+        "path": "storage/posts/covers/post-dv-e04-kerry-king-2006.jpg",
+        "absolute_path": "C:\\DEV\\Laragon\\laragon\\www\\SevenRockRadio/storage/app/public/posts/covers/post-dv-e04-kerry-king-2006.jpg",
+        "dimensions": "1200x800",
+        "size_kb": 170.7,
+        "meta": {
+            "filename": "post-dv-e04-kerry-king-2006.jpg",
+            "url": "https://upload.wikimedia.org/wikipedia/commons/0/09/Kerry_King%2C_2006.jpg",
+            "artist": "Suelen Pessoa",
+            "license": "CC BY-SA 2.0",
+            "license_url": "https://creativecommons.org/licenses/by-sa/2.0/",
+            "credit": "Foto: Suelen Pessoa / Wikimedia Commons (CC BY-SA 2.0)",
+            "alt": "Kerry King tocando la guitarra en directo",
+            "is_archive": true
+        }
+    },
+    "DV-20261110-01-E11": {
+        "path": "storage/posts/covers/post-dv-e11-greg-lake-2013-elfo.jpg",
+        "absolute_path": "C:\\DEV\\Laragon\\laragon\\www\\SevenRockRadio/storage/app/public/posts/covers/post-dv-e11-greg-lake-2013-elfo.jpg",
+        "dimensions": "1144x1144",
+        "size_kb": 180.3,
+        "meta": {
+            "filename": "post-dv-e11-greg-lake-2013-elfo.jpg",
+            "url": "https://upload.wikimedia.org/wikipedia/commons/6/65/Greg_Lake_and_Annie_Barbazza_at_Elfo_Studios%2C_2013.jpg",
+            "artist": "Manticore1962",
+            "license": "CC0 1.0 Universal",
+            "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+            "credit": "Foto: Manticore1962 / Wikimedia Commons (CC0 1.0 Universal / Dominio Público)",
+            "alt": "Greg Lake en los estudios Elfo en 2013",
+            "is_archive": true
+        }
+    }
+}

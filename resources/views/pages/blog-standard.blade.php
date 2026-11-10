@@ -42,7 +42,7 @@
                                         <a href="{{ $url }}" class="block hero-slide" style="background-image: url('{{ str_starts_with($image, 'http') ? $image : asset($image) }}');">
                                             <img
                                                 src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}"
-                                                alt="{{ $title }}"
+                                                alt="{{ data_get($post, 'image_alt') ?: $title }}"
                                                 width="1200"
                                                 height="675"
                                                 class="hero-slide-img transition duration-500 ease-out group-hover:scale-102"
@@ -150,7 +150,7 @@
                                         <a href="{{ $url }}" class="block h-full">
                                             <img
                                                 src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}"
-                                                alt="{{ $title }}"
+                                                alt="{{ data_get($post, 'image_alt') ?: $title }}"
                                                 width="640"
                                                 height="360"
                                                 class="w-full h-full object-cover transition duration-500 ease-out group-hover:scale-102"

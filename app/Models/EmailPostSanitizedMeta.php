@@ -14,9 +14,17 @@ class EmailPostSanitizedMeta extends Model
     protected $fillable = [
         'post_id',
         'source_message_id',
+        'batch_id',
+        'element_id',
+        'payload_hash',
         'sender_email',
         'received_at',
         'musical_release_date',
+        'event_date',
+        'artist_name',
+        'sources',
+        'image_credit',
+        'image_alt',
         'embargo_until',
         'publish_permitted_at',
         'is_embargo_active',
@@ -27,6 +35,7 @@ class EmailPostSanitizedMeta extends Model
         'media_inventory',
         'source_subject',
         'superseded_by_message_id',
+        'corrects_element_id',
     ];
 
     protected function casts(): array

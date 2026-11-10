@@ -306,6 +306,40 @@ class ProcessIncomingEmails extends Command
                     continue;
                 }
 
+                // ── CIRCUITO EDITORIAL DARTH VADER DV-1 (DETERMINISTA, MODO BORRADOR, AISLADO) ──
+                $dvParser = app(\App\Services\EditorialDarthVaderParser::class);
+                $isDv1Payload = $dvParser->isDv1Format($subject, $body);
+
+                if ($isDv1Payload && ! $isDarkVaderAgent) {
+                    $this->warn("[SEGURIDAD] Correo con formato DV-1 de remitente no autorizado como Darth Vader: {$senderEmail}. Descartando.");
+                    \Illuminate\Support\Facades\Log::warning("ProcessIncomingEmails: Intento de envío DV-1 por remitente no autenticado.", [
+                        'sender'     => $senderEmail,
+                        'message_id' => $messageId,
+                        'subject'    => $subject,
+                    ]);
+                    $this->recordProcessedEmail($messageId, $subject, 'unauthorized_dv1');
+                    $message->setFlag('SEEN');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    continue;
+                }
+
+                if ($isDv1Payload && $isDarkVaderAgent) {
+                    $this->info("[DARK VADER DV-1] Procesando lote estructurado con EditorialBatchProcessor para mensaje: {$messageId}");
+                    $batchProcessor = app(\App\Services\EditorialBatchProcessor::class);
+                    $result = $batchProcessor->process($body, [], $messageId, $senderEmail);
+
+                    if ($result['success']) {
+                        $this->info("[DV-1 PROCESADO] Lote {$result['batch_id']}: creados {$result['created']}, actualizados {$result['updated']}, omitidos {$result['skipped']}, conflictos {$result['conflicts']}.");
+                        $this->recordProcessedEmail($messageId, $subject, 'processed');
+                    } else {
+                        $this->warn("[DV-1 FALLO] Lote {$result['batch_id']}: {$result['error']}");
+                        $this->recordProcessedEmail($messageId, $subject, 'failed_dv1');
+                    }
+                    $message->setFlag('SEEN');
+                    if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
+                    continue;
+                }
+
                 // Comprobar si es un correo especial
                 $isDarkVader = $isDarkVaderAgent;
                 $subjectLower = mb_strtolower($subject);

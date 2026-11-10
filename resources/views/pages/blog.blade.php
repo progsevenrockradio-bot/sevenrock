@@ -22,7 +22,7 @@
                         @if ($image)
                             <img
                                 src="{{ str_starts_with($image, 'http') ? $image : asset($image) }}"
-                                alt="{{ $title }}"
+                                alt="{{ data_get($post, 'image_alt') ?: $title }}"
                                 width="1200"
                                 height="800"
                                 class="lucille-card-bg absolute inset-0 aspect-[3/2] h-full w-full object-cover opacity-55 transition duration-500 ease-out"

@@ -58,6 +58,7 @@ class Post extends Model
         'source_name',
         'source_url',
         'image_source',
+        'image_alt',
         'meta_title',
         'meta_description',
         'published_at',
