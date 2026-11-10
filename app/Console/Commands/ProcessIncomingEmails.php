@@ -148,7 +148,7 @@ class ProcessIncomingEmails extends Command
                 $daysOption = $this->option('days');
                 if ($targetMessageId !== '') {
                     $this->info("Buscando mensaje específico por Message-ID: <{$targetMessageId}>...");
-                    $messages = $folder->query()->setFetchOrder('desc')->limit(50)->get();
+                    $messages = $folder->query()->from('dark.vader.agent@gmail.com')->setFetchOrder('desc')->limit(10)->get();
                 } elseif ($daysOption) {
                     $days = max(1, (int) $daysOption);
                     $this->info("Buscando correos de los últimos {$days} días (incluye leídos)...");
