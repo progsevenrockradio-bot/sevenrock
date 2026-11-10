@@ -1129,7 +1129,7 @@ class SiteController extends Controller
         );
     }
 
-    public function singlePost(string $year, string $month, string $day, string $slug): View|RedirectResponse
+    public function singlePost(string $year, string $month, string $day, string $slug): View|RedirectResponse|\Illuminate\Http\Response
     {
         $targetDate = sprintf('%04d-%02d-%02d', (int) $year, (int) $month, (int) $day);
 
@@ -1141,6 +1141,8 @@ class SiteController extends Controller
                 ->whereDate('published_at', $targetDate)
                 ->first();
         }, null);
+
+        $isPreview = false;
 
         // Si la fecha en la URL no coincide exactamente, buscar si el post existe con ese slug
         if (! $post) {
@@ -1157,12 +1159,25 @@ class SiteController extends Controller
                 return redirect()->to($postBySlug->url, 301);
             }
 
-            // Vista previa autorizada para administradores autenticados
-            if (auth()->check()) {
-                $postDraft = Post::where('slug', $slug)->first();
-                if ($postDraft) {
-                    $post = $postDraft;
+            // Comprobar si existe un borrador con ese slug
+            $postDraft = $this->safeValue(function () use ($slug) {
+                return Post::query()->where('slug', $slug)->first();
+            }, null);
+
+            if ($postDraft && (! $postDraft->is_published || $postDraft->status !== 'published')) {
+                // Visitantes anónimos no pueden previsualizar borradores
+                if (! auth()->check()) {
+                    abort(404);
                 }
+
+                /** @var \App\Models\User $currentUser */
+                $currentUser = auth()->user();
+                if (! $this->canPreviewDraft($currentUser)) {
+                    abort(403, 'No tienes permisos administrativos ni editoriales para previsualizar este borrador.');
+                }
+
+                $post = $postDraft;
+                $isPreview = true;
             }
 
             if (! $post) {
@@ -1241,6 +1256,20 @@ class SiteController extends Controller
                     []
                 ),
             ]);
+
+            if ($isPreview) {
+                $response = response($view);
+                $response->headers->addCacheControlDirective('no-store', true);
+                $response->headers->addCacheControlDirective('no-cache', true);
+                $response->headers->addCacheControlDirective('private', true);
+                $response->headers->addCacheControlDirective('must-revalidate', true);
+                $response->headers->set('Pragma', 'no-cache');
+                $response->headers->set('Expires', '0');
+
+                return $response;
+            }
+
+            return $view;
         }
 
         return view('pages.single-post', [
@@ -1255,6 +1284,39 @@ class SiteController extends Controller
             'archiveActiveMonth' => null,
             'comments' => [],
         ]);
+    }
+
+    /**
+     * Determina si el usuario autenticado tiene permisos administrativos o editoriales
+     * para previsualizar borradores no publicados.
+     */
+    protected function canPreviewDraft(?\App\Models\User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        // 1. Acceso de administrador por método del modelo
+        if (method_exists($user, 'hasAdminAccess') && $user->hasAdminAccess()) {
+            return true;
+        }
+
+        // 2. Columna is_admin o role admin
+        if ((bool) ($user->is_admin ?? false) || (string) ($user->role ?? '') === 'admin') {
+            return true;
+        }
+
+        // 3. Permiso Spatie específico 'manage posts'
+        if (method_exists($user, 'can') && $user->can('manage posts')) {
+            return true;
+        }
+
+        // 4. Roles editoriales o administrativos Spatie
+        if (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Editor/Locutor', 'admin'])) {
+            return true;
+        }
+
+        return false;
     }
 
     private function cachedPostArchives(): array

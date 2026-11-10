@@ -13,7 +13,8 @@ class ProcessEditorialBatchCommand extends Command
     protected $signature = 'editorial:process-batch 
                             {file : Ruta absoluta o relativa al fichero del lote DV-1}
                             {--manifest= : Ruta al manifiesto de imagenes instaladas (opcional)}
-                            {--dry-run : Ejecuta sin persistir cambios en la base de datos}';
+                            {--dry-run : Ejecuta sin persistir cambios en la base de datos}
+                            {--approve-updates : Permite actualizar borradores existentes ante contenido modificado con aprobacion explicita}';
 
     protected $description = 'Procesa un lote estructurado DV-1 local en modo borrador, con reimportación segura, validación atómica y protección contra duplicados.';
 
@@ -27,6 +28,7 @@ class ProcessEditorialBatchCommand extends Command
 
         $rawContent = File::get($filePath);
         $isDryRun = (bool) $this->option('dry-run');
+        $approveUpdates = (bool) $this->option('approve-updates');
 
         $this->info("Analizando lote DV-1 desde: {$filePath}");
 
@@ -43,7 +45,8 @@ class ProcessEditorialBatchCommand extends Command
             $imagesManifest,
             sourceMessageId: null,
             senderEmail: 'dark.vader.agent@gmail.com',
-            isDryRun: $isDryRun
+            isDryRun: $isDryRun,
+            allowUpdateApproval: $approveUpdates
         );
 
         if (! $result['success']) {

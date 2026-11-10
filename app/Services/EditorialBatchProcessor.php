@@ -27,6 +27,7 @@ class EditorialBatchProcessor
      * @param string|null $sourceMessageId Identificador de mensaje de correo (si proviene de IMAP)
      * @param string $senderEmail Correo del remitente autenticado
      * @param bool $isDryRun Si es true, simula sin persistir en BD
+     * @param bool $allowUpdateApproval Si es true, permite actualizar borradores existentes ante contenido modificado
      * @return array{
      *     success: bool,
      *     batch_id: string,
@@ -47,7 +48,8 @@ class EditorialBatchProcessor
         array $imagesManifest = [],
         ?string $sourceMessageId = null,
         string $senderEmail = 'dark.vader.agent@gmail.com',
-        bool $isDryRun = false
+        bool $isDryRun = false,
+        bool $allowUpdateApproval = false
     ): array {
         // ── 1. VALIDACIÓN PREVIA DEL LOTE (FAIL-FAST ATÓMICO) ─────────────────
         if (! $this->parser->isDv1Format('Lote Editorial', $rawContent)) {
@@ -59,6 +61,14 @@ class EditorialBatchProcessor
         $totalDeclared = $parsed['total_declared'];
         $totalExtracted = $parsed['total_extracted'];
         $elements = $parsed['elements'];
+
+        // Si no se proporcionó manifiesto explícito, autodescubrir si existe en almacenamiento local
+        if (empty($imagesManifest) && ! empty($batchId)) {
+            $defaultManifestPath = storage_path("editorial_batches/{$batchId}/images_installed.json");
+            if (file_exists($defaultManifestPath)) {
+                $imagesManifest = json_decode((string) file_get_contents($defaultManifestPath), true) ?: [];
+            }
+        }
 
         // Validar conteo declarado vs extraído
         if ($totalDeclared > 0 && $totalDeclared !== $totalExtracted) {
@@ -125,14 +135,19 @@ class EditorialBatchProcessor
             $revisionRequerida = (bool) ($elem['revision_requerida'] ?? false);
             $motivoRevision = $elem['motivo_revision'] ?? null;
 
-            // Calcular hash determinista del payload del elemento
-            $payloadHash = hash('sha256', "{$tipo}|{$title}|{$text}|" . json_encode($fuentes, JSON_UNESCAPED_SLASHES));
-
             // Resolver imagen y metadatos accesibles desde manifiesto o elemento
             $imageMeta = $imagesManifest[$elemId] ?? null;
-            $imagePath = $imageMeta['path'] ?? $elem['imagen_url'] ?? null;
-            $imageCredit = $imageMeta['meta']['credit'] ?? $elem['imagen_credito'] ?? null;
-            $imageAlt = $imageMeta['meta']['alt'] ?? $title;
+
+            // Calcular hash determinista y canónico del payload del elemento
+            $payloadHash = self::computeStablePayloadHash($elem, $imageMeta);
+
+            $rawPath = $imageMeta['path'] ?? $elem['imagen_url'] ?? null;
+            $imagePath = ($rawPath === 'NINGUNA' || $rawPath === 'none' || $rawPath === '') ? null : $rawPath;
+
+            $rawCredit = $imageMeta['meta']['credit'] ?? $elem['imagen_credito'] ?? null;
+            $imageCredit = ($rawCredit === 'NO_CONFIRMADO' || $rawCredit === 'none' || $rawCredit === '') ? null : $rawCredit;
+
+            $imageAlt = $imageMeta['meta']['alt'] ?? $elem['imagen_alt'] ?? $title;
 
             // Comprobar si ya existe registro previo para (batch_id, element_id)
             $existingMeta = EmailPostSanitizedMeta::where('batch_id', $batchId)
@@ -184,9 +199,38 @@ class EditorialBatchProcessor
 
             // CASO C: El artículo ya existe como borrador pero el contenido cambió
             if ($existingPost && $existingMeta && $existingMeta->payload_hash !== $payloadHash) {
+                if (! $allowUpdateApproval) {
+                    // REGLA CRÍTICA: Conservar íntegros título, contenido, imagen y cambios editoriales existentes
+                    $conflictCount++;
+                    $processedElements[] = $elemId;
+
+                    $existingMeta->editorial_notes = "[CONFLICTO_DETECTADO] Se recibió contenido modificado para el borrador existente. Se conservan íntegros título, contenido, imagen y cambios editoriales a la espera de aprobación explícita.";
+                    $existingMeta->security_status = 'conflict';
+                    if (Schema::hasColumn('email_post_sanitized_meta', 'requires_review')) {
+                        $existingMeta->requires_review = true;
+                    }
+                    if (Schema::hasColumn('email_post_sanitized_meta', 'review_reason')) {
+                        $existingMeta->review_reason = "[CONTENIDO_MODIFICADO] El contenido recibido difiere del borrador previo. Requiere aprobación explícita para actualizar.";
+                    }
+                    if (! $isDryRun) {
+                        $existingMeta->save();
+                    }
+
+                    $elementsDetail[$elemId] = [
+                        'action'    => 'conflict_preserved_existing',
+                        'post_id'   => $existingPost->id,
+                        'status'    => $existingPost->status,
+                        'published' => false,
+                        'revision'  => true,
+                        'reason'    => 'Borrador existente preservado íntegro: se detectó contenido modificado y se requiere aprobación explícita para actualizar.',
+                    ];
+                    continue; // NO continúa hacia la sobrescritura
+                }
+
+                // Si hay aprobación explícita de actualización:
                 $conflictCount++;
                 $revisionRequerida = true;
-                $motivoRevision = "[CONTENIDO_MODIFICADO] El contenido recibido difiere del borrador previo. " . ($motivoRevision ?: 'Requiere revisión.');
+                $motivoRevision = "[CONTENIDO_MODIFICADO_APROBADO] Actualización explícitamente autorizada. " . ($motivoRevision ?: '');
             }
 
             if ($isDryRun) {
@@ -210,6 +254,17 @@ class EditorialBatchProcessor
             // ── PERSISTENCIA TRANSACCIONAL POR ELEMENTO ─────────────────────
             DB::beginTransaction();
             try {
+                // REGLA CRÍTICA: Nunca borrar una imagen ya asignada a un post existente si el nuevo payload no aporta una imagen
+                if (empty($imagePath) && $existingPost && ! empty($existingPost->featured_image_path)) {
+                    $imagePath = $existingPost->featured_image_path;
+                }
+                if (empty($imageAlt) && $existingPost && ! empty($existingPost->image_alt)) {
+                    $imageAlt = $existingPost->image_alt;
+                }
+                if (empty($imageCredit) && $existingMeta && ! empty($existingMeta->image_credit)) {
+                    $imageCredit = $existingMeta->image_credit;
+                }
+
                 $htmlContent = $this->buildHtmlContent($text, $fuentes, $imageCredit);
 
                 $slug = Str::slug($title);
@@ -304,7 +359,15 @@ class EditorialBatchProcessor
                 ];
             } catch (\Throwable $e) {
                 DB::rollBack();
-                $failedElements[$elemId] = $e->getMessage();
+                $isUniqueViolation = str_contains($e->getMessage(), 'Integrity constraint violation')
+                    || str_contains($e->getMessage(), 'UNIQUE constraint failed')
+                    || str_contains($e->getMessage(), 'Duplicate entry');
+
+                $errorLabel = $isUniqueViolation
+                    ? "[COLISIÓN_CONCURRENCIA] Clave compuesta ({$batchId}, {$elemId}) duplicada: {$e->getMessage()}"
+                    : $e->getMessage();
+
+                $failedElements[$elemId] = $errorLabel;
                 Log::error("EditorialBatchProcessor: Fallo al persistir elemento {$elemId}", [
                     'batch_id' => $batchId,
                     'error'    => $e->getMessage(),
@@ -371,5 +434,50 @@ class EditorialBatchProcessor
         }
 
         return $html;
+    }
+
+    /**
+     * Calcula una representación canónica y un hash determinista SHA-256 para el elemento.
+     * Incorpora tipo, título, artista/banda, fechas, texto, fuentes ordenadas, estado de revisión,
+     * motivo de revisión y metadatos de imagen canónicos.
+     */
+    public static function computeStablePayloadHash(array $elem, ?array $imageMeta = null): string
+    {
+        $tipo = strtoupper(trim((string) ($elem['tipo'] ?? '')));
+        $title = trim((string) ($elem['titulo'] ?? ''));
+        $artist = trim((string) ($elem['artista_banda'] ?? ''));
+        $eventDate = trim((string) ($elem['fecha_acontecimiento'] ?? $elem['fecha_editorial'] ?? ''));
+        $text = preg_replace('/\r\n|\r/', "\n", trim((string) ($elem['texto'] ?? '')));
+
+        $fuentes = (array) ($elem['fuentes'] ?? []);
+        $cleanFuentes = array_values(array_filter(array_map('trim', $fuentes)));
+        sort($cleanFuentes);
+
+        $revReq = ! empty($elem['revision_requerida']) && $elem['revision_requerida'] !== false && $elem['revision_requerida'] !== 'NO' ? '1' : '0';
+        $revMotivo = trim((string) ($elem['motivo_revision'] ?? ''));
+
+        $rawUrl = (string) ($imageMeta['meta']['url'] ?? $elem['imagen_url'] ?? '');
+        $imageUrl = ($rawUrl === 'NINGUNA' || $rawUrl === 'none') ? '' : trim($rawUrl);
+
+        $rawCredit = (string) ($imageMeta['meta']['credit'] ?? $elem['imagen_credito'] ?? '');
+        $imageCredit = ($rawCredit === 'NO_CONFIRMADO' || $rawCredit === 'none') ? '' : trim($rawCredit);
+
+        $imageAlt = trim((string) ($imageMeta['meta']['alt'] ?? $elem['imagen_alt'] ?? ''));
+
+        $canonical = [
+            'tipo'                 => $tipo,
+            'titulo'               => $title,
+            'artista_banda'        => $artist,
+            'fecha_acontecimiento' => $eventDate,
+            'texto'                => $text,
+            'fuentes'              => $cleanFuentes,
+            'revision_requerida'   => $revReq,
+            'motivo_revision'      => $revMotivo,
+            'imagen_url'           => $imageUrl,
+            'imagen_credito'       => $imageCredit,
+            'imagen_alt'           => $imageAlt,
+        ];
+
+        return hash('sha256', json_encode($canonical, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     }
 }
