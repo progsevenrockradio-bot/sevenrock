@@ -16,8 +16,11 @@ use Illuminate\Support\Str;
 class EditorialBatchProcessor
 {
     public function __construct(
-        protected EditorialDarthVaderParser $parser
-    ) {}
+        protected EditorialDarthVaderParser $parser,
+        protected ?DvAutoPublishPolicy $autoPublishPolicy = null
+    ) {
+        $this->autoPublishPolicy = $autoPublishPolicy ?? app(DvAutoPublishPolicy::class);
+    }
 
     /**
      * Valida y procesa un lote estructurado DV-1 desde texto crudo.
@@ -28,6 +31,7 @@ class EditorialBatchProcessor
      * @param string $senderEmail Correo del remitente autenticado
      * @param bool $isDryRun Si es true, simula sin persistir en BD
      * @param bool $allowUpdateApproval Si es true, permite actualizar borradores existentes ante contenido modificado
+     * @param bool|null $autoPublish Si es true o null con configuración activa, evalúa política automática DV-1
      * @return array{
      *     success: bool,
      *     batch_id: string,
@@ -37,6 +41,10 @@ class EditorialBatchProcessor
      *     updated: int,
      *     skipped: int,
      *     conflicts: int,
+     *     auto_published_noticias: int,
+     *     auto_published_efemerides: int,
+     *     auto_published_total: int,
+     *     warnings: array<int, string>,
      *     processed_elements: array<int, string>,
      *     failed_elements: array<string, string>,
      *     elements_detail: array<string, array<string, mixed>>,
@@ -49,7 +57,8 @@ class EditorialBatchProcessor
         ?string $sourceMessageId = null,
         string $senderEmail = 'dark.vader.agent@gmail.com',
         bool $isDryRun = false,
-        bool $allowUpdateApproval = false
+        bool $allowUpdateApproval = false,
+        ?bool $autoPublish = null
     ): array {
         // ── 1. VALIDACIÓN PREVIA DEL LOTE (FAIL-FAST ATÓMICO) ─────────────────
         if (! $this->parser->isDv1Format('Lote Editorial', $rawContent)) {
@@ -126,6 +135,17 @@ class EditorialBatchProcessor
         $taxNoticias = PostTaxonomy::where('slug', 'noticias-rock')->first();
         $taxEfemerides = PostTaxonomy::where('slug', 'hoy-en-el-rock')->first();
         $adminUser = User::first();
+
+        $isAutoPublishEnabled = $autoPublish !== null
+            ? (bool) $autoPublish
+            : (bool) (
+                \App\Models\ThemeSetting::current()->email_auto_publish 
+                ?? config('services.email_import.auto_publish', false) 
+                ?? env('EMAIL_AUTO_PUBLISH', false)
+            );
+
+        $autoPublishedNoticias = 0;
+        $autoPublishedEfemerides = 0;
 
         $processedElements = [];
         $failedElements = [];
@@ -324,9 +344,6 @@ class EditorialBatchProcessor
                 $post->author = 'Seven Rock Radio';
                 $post->title = $title;
                 $post->slug = $existingPost ? $post->slug : $slug;
-                $post->status = 'draft'; // ESTRICTAMENTE BORRADOR
-                $post->is_published = 0; // NO PUBLICADO
-                $post->published_at = null;
                 $post->content = $htmlContent;
                 $post->excerpt = Str::limit(strip_tags($text), 220, '...');
                 $post->source_name = 'Darth Vader / Agencia Editorial';
@@ -353,12 +370,51 @@ class EditorialBatchProcessor
                     $post->image_alt = $safeImageAlt;
                 }
 
-                $post->save();
-
-                // Asignar taxonomía
+                // Asignar taxonomía y categorías antes de evaluar política
                 $taxonomyId = ($tipo === 'EFEMERIDE')
                     ? ($taxEfemerides?->id)
                     : ($taxNoticias?->id);
+
+                $categoryName = ($tipo === 'EFEMERIDE') ? 'Hoy en el Rock' : 'Noticias Rock';
+                if (Schema::hasColumn('posts', 'categories')) {
+                    $post->categories = [$categoryName];
+                }
+
+                // ── EVALUACIÓN DE POLÍTICA DE AUTO-PUBLICACIÓN DV-1 ───────────
+                $policyEval = ['can_auto_publish' => false, 'reason' => 'Publicación automática no requerida'];
+                if ($isAutoPublishEnabled) {
+                    $policyEval = $this->autoPublishPolicy->evaluate(
+                        $elem,
+                        $post,
+                        $imagePath,
+                        $safeImageCredit,
+                        $safeImageAlt,
+                        [
+                            'sender_email' => $senderEmail,
+                            'is_sender_authenticated' => true,
+                            'is_conflict' => false,
+                        ]
+                    );
+                }
+
+                $isAutoPublished = false;
+                if ($isAutoPublishEnabled && $policyEval['can_auto_publish']) {
+                    $post->status = 'published';
+                    $post->is_published = 1;
+                    $post->published_at = now();
+                    $isAutoPublished = true;
+                    if ($tipo === 'EFEMERIDE') {
+                        $autoPublishedEfemerides++;
+                    } else {
+                        $autoPublishedNoticias++;
+                    }
+                } else {
+                    $post->status = 'draft';
+                    $post->is_published = 0;
+                    $post->published_at = null;
+                }
+
+                $post->save();
 
                 if ($taxonomyId) {
                     $post->taxonomies()->syncWithoutDetaching([$taxonomyId]);
@@ -381,14 +437,52 @@ class EditorialBatchProcessor
                 if (Schema::hasColumn('email_post_sanitized_meta', 'image_alt')) {
                     $meta->image_alt = $safeImageAlt;
                 }
-                $meta->editorial_notes = $revisionRequerida
-                    ? "[REVISION_REQUERIDA] " . ($motivoRevision ?: 'Pendiente de validación editorial')
-                    : "[APROBADO_PARA_REVISION] Sin observaciones pendientes";
-                $meta->security_status = $revisionRequerida ? 'needs_review' : 'sanitized';
-                if ($revisionRequerida && $motivoRevision) {
-                    $meta->incident_reason = Str::limit((string) $motivoRevision, 500, '');
+
+                if ($isAutoPublished) {
+                    // Evidencia explícita de política automática (sin firma humana falsa)
+                    $meta->approved_urls = $policyEval['approved_urls'];
+                    $meta->approved_at = now();
+                    $meta->approved_by = null; // ACREDITA POLÍTICA AUTOMÁTICA
+                    $meta->security_status = 'passed';
+                    $meta->editorial_notes = '[AUTO_PUBLICADO] Publicado conforme a política automática DV-1';
+                    $meta->incident_reason = null;
+                } else {
+                    if ($revisionRequerida) {
+                        $meta->editorial_notes = "[REVISION_REQUERIDA] " . ($motivoRevision ?: 'Pendiente de validación editorial');
+                        $meta->security_status = 'needs_review';
+                        if ($motivoRevision) {
+                            $meta->incident_reason = Str::limit((string) $motivoRevision, 500, '');
+                        }
+                    } elseif ($isAutoPublishEnabled && ! $policyEval['can_auto_publish']) {
+                        $meta->editorial_notes = '[BORRADOR_POR_POLITICA] ' . $policyEval['reason'];
+                        $meta->security_status = 'needs_review';
+                        $meta->incident_reason = Str::limit((string) $policyEval['reason'], 500, '');
+                    } else {
+                        $meta->editorial_notes = '[APROBADO_PARA_REVISION] Sin observaciones pendientes';
+                        $meta->security_status = 'sanitized';
+                    }
                 }
                 $meta->save();
+
+                // Registrar auditoría si fue auto-publicado
+                if ($isAutoPublished) {
+                    try {
+                        app(AuditTrailService::class)->recordModel(
+                            event: 'editorial_auto_policy_published',
+                            model: $post,
+                            before: ['status' => 'draft', 'is_published' => 0],
+                            after: ['status' => 'published', 'is_published' => 1, 'published_at' => $post->published_at?->toIso8601String()],
+                            context: [
+                                'action'   => 'auto_policy_publish',
+                                'batch_id' => $batchId,
+                                'elem_id'  => $elemId,
+                                'sources'  => $policyEval['approved_urls'],
+                            ]
+                        );
+                    } catch (\Throwable $auditEx) {
+                        Log::warning("EditorialBatchProcessor: Fallo al registrar auditoría de auto-publicación: {$auditEx->getMessage()}");
+                    }
+                }
 
                 DB::commit();
 
@@ -403,10 +497,10 @@ class EditorialBatchProcessor
                 $elementsDetail[$elemId] = [
                     'action'    => $action,
                     'post_id'   => $post->id,
-                    'status'    => 'draft',
-                    'published' => false,
+                    'status'    => $post->status,
+                    'published' => (bool) $post->is_published,
                     'revision'  => $revisionRequerida,
-                    'reason'    => $motivoRevision,
+                    'reason'    => $isAutoPublished ? 'Publicado por política automática' : ($motivoRevision ?: ($policyEval['reason'] ?? null)),
                 ];
             } catch (\Throwable $e) {
                 DB::rollBack();
@@ -426,39 +520,57 @@ class EditorialBatchProcessor
             }
         }
 
+        $warnings = [];
+        if ($isAutoPublishEnabled) {
+            if ($autoPublishedNoticias < 4) {
+                $warnings[] = "Aviso editorial: Se publicaron {$autoPublishedNoticias} noticias nuevas (menos del umbral de 4 recomendado para renovar completamente el bloque de portada).";
+            }
+            if ($autoPublishedEfemerides < 4) {
+                $warnings[] = "Aviso editorial: Se publicaron {$autoPublishedEfemerides} efemérides nuevas (menos del umbral de 4 recomendado).";
+            }
+        }
+
         $allSucceeded = count($failedElements) === 0;
 
         return [
-            'success'            => $allSucceeded,
-            'batch_id'           => $batchId,
-            'total_declared'     => $totalDeclared,
-            'total_extracted'    => $totalExtracted,
-            'created'            => $createdCount,
-            'updated'            => $updatedCount,
-            'skipped'            => $skippedCount,
-            'conflicts'          => $conflictCount,
-            'processed_elements' => $processedElements,
-            'failed_elements'    => $failedElements,
-            'elements_detail'    => $elementsDetail,
-            'error'              => $allSucceeded ? null : 'Uno o más elementos no pudieron ser persistidos.',
+            'success'                   => $allSucceeded,
+            'batch_id'                  => $batchId,
+            'total_declared'            => $totalDeclared,
+            'total_extracted'           => $totalExtracted,
+            'created'                   => $createdCount,
+            'updated'                   => $updatedCount,
+            'skipped'                   => $skippedCount,
+            'conflicts'                 => $conflictCount,
+            'auto_published_noticias'   => $autoPublishedNoticias,
+            'auto_published_efemerides' => $autoPublishedEfemerides,
+            'auto_published_total'      => $autoPublishedNoticias + $autoPublishedEfemerides,
+            'warnings'                  => $warnings,
+            'processed_elements'        => $processedElements,
+            'failed_elements'           => $failedElements,
+            'elements_detail'           => $elementsDetail,
+            'error'                     => $allSucceeded ? null : 'Uno o más elementos no pudieron ser persistidos.',
         ];
     }
 
     protected function failureResponse(string $batchId, string $errorMessage): array
     {
         return [
-            'success'            => false,
-            'batch_id'           => $batchId,
-            'total_declared'     => 0,
-            'total_extracted'    => 0,
-            'created'            => 0,
-            'updated'            => 0,
-            'skipped'            => 0,
-            'conflicts'          => 0,
-            'processed_elements' => [],
-            'failed_elements'    => [],
-            'elements_detail'    => [],
-            'error'              => $errorMessage,
+            'success'                   => false,
+            'batch_id'                  => $batchId,
+            'total_declared'            => 0,
+            'total_extracted'           => 0,
+            'created'                   => 0,
+            'updated'                   => 0,
+            'skipped'                   => 0,
+            'conflicts'                 => 0,
+            'auto_published_noticias'   => 0,
+            'auto_published_efemerides' => 0,
+            'auto_published_total'      => 0,
+            'warnings'                  => [],
+            'processed_elements'        => [],
+            'failed_elements'           => [],
+            'elements_detail'           => [],
+            'error'                     => $errorMessage,
         ];
     }
 
