@@ -6,8 +6,9 @@ namespace App\Console\Commands;
 
 use App\Models\AuditLog;
 use App\Models\ThemeSetting;
-use App\Services\EditorialBatchProcessor;
+use App\Services\AuditTrailService;
 use Illuminate\Console\Command;
+use Throwable;
 
 class ConfigureEditorialAutoPublishCommand extends Command
 {
@@ -18,55 +19,57 @@ class ConfigureEditorialAutoPublishCommand extends Command
 
     protected $description = 'Consulta o modifica de forma segura y auditada el ajuste de auto-publicación DV-1 en ThemeSetting.';
 
-    public function handle(): int
+    public function handle(AuditTrailService $auditTrailService): int
     {
         ThemeSetting::clearCache();
         $settings = ThemeSetting::current();
+        $previousState = (bool) $settings->email_auto_publish;
 
         if ($this->option('enable')) {
-            $settings->email_auto_publish = true;
-            $settings->save();
-            ThemeSetting::clearCache();
-            $this->info("Ajuste 'email_auto_publish' en ThemeSetting actualizado a: TRUE");
-
-            // Registro explícito en auditoría
-            try {
-                AuditLog::create([
-                    'auditable_type' => ThemeSetting::class,
-                    'auditable_id'   => $settings->id ?: 1,
-                    'action'         => 'editorial_auto_publish_enabled',
-                    'user_id'        => null,
-                    'old_values'     => ['email_auto_publish' => false],
-                    'new_values'     => ['email_auto_publish' => true],
-                    'ip_address'     => '127.0.0.1',
-                    'user_agent'     => 'CLI / Artisan Command',
-                ]);
-            } catch (\Throwable) {
-                // Si la tabla no está disponible o falla, continuar
-            }
+            $newState = true;
+            $event = 'editorial.auto_publish.enabled';
+            $summary = "Activación de la política de auto-publicación DV-1 en ThemeSetting.";
         } elseif ($this->option('disable')) {
-            $settings->email_auto_publish = false;
+            $newState = false;
+            $event = 'editorial.auto_publish.disabled';
+            $summary = "Desactivación de la política de auto-publicación DV-1 en ThemeSetting.";
+        } else {
+            $newState = null;
+            $event = null;
+            $summary = null;
+        }
+
+        if ($newState !== null) {
+            $settings->email_auto_publish = $newState;
             $settings->save();
             ThemeSetting::clearCache();
-            $this->info("Ajuste 'email_auto_publish' en ThemeSetting actualizado a: FALSE");
 
+            // Registro obligatorio en auditoría oficial con AuditTrailService (sin silenciar errores)
             try {
-                AuditLog::create([
-                    'auditable_type' => ThemeSetting::class,
-                    'auditable_id'   => $settings->id ?: 1,
-                    'action'         => 'editorial_auto_publish_disabled',
-                    'user_id'        => null,
-                    'old_values'     => ['email_auto_publish' => true],
-                    'new_values'     => ['email_auto_publish' => false],
-                    'ip_address'     => '127.0.0.1',
-                    'user_agent'     => 'CLI / Artisan Command',
-                ]);
-            } catch (\Throwable) {
-                // continuar
+                $auditTrailService->recordModel(
+                    event: $event,
+                    model: $settings,
+                    before: ['email_auto_publish' => $previousState],
+                    after: ['email_auto_publish' => $newState],
+                    changes: ['email_auto_publish' => $newState],
+                    context: [
+                        'invoked_via' => 'artisan editorial:configure-auto-publish',
+                        'command_option' => $newState ? '--enable' : '--disable',
+                    ],
+                    level: 'info'
+                );
+            } catch (Throwable $e) {
+                $this->error("Fallo crítico al registrar la auditoría para {$event}: " . $e->getMessage());
+                return self::FAILURE;
             }
+
+            $stateLabel = $newState ? 'TRUE' : 'FALSE';
+            $this->info("Ajuste 'email_auto_publish' en ThemeSetting actualizado a: {$stateLabel}");
+            $this->info("Evento de auditoría registrado exitosamente: {$event}");
         }
 
         // Recargar ajustes frescos
+        ThemeSetting::clearCache();
         $settings = ThemeSetting::current();
         $dbValue = (bool) $settings->email_auto_publish;
         $configValue = config('services.email_import.auto_publish');
