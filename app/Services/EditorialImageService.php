@@ -125,10 +125,11 @@ class EditorialImageService
             }
 
             return [
-                'success' => true,
-                'path'    => $storeResult['relative_path'],
-                'credit'  => $resolvedCredit,
-                'error'   => null,
+                'success'         => true,
+                'path'            => $storeResult['relative_path'],
+                'credit'          => $resolvedCredit,
+                'error'           => null,
+                'structured_meta' => $metaResult['structured_meta'] ?? null,
             ];
         } catch (\Throwable $e) {
             @unlink($tempPath);
@@ -203,10 +204,19 @@ class EditorialImageService
             }
 
             return [
-                'success'      => true,
-                'download_url' => $directUrl,
-                'credit'       => $licenseCheck['credit'],
-                'error'        => null,
+                'success'         => true,
+                'download_url'    => $directUrl,
+                'credit'          => $licenseCheck['credit'],
+                'error'           => null,
+                'structured_meta' => [
+                    'source'       => 'wikimedia_commons',
+                    'page_url'     => $pageUrl,
+                    'download_url' => $directUrl,
+                    'artist'       => $licenseCheck['artist'] ?? 'Dominio Público',
+                    'license'      => $licenseCheck['license'] ?? '',
+                    'license_url'  => $licenseCheck['license_url'] ?? '',
+                    'verified'     => true,
+                ],
             ];
         } catch (\Throwable $e) {
             return ['success' => false, 'download_url' => null, 'credit' => null, 'error' => $e->getMessage()];
@@ -267,7 +277,14 @@ class EditorialImageService
             $credit .= " (Crédito declarado: {$declaredCredit})";
         }
 
-        return ['valid' => true, 'credit' => $credit, 'error' => null];
+        return [
+            'valid'       => true,
+            'credit'      => $credit,
+            'artist'      => $authorDisplay,
+            'license'     => $licenseName,
+            'license_url' => $licenseUrl,
+            'error'       => null,
+        ];
     }
 
     /**

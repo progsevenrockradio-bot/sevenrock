@@ -58,7 +58,9 @@ class EditorialBatchProcessor
         string $senderEmail = 'dark.vader.agent@gmail.com',
         bool $isDryRun = false,
         bool $allowUpdateApproval = false,
-        ?bool $autoPublish = null
+        ?bool $autoPublish = null,
+        bool $isSenderAuthenticated = false,
+        bool $allowLocalAutoPublish = false
     ): array {
         // ── 1. VALIDACIÓN PREVIA DEL LOTE (FAIL-FAST ATÓMICO) ─────────────────
         if (! $this->parser->isDv1Format('Lote Editorial', $rawContent)) {
@@ -296,6 +298,12 @@ class EditorialBatchProcessor
                     if (! empty($imgResult['credit'])) {
                         $imageCredit = $imgResult['credit'];
                     }
+                    if (! empty($imgResult['structured_meta'])) {
+                        $imageMeta = [
+                            'path' => $imagePath,
+                            'meta' => $imgResult['structured_meta'],
+                        ];
+                    }
                 } else {
                     $imagePath = null;
                     $revisionRequerida = true;
@@ -383,6 +391,7 @@ class EditorialBatchProcessor
                 // ── EVALUACIÓN DE POLÍTICA DE AUTO-PUBLICACIÓN DV-1 ───────────
                 $policyEval = ['can_auto_publish' => false, 'reason' => 'Publicación automática no requerida'];
                 if ($isAutoPublishEnabled) {
+                    $isLocalSource = ($sourceMessageId === null || str_starts_with($sourceMessageId, 'dv-local-'));
                     $policyEval = $this->autoPublishPolicy->evaluate(
                         $elem,
                         $post,
@@ -390,9 +399,13 @@ class EditorialBatchProcessor
                         $safeImageCredit,
                         $safeImageAlt,
                         [
-                            'sender_email' => $senderEmail,
-                            'is_sender_authenticated' => true,
-                            'is_conflict' => false,
+                            'sender_email'             => $senderEmail,
+                            'is_sender_authenticated'  => $isSenderAuthenticated,
+                            'is_local_import'          => $isLocalSource,
+                            'allow_local_auto_publish' => $allowLocalAutoPublish,
+                            'source_message_id'        => $sourceMessageId,
+                            'image_meta'               => $imageMeta,
+                            'is_conflict'              => false,
                         ]
                     );
                 }

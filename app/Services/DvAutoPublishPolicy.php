@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\EmailPostSanitizedMeta;
 use App\Models\Post;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -47,12 +46,20 @@ class DvAutoPublishPolicy
         $title = trim((string) ($elem['titulo'] ?? ''));
 
         // ── CRITERIO 1: Identidad y autenticación del remitente ─────────────
-        $senderEmail = strtolower(trim((string) ($context['sender_email'] ?? 'dark.vader.agent@gmail.com')));
-        $isSenderAuthenticated = (bool) ($context['is_sender_authenticated'] ?? true);
+        $senderEmail = strtolower(trim((string) ($context['sender_email'] ?? '')));
+        $isSenderAuthenticated = (bool) ($context['is_sender_authenticated'] ?? false);
+        $isLocalImport = (bool) ($context['is_local_import'] ?? false);
+        $allowLocalAutoPublish = (bool) ($context['allow_local_auto_publish'] ?? false);
 
         if ($senderEmail !== 'dark.vader.agent@gmail.com' || ! $isSenderAuthenticated) {
             return $this->rejection(
-                "Remitente no autenticado como agente Darth Vader autorizado ({$senderEmail})."
+                "Remitente no autenticado o falta evidencia técnica de autenticación criptográfica ({$senderEmail})."
+            );
+        }
+
+        if ($isLocalImport && ! $allowLocalAutoPublish) {
+            return $this->rejection(
+                "Importación local no autorizada para publicación automática (debe crearse como borrador salvo autorización explícita y auditada)."
             );
         }
 
@@ -78,13 +85,23 @@ class DvAutoPublishPolicy
             return $this->rejection("Observación editorial pendiente de resolución: {$motivoRevision}");
         }
 
-        // ── CRITERIO 4: Fuentes válidas y acreditadas ─────────────────────────
+        // ── CRITERIO 4: Verificación editorial de investigación (afirmaciones y fuentes) ──
+        $text = trim((string) ($elem['texto'] ?? ''));
+        if (preg_match('/\b(?:\[?(?:POR CONFIRMAR|PENDIENTE(?: DE REVISI[OÓ]N)?|VERIFICAR|TODO|TBD)\]?|investigaci[oó]n pendiente|datos? sin confirmar)\b/iu', $text, $markerMatch)) {
+            return $this->rejection("El texto contiene marcas o advertencias de investigación editorial no resuelta ('{$markerMatch[0]}').");
+        }
+
+        if (mb_strlen($text) < 60) {
+            return $this->rejection("Contenido editorial insuficiente para publicación automática (longitud menor a 60 caracteres).");
+        }
+
         $rawFuentes = $elem['fuentes'] ?? [];
         if (! is_array($rawFuentes) || empty($rawFuentes)) {
             return $this->rejection('El elemento no incluye fuentes consultadas verificables.');
         }
 
         $validSources = [];
+        $sourceHosts = [];
         $linkClassifier = $this->safetyValidator->getLinkClassifier();
 
         foreach ($rawFuentes as $rawUrl) {
@@ -117,13 +134,46 @@ class DvAutoPublishPolicy
             }
 
             $validSources[] = $candidate;
+            $host = strtolower((string) parse_url($candidate, PHP_URL_HOST));
+            $host = preg_replace('/^www\./', '', $host);
+            if ($host !== '') {
+                $sourceHosts[$host] = true;
+            }
         }
 
         if (count($validSources) === 0) {
             return $this->rejection('No se encontraron fuentes válidas tras la verificación de seguridad.');
         }
 
-        // ── CRITERIO 5: Permisos de imagen acreditados conforme al procedimiento ──
+        // Para NOTICIA: requiere al menos 2 fuentes independientes con dominios distintos,
+        // o al menos 1 fuente primaria oficial contrastada (agencia/sello/medio de rock de referencia)
+        if ($tipo === 'NOTICIA') {
+            $distinctHostsCount = count($sourceHosts);
+            $hasPrimaryOfficial = false;
+            $primaryAgencies = [
+                'blabbermouth.net', 'loudwire.com', 'rollingstone.com', 'billboard.com',
+                'metalblade.com', 'nuclearblast.com', 'centurymedia.com', 'napalmrecords.com',
+                'discogs.com', 'allmusic.com', 'bravewords.com', 'ultimateclassicrock.com',
+                'theprp.com', 'metalsucks.net', 'kerrang.com', 'metalhammer.com',
+            ];
+
+            foreach (array_keys($sourceHosts) as $h) {
+                foreach ($primaryAgencies as $agency) {
+                    if ($h === $agency || str_ends_with($h, '.' . $agency)) {
+                        $hasPrimaryOfficial = true;
+                        break 2;
+                    }
+                }
+            }
+
+            if ($distinctHostsCount < 2 && ! $hasPrimaryOfficial) {
+                return $this->rejection(
+                    "Evidencia de investigación insuficiente: las noticias requieren al menos dos fuentes independientes o una fuente primaria oficial contrastada."
+                );
+            }
+        }
+
+        // ── CRITERIO 5: Permisos de imagen acreditados mediante evidencia estructurada ──
         if (empty($imagePath)) {
             return $this->rejection('Imagen no disponible o descarga fallida para el artículo.');
         }
@@ -148,23 +198,38 @@ class DvAutoPublishPolicy
             return $this->rejection('Texto alternativo de imagen ausente o insuficiente.');
         }
 
-        // Acreditación de licencia y procedencia
-        $isCommons = str_contains($safeCredit, 'Wikimedia Commons')
-            || str_contains($safeCredit, 'commons.wikimedia.org')
-            || (isset($elem['imagen_url']) && str_contains((string) $elem['imagen_url'], 'commons.wikimedia.org'));
+        // Evidencia estructurada de la imagen (NO se concede permiso por prefijo de archivo ni regex ciega sobre crédito)
+        $imageMeta = $context['image_meta'] ?? [];
+        $metaData = is_array($imageMeta) ? ($imageMeta['meta'] ?? $imageMeta) : [];
 
-        $isPreinstalledLocal = str_starts_with($imagePath, 'storage/posts/covers/post-dv-')
-            || str_starts_with($imagePath, 'assets/');
+        $hasStructuredCommons = false;
+        $hasStructuredLocal = false;
 
-        $hasApprovedLicense = preg_match('/\b(CC BY|CC BY-SA|CC0|Dominio P[uú]blico|Public domain)\b/i', $safeCredit);
+        $author = trim((string) ($metaData['artist'] ?? $metaData['author'] ?? ''));
+        $license = trim((string) ($metaData['license'] ?? ''));
+        $isVerified = (bool) ($metaData['verified'] ?? $metaData['is_verified'] ?? ($metaData['is_archive'] ?? false));
+        $sourceUrl = (string) ($metaData['url'] ?? $metaData['page_url'] ?? $metaData['commons_page'] ?? '');
 
-        if (! ($isCommons && $hasApprovedLicense) && ! ($isPreinstalledLocal && $hasApprovedLicense)) {
+        $hasValidLicense = (bool) preg_match('/\b(CC BY|CC BY-SA|CC0|Dominio P[uú]blico|Public domain)\b/i', $license);
+        $hasValidAuthor = ($author !== '' && strcasecmp($author, 'desconocido') !== 0 && strcasecmp($author, 'unknown') !== 0)
+            || preg_match('/\b(Dominio P[uú]blico|Public domain|CC0)\b/i', $license);
+
+        if ($hasValidLicense && $hasValidAuthor) {
+            if (str_contains($sourceUrl, 'commons.wikimedia.org') || str_contains($sourceUrl, 'wikipedia.org') || ($metaData['source'] ?? '') === 'wikimedia_commons') {
+                $hasStructuredCommons = true;
+            } elseif ($isVerified || ! empty($metaData['accreditation_id']) || ! empty($metaData['is_archive'])) {
+                // Recurso local con registro estructurado de acreditación
+                $hasStructuredLocal = true;
+            }
+        }
+
+        if (! $hasStructuredCommons && ! $hasStructuredLocal) {
             return $this->rejection(
-                "Permiso de imagen no acreditado conforme al procedimiento aprobado (requiere ficha de Wikimedia Commons o recurso local verificado con licencia CC/Dominio Público). Crédito: '{$safeCredit}'"
+                "Permiso de imagen no acreditado mediante evidencia estructurada (se requiere ficha de Wikimedia Commons verificada o registro de acreditación para recursos locales; un crédito declarado sin acreditación estructurada no es suficiente). Crédito: '{$safeCredit}'"
             );
         }
 
-        // ── CRITERIO 6: Categoría y fechas correctas ─────────────────────────
+        // ── CRITERIO 6: Categoría, fechas y vigencia ─────────────────────────
         if (! in_array($tipo, ['NOTICIA', 'EFEMERIDE'], true)) {
             return $this->rejection("Tipo de publicación no reconocido: '{$tipo}'");
         }
@@ -174,26 +239,81 @@ class DvAutoPublishPolicy
             return $this->rejection('Fecha de acontecimiento obligatoria ausente.');
         }
 
-        // Si es efeméride: debe ser hecho histórico y el titular debe identificarlo
+        try {
+            $eventDate = Carbon::parse($fechaAcontecimiento);
+            $editorialDate = Carbon::parse($elem['fecha_editorial'] ?? date('Y-m-d'));
+        } catch (\Throwable) {
+            return $this->rejection("Fecha de acontecimiento inválida: '{$fechaAcontecimiento}'");
+        }
+
         if ($tipo === 'EFEMERIDE') {
-            try {
-                $eventDate = Carbon::parse($fechaAcontecimiento);
-                if ($eventDate->year >= (int) date('Y')) {
-                    return $this->rejection("Fecha de efeméride no es histórica ({$fechaAcontecimiento}). El año debe ser anterior al actual.");
-                }
-            } catch (\Throwable) {
-                return $this->rejection("Fecha de acontecimiento de efeméride inválida: '{$fechaAcontecimiento}'");
+            if ($eventDate->year >= $editorialDate->year) {
+                return $this->rejection(
+                    "Fecha de efeméride no es histórica ({$fechaAcontecimiento}). El año ({$eventDate->year}) debe ser anterior al año editorial ({$editorialDate->year})."
+                );
             }
 
-            // El titular debe identificar expresamente que se trata de un hecho histórico o año
-            $hasHistoricalContext = preg_match('/\b(18|19|20\d{2})\b/', $title)
-                || preg_match('/\b(efem[eé]ride|nace|aniversario|fallece en|hist[oó]ric[ao])\b/i', $title);
+            // Coincidencia estricta de mes y día, con soporte para 29 de febrero en años comunes
+            $isLeapEvent = ($eventDate->month === 2 && $eventDate->day === 29);
+            $isCommonEditorialYear = ! $editorialDate->isLeapYear();
+
+            if ($isLeapEvent && $isCommonEditorialYear) {
+                $matchesMonthDay = ($editorialDate->month === 2 && $editorialDate->day === 28);
+            } else {
+                $matchesMonthDay = ($editorialDate->month === $eventDate->month && $editorialDate->day === $eventDate->day);
+            }
+
+            if (! $matchesMonthDay) {
+                return $this->rejection(
+                    "La fecha de la efeméride ({$eventDate->format('m-d')}) no coincide con el día y mes de la fecha editorial ({$editorialDate->format('m-d')})."
+                );
+            }
+
+            // Titular con año o contexto histórico explícito (regex corregida para capturar años como 1972)
+            $hasHistoricalContext = preg_match('/\b(?:17|18|19|20)\d{2}\b/', $title)
+                || preg_match('/\b(efem[eé]ride|nace|aniversario|fallece en|hist[oó]ric[ao])\b/iu', $title);
 
             if (! $hasHistoricalContext) {
                 return $this->rejection(
                     "El titular de la efeméride ('{$title}') no identifica expresamente el año o contexto histórico y podría presentarse como un suceso de actualidad."
                 );
             }
+        } elseif ($tipo === 'NOTICIA') {
+            // No admitir acontecimientos futuros respecto a la fecha editorial
+            if ($eventDate->greaterThan($editorialDate->copy()->addDay())) {
+                return $this->rejection(
+                    "Fecha de acontecimiento no válida para noticia ({$fechaAcontecimiento}): posterior a la fecha editorial ({$editorialDate->format('Y-m-d')})."
+                );
+            }
+
+            // Vigencia temporal de noticias: máximo 7 días de desfase respecto a la fecha editorial
+            if ($eventDate->diffInDays($editorialDate, false) > 7) {
+                return $this->rejection(
+                    "Noticia fuera de vigencia editorial ({$fechaAcontecimiento}). Tiene más de 7 días de desfase respecto a la fecha editorial ({$editorialDate->format('Y-m-d')}). Requiere revisión editorial."
+                );
+            }
+
+            // Detección de lotes demorados: fecha editorial con más de 3 días de desfase respecto al momento de ejecución
+            $now = Carbon::now();
+            if ($editorialDate->diffInDays($now, false) > 3) {
+                return $this->rejection(
+                    "Lote demorado: la fecha editorial ({$editorialDate->format('Y-m-d')}) tiene más de 3 días de retraso respecto a la fecha actual ({$now->format('Y-m-d')}). Requiere revisión editorial."
+                );
+            }
+        }
+
+        // ── CRITERIO 7: Validación de seguridad final del post y metadatos ───
+        $safetyResult = $this->safetyValidator->validatePost($post, targetPublishDate: now(), context: [
+            'approved_urls' => $validSources,
+        ]);
+
+        if (! $safetyResult['is_safe']) {
+            $violationsSummary = implode(' | ', $safetyResult['violations'] ?? ['Violación de seguridad en contenido final']);
+            return $this->rejection("Validación de seguridad final fallida: {$violationsSummary}");
+        }
+
+        if ($safetyResult['has_embargo']) {
+            return $this->rejection("Artículo bajo embargo activo o retención editorial.");
         }
 
         // ── APROBACIÓN POR POLÍTICA AUTOMÁTICA CONCEDIDA ──────────────────────

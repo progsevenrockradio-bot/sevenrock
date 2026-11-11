@@ -357,7 +357,16 @@ class ProcessIncomingEmails extends Command
                 if ($isDv1Payload && $isDarkVaderAgent) {
                     $this->info("[DARK VADER DV-1] Procesando lote estructurado con EditorialBatchProcessor para mensaje: {$messageId}");
                     $batchProcessor = app(\App\Services\EditorialBatchProcessor::class);
-                    $result = $batchProcessor->process($body, [], $messageId, $senderEmail);
+                    $result = $batchProcessor->process(
+                        rawContent: $body,
+                        imagesManifest: [],
+                        sourceMessageId: $messageId,
+                        senderEmail: (string) $senderEmail,
+                        isDryRun: false,
+                        allowUpdateApproval: false,
+                        autoPublish: null,
+                        isSenderAuthenticated: (bool) $isDarkVaderAgent
+                    );
 
                     if ($result['success']) {
                         $this->info("[DV-1 PROCESADO] Lote {$result['batch_id']}: creados {$result['created']}, actualizados {$result['updated']}, omitidos {$result['skipped']}, conflictos {$result['conflicts']}.");
