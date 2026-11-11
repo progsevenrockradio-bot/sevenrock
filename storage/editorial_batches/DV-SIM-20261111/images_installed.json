@@ -1,0 +1,50 @@
+{
+    "DV-SIM2611-E01": {
+        "path": "storage/posts/covers/post-dv-test-cover.jpg",
+        "meta": {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/4/46/Judas_Priest_Live.jpg",
+            "artist": "Ralph Arvesen",
+            "license": "CC BY 2.0",
+            "license_url": "https://creativecommons.org/licenses/by/2.0/",
+            "credit": "Foto: Ralph Arvesen / Wikimedia Commons (CC BY 2.0)",
+            "alt": "Judas Priest en concierto en directo",
+            "is_archive": true
+        }
+    },
+    "DV-SIM2611-E02": {
+        "path": "storage/posts/covers/post-dv-test-cover.jpg",
+        "meta": {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/4/46/Saxon_Live.jpg",
+            "artist": "Steve Thorne",
+            "license": "CC BY-SA 3.0",
+            "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+            "credit": "Foto: Steve Thorne / Wikimedia Commons (CC BY-SA 3.0)",
+            "alt": "Saxon actuando en festival de rock",
+            "is_archive": true
+        }
+    },
+    "DV-SIM2611-E03": {
+        "path": "storage/posts/covers/post-dv-test-cover.jpg",
+        "meta": {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/4/46/Berry_Oakley_1971.jpg",
+            "artist": "Capricorn Records",
+            "license": "Public domain",
+            "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+            "credit": "Foto: Capricorn Records Archive / Wikimedia Commons (Public domain)",
+            "alt": "Berry Oakley, bajista de The Allman Brothers Band",
+            "is_archive": true
+        }
+    },
+    "DV-SIM2611-E04": {
+        "path": "storage/posts/covers/post-dv-test-cover.jpg",
+        "meta": {
+            "url": "https://upload.wikimedia.org/wikipedia/commons/4/46/Deep_Purple_Archive.jpg",
+            "artist": "Robert Ellis",
+            "license": "CC BY-SA 4.0",
+            "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+            "credit": "Foto: Robert Ellis / Wikimedia Commons (CC BY-SA 4.0)",
+            "alt": "Deep Purple en fotografía de archivo histórico",
+            "is_archive": true
+        }
+    }
+}

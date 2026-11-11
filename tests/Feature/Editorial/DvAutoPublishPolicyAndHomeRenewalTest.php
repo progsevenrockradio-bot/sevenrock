@@ -1133,4 +1133,195 @@ ELEM;
         $this->assertStringContainsString('Efeméride de año bisiesto (29 de febrero) recibida en año común', $meta->editorial_notes);
         $this->assertStringContainsString('requiere criterio y revisión editorial expresa', $meta->editorial_notes);
     }
+
+    /**
+     * TEST 19: Simulación (Dry-Run) sobre lote nuevo sin reutilizar artículos existentes.
+     * Comprueba que las piezas válidas pueden publicarse y que las incompletas
+     * quedan individualmente en borrador, sin persistir nada en la base de datos.
+     */
+    public function test_simulation_dry_run_on_new_lot_without_publishing_or_reusing_articles(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-11 10:30:00', 'Europe/Madrid'));
+
+        $batchPath = storage_path('editorial_batches/DV-SIM-20261111/batch.txt');
+        $manifestPath = storage_path('editorial_batches/DV-SIM-20261111/images_installed.json');
+
+        $this->assertFileExists($batchPath);
+        $this->assertFileExists($manifestPath);
+
+        $rawContent = File::get($batchPath);
+        $imagesManifest = json_decode(File::get($manifestPath), true);
+
+        $initialPostsCount = Post::count();
+        $initialMetaCount = EmailPostSanitizedMeta::count();
+
+        $processor = app(EditorialBatchProcessor::class);
+        $result = $processor->process(
+            rawContent: $rawContent,
+            imagesManifest: $imagesManifest,
+            sourceMessageId: '<simulation-dry-run-msg@gmail.com>',
+            senderEmail: 'dark.vader.agent@gmail.com',
+            isDryRun: true,
+            allowUpdateApproval: false,
+            autoPublish: true,
+            isSenderAuthenticated: true,
+            allowLocalAutoPublish: true
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('DV-SIM-20261111', $result['batch_id']);
+        $this->assertSame(4, $result['total_extracted']);
+
+        // En simulación: 2 calificarían para auto-publicación (1 noticia, 1 efeméride)
+        $this->assertSame(1, $result['auto_published_noticias']);
+        $this->assertSame(1, $result['auto_published_efemerides']);
+        $this->assertSame(2, $result['auto_published_total']);
+
+        // Comprobación individual de piezas en la simulación:
+        // E01 (Accept - Noticia válida con investigación completa): Califica para auto-publicación
+        $this->assertSame('would_auto_publish', $result['elements_detail']['DV-SIM2611-E01']['action']);
+        $this->assertTrue($result['elements_detail']['DV-SIM2611-E01']['can_auto_publish']);
+        $this->assertSame('published', $result['elements_detail']['DV-SIM2611-E01']['status']);
+
+        // E02 (Overkill - Noticia con fuentes sindicadas sin corroboración): Queda en borrador
+        $this->assertSame('would_create_draft', $result['elements_detail']['DV-SIM2611-E02']['action']);
+        $this->assertFalse($result['elements_detail']['DV-SIM2611-E02']['can_auto_publish']);
+        $this->assertSame('draft', $result['elements_detail']['DV-SIM2611-E02']['status']);
+        $this->assertStringContainsString('fuentes sindicadas', $result['elements_detail']['DV-SIM2611-E02']['reason']);
+
+        // E03 (Bruce Dickinson 1981 - Efeméride histórica válida): Califica para auto-publicación
+        $this->assertSame('would_auto_publish', $result['elements_detail']['DV-SIM2611-E03']['action']);
+        $this->assertTrue($result['elements_detail']['DV-SIM2611-E03']['can_auto_publish']);
+        $this->assertSame('published', $result['elements_detail']['DV-SIM2611-E03']['status']);
+
+        // E04 (Deep Purple - Efeméride con fecha parcial no confirmada): Queda en borrador
+        $this->assertSame('would_create_draft', $result['elements_detail']['DV-SIM2611-E04']['action']);
+        $this->assertFalse($result['elements_detail']['DV-SIM2611-E04']['can_auto_publish']);
+        $this->assertSame('draft', $result['elements_detail']['DV-SIM2611-E04']['status']);
+        $this->assertStringContainsString('no confirmada o parcial', $result['elements_detail']['DV-SIM2611-E04']['reason']);
+
+        // REGLA CRÍTICA DE SIMULACIÓN: Cero cambios persistidos en la base de datos
+        $this->assertSame($initialPostsCount, Post::count(), 'En simulación (dry-run) no debe crearse ningún Post en base de datos.');
+        $this->assertSame($initialMetaCount, EmailPostSanitizedMeta::count(), 'En simulación (dry-run) no debe crearse ningún registro de metadata en base de datos.');
+    }
+
+    /**
+     * Prueba exhaustiva del formato prompt_diaria_reanudada_v3:
+     * - CORROBORACION con URL + texto explicativo.
+     * - AFIRMACIONES_VERIFICADAS con múltiples líneas.
+     * - Fechas parciales o NO_CONFIRMADA que son forzadas estrictamente a borrador.
+     */
+    public function test_parser_extracts_multiline_verified_claims_and_corroboration_with_explanation_and_rejects_partial_or_unconfirmed_dates(): void
+    {
+        $multilineClaims = "- Gira mundial de 2027 confirmada con fechas en Norteamérica y Europa\n- Primer single anunciado para el 15 de marzo de 2027\n- Grabado con el productor Tom Allom en Birmingham";
+        $corroboracionWithExplanation = "https://blabbermouth.net/news/judas-priest-tour-2027 Reporte periodístico independiente de Blabbermouth confirmando los recintos y fechas de la gira";
+
+        $elemText = $this->generateDv1Element(
+            id: 'DV-PARSE-01',
+            tipo: 'NOTICIA',
+            artist: 'Judas Priest',
+            title: 'Judas Priest anuncia gira mundial para 2027',
+            eventDate: '2026-11-10',
+            editorialDate: '2026-11-11',
+            fuentes: 'https://blabbermouth.net/news/judas-priest-tour-2027',
+            fuentePrimaria: 'https://judaspriest.com/news/tour-2027',
+            corroboracion: $corroboracionWithExplanation,
+            afirmaciones: $multilineClaims,
+            discrepancias: 'NINGUNA'
+        );
+
+        $parser = app(\App\Services\EditorialDarthVaderParser::class);
+        $subject = '[DARTH-VADER][DV-1][2026-11-11][DV-TEST-BATCH]';
+        $body = "FORMATO: DV-1\nLOTE_ID: DV-TEST-BATCH\nFECHA_EDITORIAL: 2026-11-11\n{$elemText}";
+        $parsed = $parser->parseDv1($subject, $body);
+
+        $this->assertCount(1, $parsed['elements']);
+        $element = $parsed['elements'][0];
+
+        // 1. Acreditar extracción completa de CORROBORACION (URL + texto)
+        $this->assertStringContainsString('https://blabbermouth.net/news/judas-priest-tour-2027', $element['corroboracion']);
+        $this->assertStringContainsString('Reporte periodístico independiente de Blabbermouth', $element['corroboracion']);
+
+        // 2. Acreditar extracción completa de AFIRMACIONES_VERIFICADAS multilínea
+        $this->assertStringContainsString('Gira mundial de 2027 confirmada', $element['afirmaciones_verificadas']);
+        $this->assertStringContainsString('Primer single anunciado para el 15 de marzo de 2027', $element['afirmaciones_verificadas']);
+        $this->assertStringContainsString('Grabado con el productor Tom Allom', $element['afirmaciones_verificadas']);
+
+        // 3. Evaluar política automática: la pieza con fecha válida y fuentes seguras debe calificar
+        $processor = app(EditorialBatchProcessor::class);
+        $manifest = $this->generateSampleManifest(['DV-PARSE-01']);
+        $rawBatchValid = "FORMATO: DV-1\nLOTE_ID: DV-TEST-BATCH\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemText}";
+        $resultValid = $processor->process(
+            rawContent: $rawBatchValid,
+            imagesManifest: $manifest,
+            sourceMessageId: '<test-valid-v3@gmail.com>',
+            senderEmail: 'dark.vader.agent@gmail.com',
+            isDryRun: true,
+            allowUpdateApproval: false,
+            autoPublish: true,
+            isSenderAuthenticated: true,
+            allowLocalAutoPublish: true
+        );
+
+        $this->assertTrue($resultValid['elements_detail']['DV-PARSE-01']['can_auto_publish']);
+        $this->assertSame('published', $resultValid['elements_detail']['DV-PARSE-01']['status']);
+
+        // 4. Evaluar que FECHA_ACONTECIMIENTO = 'NO_CONFIRMADA' queda estrictamente en borrador
+        $elemNoConfirmada = $this->generateDv1Element(
+            id: 'DV-PARSE-02',
+            tipo: 'EFEMERIDE',
+            artist: 'Black Sabbath',
+            title: 'Black Sabbath publica álbum histórico en 1970',
+            eventDate: 'NO_CONFIRMADA',
+            editorialDate: '2026-11-11',
+            corroboracion: $corroboracionWithExplanation,
+            afirmaciones: $multilineClaims
+        );
+        $rawBatchNoConf = "FORMATO: DV-1\nLOTE_ID: DV-TEST-BATCH-2\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemNoConfirmada}";
+
+        $resultNoConf = $processor->process(
+            rawContent: $rawBatchNoConf,
+            imagesManifest: $this->generateSampleManifest(['DV-PARSE-02']),
+            sourceMessageId: '<test-no-conf@gmail.com>',
+            senderEmail: 'dark.vader.agent@gmail.com',
+            isDryRun: true,
+            allowUpdateApproval: false,
+            autoPublish: true,
+            isSenderAuthenticated: true,
+            allowLocalAutoPublish: true
+        );
+
+        $this->assertFalse($resultNoConf['elements_detail']['DV-PARSE-02']['can_auto_publish']);
+        $this->assertSame('draft', $resultNoConf['elements_detail']['DV-PARSE-02']['status']);
+        $this->assertStringContainsString('no confirmada o parcial', $resultNoConf['elements_detail']['DV-PARSE-02']['reason']);
+
+        // 5. Evaluar que fecha parcial como '1972-11-XX' queda estrictamente en borrador
+        $elemParcial = $this->generateDv1Element(
+            id: 'DV-PARSE-03',
+            tipo: 'EFEMERIDE',
+            artist: 'Deep Purple',
+            title: 'Deep Purple graba sesión histórica en 1972',
+            eventDate: '1972-11-XX',
+            editorialDate: '2026-11-11',
+            corroboracion: $corroboracionWithExplanation,
+            afirmaciones: $multilineClaims
+        );
+        $rawBatchParcial = "FORMATO: DV-1\nLOTE_ID: DV-TEST-BATCH-3\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemParcial}";
+
+        $resultParcial = $processor->process(
+            rawContent: $rawBatchParcial,
+            imagesManifest: $this->generateSampleManifest(['DV-PARSE-03']),
+            sourceMessageId: '<test-parcial@gmail.com>',
+            senderEmail: 'dark.vader.agent@gmail.com',
+            isDryRun: true,
+            allowUpdateApproval: false,
+            autoPublish: true,
+            isSenderAuthenticated: true,
+            allowLocalAutoPublish: true
+        );
+
+        $this->assertFalse($resultParcial['elements_detail']['DV-PARSE-03']['can_auto_publish']);
+        $this->assertSame('draft', $resultParcial['elements_detail']['DV-PARSE-03']['status']);
+        $this->assertStringContainsString('no confirmada o parcial', $resultParcial['elements_detail']['DV-PARSE-03']['reason']);
+    }
 }

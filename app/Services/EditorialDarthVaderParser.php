@@ -245,10 +245,10 @@ class EditorialDarthVaderParser
         $titulo = $this->extractField($block, 'TITULO');
 
         $fuentes = $this->extractFuentes($block);
-        $fuentePrimaria = $this->extractField($block, 'FUENTE_PRIMARIA') ?: $this->extractField($block, 'FUENTE_ORIGINAL');
-        $corroboracion = $this->extractField($block, 'CORROBORACION') ?: $this->extractField($block, 'FUENTE_SECUNDARIA');
+        $fuentePrimaria = $this->extractLongTextField($block, 'FUENTE_PRIMARIA') ?: $this->extractField($block, 'FUENTE_PRIMARIA') ?: $this->extractField($block, 'FUENTE_ORIGINAL');
+        $corroboracion = $this->extractLongTextField($block, 'CORROBORACION') ?: $this->extractField($block, 'CORROBORACION') ?: $this->extractField($block, 'FUENTE_SECUNDARIA');
         $afirmacionesVerificadas = $this->extractLongTextField($block, 'AFIRMACIONES_VERIFICADAS') ?: $this->extractField($block, 'AFIRMACIONES_VERIFICADAS');
-        $discrepancias = $this->extractField($block, 'DISCREPANCIAS') ?: 'NINGUNA';
+        $discrepancias = $this->extractLongTextField($block, 'DISCREPANCIAS') ?: $this->extractField($block, 'DISCREPANCIAS') ?: 'NINGUNA';
 
         $imagenUrl = $this->extractField($block, 'IMAGEN_URL');
         $imagenCredito = $this->extractField($block, 'IMAGEN_CREDITO');
@@ -314,14 +314,21 @@ class EditorialDarthVaderParser
     }
 
     /**
-     * Extrae el texto multilínea del campo TEXTO: preservando párrafos hasta encontrar
-     * otro campo en mayúsculas o el final del bloque.
+     * Extrae texto potencialmente multilínea preservando saltos de línea hasta encontrar
+     * otra cabecera de metadatos o el final del bloque.
      */
     protected function extractLongTextField(string $block, string $fieldName): string
     {
         $escaped = preg_quote($fieldName, '/');
-        // Buscar desde el campo hasta el final o hasta encontrar un campo de metadatos posterior
-        $pattern = '/^\s*' . $escaped . '\s*:\s*(.*?)(?=(?:^\s*(?:FUENTES|IMAGEN_URL|IMAGEN_CREDITO|REVISION_REQUERIDA|MOTIVO_REVISION|CORRIGE_ID|FUENTE_PRIMARIA|FUENTE_ORIGINAL|CORROBORACION|FUENTE_SECUNDARIA|AFIRMACIONES_VERIFICADAS|DISCREPANCIAS)\s*:)|\z)/imsu';
+        $allKnownFields = [
+            'ID', 'TIPO', 'FECHA_EDITORIAL', 'FECHA_ACONTECIMIENTO', 'ARTISTA_BANDA', 'TITULO',
+            'TEXTO', 'FUENTE_PRIMARIA', 'FUENTE_ORIGINAL', 'CORROBORACION', 'FUENTE_SECUNDARIA',
+            'AFIRMACIONES_VERIFICADAS', 'DISCREPANCIAS', 'FUENTES', 'IMAGEN_URL', 'IMAGEN_CREDITO',
+            'REVISION_REQUERIDA', 'MOTIVO_REVISION', 'CORRIGE_ID',
+        ];
+        $delimiters = array_filter($allKnownFields, fn ($f) => strcasecmp($f, $fieldName) !== 0);
+        $delimitersRegex = implode('|', array_map('preg_quote', $delimiters));
+        $pattern = '/^[ \t]*' . $escaped . '[ \t]*:[ \t]*(.*?)(?=(?:^[ \t]*(?:' . $delimitersRegex . ')[ \t]*:)|\z)/imsu';
 
         if (preg_match($pattern, $block, $matches)) {
             return trim($matches[1]);

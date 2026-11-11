@@ -258,24 +258,6 @@ class EditorialBatchProcessor
                 $motivoRevision = "[CONTENIDO_MODIFICADO_APROBADO] Actualización explícitamente autorizada. " . ($motivoRevision ?: '');
             }
 
-            if ($isDryRun) {
-                $processedElements[] = $elemId;
-                $elementsDetail[$elemId] = [
-                    'action'    => $existingPost ? 'would_update_draft' : 'would_create_draft',
-                    'post_id'   => $existingPost?->id,
-                    'status'    => 'draft',
-                    'published' => false,
-                    'revision'  => $revisionRequerida,
-                    'reason'    => $motivoRevision,
-                ];
-                if ($existingPost) {
-                    $updatedCount++;
-                } else {
-                    $createdCount++;
-                }
-                continue;
-            }
-
             // ── RESOLUCIÓN DE IMAGEN (SOLO PARA ARTÍCULOS QUE SE CREAN O ACTUALIZAN) ──
             $rawPath = $imageMeta['path'] ?? $elem['imagen_url'] ?? null;
             $rawCredit = $imageMeta['meta']['credit'] ?? $elem['imagen_credito'] ?? null;
@@ -321,8 +303,7 @@ class EditorialBatchProcessor
                 }
             }
 
-            // ── PERSISTENCIA TRANSACCIONAL POR ELEMENTO ─────────────────────
-            DB::beginTransaction();
+            // ── EVALUACIÓN Y PREPARACIÓN DE ENTIDAD ─────────────────────────
             try {
                 // REGLA CRÍTICA: Nunca borrar una imagen ya asignada a un post existente si el nuevo payload no aporta una imagen
                 if (empty($imagePath) && $existingPost && ! empty($existingPost->featured_image_path)) {
@@ -428,6 +409,28 @@ class EditorialBatchProcessor
                     $post->is_published = 0;
                     $post->published_at = null;
                 }
+
+                if ($isDryRun) {
+                    $processedElements[] = $elemId;
+                    $elementsDetail[$elemId] = [
+                        'action'           => $isAutoPublished ? 'would_auto_publish' : ($existingPost ? 'would_update_draft' : 'would_create_draft'),
+                        'post_id'          => $existingPost?->id,
+                        'status'           => $post->status,
+                        'published'        => (bool) $post->is_published,
+                        'can_auto_publish' => $isAutoPublished,
+                        'revision'         => $revisionRequerida,
+                        'reason'           => $isAutoPublished ? null : ($policyEval['reason'] ?? $motivoRevision),
+                    ];
+                    if ($existingPost) {
+                        $updatedCount++;
+                    } else {
+                        $createdCount++;
+                    }
+                    continue;
+                }
+
+                // ── PERSISTENCIA TRANSACCIONAL ──────────────────────────────────
+                DB::beginTransaction();
 
                 $post->save();
 

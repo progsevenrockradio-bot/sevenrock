@@ -1,0 +1,101 @@
+FORMATO: DV-1
+LOTE_ID: DV-SIM-20261111
+FECHA_EDITORIAL: 2026-11-11
+ZONA_HORARIA: Europe/Madrid
+TOTAL_ELEMENTOS: 4
+MODO: PUBLICACION
+
+=== INICIO ELEMENTO ===
+ID: DV-SIM2611-E01
+TIPO: NOTICIA
+FECHA_EDITORIAL: 2026-11-11
+FECHA_ACONTECIMIENTO: 2026-11-10
+ARTISTA_BANDA: Judas Priest
+TITULO: Judas Priest confirman fechas de su gira internacional de pabellones para 2027
+TEXTO:
+La legendaria banda británica de heavy metal Judas Priest ha confirmado de manera oficial el calendario de fechas para su nueva gira de pabellones prevista para 2027. La oficina de la banda ha ratificado los primeros recintos en Europa y Norteamérica con venta anticipada de entradas a través de sus canales autorizados.
+FUENTE_PRIMARIA: https://www.judaspriest.com/news
+CORROBORACION: https://blabbermouth.net/news/judas-priest-confirms-2027-tour-dates Reporte independiente de Blabbermouth que confirma los recintos y venta oficial de entradas anunciada por la banda
+AFIRMACIONES_VERIFICADAS:
+- Gira de pabellones confirmada oficialmente con inicio programado en 2027
+- Canales de venta autorizados validados por la oficina del grupo
+- Repertorio centrado en su trayectoria clásica y material contemporáneo
+DISCREPANCIAS: NINGUNA
+FUENTES:
+- https://www.judaspriest.com/news
+- https://blabbermouth.net/news/judas-priest-confirms-2027-tour-dates
+IMAGEN_URL: storage/posts/covers/post-dv-test-cover.jpg
+IMAGEN_CREDITO: Foto: Ralph Arvesen / Wikimedia Commons (CC BY 2.0)
+REVISION_REQUERIDA: NO
+MOTIVO_REVISION: NINGUNO
+CORRIGE_ID: NINGUNO
+=== FIN ELEMENTO ===
+
+=== INICIO ELEMENTO ===
+ID: DV-SIM2611-E02
+TIPO: NOTICIA
+FECHA_EDITORIAL: 2026-11-11
+FECHA_ACONTECIMIENTO: 2026-11-10
+ARTISTA_BANDA: Saxon
+TITULO: Saxon emite comunicado preliminar sobre sesiones de grabación en estudio
+TEXTO:
+La veterana formación británica Saxon ha distribuido un comunicado preliminar sobre sus planes de estudio para la próxima primavera. La nota ha sido remitida a través de agencias sindicadas y carece al momento de confirmación independiente o corroboración de fechas de lanzamiento por parte de su discográfica.
+FUENTE_PRIMARIA: https://saxon747.com/news/recording-sessions
+CORROBORACION: https://metal-syndication-wire.com/saxon-pr Nota de prensa idéntica distribuida por agencia sindicada sin corroboración independiente
+AFIRMACIONES_VERIFICADAS: Nota de prensa preliminar distribuida por agencia de relaciones públicas
+DISCREPANCIAS: NINGUNA
+FUENTES:
+- https://saxon747.com/news/recording-sessions
+- https://metal-syndication-wire.com/saxon-pr
+IMAGEN_URL: storage/posts/covers/post-dv-test-cover.jpg
+IMAGEN_CREDITO: Foto: Steve Thorne / Wikimedia Commons (CC BY-SA 3.0)
+REVISION_REQUERIDA: NO
+MOTIVO_REVISION: NINGUNO
+CORRIGE_ID: NINGUNO
+=== FIN ELEMENTO ===
+
+=== INICIO ELEMENTO ===
+ID: DV-SIM2611-E03
+TIPO: EFEMERIDE
+FECHA_EDITORIAL: 2026-11-11
+FECHA_ACONTECIMIENTO: 1972-11-11
+ARTISTA_BANDA: The Allman Brothers Band
+TITULO: The Allman Brothers Band (1972): Fallece en Macon el bajista fundador Berry Oakley
+TEXTO:
+El 11 de noviembre de 1972 fallecía en Macon, Georgia, a la edad de 24 años, Berry Oakley, bajista y miembro fundador de The Allman Brothers Band. Su sonido melódico al bajo definió la identidad de clásicos históricos del southern rock como At Fillmore East antes de su trágico deceso un año después que Duane Allman.
+FUENTE_PRIMARIA: https://www.discogs.com/artist/berry-oakley
+CORROBORACION: Archivo histórico discográfico y biografía oficial contrastada
+AFIRMACIONES_VERIFICADAS:
+- Fallecimiento de Berry Oakley el 11 de noviembre de 1972 en Macon, Georgia
+- Miembro fundador y bajista de The Allman Brothers Band
+DISCREPANCIAS: NINGUNA
+FUENTES:
+- https://www.discogs.com/artist/berry-oakley
+IMAGEN_URL: storage/posts/covers/post-dv-test-cover.jpg
+IMAGEN_CREDITO: Foto: Capricorn Records Archive / Wikimedia Commons (Public domain)
+REVISION_REQUERIDA: NO
+MOTIVO_REVISION: NINGUNO
+CORRIGE_ID: NINGUNO
+=== FIN ELEMENTO ===
+
+=== INICIO ELEMENTO ===
+ID: DV-SIM2611-E04
+TIPO: EFEMERIDE
+FECHA_EDITORIAL: 2026-11-11
+FECHA_ACONTECIMIENTO: 1972-11-XX
+ARTISTA_BANDA: Deep Purple
+TITULO: Deep Purple (1972): Sesión de composición para el álbum Who Do We Think We Are
+TEXTO:
+A mediados de noviembre de 1972, la formación clásica Mark II de Deep Purple realizaba sesiones de ensayo y composición para su disco de estudio Who Do We Think We Are. La documentación de archivo registra el mes de noviembre de 1972 pero la fecha exacta del día permanece sin documentar de forma concluyente.
+FUENTE_PRIMARIA: https://www.discogs.com/artist/deep-purple
+CORROBORACION: Archivo discográfico y documentación histórica
+AFIRMACIONES_VERIFICADAS: Sesión de composición en Roma en noviembre de 1972 con día de calendario no confirmado
+DISCREPANCIAS: NINGUNA
+FUENTES:
+- https://www.discogs.com/artist/deep-purple
+IMAGEN_URL: storage/posts/covers/post-dv-test-cover.jpg
+IMAGEN_CREDITO: Foto: Robert Ellis / Wikimedia Commons (CC BY-SA 4.0)
+REVISION_REQUERIDA: NO
+MOTIVO_REVISION: NINGUNO
+CORRIGE_ID: NINGUNO
+=== FIN ELEMENTO ===

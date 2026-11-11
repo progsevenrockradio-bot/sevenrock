@@ -14,9 +14,11 @@ class ProcessEditorialBatchCommand extends Command
                             {file : Ruta absoluta o relativa al fichero del lote DV-1}
                             {--manifest= : Ruta al manifiesto de imagenes instaladas (opcional)}
                             {--dry-run : Ejecuta sin persistir cambios en la base de datos}
-                            {--approve-updates : Permite actualizar borradores existentes ante contenido modificado con aprobacion explicita}';
+                            {--approve-updates : Permite actualizar borradores existentes ante contenido modificado con aprobacion explicita}
+                            {--auto-publish : Evalúa la política de auto-publicación DV-1}
+                            {--allow-local-auto-publish : Permite auto-publicación para lote local explícitamente auditado}';
 
-    protected $description = 'Procesa un lote estructurado DV-1 local en modo borrador, con reimportación segura, validación atómica y protección contra duplicados.';
+    protected $description = 'Procesa un lote estructurado DV-1 local en modo borrador o auto-publicación simulada/real, con reimportación segura, validación atómica y protección contra duplicados.';
 
     public function handle(EditorialBatchProcessor $batchProcessor): int
     {
@@ -29,6 +31,8 @@ class ProcessEditorialBatchCommand extends Command
         $rawContent = File::get($filePath);
         $isDryRun = (bool) $this->option('dry-run');
         $approveUpdates = (bool) $this->option('approve-updates');
+        $autoPublish = $this->option('auto-publish') ? true : null;
+        $allowLocalAutoPublish = (bool) $this->option('allow-local-auto-publish');
 
         $this->info("Analizando lote DV-1 desde: {$filePath}");
 
@@ -41,12 +45,15 @@ class ProcessEditorialBatchCommand extends Command
         }
 
         $result = $batchProcessor->process(
-            $rawContent,
-            $imagesManifest,
+            rawContent: $rawContent,
+            imagesManifest: $imagesManifest,
             sourceMessageId: null,
             senderEmail: 'dark.vader.agent@gmail.com',
             isDryRun: $isDryRun,
-            allowUpdateApproval: $approveUpdates
+            allowUpdateApproval: $approveUpdates,
+            autoPublish: $autoPublish,
+            isSenderAuthenticated: $allowLocalAutoPublish,
+            allowLocalAutoPublish: $allowLocalAutoPublish
         );
 
         if (! $result['success']) {

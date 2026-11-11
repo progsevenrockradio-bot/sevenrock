@@ -34,13 +34,23 @@ class DvAutoPublishPolicy
     public static function validateStrictCalendarDate(string $dateStr): array
     {
         $trimmed = trim($dateStr);
+        if ($trimmed === '' || strtoupper($trimmed) === 'NO_CONFIRMADA' || strtoupper($trimmed) === 'PENDIENTE' || preg_match('/(?:NO_CONFIRMADA|PENDIENTE|XX)/i', $trimmed)) {
+            return [
+                'valid' => false,
+                'year'  => 0,
+                'month' => 0,
+                'day'   => 0,
+                'error' => "Fecha de acontecimiento no confirmada o parcial ('{$dateStr}'). Las fechas parciales o no confirmadas no admiten publicación automática y deben quedar en borrador.",
+            ];
+        }
+
         if (! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $trimmed, $matches)) {
             return [
                 'valid' => false,
                 'year'  => 0,
                 'month' => 0,
                 'day'   => 0,
-                'error' => "Formato de fecha inválido ('{$dateStr}'). Debe ser YYYY-MM-DD estricto.",
+                'error' => "Formato de fecha inválido o incompleto ('{$dateStr}'). Debe ser YYYY-MM-DD estricto.",
             ];
         }
 
@@ -204,10 +214,19 @@ class DvAutoPublishPolicy
                 if ($fStr !== '') $candidateUrls[] = $fStr;
             }
         }
-        if (filter_var($fuentePrimaria, FILTER_VALIDATE_URL)) {
+        if (preg_match_all('/https?:\/\/[^\s<"\'\)]+/i', $fuentePrimaria, $pMatches)) {
+            foreach ($pMatches[0] as $u) {
+                $candidateUrls[] = trim($u);
+            }
+        } elseif (filter_var($fuentePrimaria, FILTER_VALIDATE_URL)) {
             $candidateUrls[] = $fuentePrimaria;
         }
-        if (filter_var($corroboracion, FILTER_VALIDATE_URL)) {
+
+        if (preg_match_all('/https?:\/\/[^\s<"\'\)]+/i', $corroboracion, $cMatches)) {
+            foreach ($cMatches[0] as $u) {
+                $candidateUrls[] = trim($u);
+            }
+        } elseif (filter_var($corroboracion, FILTER_VALIDATE_URL)) {
             $candidateUrls[] = $corroboracion;
         }
 
