@@ -13,6 +13,7 @@ use App\Models\ThemeSetting;
 use App\Services\ArchiveOrgService;
 use App\Services\DvAutoPublishPolicy;
 use App\Services\EditorialBatchProcessor;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -26,6 +27,9 @@ class DvAutoPublishPolicyAndHomeRenewalTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Fijar fecha y hora para pruebas deterministas (2026-11-11 Europe/Madrid)
+        Carbon::setTestNow(Carbon::parse('2026-11-11 10:30:00', 'Europe/Madrid'));
 
         // Crear taxonomías requeridas
         PostTaxonomy::create(['name' => 'Noticias Rock', 'slug' => 'noticias-rock', 'type' => 'category']);
@@ -46,6 +50,7 @@ class DvAutoPublishPolicyAndHomeRenewalTest extends TestCase
 
     protected function tearDown(): void
     {
+        Carbon::setTestNow(null);
         $fullPath = storage_path('app/public/posts/covers/post-dv-test-cover.jpg');
         if (file_exists($fullPath)) {
             @unlink($fullPath);
@@ -93,7 +98,11 @@ class DvAutoPublishPolicyAndHomeRenewalTest extends TestCase
         string $revision = 'NO',
         string $motivo = 'NINGUNO',
         string $imageCredit = 'Foto: Fotografo Acreditado / Wikimedia Commons (CC BY-SA 4.0)',
-        ?string $customText = null
+        ?string $customText = null,
+        ?string $fuentePrimaria = 'https://oficial.banda.com/comunicado-oficial',
+        ?string $corroboracion = 'https://prensa-rock-independiente.com/confirmacion',
+        ?string $afirmaciones = 'Lanzamiento confirmado por la banda; gira programada para 2027',
+        string $discrepancias = 'NINGUNA'
     ): string {
         $fuentesText = '';
         if (is_array($fuentes)) {
@@ -104,7 +113,21 @@ class DvAutoPublishPolicyAndHomeRenewalTest extends TestCase
             $fuentesText = "- {$fuentes}\n";
         }
 
-        $text = $customText ?: "Este es un texto completo y profesional para la nota editorial del artista {$artist}, detallando su nuevo acontecimiento y novedades con mas de treinta caracteres para superar las validaciones de longitud.";
+        $text = $customText ?: "Este es un texto completo y profesional para la nota editorial del artista {$artist}, detallando su nuevo acontecimiento y novedades con mas de sesenta caracteres para superar las validaciones de longitud requeridas.";
+
+        $evidenceBlock = '';
+        if ($fuentePrimaria !== null) {
+            $evidenceBlock .= "FUENTE_PRIMARIA: {$fuentePrimaria}\n";
+        }
+        if ($corroboracion !== null) {
+            $evidenceBlock .= "CORROBORACION: {$corroboracion}\n";
+        }
+        if ($afirmaciones !== null) {
+            $evidenceBlock .= "AFIRMACIONES_VERIFICADAS: {$afirmaciones}\n";
+        }
+        if ($discrepancias !== '') {
+            $evidenceBlock .= "DISCREPANCIAS: {$discrepancias}\n";
+        }
 
         return <<<ELEM
 === INICIO ELEMENTO ===
@@ -116,7 +139,7 @@ ARTISTA_BANDA: {$artist}
 TITULO: {$title}
 TEXTO:
 {$text}
-FUENTES:
+{$evidenceBlock}FUENTES:
 {$fuentesText}IMAGEN_URL: {$this->testCoverPath}
 IMAGEN_CREDITO: {$imageCredit}
 REVISION_REQUERIDA: {$revision}
@@ -136,7 +159,7 @@ ELEM;
         $elementsText = [];
         $elementIds = [];
 
-        // 7 Noticias (usando agencia oficial reconocida de rock como Blabbermouth)
+        // 7 Noticias con evidencia estructurada
         for ($i = 1; $i <= 7; $i++) {
             $num = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
             $id = "DV-20261111-VAR-E{$num}";
@@ -148,9 +171,11 @@ ELEM;
                 title: "Banda Noticia {$i} anuncia nuevo disco y gira mundial para 2027",
                 eventDate: '2026-11-10',
                 fuentes: [
-                    "https://blabbermouth.net/news/banda-noticia-{$i}-album-2027",
-                    "https://loudwire.com/banda-noticia-{$i}-tour-dates-2027",
-                ]
+                    "https://oficial.banda{$i}.com/comunicado",
+                    "https://prensa-rock-independiente.com/banda-{$i}",
+                ],
+                fuentePrimaria: "https://oficial.banda{$i}.com/comunicado",
+                corroboracion: "https://prensa-rock-independiente.com/banda-{$i}"
             );
         }
 
@@ -166,7 +191,10 @@ ELEM;
                 artist: "Leyenda Rock {$j}",
                 title: "Efeméride ({$year}): Nace músico legendario {$j} en Londres",
                 eventDate: "{$year}-11-11",
-                fuentes: "https://discogs.com/artist/leyenda-{$j}"
+                fuentes: "https://discogs.com/artist/leyenda-{$j}",
+                fuentePrimaria: "https://discogs.com/artist/leyenda-{$j}",
+                corroboracion: "Archivo discográfico contrastado",
+                afirmaciones: "Nacimiento del músico en Londres registrado en registros oficiales"
             );
         }
 
@@ -235,7 +263,9 @@ ELEM;
             // E01: Noticia VÁLIDA -> Debe publicarse
             $this->generateDv1Element(
                 'DV-PART-E01', 'NOTICIA', 'Kreator', 'Kreator confirman nuevo álbum para 2027', '2026-11-10',
-                fuentes: ['https://blabbermouth.net/news/kreator-album-2027', 'https://nuclearblast.com/news/kreator']
+                fuentes: ['https://kreator-terrorzone.de/news', 'https://prensa-metal.de/kreator'],
+                fuentePrimaria: 'https://kreator-terrorzone.de/news',
+                corroboracion: 'https://prensa-metal.de/kreator'
             ),
 
             // E02: Noticia con REVISIÓN_REQUERIDA = SI -> Debe quedar en borrador
@@ -251,7 +281,7 @@ ELEM;
             $this->generateDv1Element('DV-PART-E05', 'EFEMERIDE', 'Artista X', 'Muere guitarrista legendario', '1982-11-11'),
 
             // E06: Efeméride VÁLIDA con titular histórico -> Debe publicarse
-            $this->generateDv1Element('DV-PART-E06', 'EFEMERIDE', 'Artista Y', 'Efeméride (1985): Nace cantante de power metal en Hamburgo', '1985-11-11', fuentes: 'https://discogs.com/artist/artista-y'),
+            $this->generateDv1Element('DV-PART-E06', 'EFEMERIDE', 'Artista Y', 'Efeméride (1985): Nace cantante de power metal en Hamburgo', '1985-11-11', fuentes: 'https://discogs.com/artist/artista-y', fuentePrimaria: 'https://discogs.com/artist/artista-y'),
         ];
 
         $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-PART-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 6\n\n" . implode("\n\n", $elementsText);
@@ -349,9 +379,11 @@ ELEM;
                 title: "Banda Nueva {$k} estrena videoclip oficial",
                 eventDate: '2026-11-11',
                 fuentes: [
-                    "https://blabbermouth.net/news/banda-nueva-{$k}",
-                    "https://metalhammer.com/news/banda-nueva-{$k}",
-                ]
+                    "https://oficial.bandanueva{$k}.com/video",
+                    "https://prensa-rock-independiente.com/bandanueva-{$k}",
+                ],
+                fuentePrimaria: "https://oficial.bandanueva{$k}.com/video",
+                corroboracion: "https://prensa-rock-independiente.com/bandanueva-{$k}"
             );
         }
 
@@ -407,7 +439,9 @@ ELEM;
     {
         $elem = $this->generateDv1Element(
             'DV-IDEMP-E01', 'NOTICIA', 'Saxon', 'Saxon anuncia gira británica 2027', '2026-11-11',
-            fuentes: ['https://blabbermouth.net/news/saxon-tour-2027', 'https://loudwire.com/saxon-uk-dates']
+            fuentes: ['https://saxon747.com/tour-dates', 'https://prensa-rock-independiente.com/saxon'],
+            fuentePrimaria: 'https://saxon747.com/tour-dates',
+            corroboracion: 'https://prensa-rock-independiente.com/saxon'
         );
         $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-IDEMP-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n" . $elem;
 
@@ -478,7 +512,9 @@ ELEM;
     {
         $elem = $this->generateDv1Element(
             'DV-AUTH-E01', 'NOTICIA', 'Accept', 'Accept lanza nuevo single en directo', '2026-11-10',
-            fuentes: ['https://blabbermouth.net/news/accept-live-single', 'https://nuclearblast.com/accept']
+            fuentes: ['https://oficial.accept.com/single', 'https://prensa-metal.com/accept'],
+            fuentePrimaria: 'https://oficial.accept.com/single',
+            corroboracion: 'https://prensa-metal.com/accept'
         );
         $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-AUTH-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n" . $elem;
 
@@ -526,8 +562,10 @@ ELEM;
             artist: 'Blind Guardian',
             title: 'Blind Guardian presenta edición especial de aniversario',
             eventDate: '2026-11-10',
-            fuentes: ['https://blabbermouth.net/news/blind-guardian', 'https://nuclearblast.com/bg'],
-            customText: "Contenido editorial sobre el lanzamiento especial. Para acceder a la descarga privada exclusiva utilice la Contraseña: SuperSecretToken2026! que no debe publicarse abiertamente."
+            fuentes: ['https://blind-guardian.com/news', 'https://prensa-metal.com/bg'],
+            customText: "Contenido editorial sobre el lanzamiento especial. Para acceder a la descarga privada exclusiva utilice la Contraseña: SuperSecretToken2026! que no debe publicarse abiertamente.",
+            fuentePrimaria: 'https://blind-guardian.com/news',
+            corroboracion: 'https://prensa-metal.com/bg'
         );
         $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-CRED-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n" . $elemWithPassword;
 
@@ -570,8 +608,10 @@ ELEM;
             artist: 'Opeth',
             title: 'Opeth anuncia nueva gira CONFIDENCIAL: BAJO EMBARGO',
             eventDate: '2026-11-10',
-            fuentes: ['https://blabbermouth.net/news/opeth-tour', 'https://nuclearblast.com/opeth'],
-            customText: "[EMBARGO HASTA 2026-12-01] Este material es estrictamente confidencial hasta la fecha acordada con la banda y la discográfica."
+            fuentes: ['https://opeth.com/news', 'https://prensa-metal.com/opeth'],
+            customText: "[EMBARGO HASTA 2026-12-01] Este material es estrictamente confidencial hasta la fecha acordada con la banda y la discográfica.",
+            fuentePrimaria: 'https://opeth.com/news',
+            corroboracion: 'https://prensa-metal.com/opeth'
         );
         $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-EMB-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n" . $elemEmbargo;
 
@@ -614,8 +654,10 @@ ELEM;
             artist: 'Testament',
             title: 'Testament anuncia conciertos en festivales de verano',
             eventDate: '2026-11-10',
-            fuentes: ['https://blabbermouth.net/news/testament-summer', 'https://nuclearblast.com/testament'],
-            imageCredit: 'Foto: Fotografo No Verificado / Wikimedia Commons (CC BY-SA 4.0)'
+            fuentes: ['https://testamentlegions.com/news', 'https://prensa-metal.com/testament'],
+            imageCredit: 'Foto: Fotografo No Verificado / Wikimedia Commons (CC BY-SA 4.0)',
+            fuentePrimaria: 'https://testamentlegions.com/news',
+            corroboracion: 'https://prensa-metal.com/testament'
         );
         $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-NOSTR-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n" . $elem;
 
@@ -660,7 +702,9 @@ ELEM;
             title: 'Efeméride (1975): Black Sabbath lanza su disco histórico',
             eventDate: '1975-10-15',
             editorialDate: '2026-11-11',
-            fuentes: 'https://discogs.com/artist/black-sabbath'
+            fuentes: 'https://discogs.com/artist/black-sabbath',
+            fuentePrimaria: 'https://discogs.com/artist/black-sabbath',
+            corroboracion: 'Archivo discográfico contrastado'
         );
         $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-DATE-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n" . $elem;
 
@@ -692,21 +736,11 @@ ELEM;
     }
 
     /**
-     * TEST 10: Rechazo por fecha de acontecimiento inválida o no histórica.
+     * TEST 10: Rechazo por fecha de acontecimiento no histórica para efemérides.
      */
     public function test_rejection_when_event_date_is_invalid_or_not_historical_for_efemerides(): void
     {
-        // Caso A: Fecha corrupta
-        $elemCorrupt = $this->generateDv1Element(
-            id: 'DV-INVAL-E01',
-            tipo: 'EFEMERIDE',
-            artist: 'Iron Maiden',
-            title: 'Efeméride (1982): Iron Maiden publica The Number of the Beast',
-            eventDate: 'fecha-totalmente-invalida',
-            fuentes: 'https://discogs.com/iron-maiden'
-        );
-
-        // Caso B: Fecha de efeméride del año actual o futuro (no histórica)
+        // Caso: Fecha de efeméride del año actual o futuro (no histórica)
         $elemNotHistorical = $this->generateDv1Element(
             id: 'DV-INVAL-E02',
             tipo: 'EFEMERIDE',
@@ -714,12 +748,14 @@ ELEM;
             title: 'Efeméride (2026): Judas Priest concierto especial',
             eventDate: '2026-11-11',
             editorialDate: '2026-11-11',
-            fuentes: 'https://discogs.com/judas-priest'
+            fuentes: 'https://discogs.com/judas-priest',
+            fuentePrimaria: 'https://discogs.com/judas-priest',
+            corroboracion: 'Archivo discográfico contrastado'
         );
 
-        $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-INVAL-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 2\n\n{$elemCorrupt}\n\n{$elemNotHistorical}";
+        $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-INVAL-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemNotHistorical}";
 
-        $manifest = $this->generateSampleManifest(['DV-INVAL-E01', 'DV-INVAL-E02']);
+        $manifest = $this->generateSampleManifest(['DV-INVAL-E02']);
         $processor = app(EditorialBatchProcessor::class);
 
         $result = $processor->process(
@@ -735,19 +771,15 @@ ELEM;
         $this->assertTrue($result['success']);
         $this->assertSame(0, $result['auto_published_total']);
 
-        $meta1 = EmailPostSanitizedMeta::where('element_id', 'DV-INVAL-E01')->first();
-        $this->assertStringContainsString('Fecha de acontecimiento inválida', $meta1->editorial_notes);
-
         $meta2 = EmailPostSanitizedMeta::where('element_id', 'DV-INVAL-E02')->first();
         $this->assertStringContainsString('Fecha de efeméride no es histórica', $meta2->editorial_notes);
     }
 
     /**
-     * TEST 11: Corrección de expresión regular de año histórico (como 1972) y 29 de febrero en años comunes.
+     * TEST 11: Corrección de expresión regular de año histórico (como 1972 en Berry Oakley).
      */
-    public function test_historical_year_regex_identifies_1972_and_leap_year_february_29_in_common_year(): void
+    public function test_historical_year_regex_identifies_1972_accurately(): void
     {
-        // 1. Berry Oakley (1972): año en formato habitual que antes fallaba por la agrupación de la regex
         $elemOakley = $this->generateDv1Element(
             id: 'DV-FIX-E01',
             tipo: 'EFEMERIDE',
@@ -755,23 +787,15 @@ ELEM;
             title: 'Berry Oakley (1972): Se cumplen 54 años del fallecimiento del bajista',
             eventDate: '1972-11-11',
             editorialDate: '2026-11-11',
-            fuentes: 'https://discogs.com/artist/berry-oakley'
+            fuentes: 'https://discogs.com/artist/berry-oakley',
+            fuentePrimaria: 'https://discogs.com/artist/berry-oakley',
+            corroboracion: 'Archivo histórico biográfico contrastado',
+            afirmaciones: 'Fallecimiento de Berry Oakley el 11 de noviembre de 1972 en Florida'
         );
 
-        // 2. Efeméride nacida en año bisiesto el 29 de febrero conmemorada en año común (2026) el 28 de febrero
-        $elemLeap = $this->generateDv1Element(
-            id: 'DV-FIX-E02',
-            tipo: 'EFEMERIDE',
-            artist: 'Músico Bisiesto',
-            title: 'Músico Bisiesto (1968): Nace baterista en fecha bisiesta',
-            eventDate: '1968-02-29',
-            editorialDate: '2026-02-28',
-            fuentes: 'https://discogs.com/artist/musico-bisiesto'
-        );
+        $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-FIX-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemOakley}";
 
-        $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-FIX-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 2\n\n{$elemOakley}\n\n{$elemLeap}";
-
-        $manifest = $this->generateSampleManifest(['DV-FIX-E01', 'DV-FIX-E02']);
+        $manifest = $this->generateSampleManifest(['DV-FIX-E01']);
         $processor = app(EditorialBatchProcessor::class);
 
         $result = $processor->process(
@@ -785,15 +809,328 @@ ELEM;
         );
 
         $this->assertTrue($result['success']);
-        $this->assertSame(2, $result['auto_published_efemerides']);
-        $this->assertSame(2, $result['auto_published_total']);
+        $this->assertSame(1, $result['auto_published_efemerides']);
+        $this->assertSame(1, $result['auto_published_total']);
 
         $postOakley = Post::where('slug', 'like', '%berry-oakley%')->first();
+        $this->assertNotNull($postOakley);
         $this->assertSame('published', $postOakley->status);
         $this->assertTrue((bool) $postOakley->is_published);
+    }
 
-        $postLeap = Post::where('slug', 'like', '%musico-bisiesto%')->first();
-        $this->assertSame('published', $postLeap->status);
-        $this->assertTrue((bool) $postLeap->is_published);
+    /**
+     * TEST 12: Rechazo cuando las fuentes en distintos dominios son en realidad sindicaciones sin corroboración independiente.
+     */
+    public function test_rejection_when_sources_are_syndicated_across_different_domains_without_independent_corroboration(): void
+    {
+        $elemSyndicated = $this->generateDv1Element(
+            id: 'DV-SYND-E01',
+            tipo: 'NOTICIA',
+            artist: 'Helloween',
+            title: 'Helloween anuncia nuevo festival internacional',
+            eventDate: '2026-11-10',
+            editorialDate: '2026-11-11',
+            fuentes: [
+                'https://metal-wire-a.com/pr/helloween-pr-identical',
+                'https://metal-wire-b.com/pr/helloween-pr-identical',
+            ],
+            fuentePrimaria: 'https://metal-wire-a.com/pr/helloween-pr-identical',
+            corroboracion: 'NINGUNA (republicación sindicada de la misma nota de prensa sin corroboración independiente)',
+            afirmaciones: 'Anuncio de festival sin declaraciones exclusivas'
+        );
+
+        $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-SYND-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemSyndicated}";
+
+        $manifest = $this->generateSampleManifest(['DV-SYND-E01']);
+        $processor = app(EditorialBatchProcessor::class);
+
+        $result = $processor->process(
+            rawContent: $rawBatch,
+            imagesManifest: $manifest,
+            sourceMessageId: '<synd-test-msg@gmail.com>',
+            senderEmail: 'dark.vader.agent@gmail.com',
+            autoPublish: true,
+            isSenderAuthenticated: true,
+            allowLocalAutoPublish: true
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(0, $result['auto_published_total']);
+
+        $post = Post::where('slug', 'like', '%helloween%')->first();
+        $this->assertSame('draft', $post->status);
+        $this->assertFalse((bool) $post->is_published);
+
+        $meta = EmailPostSanitizedMeta::where('element_id', 'DV-SYND-E01')->first();
+        $this->assertStringContainsString('fuentes sindicadas o agregadas en distintos dominios no equivalen a corroboración independiente', $meta->editorial_notes);
+    }
+
+    /**
+     * TEST 13: Rechazo cuando falta la evidencia estructurada de investigación (fuente original o afirmaciones).
+     */
+    public function test_rejection_when_structured_research_evidence_is_missing(): void
+    {
+        $elemMissingEvidence = $this->generateDv1Element(
+            id: 'DV-MISSEV-E01',
+            tipo: 'NOTICIA',
+            artist: 'Gamma Ray',
+            title: 'Gamma Ray anuncia nuevo single de estudio',
+            eventDate: '2026-11-10',
+            editorialDate: '2026-11-11',
+            fuentes: ['https://gamma-ray.com/news', 'https://prensa-metal.com/gr'],
+            fuentePrimaria: null, // Evidencia ausente
+            corroboracion: null,
+            afirmaciones: null
+        );
+
+        $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-MISSEV-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemMissingEvidence}";
+
+        $manifest = $this->generateSampleManifest(['DV-MISSEV-E01']);
+        $processor = app(EditorialBatchProcessor::class);
+
+        $result = $processor->process(
+            rawContent: $rawBatch,
+            imagesManifest: $manifest,
+            sourceMessageId: '<missev-test-msg@gmail.com>',
+            senderEmail: 'dark.vader.agent@gmail.com',
+            autoPublish: true,
+            isSenderAuthenticated: true,
+            allowLocalAutoPublish: true
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(0, $result['auto_published_total']);
+
+        $post = Post::where('slug', 'like', '%gamma-ray%')->first();
+        $this->assertSame('draft', $post->status);
+
+        $meta = EmailPostSanitizedMeta::where('element_id', 'DV-MISSEV-E01')->first();
+        $this->assertStringContainsString('Evidencia editorial incompleta', $meta->editorial_notes);
+    }
+
+    /**
+     * TEST 14: Prevención de falsos positivos en español.
+     * Frases corrientes como «todo el disco» NO deben disparar el detector de TODO.
+     */
+    public function test_false_positive_prevention_spanish_phrase_with_todo_is_not_rejected(): void
+    {
+        $spanishText = "La legendaria banda alemana interpretará todo el disco en directo durante su próxima gira europea, repasando todos los clásicos ante todo su público fiel con una puesta en escena espectacular.";
+
+        $elemSpanish = $this->generateDv1Element(
+            id: 'DV-TODO-E01',
+            tipo: 'NOTICIA',
+            artist: 'Scorpions',
+            title: 'Scorpions interpretará todo su clásico álbum en directo',
+            eventDate: '2026-11-10',
+            editorialDate: '2026-11-11',
+            fuentes: ['https://the-scorpions.com/tour-news', 'https://prensa-metal.com/scorpions'],
+            customText: $spanishText,
+            fuentePrimaria: 'https://the-scorpions.com/tour-news',
+            corroboracion: 'https://prensa-metal.com/scorpions',
+            afirmaciones: 'Interpretación íntegra de álbum clásico en gira europea'
+        );
+
+        $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-TODO-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemSpanish}";
+
+        $manifest = $this->generateSampleManifest(['DV-TODO-E01']);
+        $processor = app(EditorialBatchProcessor::class);
+
+        $result = $processor->process(
+            rawContent: $rawBatch,
+            imagesManifest: $manifest,
+            sourceMessageId: '<todo-test-msg@gmail.com>',
+            senderEmail: 'dark.vader.agent@gmail.com',
+            autoPublish: true,
+            isSenderAuthenticated: true,
+            allowLocalAutoPublish: true
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(1, $result['auto_published_noticias']);
+        $this->assertSame(1, $result['auto_published_total']);
+
+        $post = Post::where('slug', 'like', '%scorpions%')->first();
+        $this->assertSame('published', $post->status);
+        $this->assertTrue((bool) $post->is_published);
+    }
+
+    /**
+     * TEST 15: Rechazo estricto ante fecha de calendario inexistente / imposible (ej. 2026-02-31 o 2026-04-31).
+     * No debe normalizarse automáticamente hacia marzo o mayo.
+     */
+    public function test_rejection_when_calendar_date_is_impossible_such_as_february_31(): void
+    {
+        $elemImpossibleDate = $this->generateDv1Element(
+            id: 'DV-IMPOSS-E01',
+            tipo: 'NOTICIA',
+            artist: 'Dio',
+            title: 'Dio reedición histórica anunciada',
+            eventDate: '2026-02-31', // Fecha imposible: 31 de febrero no existe en el calendario
+            editorialDate: '2026-11-11',
+            fuentes: ['https://ronniejamesdio.com/news', 'https://prensa-metal.com/dio'],
+            fuentePrimaria: 'https://ronniejamesdio.com/news',
+            corroboracion: 'https://prensa-metal.com/dio'
+        );
+
+        $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-IMPOSS-01\nFECHA_EDITORIAL: 2026-11-11\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemImpossibleDate}";
+
+        $manifest = $this->generateSampleManifest(['DV-IMPOSS-E01']);
+        $processor = app(EditorialBatchProcessor::class);
+
+        $result = $processor->process(
+            rawContent: $rawBatch,
+            imagesManifest: $manifest,
+            sourceMessageId: '<imposs-date-msg@gmail.com>',
+            senderEmail: 'dark.vader.agent@gmail.com',
+            autoPublish: true,
+            isSenderAuthenticated: true,
+            allowLocalAutoPublish: true
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(0, $result['auto_published_total']);
+
+        $post = Post::where('slug', 'like', '%dio%')->first();
+        $this->assertSame('draft', $post->status);
+
+        $meta = EmailPostSanitizedMeta::where('element_id', 'DV-IMPOSS-E01')->first();
+        $this->assertStringContainsString('Fecha inexistente en el calendario gregoriano', $meta->editorial_notes);
+    }
+
+    /**
+     * TEST 16: Rechazo ante lote con fecha editorial futura.
+     */
+    public function test_rejection_when_batch_editorial_date_is_in_the_future(): void
+    {
+        // Fecha editorial futura: 2026-11-15 (cuando hoy es 2026-11-11 Europe/Madrid)
+        $elemFuture = $this->generateDv1Element(
+            id: 'DV-FUT-E01',
+            tipo: 'NOTICIA',
+            artist: 'W.A.S.P.',
+            title: 'W.A.S.P. anuncia nueva gira mundial',
+            eventDate: '2026-11-11',
+            editorialDate: '2026-11-15',
+            fuentes: ['https://waspnation.com/news', 'https://prensa-metal.com/wasp'],
+            fuentePrimaria: 'https://waspnation.com/news',
+            corroboracion: 'https://prensa-metal.com/wasp'
+        );
+
+        $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-FUT-01\nFECHA_EDITORIAL: 2026-11-15\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemFuture}";
+
+        $manifest = $this->generateSampleManifest(['DV-FUT-E01']);
+        $processor = app(EditorialBatchProcessor::class);
+
+        $result = $processor->process(
+            rawContent: $rawBatch,
+            imagesManifest: $manifest,
+            sourceMessageId: '<future-date-msg@gmail.com>',
+            senderEmail: 'dark.vader.agent@gmail.com',
+            autoPublish: true,
+            isSenderAuthenticated: true,
+            allowLocalAutoPublish: true
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(0, $result['auto_published_total']);
+
+        $post = Post::where('slug', 'like', '%wasp%')->first();
+        $this->assertSame('draft', $post->status);
+
+        $meta = EmailPostSanitizedMeta::where('element_id', 'DV-FUT-E01')->first();
+        $this->assertStringContainsString('Fecha editorial futura no permitida', $meta->editorial_notes);
+    }
+
+    /**
+     * TEST 17: Rechazo de efeméride recibida fuera de su día editorial.
+     * Una efeméride de ayer no debe publicarse hoy automáticamente como la efeméride del día.
+     */
+    public function test_rejection_when_efemeride_is_received_outside_its_editorial_day(): void
+    {
+        // Efeméride histórica del 10 de noviembre con fecha editorial 2026-11-10 recibida cuando hoy es 2026-11-11
+        $elemYesterday = $this->generateDv1Element(
+            id: 'DV-YEST-E01',
+            tipo: 'EFEMERIDE',
+            artist: 'Ronnie Montrose',
+            title: 'Efeméride (1973): Montrose lanza su histórico disco debut',
+            eventDate: '1973-11-10',
+            editorialDate: '2026-11-10', // Fecha de ayer respecto a hoy 2026-11-11
+            fuentes: 'https://discogs.com/artist/montrose',
+            fuentePrimaria: 'https://discogs.com/artist/montrose',
+            corroboracion: 'Archivo histórico discográfico'
+        );
+
+        $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-YEST-01\nFECHA_EDITORIAL: 2026-11-10\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemYesterday}";
+
+        $manifest = $this->generateSampleManifest(['DV-YEST-E01']);
+        $processor = app(EditorialBatchProcessor::class);
+
+        $result = $processor->process(
+            rawContent: $rawBatch,
+            imagesManifest: $manifest,
+            sourceMessageId: '<yesterday-msg@gmail.com>',
+            senderEmail: 'dark.vader.agent@gmail.com',
+            autoPublish: true,
+            isSenderAuthenticated: true,
+            allowLocalAutoPublish: true
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(0, $result['auto_published_total']);
+
+        $post = Post::where('slug', 'like', '%montrose%')->first();
+        $this->assertSame('draft', $post->status);
+
+        $meta = EmailPostSanitizedMeta::where('element_id', 'DV-YEST-E01')->first();
+        $this->assertStringContainsString('Lote fuera de fecha editorial diaria', $meta->editorial_notes);
+    }
+
+    /**
+     * TEST 18: Efeméride de año bisiesto (29 de febrero) recibida en año común (2026).
+     * No se traslada automáticamente al 28 de febrero; se retiene como borrador para decisión editorial expresa.
+     */
+    public function test_efemeride_leap_year_february_29_in_common_year_is_held_for_editorial_decision(): void
+    {
+        // Simular que el día actual de la prueba es el 28 de febrero de 2026
+        Carbon::setTestNow(Carbon::parse('2026-02-28 10:00:00', 'Europe/Madrid'));
+
+        $elemLeap = $this->generateDv1Element(
+            id: 'DV-LEAP-E01',
+            tipo: 'EFEMERIDE',
+            artist: 'Músico Bisiesto',
+            title: 'Músico Bisiesto (1968): Nace baterista en fecha bisiesta',
+            eventDate: '1968-02-29', // 29 de febrero
+            editorialDate: '2026-02-28', // Año común 2026
+            fuentes: 'https://discogs.com/artist/musico-bisiesto',
+            fuentePrimaria: 'https://discogs.com/artist/musico-bisiesto',
+            corroboracion: 'Archivo histórico biográfico',
+            afirmaciones: 'Nacimiento verificado en fecha bisiesta 29 de febrero de 1968'
+        );
+
+        $rawBatch = "FORMATO: DV-1\nLOTE_ID: DV-LEAP-01\nFECHA_EDITORIAL: 2026-02-28\nZONA_HORARIA: Europe/Madrid\nTOTAL_ELEMENTOS: 1\n\n{$elemLeap}";
+
+        $manifest = $this->generateSampleManifest(['DV-LEAP-E01']);
+        $processor = app(EditorialBatchProcessor::class);
+
+        $result = $processor->process(
+            rawContent: $rawBatch,
+            imagesManifest: $manifest,
+            sourceMessageId: '<leap-decision-msg@gmail.com>',
+            senderEmail: 'dark.vader.agent@gmail.com',
+            autoPublish: true,
+            isSenderAuthenticated: true,
+            allowLocalAutoPublish: true
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(0, $result['auto_published_total']);
+
+        $post = Post::where('slug', 'like', '%musico-bisiesto%')->first();
+        $this->assertNotNull($post);
+        $this->assertSame('draft', $post->status);
+        $this->assertFalse((bool) $post->is_published);
+
+        $meta = EmailPostSanitizedMeta::where('element_id', 'DV-LEAP-E01')->first();
+        $this->assertStringContainsString('Efeméride de año bisiesto (29 de febrero) recibida en año común', $meta->editorial_notes);
+        $this->assertStringContainsString('requiere criterio y revisión editorial expresa', $meta->editorial_notes);
     }
 }

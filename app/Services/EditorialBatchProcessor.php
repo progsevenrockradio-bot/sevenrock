@@ -405,6 +405,8 @@ class EditorialBatchProcessor
                             'allow_local_auto_publish' => $allowLocalAutoPublish,
                             'source_message_id'        => $sourceMessageId,
                             'image_meta'               => $imageMeta,
+                            'timezone'                 => $parsed['timezone'] ?? 'Europe/Madrid',
+                            'fecha_editorial'          => $parsed['editorial_date'] ?? null,
                             'is_conflict'              => false,
                         ]
                     );

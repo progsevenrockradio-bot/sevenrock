@@ -245,6 +245,10 @@ class EditorialDarthVaderParser
         $titulo = $this->extractField($block, 'TITULO');
 
         $fuentes = $this->extractFuentes($block);
+        $fuentePrimaria = $this->extractField($block, 'FUENTE_PRIMARIA') ?: $this->extractField($block, 'FUENTE_ORIGINAL');
+        $corroboracion = $this->extractField($block, 'CORROBORACION') ?: $this->extractField($block, 'FUENTE_SECUNDARIA');
+        $afirmacionesVerificadas = $this->extractLongTextField($block, 'AFIRMACIONES_VERIFICADAS') ?: $this->extractField($block, 'AFIRMACIONES_VERIFICADAS');
+        $discrepancias = $this->extractField($block, 'DISCREPANCIAS') ?: 'NINGUNA';
 
         $imagenUrl = $this->extractField($block, 'IMAGEN_URL');
         $imagenCredito = $this->extractField($block, 'IMAGEN_CREDITO');
@@ -273,20 +277,24 @@ class EditorialDarthVaderParser
         }
 
         return [
-            'id'                   => $id,
-            'tipo'                 => $tipo,
-            'fecha_editorial'      => $elementEditorialDate,
-            'fecha_acontecimiento' => $fechaAcontecimiento ?: null,
-            'artista_banda'        => $artistaBanda ?: null,
-            'titulo'               => $titulo,
-            'texto'                => $texto,
-            'fuentes'              => $fuentes,
-            'imagen_url'           => $imagenUrl ?: null,
-            'imagen_credito'       => $imagenCredito ?: null,
-            'revision_requerida'   => $revisionRequerida,
-            'motivo_revision'      => $motivoRevision ?: null,
-            'corrige_id'           => $corrigeId,
-            'raw_block'            => $block,
+            'id'                       => $id,
+            'tipo'                     => $tipo,
+            'fecha_editorial'          => $elementEditorialDate,
+            'fecha_acontecimiento'     => $fechaAcontecimiento ?: null,
+            'artista_banda'            => $artistaBanda ?: null,
+            'titulo'                   => $titulo,
+            'texto'                    => $texto,
+            'fuentes'                  => $fuentes,
+            'fuente_primaria'          => $fuentePrimaria ?: null,
+            'corroboracion'            => $corroboracion ?: null,
+            'afirmaciones_verificadas' => $afirmacionesVerificadas ?: null,
+            'discrepancias'            => $discrepancias,
+            'imagen_url'               => $imagenUrl ?: null,
+            'imagen_credito'           => $imagenCredito ?: null,
+            'revision_requerida'       => $revisionRequerida,
+            'motivo_revision'          => $motivoRevision ?: null,
+            'corrige_id'               => $corrigeId,
+            'raw_block'                => $block,
         ];
     }
 
@@ -312,8 +320,8 @@ class EditorialDarthVaderParser
     protected function extractLongTextField(string $block, string $fieldName): string
     {
         $escaped = preg_quote($fieldName, '/');
-        // Buscar desde TEXTO: hasta el final o hasta encontrar un campo de metadatos posterior
-        $pattern = '/^\s*' . $escaped . '\s*:\s*(.*?)(?=(?:^\s*(?:FUENTES|IMAGEN_URL|IMAGEN_CREDITO|REVISION_REQUERIDA|MOTIVO_REVISION|CORRIGE_ID)\s*:)|\z)/imsu';
+        // Buscar desde el campo hasta el final o hasta encontrar un campo de metadatos posterior
+        $pattern = '/^\s*' . $escaped . '\s*:\s*(.*?)(?=(?:^\s*(?:FUENTES|IMAGEN_URL|IMAGEN_CREDITO|REVISION_REQUERIDA|MOTIVO_REVISION|CORRIGE_ID|FUENTE_PRIMARIA|FUENTE_ORIGINAL|CORROBORACION|FUENTE_SECUNDARIA|AFIRMACIONES_VERIFICADAS|DISCREPANCIAS)\s*:)|\z)/imsu';
 
         if (preg_match($pattern, $block, $matches)) {
             return trim($matches[1]);
@@ -330,7 +338,7 @@ class EditorialDarthVaderParser
      */
     protected function extractFuentes(string $block): array
     {
-        $pattern = '/^\s*FUENTES\s*:\s*(.*?)(?=(?:^\s*(?:IMAGEN_URL|IMAGEN_CREDITO|REVISION_REQUERIDA|MOTIVO_REVISION|CORRIGE_ID)\s*:)|\z)/imsu';
+        $pattern = '/^\s*FUENTES\s*:\s*(.*?)(?=(?:^\s*(?:IMAGEN_URL|IMAGEN_CREDITO|REVISION_REQUERIDA|MOTIVO_REVISION|CORRIGE_ID|FUENTE_PRIMARIA|FUENTE_ORIGINAL|CORROBORACION|FUENTE_SECUNDARIA|AFIRMACIONES_VERIFICADAS|DISCREPANCIAS)\s*:)|\z)/imsu';
         if (preg_match($pattern, $block, $matches)) {
             $raw = trim($matches[1]);
             if (preg_match_all('/https?:\/\/[^\s<"\'\)]+/i', $raw, $urlMatches)) {
