@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\ThemeSetting;
 use App\Services\AuditTrailService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class ConfigureEditorialAutoPublishCommand extends Command
@@ -40,29 +41,32 @@ class ConfigureEditorialAutoPublishCommand extends Command
         }
 
         if ($newState !== null) {
-            $settings->email_auto_publish = $newState;
-            $settings->save();
-            ThemeSetting::clearCache();
-
-            // Registro obligatorio en auditoría oficial con AuditTrailService (sin silenciar errores)
             try {
-                $auditTrailService->recordModel(
-                    event: $event,
-                    model: $settings,
-                    before: ['email_auto_publish' => $previousState],
-                    after: ['email_auto_publish' => $newState],
-                    changes: ['email_auto_publish' => $newState],
-                    context: [
-                        'invoked_via' => 'artisan editorial:configure-auto-publish',
-                        'command_option' => $newState ? '--enable' : '--disable',
-                    ],
-                    level: 'info'
-                );
+                DB::transaction(function () use ($settings, $newState, $previousState, $event, $auditTrailService): void {
+                    $settings->email_auto_publish = $newState;
+                    $settings->save();
+
+                    // Registro obligatorio en auditoría oficial con AuditTrailService (atómico con la transacción)
+                    $auditTrailService->recordModel(
+                        event: $event,
+                        model: $settings,
+                        before: ['email_auto_publish' => $previousState],
+                        after: ['email_auto_publish' => $newState],
+                        changes: ['email_auto_publish' => $newState],
+                        context: [
+                            'invoked_via' => 'artisan editorial:configure-auto-publish',
+                            'command_option' => $newState ? '--enable' : '--disable',
+                        ],
+                        level: 'info'
+                    );
+                });
             } catch (Throwable $e) {
-                $this->error("Fallo crítico al registrar la auditoría para {$event}: " . $e->getMessage());
+                ThemeSetting::clearCache();
+                $this->error("Fallo crítico al actualizar y auditar {$event}: " . $e->getMessage());
                 return self::FAILURE;
             }
 
+            ThemeSetting::clearCache();
             $stateLabel = $newState ? 'TRUE' : 'FALSE';
             $this->info("Ajuste 'email_auto_publish' en ThemeSetting actualizado a: {$stateLabel}");
             $this->info("Evento de auditoría registrado exitosamente: {$event}");

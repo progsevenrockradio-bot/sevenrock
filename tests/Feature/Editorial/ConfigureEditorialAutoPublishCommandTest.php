@@ -76,4 +76,29 @@ class ConfigureEditorialAutoPublishCommandTest extends TestCase
         $this->assertTrue($audit->before_state['email_auto_publish'] ?? null);
         $this->assertFalse($audit->after_state['email_auto_publish'] ?? null);
     }
+
+    public function test_command_enable_rolls_back_atomically_when_audit_fails(): void
+    {
+        ThemeSetting::clearCache();
+        $settings = ThemeSetting::firstOrCreate([], ThemeSetting::defaults());
+        $settings->email_auto_publish = false;
+        $settings->save();
+        ThemeSetting::clearCache();
+
+        $initialAuditCount = AuditLog::count();
+
+        // Forzar un fallo crítico durante la creación del AuditLog para probar rollback atómico
+        AuditLog::saving(function (): void {
+            throw new \RuntimeException('Fallo simulado en almacenamiento de auditoría');
+        });
+
+        $this->artisan('editorial:configure-auto-publish --enable')
+            ->expectsOutputToContain('Fallo crítico al actualizar y auditar editorial.auto_publish.enabled')
+            ->assertExitCode(1);
+
+        // Verificar que la transacción realizó rollback y el valor anterior FALSE fue conservado intacto
+        ThemeSetting::clearCache();
+        $this->assertFalse((bool) ThemeSetting::current()->email_auto_publish);
+        $this->assertSame($initialAuditCount, AuditLog::count());
+    }
 }
