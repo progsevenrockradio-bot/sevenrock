@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\Post;
 use App\Models\PostReaction;
 use App\Models\PostTaxonomy;
+use App\Models\RadioProgram;
 use App\Models\TalentAlbum;
 use App\Models\ThemeSetting;
 use App\Models\Video;
@@ -928,6 +929,7 @@ class SiteController extends Controller
                                         'views' => $file['downloads'] ?? null,
                                         'duration' => trim($file['length'] ?? ''),
                                         'size' => $file['size'] ?? null,
+                                        'archive_desc' => $file['description'] ?? $file['comment'] ?? null,
                                     ];
                                 }
                             }
@@ -945,6 +947,9 @@ class SiteController extends Controller
                                 'conductor' => $masterProgram?->conductor ?? '',
                                 'schedule' => $masterProgram?->schedule ?? '',
                                 'description' => \App\Support\ProgramTextNormalizer::limpiarDescripcion($masterProgram?->description ?: trim(strip_tags(is_string($desc) ? $desc : ''))),
+                                'social_1' => $masterProgram?->red_social1_url ?: null,
+                                'social_2' => $masterProgram?->red_social2_url ?: null,
+                                'mixcloud' => $masterProgram?->url_mixcloud ?: null,
                             ];
                             
                             return ['episodes' => $parsedEpisodes, 'program' => $programData];
@@ -970,9 +975,98 @@ class SiteController extends Controller
                     'conductor' => $masterProgram->conductor ?? '',
                     'schedule' => $masterProgram->schedule ?? '',
                     'description' => \App\Support\ProgramTextNormalizer::limpiarDescripcion($masterProgram->description ?? ''),
-                    'mixcloud' => $masterProgram->url_mixcloud ?? '',
+                    'social_1' => $masterProgram->red_social1_url ?: null,
+                    'social_2' => $masterProgram->red_social2_url ?: null,
+                    'mixcloud' => $masterProgram->url_mixcloud ?: null,
                 ];
             }
+
+            if ($program && $masterProgram) {
+                $program['social_1'] = $masterProgram->red_social1_url ?: ($program['social_1'] ?? null);
+                $program['social_2'] = $masterProgram->red_social2_url ?: ($program['social_2'] ?? null);
+                $program['mixcloud'] = $masterProgram->url_mixcloud ?: ($program['mixcloud'] ?? null);
+            }
+
+            // Fallback de episodios si Archive.org no respondió o no contiene archivos
+            if (empty($episodes) && $masterProgram) {
+                $localList = RadioProgram::query()
+                    ->where('master_program_id', $masterProgram->id)
+                    ->orderByDesc('id')
+                    ->get();
+                foreach ($localList as $rp) {
+                    $episodes[] = [
+                        'id' => basename($rp->archivo_mp3 ?: 'ep-' . $rp->id . '.mp3'),
+                        'title' => $rp->titulo_episodio ?: ($masterProgram->nombre . ' - Ep. ' . ($rp->numero_episodio ?? $rp->id)),
+                        'src' => $rp->audioPlaybackUrl(),
+                        'published_at' => $rp->created_at?->timestamp ?? 0,
+                        'views' => null,
+                        'duration' => $rp->duracion_estimada ? gmdate('H:i:s', (int)$rp->duracion_estimada) : '',
+                        'size' => null,
+                        'archive_desc' => null,
+                    ];
+                }
+            }
+
+            // Enriquecer cada episodio con reseña individual y enlace a ficha
+            $localEpisodes = $masterProgram
+                ? RadioProgram::query()->where('master_program_id', $masterProgram->id)->get()
+                : collect();
+
+            foreach ($episodes as &$ep) {
+                $matchedRp = null;
+                $epId = (string) ($ep['id'] ?? '');
+                $epTitle = (string) ($ep['title'] ?? '');
+
+                if ($localEpisodes->isNotEmpty()) {
+                    // 1. Por coincidencia en nombre de archivo MP3 o ruta remota
+                    $baseId = basename($epId);
+                    $matchedRp = $localEpisodes->first(function ($rp) use ($baseId) {
+                        $f1 = $rp->archivo_mp3 ? basename($rp->archivo_mp3) : null;
+                        $f2 = $rp->archive_org_remote_path ? basename($rp->archive_org_remote_path) : null;
+                        return ($f1 && $f1 === $baseId) || ($f2 && $f2 === $baseId);
+                    });
+
+                    // 2. Por número de episodio extraído de título o archivo
+                    if (!$matchedRp) {
+                        $epNum = self::extractEpisodeNumber($epTitle, $epId);
+                        if ($epNum !== null) {
+                            $matchedRp = $localEpisodes->first(fn ($rp) => (int)$rp->numero_episodio === (int)$epNum);
+                        }
+                    }
+
+                    // 3. Por título exacto
+                    if (!$matchedRp && $epTitle !== '') {
+                        $cleanEpTitle = mb_strtolower(trim($epTitle));
+                        $matchedRp = $localEpisodes->first(function ($rp) use ($cleanEpTitle) {
+                            return $rp->titulo_episodio && mb_strtolower(trim($rp->titulo_episodio)) === $cleanEpTitle;
+                        });
+                    }
+                }
+
+                // Reseña del capítulo: prioridad editorial local -> Archive.org específico
+                $review = null;
+                if ($matchedRp) {
+                    $rawLocal = $matchedRp->live_description ?: $matchedRp->resena ?: $matchedRp->comentario_episodio ?: $matchedRp->editorial_summary;
+                    $review = self::cleanEpisodeReviewText($rawLocal, $program['description'] ?? null);
+                }
+
+                if ($review === null && !empty($ep['archive_desc'])) {
+                    $review = self::cleanEpisodeReviewText($ep['archive_desc'], $program['description'] ?? null);
+                }
+
+                $ep['description'] = $review;
+
+                // Ficha individual: solo si el episodio existe y está aprobado
+                if ($matchedRp && $masterProgram && $matchedRp->isApproved() && !empty($matchedRp->numero_episodio)) {
+                    $ep['episode_url'] = route('public.podcasts.episode', [
+                        'programSlug' => $masterProgram->publicSlug(),
+                        'episodeNumber' => (int) $matchedRp->numero_episodio,
+                    ]);
+                } else {
+                    $ep['episode_url'] = null;
+                }
+            }
+            unset($ep);
         } catch (\Throwable) {
         }
 
@@ -2514,5 +2608,88 @@ class SiteController extends Controller
         }
 
         return response()->json(['success' => false]);
+    }
+
+    public static function extractEpisodeNumber(string $title, string $id = ''): ?int
+    {
+        $candidates = [$title, $id];
+        foreach ($candidates as $cand) {
+            if ($cand === '') {
+                continue;
+            }
+            if (preg_match('/(?:^|[_\-\s]|ep|cap|episodio|capitulo|programa)[._\-\s#]*0*(\d{1,4})(?:[._\-\s]|$)/i', $cand, $matches)) {
+                $n = (int) $matches[1];
+                if ($n > 0 && $n < 10000) {
+                    return $n;
+                }
+            }
+        }
+        return null;
+    }
+
+    public static function cleanEpisodeReviewText(?string $text, ?string $programGeneralDescription = null): ?string
+    {
+        if ($text === null) {
+            return null;
+        }
+
+        $raw = trim($text);
+        if ($raw === '') {
+            return null;
+        }
+
+        // Si viene serializado en PHP o JSON
+        if (preg_match('/^[aOs]:\d+:/', $raw) || ((str_starts_with($raw, '{') && str_ends_with($raw, '}')) || (str_starts_with($raw, '[') && str_ends_with($raw, ']')))) {
+            try {
+                $un = @unserialize($raw);
+                if ($un !== false) {
+                    if (is_string($un)) {
+                        $raw = $un;
+                    } elseif (is_array($un)) {
+                        $raw = implode(' ', array_filter(array_map('strval', $un)));
+                    }
+                } else {
+                    $dec = json_decode($raw, true);
+                    if (is_string($dec)) {
+                        $raw = $dec;
+                    } elseif (is_array($dec)) {
+                        $raw = implode(' ', array_filter(array_map('strval', $dec)));
+                    }
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        // Quitar etiquetas HTML y decodificar entidades
+        $clean = strip_tags((string) $raw);
+        $clean = html_entity_decode($clean, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Limpiar espacios redundantes y saltos excesivos
+        $clean = preg_replace('/[ \t]+/', ' ', $clean);
+        $clean = preg_replace('/(\r?\n){3,}/', "\n\n", $clean);
+        $clean = trim($clean);
+
+        if ($clean === '') {
+            return null;
+        }
+
+        // Descartar nombres técnicos de archivo de audio
+        if (preg_match('/\.(mp3|wav|ogg|m4a|aac)$/i', $clean) && strlen($clean) < 120) {
+            return null;
+        }
+
+        // Descartar si es idéntico a la descripción general del programa o subconjunto exacto
+        if ($programGeneralDescription !== null) {
+            $genClean = trim(strip_tags($programGeneralDescription));
+            if ($genClean !== '') {
+                $lowerClean = mb_strtolower($clean);
+                $lowerGen = mb_strtolower($genClean);
+                if ($lowerClean === $lowerGen || (strlen($lowerClean) > 25 && str_contains($lowerGen, $lowerClean))) {
+                    return null;
+                }
+            }
+        }
+
+        return $clean !== '' ? $clean : null;
     }
 }

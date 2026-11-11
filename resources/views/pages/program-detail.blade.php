@@ -48,15 +48,58 @@
         <div class="lucille-content-box mx-auto max-w-[1180px] px-5 py-12">
             @php $fallbackImage = asset('assets/lucille/logo.png'); @endphp
 
-            {{-- Descripción del programa --}}
-            @if (!empty($program['description']))
+            {{-- Descripción del programa y Redes Sociales --}}
+            @if (!empty($program['description']) || !empty($program['schedule']) || !empty($program['social_1']) || !empty($program['social_2']) || !empty($program['mixcloud']))
                 <div class="mb-12 max-w-3xl border-l-2 border-lucille-accent pl-5 py-1">
-                    <p class="text-sm leading-relaxed text-[#cbcbcb]">{{ $program['description'] }}</p>
-                    @if (!empty($program['schedule']))
-                        <p class="mt-3 text-[11px] uppercase tracking-[.18em] text-[#7b7b7b]">
-                            Horario: {{ $program['schedule'] }}
-                        </p>
+                    @if (!empty($program['description']))
+                        <p class="text-sm leading-relaxed text-[#cbcbcb]">{{ $program['description'] }}</p>
                     @endif
+
+                    <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 text-[11px]">
+                        @if (!empty($program['schedule']))
+                            <p class="uppercase tracking-[.18em] text-[#7b7b7b]">
+                                Horario: <span class="text-[#dcdcdc]">{{ $program['schedule'] }}</span>
+                            </p>
+                        @endif
+
+                        @php
+                            $socialLinks = [];
+                            $rawSocials = [
+                                'social_1' => $program['social_1'] ?? null,
+                                'social_2' => $program['social_2'] ?? null,
+                                'mixcloud' => $program['mixcloud'] ?? null,
+                            ];
+                            foreach ($rawSocials as $sUrl) {
+                                $u = trim((string)$sUrl);
+                                if (!$u) continue;
+                                $lbl = 'Web';
+                                if (str_contains($u, 'instagram.com')) { $lbl = 'Instagram'; }
+                                elseif (str_contains($u, 'facebook.com') || str_contains($u, 'fb.com')) { $lbl = 'Facebook'; }
+                                elseif (str_contains($u, 'twitter.com') || str_contains($u, 'x.com')) { $lbl = 'X / Twitter'; }
+                                elseif (str_contains($u, 'youtube.com') || str_contains($u, 'youtu.be')) { $lbl = 'YouTube'; }
+                                elseif (str_contains($u, 'mixcloud.com')) { $lbl = 'Mixcloud'; }
+                                elseif (str_contains($u, 'tiktok.com')) { $lbl = 'TikTok'; }
+                                elseif (str_contains($u, 'spotify.com')) { $lbl = 'Spotify'; }
+
+                                $socialLinks[] = ['url' => $u, 'label' => $lbl];
+                            }
+                        @endphp
+
+                        @if (!empty($socialLinks))
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-[#7b7b7b] uppercase tracking-[.18em]">Redes:</span>
+                                @foreach ($socialLinks as $soc)
+                                    <a href="{{ $soc['url'] }}"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-white/10 bg-white/[0.03] text-xs text-[#dcdcdc] hover:text-white hover:border-lucille-accent hover:bg-lucille-accent/10 transition-colors">
+                                        <span>{{ $soc['label'] }}</span>
+                                        <span class="text-white/40 text-[10px]" aria-hidden="true">&nearr;</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
                 </div>
             @endif
 
@@ -172,13 +215,20 @@
                                 $epDate = (!empty($episode['published_at']) && $episode['published_at'] > 0) ? \Carbon\Carbon::createFromTimestamp((int)$episode['published_at'])->format('d/m/Y') : '';
                                 $epSize = isset($episode['size']) ? round($episode['size'] / 1048576, 1) . ' MB' : '';
                                 $epViews = $episode['views'] ?? '';
+                                $epReview = $episode['description'] ?? null;
+                                $epUrl = $episode['episode_url'] ?? null;
+                                $cardId = 'ep-card-' . $loop->index;
+                                $descId = 'ep-desc-' . $loop->index;
+                                $needsExpand = !empty($epReview) && (mb_strlen($epReview) > 160 || str_contains($epReview, "\n"));
                             @endphp
-                            <div class="group flex items-center justify-between gap-4 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-4 sm:p-5 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04] hover:-translate-y-0.5 shadow-lg"
-                                :class="activeEpisode && activeEpisode.src === '{{ $epSrc }}' ? 'border-lucille-accent/50 bg-lucille-accent/5 shadow-[0_0_20px_rgba(195,39,32,.08)]' : ''">
+                            <div x-data="{ expanded: false }"
+                                 id="{{ $cardId }}"
+                                 class="group flex items-start justify-between gap-3 sm:gap-4 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-[16px] p-3.5 sm:p-5 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04] shadow-lg"
+                                 :class="activeEpisode && activeEpisode.src === '{{ $epSrc }}' ? 'border-lucille-accent/50 bg-lucille-accent/5 shadow-[0_0_20px_rgba(195,39,32,.08)]' : ''">
 
-                                <div class="flex items-center gap-4 min-w-0 flex-1">
+                                <div class="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">
                                     {{-- Portada miniatura --}}
-                                    <div class="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-[8px] border border-white/10 bg-[#0a0a0a]">
+                                    <div class="h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-[8px] border border-white/10 bg-[#0a0a0a] mt-0.5">
                                         <img src="{{ $program['cover'] ?: $fallbackImage }}"
                                              alt="{{ $epTitle }}"
                                              width="256"
@@ -190,9 +240,12 @@
 
                                     {{-- Info del episodio --}}
                                     <div class="min-w-0 flex-1">
-                                        <h3 class="font-display text-[14px] sm:text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] group-hover:text-lucille-accent transition-colors truncate">
+                                        {{-- Título multilínea sin truncar --}}
+                                        <h3 class="font-display text-[13px] sm:text-[16px] uppercase tracking-[.08em] text-[#dcdcdc] group-hover:text-lucille-accent transition-colors break-words leading-snug">
                                             {{ $epTitle }}
                                         </h3>
+
+                                        {{-- Metadatos: fecha, duración, tamaño --}}
                                         <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] sm:text-[11px] text-[#7b7b7b]">
                                             @if ($epDate)
                                                 <span>{{ $epDate }}</span>
@@ -204,20 +257,61 @@
                                                 <span class="font-mono">{{ $epSize }}</span>
                                             @endif
                                         </div>
+
+                                        {{-- Reseña del episodio --}}
+                                        <div class="mt-2.5">
+                                            @if (!empty($epReview))
+                                                <div id="{{ $descId }}"
+                                                     class="text-xs sm:text-[13px] leading-relaxed text-[#a3a3a3] whitespace-pre-line break-words"
+                                                     :class="expanded ? '' : 'line-clamp-2 sm:line-clamp-3'">
+                                                    {{ $epReview }}
+                                                </div>
+
+                                                @if ($needsExpand)
+                                                    <button type="button"
+                                                            @click.stop="expanded = !expanded"
+                                                            :aria-expanded="expanded ? 'true' : 'false'"
+                                                            aria-controls="{{ $descId }}"
+                                                            class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-lucille-accent hover:underline focus:outline-none focus:ring-1 focus:ring-lucille-accent/50 rounded cursor-pointer">
+                                                        <span x-text="expanded ? 'Ver menos' : 'Ver más'"></span>
+                                                        <svg class="w-3 h-3 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                @endif
+                                            @else
+                                                <p class="text-[11px] italic text-[#666666]">
+                                                    Este episodio todavía no tiene descripción
+                                                </p>
+                                            @endif
+                                        </div>
+
+                                        {{-- Enlace independiente a ficha de episodio (solo si aprobado) --}}
+                                        @if ($epUrl)
+                                            <div class="mt-3 pt-2 border-t border-white/5">
+                                                <a href="{{ $epUrl }}"
+                                                   @click.stop
+                                                   class="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[.12em] text-[#dcdcdc] hover:text-lucille-accent transition-colors font-medium">
+                                                    <span>Ver ficha del episodio</span>
+                                                    <span class="text-lucille-accent text-xs" aria-hidden="true">&rarr;</span>
+                                                </a>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
 
                                 {{-- Botón Play --}}
                                 @if ($epSrc)
                                     <button type="button"
-                                        class="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition-all duration-300 hover:bg-lucille-accent hover:border-lucille-accent hover:shadow-[0_0_15px_rgba(195,39,32,0.4)] hover:scale-105 active:scale-95 shrink-0"
-                                        @click="play({
+                                        class="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition-all duration-300 hover:bg-lucille-accent hover:border-lucille-accent hover:shadow-[0_0_15px_rgba(195,39,32,0.4)] hover:scale-105 active:scale-95 shrink-0 mt-0.5 focus:outline-none focus:ring-2 focus:ring-lucille-accent/60 cursor-pointer"
+                                        aria-label="Reproducir {{ $epTitle }}"
+                                        @click.stop="play({
                                             program: '{{ addslashes($program['title']) }}',
                                             title: '{{ addslashes($epTitle) }}',
                                             src: '{{ $epSrc }}',
                                             image: '{{ $program['cover'] ?: $fallbackImage }}'
                                         })">
-                                        <span class="text-sm sm:text-base leading-none ml-0.5">▶</span>
+                                        <span class="text-sm sm:text-base leading-none ml-0.5" aria-hidden="true">▶</span>
                                     </button>
                                 @endif
                             </div>

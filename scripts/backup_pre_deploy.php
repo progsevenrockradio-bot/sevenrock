@@ -105,3 +105,4 @@ if (is_dir($buildSource)) {
 
 echo "\nRESPALDO_VERIFICADO_OK: Todos los componentes (BD, .env, assets) respaldados con éxito en {$backupDir}\n";
 exit(0);
+
