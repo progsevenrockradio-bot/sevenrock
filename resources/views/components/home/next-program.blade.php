@@ -184,7 +184,7 @@
             <div class="flex h-full min-w-0 flex-col lg:h-[380px]">
                 {{-- Encabezado de la parrilla y zona horaria --}}
                 <div class="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-lucille-line/20 pb-2">
-                    <span class="font-display text-xs uppercase tracking-[.22em] text-lucille-heading">Parrilla de programación</span>
+                    <span class="font-display text-xs uppercase tracking-[.22em] text-lucille-heading">Emisión actual y próximos programas</span>
                     <span class="text-[11px] text-lucille-body">Zona horaria: {{ $program['timezone'] ?? 'America/Caracas' }}</span>
                 </div>
 
@@ -196,6 +196,7 @@
                             $slotBadgeRaw = (string) ($slot['badge'] ?? ($isPrimarySlot ? ($heroProgram['badge'] ?? 'A continuación') : 'A continuación'));
                             $slotBadge = match (strtolower(trim($slotBadgeRaw))) {
                                 'on air', 'en vivo' => 'En vivo',
+                                'en emisión', 'en emision' => 'En emisión',
                                 'up next', 'en breve' => 'En breve',
                                 default => 'A continuación',
                             };

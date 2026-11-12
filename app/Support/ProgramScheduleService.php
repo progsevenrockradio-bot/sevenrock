@@ -55,7 +55,7 @@ class ProgramScheduleService
             return $this->memoizedResolutions[$limit];
         }
 
-        $cacheKey = "program_schedule:resolve:v{$version}:{$limit}";
+        $cacheKey = "program_schedule:resolve:occurrences:v{$version}:{$limit}";
 
         if (! $fresh) {
             $cached = Cache::get($cacheKey);
@@ -513,14 +513,10 @@ class ProgramScheduleService
             return $indexed->take($limit)->pluck('program')->values();
         }
 
-        $currentIndex = $indexed->search(fn (array $item): bool => (int) $item['program']->getKey() === (int) $current->getKey());
-        if ($currentIndex === false) {
-            return $indexed->take($limit)->pluck('program')->values();
-        }
-
+        // Keep chronological order: the on-air program's next start may be
+        // several days away, after other programs that still air today.
         return $indexed
-            ->slice($currentIndex + 1)
-            ->concat($indexed->slice(0, $currentIndex))
+            ->reject(fn (array $item): bool => (int) $item['program']->getKey() === (int) $current->getKey())
             ->take($limit)
             ->pluck('program')
             ->values();
@@ -788,10 +784,8 @@ class ProgramScheduleService
         return $programs
             ->take(5)
             ->map(function (MasterProgram $program) use ($theme): array {
-                return [
-                    ...$this->programPayload($program, $theme, 'A continuación'),
-                    'time' => $program->schedule ?: 'Próxima emisión',
-                ];
+                $payload = $this->programPayload($program, $theme, 'A continuación');
+                return [...$payload, 'time' => $payload['schedule']];
             })
             ->values()
             ->all();
@@ -804,17 +798,54 @@ class ProgramScheduleService
         $enlace = null;
 
         $now = now($this->programTimezone($program));
+        $schedule = $program->schedule ?: 'Próxima emisión';
+        $selected = null;
         $emisiones = $this->activeEmisionesFor($program);
-        if ($emisiones->isNotEmpty()) {
-            foreach ($emisiones as $em) {
-                // Find next emission matching or currently active
-                $day = $this->dayNumber((string) $em->dia_semana);
-                if ($day !== null) {
-                    $tipo = $em->tipo;
-                    $enlace = $em->enlace;
-                    break;
-                }
+        foreach ($emisiones as $em) {
+            $day = $this->dayNumber((string) $em->dia_semana);
+            $time = $this->parseScheduleTime((string) $em->hora_inicio);
+            if ($day === null || ! $time) {
+                continue;
             }
+            $start = $now->copy()->startOfDay()
+                ->subDays(($now->dayOfWeekIso - $day + 7) % 7)
+                ->setTime($time[0], $time[1]);
+            $duration = $em->duracion_segundos > 0
+                ? (int) $em->duracion_segundos
+                : max(15, (int) ($em->duracion_minutos ?? $program->duracion_minutos ?? 120)) * 60;
+            $active = $now->greaterThanOrEqualTo($start) && $now->lessThan($start->copy()->addSeconds($duration));
+            if (! $active && $start->lessThanOrEqualTo($now)) {
+                $start->addWeek();
+            }
+            if ($selected === null || ($active && ! $selected['active'])
+                || ($active === $selected['active'] && $start->lessThan($selected['start']))) {
+                $selected = compact('em', 'start', 'active');
+            }
+        }
+        if ($selected !== null) {
+            $tipo = $selected['em']->tipo;
+            $enlace = $selected['em']->enlace;
+            $start = $selected['start'];
+            $dayLabel = array_search($start->dayOfWeekIso, self::DAY_ORDER, true);
+            $schedule = $dayLabel.' · '.$start->format('d/m').' · '.$start->format('H:i');
+        } elseif ($program->dia_transmision && $program->hora_transmision) {
+            $day = $this->dayNumber((string) $program->dia_transmision);
+            $time = $this->parseScheduleTime((string) $program->hora_transmision);
+            if ($day !== null && $time) {
+                $start = $now->copy()->startOfDay()
+                    ->subDays(($now->dayOfWeekIso - $day + 7) % 7)
+                    ->setTime($time[0], $time[1]);
+                $duration = max(15, (int) ($program->duracion_minutos ?? 120)) * 60;
+                $active = $now->greaterThanOrEqualTo($start) && $now->lessThan($start->copy()->addSeconds($duration));
+                if (! $active && $start->lessThanOrEqualTo($now)) {
+                    $start->addWeek();
+                }
+                $dayLabel = array_search($start->dayOfWeekIso, self::DAY_ORDER, true);
+                $schedule = $dayLabel.' · '.$start->format('d/m').' · '.$start->format('H:i');
+            }
+        }
+        if ($badgeLabel === 'En vivo' && $tipo === 'retransmision') {
+            $badgeLabel = 'En emisión';
         }
 
         return [
@@ -823,8 +854,8 @@ class ProgramScheduleService
             'title' => mb_strtoupper($program->name ?: 'PROGRAMACIÓN'),
             'title_html' => formatear_titulo(mb_strtoupper($program->name ?: 'PROGRAMACIÓN')),
             'host' => $program->host ?: 'Seven Rock Radio',
-            'location' => $program->schedule ?: 'Próxima emisión',
-            'schedule' => $program->schedule ?: 'Próxima emisión',
+            'location' => $schedule,
+            'schedule' => $schedule,
             'show' => $program->name ?: 'Programación',
             'timezone' => $program->timezone ?: 'America/Caracas',
             'summary' => $this->summaryFor($program),

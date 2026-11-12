@@ -90,7 +90,7 @@ class MasterProgram extends Model
     protected static function booted(): void
     {
         $bumpScheduleVersion = static function (): void {
-            \Illuminate\Support\Facades\Cache::forever('cache.version.program_schedule', now()->timestamp);
+            \Illuminate\Support\Facades\Cache::forever('cache.version.program_schedule', (string) (microtime(true) . '_' . uniqid()));
             \Illuminate\Support\Facades\Cache::forget('site.programs.catalog');
         };
 
