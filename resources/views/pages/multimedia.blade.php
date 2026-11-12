@@ -19,8 +19,9 @@
     :title="$multimediaTitle"
     :subtitle="$multimediaSubtitle"
     image="assets/lucille/microphone-1206364_1920.jpg"
-    overlay="rgba(16,16,18,.82)"
+    overlay="rgba(16,16,18,.86)"
     :compact="true"
+    :contained-image="false"
 />
 
 <section class="mx-auto max-w-[1180px] px-5 pt-8 pb-36"

@@ -5,6 +5,7 @@
     'overlay' => 'rgba(21,21,21,.88)',
     'categories' => [],
     'compact' => false,
+    'containedImage' => true,
 ])
 
 <section class="lucille-page-heading {{ $compact ? 'lucille-page-heading--compact' : '' }} {{ $subtitle ? '' : 'no-subtitle' }} {{ ! empty($categories) ? 'has-cpt-tax' : '' }}">
@@ -16,7 +17,9 @@
                     : asset((string) $image));
         @endphp
         <div class="absolute inset-0 hero-slide" style="background-image: url('{{ $pageHeadingImage }}');">
-            <img src="{{ $pageHeadingImage }}" alt="Background" class="hero-slide-img" width="1920" height="500" loading="eager" fetchpriority="high" decoding="async" aria-hidden="true">
+            @if ($containedImage)
+                <img src="{{ $pageHeadingImage }}" alt="Background" class="hero-slide-img" width="1920" height="500" loading="eager" fetchpriority="high" decoding="async" aria-hidden="true">
+            @endif
         </div>
         <div class="absolute inset-0" style="background: {{ $overlay === 'rgba(21,21,21,.88)' ? 'rgba(16, 16, 18, 0.75)' : $overlay }}; z-index: 2;"></div>
     @else
