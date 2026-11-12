@@ -845,6 +845,234 @@ class PodcastStorageLifecycleTest extends TestCase
         $this->assertFalse(Storage::disk('r2')->exists($rawInboxKey), 'Una vez persistida la referencia definitiva en BD, el original de inbox sí se limpia.');
     }
 
+    public function test_panel_retry_radioboss_on_unprocessed_inbox_episode_normalizes_first_and_passes_only_definitive_path_to_radioboss(): void
+    {
+        Mail::fake();
+        Storage::fake('public');
+        Storage::fake('r2');
+        $this->configurePodcastDisks();
+        Storage::fake('radioboss');
+        $this->fakeRadioBossService();
+        $this->fakeArchiveOrgService();
+
+        Carbon::setTestNow(Carbon::parse('2026-11-12 10:00:00', 'America/Caracas'));
+
+        $admin = User::factory()->create(['is_admin' => true]);
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'Estación Rock',
+            'conductor' => 'Oswaldo',
+            'dia_transmision' => 'MIERCOLES',
+            'hora_transmision' => '18:00:00',
+            'genero' => 'Rock',
+            'ruta_ftp' => 'programas',
+            'activo' => true,
+        ]);
+
+        $rawInboxKey = 'podcast-inbox/8a50ed8e-9138-459e-9b6e-572857117899-er-p389-6-nov-26.mp3';
+        Storage::disk('r2')->put($rawInboxKey, $this->sampleMp3Content());
+
+        $episode = RadioProgram::query()->create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'Estación Rock',
+            'conductor' => 'Oswaldo',
+            'numero_episodio' => 170,
+            'fecha_emision' => '2026-11-11',
+            'live_title' => 'Estación Rock #170',
+            'archivo_mp3' => $rawInboxKey,
+            'archivo_mp3_disk' => 'r2',
+            'enviado_radioboss' => false,
+            'radioboss_status' => 'skipped',
+            'archive_org_status' => 'skipped',
+            'delivery_status' => 'skipped',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_NOT_REQUIRED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'ruta_ftp_radioboss' => 'programas',
+            'delivery_metadata' => [
+                'storage_folder' => 'estacion-rock',
+                'pipeline' => 'save-only',
+                'test_flag' => 'initial',
+            ],
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('admin.podcast-uploads.retry', $episode), [
+            'target' => 'radioboss',
+        ]);
+        $response->assertStatus(302);
+
+        $episode->refresh();
+        $expectedFinalPath = 'programas_procesados/estacion-rock/170.- ESTACIóN ROCK 11-11-2026.mp3';
+
+        $this->assertSame($expectedFinalPath, $episode->archivo_mp3);
+        $this->assertSame('r2', $episode->archivo_mp3_disk);
+        $this->assertTrue((bool) data_get($episode->delivery_metadata, 'r2_verified'));
+        $this->assertTrue(Storage::disk('r2')->exists($expectedFinalPath));
+        $this->assertNull($episode->radioboss_last_error, 'radioboss_last_error: ' . $episode->radioboss_last_error . ' | status: ' . $episode->radioboss_status . ' | msg: ' . $episode->status_message);
+        $this->assertTrue($episode->enviado_radioboss);
+        $this->assertSame('radioboss_verified', $episode->radioboss_status);
+        $this->assertTrue(Storage::disk('radioboss')->exists('03.- MIERCOLES/22.- ESTACION ROCK/170.- ESTACION ROCK 11-11-2026.mp3'));
+        $this->assertSame('skipped', $episode->archive_org_status, 'El reintento selectivo de RadioBOSS no debe disparar Archive.org.');
+        $this->assertArrayNotHasKey(
+            'requested_distribution_target',
+            (array) ($episode->delivery_metadata ?? []),
+            'requested_distribution_target debe quedar consumido y eliminado para no afectar reintentos posteriores.'
+        );
+
+        // Comprobación de que un reintento posterior no queda alterado por flags residuales
+        $subsequentResponse = $this->actingAs($admin)->post(route('admin.podcast-uploads.retry', $episode), [
+            'target' => 'archive',
+        ]);
+        $subsequentResponse->assertStatus(302);
+
+        $episode->refresh();
+        $this->assertSame('archive_verified', $episode->archive_org_status, 'El reintento posterior de Archive.org debe procesarse sin interferencia.');
+        $this->assertSame('radioboss_verified', $episode->radioboss_status, 'RadioBOSS sigue verificado.');
+        $this->assertArrayNotHasKey(
+            'requested_distribution_target',
+            (array) ($episode->delivery_metadata ?? []),
+            'requested_distribution_target no debe persistir tras el segundo procesamiento.'
+        );
+    }
+
+    public function test_dispatcher_registers_podcast_processed_listener_exactly_once_and_radioboss_event_never_queues_archive(): void
+    {
+        // 1. Confirmar con el dispatcher real de Laravel que DispatchPodcastDistributionJobs está registrado exactamente 1 vez
+        $listeners = app('events')->getListeners(\App\Events\PodcastProcessed::class);
+        $this->assertCount(
+            1,
+            $listeners,
+            'PodcastProcessed debe tener exactamente un listener registrado en el dispatcher real para evitar ejecuciones dobles.'
+        );
+
+        // 2. Probar que un único evento con destino 'radioboss' despacha RadioBOSS y NUNCA encola/despacha Archive.org
+        \Illuminate\Support\Facades\Bus::fake([
+            \App\Jobs\UploadRadiobossJob::class,
+            \App\Jobs\UploadArchiveOrgJob::class,
+        ]);
+
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'Estación Rock',
+            'conductor' => 'Oswaldo',
+            'dia_transmision' => 'MIERCOLES',
+            'hora_transmision' => '18:00:00',
+            'ruta_ftp' => 'programas',
+            'activo' => true,
+        ]);
+
+        $processedPath = 'programas_procesados/estacion-rock/170.- ESTACION ROCK 11-11-2026.mp3';
+        Storage::fake('r2');
+        Storage::disk('r2')->put($processedPath, 'dummy mp3 data');
+
+        $episode = RadioProgram::query()->create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'Estación Rock',
+            'conductor' => 'Oswaldo',
+            'numero_episodio' => 170,
+            'fecha_emision' => '2026-11-11',
+            'archivo_mp3' => $processedPath,
+            'archivo_mp3_disk' => 'r2',
+            'enviado_radioboss' => false,
+            'radioboss_status' => 'skipped',
+            'archive_org_status' => 'skipped',
+            'delivery_status' => 'delivery_pending',
+            'delivery_metadata' => [
+                'r2_verified' => true,
+                'requested_distribution_target' => 'radioboss',
+            ],
+        ]);
+
+        // Disparar el evento real a través del dispatcher de Laravel
+        event(new \App\Events\PodcastProcessed($episode->id));
+
+        \Illuminate\Support\Facades\Bus::assertDispatched(\App\Jobs\UploadRadiobossJob::class, 1);
+        \Illuminate\Support\Facades\Bus::assertNotDispatched(\App\Jobs\UploadArchiveOrgJob::class);
+
+        $episode->refresh();
+        $this->assertArrayNotHasKey(
+            'requested_distribution_target',
+            (array) ($episode->delivery_metadata ?? []),
+            'requested_distribution_target debe consumirse y limpiarse inmediatamente.'
+        );
+    }
+
+    public function test_failed_normalization_never_dispatches_radioboss_never_marks_delivered_and_shows_clear_error_in_panel(): void
+    {
+        Mail::fake();
+        Storage::fake('public');
+        Storage::fake('r2');
+        $this->configurePodcastDisks();
+        $this->fakeRadioBossService();
+        $this->fakeArchiveOrgService();
+
+        $admin = User::factory()->create(['is_admin' => true]);
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'Estación Rock',
+            'conductor' => 'Oswaldo',
+            'dia_transmision' => 'MIERCOLES',
+            'hora_transmision' => '18:00:00',
+            'genero' => 'Rock',
+            'ruta_ftp' => 'programas',
+            'activo' => true,
+        ]);
+
+        $rawInboxKey = 'podcast-inbox/8a50ed8e-9138-459e-9b6e-572857117899-er-p389-6-nov-26.mp3';
+        Storage::disk('public')->put($rawInboxKey, $this->sampleMp3Content());
+
+        $episode = RadioProgram::query()->create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'Estación Rock',
+            'conductor' => 'Oswaldo',
+            'numero_episodio' => 170,
+            'fecha_emision' => '2026-11-11',
+            'live_title' => 'Estación Rock #170 Fallo Normalización',
+            'archivo_mp3' => $rawInboxKey,
+            'archivo_mp3_disk' => 'public',
+            'enviado_radioboss' => false,
+            'radioboss_status' => 'skipped',
+            'archive_org_status' => 'skipped',
+            'delivery_status' => 'skipped',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_NOT_REQUIRED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'ruta_ftp_radioboss' => 'programas',
+        ]);
+
+        // Desconfigurar R2 para provocar fallo en la normalización/publicación definitiva
+        config([
+            'filesystems.disks.r2.key' => '',
+            'filesystems.disks.r2.secret' => '',
+            'filesystems.disks.r2.bucket' => '',
+            'filesystems.disks.r2.url' => '',
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('admin.podcast-uploads.retry', $episode), [
+            'target' => 'radioboss',
+        ]);
+        $response->assertStatus(302);
+
+        $episode->refresh();
+
+        $this->assertSame($rawInboxKey, $episode->archivo_mp3);
+        $this->assertFalse($episode->enviado_radioboss, 'No debe marcarse como entregado si falla la normalización.');
+        $this->assertSame('skipped', $episode->radioboss_status, 'No debe quedar como pendiente ni verificado en RadioBOSS con audio crudo.');
+        $this->assertSame('delivery_failed', $episode->delivery_status);
+        $this->assertNotEmpty($episode->delivery_last_error);
+        $this->assertStringContainsString('Cloudflare R2 no está configurado', (string) $episode->delivery_last_error);
+        $this->assertCount(0, Storage::disk('radioboss')->allFiles(), 'No debe haberse subido ningún archivo a RadioBOSS.');
+
+        // Verificar que el panel muestra claramente el estado de fallo de audio y el detalle del error
+        $fragment = $this->actingAs($admin)->get(route('admin.podcast-uploads.recent'));
+        $fragment->assertOk();
+        $fragment->assertSee('Audio · Falló proceso', false);
+        $fragment->assertSee('Error en procesamiento de audio:', false);
+        $fragment->assertSee('Cloudflare R2 no está configurado', false);
+
+        // Comprobar también que el listener DispatchPodcastDistributionJobs bloquea cualquier evento directo con ruta cruda
+        \Illuminate\Support\Facades\Bus::fake([UploadRadiobossJob::class]);
+        app(\App\Listeners\DispatchPodcastDistributionJobs::class)->handle(new \App\Events\PodcastProcessed($episode->id));
+        \Illuminate\Support\Facades\Bus::assertNotDispatched(UploadRadiobossJob::class);
+    }
+
     /**
      * @return array<int, string>
      */
