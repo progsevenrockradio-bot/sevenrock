@@ -255,6 +255,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Angelus Apatrida News',
             'author_email'   => 'promo@centurymedia.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create([
             'post_id'           => $post->id,
@@ -289,6 +290,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'CONFIDENTIAL EMBARGO: Crisix',
             'author_email'   => 'press@crisix.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
 
         EmailPostSanitizedMeta::create([
@@ -325,6 +327,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Ghost Tour Dates',
             'author_email'   => 'press@loma-vista.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create([
             'post_id'           => $post->id,
@@ -438,6 +441,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Embargoed Release',
             'author_email'   => 'label@nuclearblast.de',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create([
             'post_id'           => $post->id,
@@ -529,6 +533,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Asunto 1',
             'author_email'   => 'pr1@media.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create(['post_id' => $p1->id, 'security_status' => 'passed', 'received_at' => now()]);
 
@@ -580,6 +585,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Asunto 4',
             'author_email'   => 'pr4@media.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create(['post_id' => $p4->id, 'security_status' => 'passed', 'received_at' => now()]);
 
@@ -729,6 +735,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Press Notification Test',
             'author_email'   => 'external_agency@promorock.es',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create([
             'post_id'           => $post->id,
@@ -762,6 +769,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Concurrent test',
             'author_email'   => 'band@race.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create([
             'post_id'           => $post->id,

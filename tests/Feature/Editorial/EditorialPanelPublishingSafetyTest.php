@@ -36,6 +36,29 @@ class EditorialPanelPublishingSafetyTest extends TestCase
         }
 
         $this->validator = app(EmailSafetyValidator::class);
+
+        $coversDir = storage_path('app/public/posts/covers');
+        if (! file_exists($coversDir)) {
+            @mkdir($coversDir, 0755, true);
+        }
+        foreach (['valid-cover.jpg', 'cover.jpg', 'valid-fob.jpg'] as $file) {
+            $p = $coversDir . DIRECTORY_SEPARATOR . $file;
+            if (! file_exists($p)) {
+                @file_put_contents($p, 'fake-cover-bytes');
+            }
+        }
+    }
+
+    protected function tearDown(): void
+    {
+        $coversDir = storage_path('app/public/posts/covers');
+        foreach (['valid-cover.jpg', 'cover.jpg', 'valid-fob.jpg'] as $file) {
+            $p = $coversDir . DIRECTORY_SEPARATOR . $file;
+            if (file_exists($p)) {
+                @unlink($p);
+            }
+        }
+        parent::tearDown();
     }
 
     /**
