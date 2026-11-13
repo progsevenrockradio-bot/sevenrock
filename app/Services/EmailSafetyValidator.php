@@ -502,19 +502,8 @@ class EmailSafetyValidator
             return $baseSafety;
         }
 
-        // 2. Comprobación de extensión de archivo
-        $pathForExt = parse_url($clean, PHP_URL_PATH) ?? $clean;
-        $ext = strtolower(pathinfo($pathForExt, PATHINFO_EXTENSION));
-        $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'svg'];
-        if (! in_array($ext, $allowedExtensions, true)) {
-            return [
-                'is_safe'         => false,
-                'violation'       => "La imagen de portada tiene una extensión no permitida o ausente ('.{$ext}').",
-                'normalized_path' => null,
-            ];
-        }
-
-        // 3. Chequeo de URLs con esquema
+        // 2. Chequeo de URLs con esquema. Las remotas se validan mediante host
+        // autorizado, Content-Type y firma binaria; el path no necesita extensión.
         $hasScheme = (bool) preg_match('#^https?://#i', $clean);
         if ($hasScheme) {
             $host = strtolower(parse_url($clean, PHP_URL_HOST) ?? '');
@@ -538,6 +527,18 @@ class EmailSafetyValidator
 
         // 4. Verificación física en disco para almacenamiento local
         if (! $hasScheme) {
+            // Las rutas locales sí deben declarar una extensión de imagen permitida.
+            $pathForExt = parse_url($clean, PHP_URL_PATH) ?? $clean;
+            $ext = strtolower(pathinfo($pathForExt, PATHINFO_EXTENSION));
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'svg'];
+            if (! in_array($ext, $allowedExtensions, true)) {
+                return [
+                    'is_safe'         => false,
+                    'violation'       => "La imagen local tiene una extensión no permitida o ausente ('.{$ext}').",
+                    'normalized_path' => null,
+                ];
+            }
+
             $relPath = ltrim($clean, '/');
             $storageRelative = str_starts_with($relPath, 'storage/') ? substr($relPath, 8) : $relPath;
 

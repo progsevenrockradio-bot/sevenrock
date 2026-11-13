@@ -293,7 +293,7 @@ class PostController extends Controller
             'content_blocks' => ['nullable', 'string'],
             'content' => ['nullable'],
             'quote' => ['nullable', 'string'],
-            'featured_image' => ['nullable', 'string', 'max:2048', 'required_without:featured_image_file'],
+            'featured_image' => ['nullable', 'string', 'max:255', 'required_without:featured_image_file'],
             'featured_image_file' => ['nullable', 'image', 'max:6144'],
             'facebook_url' => ['nullable', 'url', 'max:2048'],
             'instagram_url' => ['nullable', 'url', 'max:2048'],
@@ -315,6 +315,8 @@ class PostController extends Controller
             'timezone' => ['nullable', 'string', 'timezone:all'],
             'en_memoria' => ['nullable', 'boolean'],
             'en_memoria_nombre' => ['nullable', 'string', 'max:255'],
+        ], [
+            'featured_image.max' => 'La URL o ruta de portada no puede superar 255 caracteres. Usa una URL directa válida más corta; el enlace de una publicación de Facebook no es una imagen.',
         ]);
 
         $validated['en_memoria'] = $request->boolean('en_memoria');
