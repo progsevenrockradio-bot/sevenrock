@@ -588,6 +588,7 @@ class EmailSafetyValidator
         'lastfm.freetls.fastly.net',
         'i.scdn.co',
         'f003.backblazeb2.com',
+        'encrypted-tbn0.gstatic.com',
     ];
 
     /**
@@ -705,7 +706,9 @@ class EmailSafetyValidator
         $allowedHosts = $this->getAllowedImageHosts();
         $isAllowed = false;
         foreach ($allowedHosts as $allowedHost) {
-            if ($host === $allowedHost || str_ends_with($host, '.' . $allowedHost)) {
+            $isGoogleThumbnailHost = $allowedHost === 'encrypted-tbn0.gstatic.com';
+
+            if ($host === $allowedHost || (! $isGoogleThumbnailHost && str_ends_with($host, '.' . $allowedHost))) {
                 $isAllowed = true;
                 break;
             }

@@ -694,6 +694,32 @@ class EditorialCoverImagePublishingSafetyTest extends TestCase
         $this->assertSame('https://upload.wikimedia.org/blob-image-with-magic-bytes.jpg', $resBlob['normalized_path']);
     }
 
+    public function test_google_thumbnail_host_is_allowed_only_for_verified_image_content(): void
+    {
+        $url = 'https://encrypted-tbn0.gstatic.com/images?q=verified-rock-photo';
+        $content = "\xFF\xD8\xFF\xE0\x00\x10JFIF";
+        $contentType = 'image/jpeg';
+        Http::fake([
+            $url => function () use (&$content, &$contentType) {
+                return Http::response($content, 200, ['Content-Type' => $contentType]);
+            },
+        ]);
+
+        $valid = $this->validator->validatePublishableCoverImage($url);
+        $this->assertTrue($valid['is_safe']);
+        $this->assertSame($url, $valid['normalized_path']);
+
+        $content = 'not an image';
+        $contentType = 'text/html';
+
+        $invalid = $this->validator->validatePublishableCoverImage($url);
+        $this->assertFalse($invalid['is_safe']);
+        $this->assertStringContainsString('contenido de imagen válido', (string) $invalid['violation']);
+
+        $subdomain = $this->validator->validateRemoteImageUrlSecurity('https://other.encrypted-tbn0.gstatic.com/image.jpg');
+        $this->assertFalse($subdomain['is_safe']);
+    }
+
     /**
      * 17. La lectura se limita estrictamente a 1.024 bytes cuando el servidor ignora la cabecera Range.
      */
