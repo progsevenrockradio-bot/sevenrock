@@ -134,6 +134,119 @@ class NewRelease extends Model
         return true;
     }
 
+    /**
+     * Determina si el lanzamiento se encuentra bajo un embargo activo vigente o fecha futura.
+     */
+    public function isUnderActiveEmbargo(): bool
+    {
+        if ($this->is_embargo_active) {
+            if ($this->embargo_until === null) {
+                return true;
+            }
+
+            return $this->embargo_until->isFuture();
+        }
+
+        if ($this->released_at !== null && $this->released_at->isFuture()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public const STATUS_APPROVED_FOR_BROADCAST = 'approved_for_broadcast';
+    public const STATUS_BROADCAST_DELIVERED = 'broadcast_delivered';
+    public const STATUS_BROADCAST_DELIVERY_FAILED = 'broadcast_delivery_failed';
+
+    public const SECURITY_HOLD_STATUSES = [
+        'needs_review',
+        'held_security',
+        'rejected',
+        'failed_metadata',
+    ];
+
+    /**
+     * Indica si el lanzamiento tiene una retención de seguridad o validación activa
+     * (incluyendo 'needs_review') que bloquea su aprobación para emisión.
+     */
+    public function hasSecurityHold(): bool
+    {
+        return in_array((string) $this->security_status, self::SECURITY_HOLD_STATUSES, true);
+    }
+
+    /**
+     * Aprobación expresa de EMISIÓN EN RADIO (solo RadioBOSS).
+     * - NUNCA reutiliza is_active (visibilidad web ≠ permiso de emisión).
+     * - El canal /submissions queda excluido aunque la maqueta figure como aprobada.
+     * - NO autoriza Archive.org (ver isApprovedForArchive()).
+     */
+    public function isApprovedForBroadcast(): bool
+    {
+        if ($this->origin === 'submission') {
+            return false;
+        }
+
+        return in_array((string) $this->security_status, [
+            self::STATUS_APPROVED_FOR_BROADCAST,
+            self::STATUS_BROADCAST_DELIVERED,
+        ], true);
+    }
+
+    /**
+     * Indica si la entrega efectiva del audio a RadioBOSS ya fue confirmada.
+     */
+    public function isBroadcastDelivered(): bool
+    {
+        return $this->origin !== 'submission'
+            && $this->security_status === self::STATUS_BROADCAST_DELIVERED;
+    }
+
+    /**
+     * Indica si una subida autorizada a RadioBOSS falló o se detuvo por colisión/verificación
+     * y admite un reintento explícito del administrador.
+     */
+    public function hasBroadcastDeliveryFailed(): bool
+    {
+        return $this->origin !== 'submission'
+            && $this->security_status === self::STATUS_BROADCAST_DELIVERY_FAILED;
+    }
+
+    /**
+     * Autorización INDEPENDIENTE para redistribuir el audio en Archive.org (repositorio público descargable).
+     * Desactivada por defecto: requiere una columna explícita y registrada (archive_upload_approved_at +
+     * archive_upload_approved_by) que este parche NO crea. Mientras no exista, siempre devuelve false.
+     * La aprobación de emisión en radio no implica esta autorización.
+     */
+    public function isApprovedForArchive(): bool
+    {
+        if ($this->origin === 'submission') {
+            return false;
+        }
+
+        $attributes = $this->getAttributes();
+        if (! array_key_exists('archive_upload_approved_at', $attributes) || ! array_key_exists('archive_upload_approved_by', $attributes)) {
+            return false;
+        }
+
+        return $attributes['archive_upload_approved_at'] !== null && $attributes['archive_upload_approved_by'] !== null;
+    }
+
+    /**
+     * Requisitos para enviar a RadioBOSS: aprobación de emisión y sin embargo vigente.
+     */
+    public function canDispatchBroadcast(): bool
+    {
+        return $this->isApprovedForBroadcast() && ! $this->isUnderActiveEmbargo();
+    }
+
+    /**
+     * Requisitos para enviar a Archive.org: autorización independiente y sin embargo vigente.
+     */
+    public function canDispatchArchive(): bool
+    {
+        return $this->isApprovedForArchive() && ! $this->isUnderActiveEmbargo();
+    }
+
     public function trackSubmission(): HasOne
     {
         return $this->hasOne(TrackSubmission::class, 'new_release_id');

@@ -1283,13 +1283,13 @@ class ProcessIncomingEmails extends Command
                         $releasesCreatedToday++;
                         $this->info("Lanzamiento creado con éxito en estado " . ($isActive ? '[Activo]' : '[Borrador]') . ": {$title} - {$artistName}");
 
-                        // Si hay MP3 adjunto, guardar localmente y encolar subidas a RadioBOSS y Archive.org
+                        // Si hay MP3 adjunto, guardar copia permanente para el reproductor web y eliminar el temporal de ingesta
                         if ($tempMp3Path) {
                             try {
                                 $fileContent = file_get_contents($tempMp3Path);
                                 $cleanName = Str::slug(pathinfo($tempMp3Name, PATHINFO_FILENAME)) . '.mp3';
                                 
-                                // 1. Guardar permanentemente en local/B2 para el reproductor web
+                                // 1. Guardar permanentemente en local/B2 para el reproductor web (ruta distinta del temporal)
                                 $uploadedAudio = app(\App\Services\FileUploadService::class)->uploadRaw(
                                     $fileContent,
                                     'catalog/releases/audios/' . Str::uuid()->toString() . '/' . $cleanName
@@ -1301,17 +1301,19 @@ class ProcessIncomingEmails extends Command
                                 
                                 $this->info("Audio del lanzamiento guardado permanentemente en la web: {$uploadedAudio['url']}");
                                 
-                                // 2. Despachar cadena de trabajos en segundo plano: RadioBOSS FTP primero, luego Archive.org como respaldo (el cual limpia el archivo temporal al final)
-                                \Illuminate\Support\Facades\Bus::chain([
-                                    new \App\Jobs\UploadMp3ToRadiobossJob($release->id, $tempMp3Path, $tempMp3Name, 'RADIO/Lanzamientos'),
-                                    new \App\Jobs\UploadMp3ToArchiveOrg($release->id, $tempMp3Path, $tempMp3Name)
-                                ])->dispatch();
-                                
-                                $this->info("Subidas a RadioBOSS y Archive.org encoladas en cadena.");
-                                $tempMp3Path = null; // Evitar que se borre en este ciclo
+                                // Retención cautelar: el audio se conserva en almacenamiento para el reproductor web,
+                                // pero NUNCA se despacha a RadioBOSS ni a Archive.org sin aprobación expresa de un administrador
+                                // y una vez vencido cualquier embargo aplicable.
+                                Log::info("ProcessIncomingEmails: Audio de NewRelease ID {$release->id} retenido en almacenamiento. Envíos a RadioBOSS y Archive.org requieren aprobación editorial expresa y fin de embargo.");
+                                $this->info("Audio retenido cautelarmente: no se despacha a RadioBOSS ni a Archive.org sin aprobación editorial y fin de embargo.");
                             } catch (\Throwable $e) {
                                 Log::error("ProcessIncomingEmails: Error al procesar audio adjunto: " . $e->getMessage());
                                 $this->error("Error al procesar audio: " . $e->getMessage());
+                            } finally {
+                                if ($tempMp3Path && file_exists($tempMp3Path)) {
+                                    @unlink($tempMp3Path);
+                                }
+                                $tempMp3Path = null;
                             }
                         }
                     }
@@ -1385,11 +1387,6 @@ class ProcessIncomingEmails extends Command
                     }
                 }
 
-                // Borrar archivos temporales remanentes si no se encoló la subida
-                if ($tempMp3Path && file_exists($tempMp3Path)) {
-                    @unlink($tempMp3Path);
-                }
-
                 // Registrar correo como procesado
                 $this->recordProcessedEmail($messageId, $subject, 'processed');
 
@@ -1401,8 +1398,12 @@ class ProcessIncomingEmails extends Command
                     'exception' => $msgEx,
                     'subject'   => $subject,
                 ]);
+            } finally {
+                // Garantizar limpieza del temporal de extracción en storage/app/temp_audio (incluyendo salidas por continue/break o excepción),
+                // sin afectar la copia permanente guardada por FileUploadService en catalog/releases/audios/.
                 if (isset($tempMp3Path) && $tempMp3Path && file_exists($tempMp3Path)) {
                     @unlink($tempMp3Path);
+                    $tempMp3Path = null;
                 }
             }
         }

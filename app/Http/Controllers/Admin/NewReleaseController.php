@@ -137,6 +137,22 @@ class NewReleaseController extends Controller
     }
 
     /**
+     * Acción explícita del panel: Aprobar un lanzamiento exclusivamente para emisión en RadioBOSS.
+     * No autoriza ni encola subidas a Archive.org, ni asume aprobación por el estado 'is_active'.
+     * Requiere que el lanzamiento no esté bajo embargo activo y cuente con audio.
+     * Aplica bloqueo transaccional e idempotencia (con despacho post-commit) para evitar duplicados.
+     */
+    public function approveBroadcast(Request $request, NewRelease $newRelease, \App\Services\NewReleaseBroadcastApprover $approver): RedirectResponse
+    {
+        // Ruta protegida por el grupo admin (middleware auth + admin + audit).
+        $outcome = $approver->approve($newRelease, $request->user()?->id);
+
+        $ok = in_array($outcome['result'], [\App\Services\NewReleaseBroadcastApprover::APPROVED, \App\Services\NewReleaseBroadcastApprover::ALREADY_APPROVED], true);
+
+        return redirect()->route('admin.new-releases.index')->with($ok ? 'status' : 'error', $outcome['message']);
+    }
+
+    /**
      * Aplica a lanzamientos procedentes de correo las restricciones de seguridad y embargo editorial.
      *
      * @param array<string, mixed> $proposedAttributes
@@ -182,8 +198,8 @@ class NewReleaseController extends Controller
             }
         }
 
-        // Si el estado de seguridad persistente tiene retenciones activas
-        if (in_array($release->security_status, ['held_security', 'rejected', 'failed_metadata'])) {
+        // Si el estado de seguridad persistente tiene retenciones activas (incluyendo needs_review)
+        if ($release->hasSecurityHold()) {
             throw ValidationException::withMessages([
                 'is_active' => "Activación bloqueada: el lanzamiento tiene una retención técnica o de seguridad activa ({$release->incident_reason}).",
             ]);

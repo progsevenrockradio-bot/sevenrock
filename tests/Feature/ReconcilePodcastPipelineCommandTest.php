@@ -99,4 +99,54 @@ class ReconcilePodcastPipelineCommandTest extends TestCase
         $this->assertStringNotContainsString('Episodio #' . $draft->id, $output);
         $this->assertStringNotContainsString('Episodio #' . $completed->id, $output);
     }
+
+    public function test_reconciler_never_dispatches_radioboss_or_archive_when_episode_audio_is_unprocessed_inbox_path(): void
+    {
+        \Illuminate\Support\Facades\Bus::fake([
+            \App\Jobs\UploadRadiobossJob::class,
+            \App\Jobs\UploadArchiveOrgJob::class,
+        ]);
+
+        $master = MasterProgram::query()->create([
+            'nombre' => 'Estación Rock',
+            'conductor' => 'Oswaldo',
+            'dia_transmision' => 'MIERCOLES',
+            'hora_transmision' => '18:00',
+            'timezone' => 'America/Caracas',
+            'duracion_minutos' => 120,
+            'genero' => 'ROCK',
+            'activo' => true,
+        ]);
+
+        $unprocessed = RadioProgram::query()->create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'Estación Rock',
+            'numero_episodio' => 170,
+            'fecha_emision' => '2026-11-11',
+            'archivo_mp3' => 'podcast-inbox/8a50ed8e-9138-459e-9b6e-572857117899-er-p389-6-nov-26.mp3',
+            'archivo_mp3_disk' => 'r2',
+            'conductor' => $master->conductor,
+            'processing_started_at' => now()->subMinutes(150),
+            'processing_finished_at' => now()->subMinutes(140),
+            'radioboss_status' => 'radioboss_pending',
+            'archive_org_status' => 'archive_pending',
+            'delivery_status' => 'delivery_failed',
+        ]);
+        RadioProgram::query()->where('id', $unprocessed->id)->update(['updated_at' => now()->subMinutes(140)]);
+
+        $exitCode = Artisan::call('podcast:reconcile-pipeline', [
+            '--limit' => 50,
+            '--stale-minutes' => 90,
+        ]);
+        $output = Artisan::output();
+
+        $this->assertSame(0, $exitCode);
+        $this->assertStringContainsString(
+            'Episodio #' . $unprocessed->id . ' no tiene un MP3 procesado definitivo',
+            $output
+        );
+
+        \Illuminate\Support\Facades\Bus::assertNotDispatched(\App\Jobs\UploadRadiobossJob::class);
+        \Illuminate\Support\Facades\Bus::assertNotDispatched(\App\Jobs\UploadArchiveOrgJob::class);
+    }
 }

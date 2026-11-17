@@ -72,6 +72,7 @@ class Phase1CircuitProtectionTest extends TestCase
             'status' => 'scheduled',
             'is_published' => false,
             'published_at' => now()->subMinute(),
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
 
         Artisan::call('posts:publish-scheduled');

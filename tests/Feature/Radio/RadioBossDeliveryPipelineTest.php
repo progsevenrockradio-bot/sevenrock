@@ -2437,6 +2437,395 @@ class RadioBossDeliveryPipelineTest extends TestCase
         $this->assertStringContainsString('No se encontró una ruta libre en respaldos', (string) $newEpisode->radioboss_last_error);
     }
 
+    /**
+     * 34. Estación Rock con FTP SIZE fallido ("Unable to retrieve the file_size") en staging_programas:
+     * El nombre temporal en staging es estrictamente ASCII, y ante el fallo de FTP SIZE se ejecuta
+     * la verificación alternativa segura por lectura de stream + SHA-256, completando la promoción y entrega.
+     */
+    public function test_estacion_rock_staging_size_failure_succeeds_via_stream_verification_and_uses_ascii_temp_filename(): void
+    {
+        Mail::fake();
+        Log::spy();
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        config(['services.radioboss.archive_to_respaldo' => true]);
+
+        $folder = '03.- MIERCOLES/22.- ESTACION ROCK';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'ESTACIÓN ROCK',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'MIERCOLES',
+            'hora_transmision' => '22:00:00',
+            'duracion_minutos' => 60,
+            'timezone' => 'America/Caracas',
+        ]);
+
+        // Fuera de ventana de emisión en vivo
+        Carbon::setTestNow(Carbon::parse('2026-11-11 14:00:00', 'America/Caracas'));
+
+        $previousFile = $folder . '/044.- ESTACION ROCK 04-11-2026.mp3';
+        Storage::disk('radioboss')->put($previousFile, 'audio-estacion-rock-semana-anterior');
+
+        $r2Source = 'programas_procesados/estacion-rock/045.- ESTACIÓN ROCK 11-11-2026.mp3';
+        $newAudioContent = 'audio-estacion-rock-episodio-045-integro-verificado-por-stream';
+        Storage::disk('r2')->put($r2Source, $newAudioContent);
+        $this->mockR2LocalPath($r2Source, $newAudioContent);
+
+        $episode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'ESTACIÓN ROCK Ep 045',
+            'conductor' => 'Locutor Estación Rock',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        $baseDisk = Storage::disk('radioboss');
+        $sizeFailingDisk = new class($baseDisk) {
+            public array $writtenTempPaths = [];
+
+            public function __construct(private $inner) {}
+
+            public function writeStream($path, $resource, array $options = [])
+            {
+                $this->writtenTempPaths[] = (string) $path;
+
+                return $this->inner->writeStream($path, $resource, $options);
+            }
+
+            public function size($path)
+            {
+                if (str_starts_with((string) $path, 'staging_programas/')) {
+                    throw new \RuntimeException("Unable to retrieve the file_size for file at location: {$path}.");
+                }
+
+                return $this->inner->size($path);
+            }
+
+            public function __call($name, $arguments)
+            {
+                return $this->inner->{$name}(...$arguments);
+            }
+        };
+        Storage::set('radioboss', $sizeFailingDisk);
+
+        $job = new UploadRadiobossJob($episode->id);
+        $job->handle();
+
+        $episode->refresh();
+
+        // 1. El nombre temporal en staging fue estrictamente ASCII
+        $this->assertNotEmpty($sizeFailingDisk->writtenTempPaths);
+        foreach ($sizeFailingDisk->writtenTempPaths as $tempPath) {
+            $this->assertSame(1, preg_match('/^[\x20-\x7E]+$/', $tempPath), "La ruta temporal debe ser 100% ASCII: {$tempPath}");
+            $this->assertStringStartsWith('staging_programas/' . $folder . '/.tmp_', $tempPath);
+            $this->assertStringEndsWith('.tmp.mp3', $tempPath);
+        }
+
+        // 2. La entrega se completó y verificó usando el fallback de lectura por stream y SHA-256
+        $this->assertSame('radioboss_verified', $episode->radioboss_status, (string) $episode->radioboss_last_error);
+        $this->assertTrue((bool) $episode->enviado_radioboss);
+        $this->assertNotNull($episode->radioboss_verified_at);
+        $this->assertSame('stream_sha256', $episode->radioboss_metadata['staging_verification_method'] ?? null);
+
+        // 3. El archivo final está promovido e íntegro en la ruta ASCII de emisión
+        $expectedDestination = $folder . '/045.- ESTACION ROCK 11-11-2026.mp3';
+        $this->assertTrue($baseDisk->exists($expectedDestination));
+        $this->assertSame($newAudioContent, $baseDisk->get($expectedDestination));
+
+        // 4. El episodio anterior se rotó limpiamente a respaldos_programas
+        $this->assertTrue($baseDisk->exists('respaldos_programas/' . $previousFile));
+    }
+
+    /**
+     * 35. Staging imposible de verificar en Estación Rock:
+     * Si FTP SIZE falla y la verificación alternativa por lectura detecta contenido corrupto/incompleto
+     * o falla al leer, NO se promociona el archivo, se limpia el temporal, se conserva intacto el episodio
+     * anterior y NO se marca la entrega como exitosa.
+     */
+    public function test_estacion_rock_staging_unverifiable_aborts_promotion_cleans_temp_and_does_not_mark_delivered(): void
+    {
+        Mail::fake();
+        Log::spy();
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        config([
+            'services.radioboss.archive_to_respaldo' => true,
+            'filesystems.disks.radioboss.username' => 'rb_secret_user',
+            'filesystems.disks.radioboss.password' => 'rb_super_secret_pass_99',
+        ]);
+
+        $folder = '03.- MIERCOLES/22.- ESTACION ROCK';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'ESTACIÓN ROCK',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'MIERCOLES',
+            'hora_transmision' => '22:00:00',
+            'duracion_minutos' => 60,
+            'timezone' => 'America/Caracas',
+        ]);
+
+        Carbon::setTestNow(Carbon::parse('2026-11-11 14:00:00', 'America/Caracas'));
+
+        $previousFile = $folder . '/044.- ESTACION ROCK 04-11-2026.mp3';
+        $previousContent = 'audio-estacion-rock-anterior-protegido';
+        Storage::disk('radioboss')->put($previousFile, $previousContent);
+
+        $r2Source = 'programas_procesados/estacion-rock/045.- ESTACIÓN ROCK 11-11-2026.mp3';
+        $newAudioContent = 'audio-estacion-rock-episodio-045-esperado';
+        Storage::disk('r2')->put($r2Source, $newAudioContent);
+        $this->mockR2LocalPath($r2Source, $newAudioContent);
+
+        $episode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'ESTACIÓN ROCK Ep 045',
+            'conductor' => 'Locutor Estación Rock',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        // Simular que FTP SIZE lanza excepción con URL con credenciales y además readStream devuelve bytes corruptos
+        $baseDisk = Storage::disk('radioboss');
+        $unverifiableDisk = new class($baseDisk) {
+            public function __construct(private $inner) {}
+
+            public function size($path)
+            {
+                if (str_starts_with((string) $path, 'staging_programas/')) {
+                    throw new \RuntimeException("Unable to retrieve the file_size for file at location: {$path} on ftp://rb_secret_user:rb_super_secret_pass_99@c30.radioboss.fm.");
+                }
+
+                return $this->inner->size($path);
+            }
+
+            public function readStream($path)
+            {
+                if (str_starts_with((string) $path, 'staging_programas/')) {
+                    $corrupted = fopen('php://temp', 'r+');
+                    fwrite($corrupted, 'corrupted-truncated-bytes');
+                    rewind($corrupted);
+
+                    return $corrupted;
+                }
+
+                return $this->inner->readStream($path);
+            }
+
+            public function __call($name, $arguments)
+            {
+                return $this->inner->{$name}(...$arguments);
+            }
+        };
+        Storage::set('radioboss', $unverifiableDisk);
+
+        $job = new UploadRadiobossJob($episode->id);
+        $job->handle();
+
+        $episode->refresh();
+
+        // 1. NO se marca como entregado ni verificado
+        $this->assertFalse((bool) $episode->enviado_radioboss);
+        $this->assertSame('radioboss_error', $episode->radioboss_status);
+        $this->assertNull($episode->radioboss_verified_at);
+
+        // 2. El nuevo archivo NO fue promovido a la carpeta de emisión
+        $expectedDestination = $folder . '/045.- ESTACION ROCK 11-11-2026.mp3';
+        $this->assertFalse($baseDisk->exists($expectedDestination));
+
+        // 3. El temporal de staging fue limpiado
+        $stagingFiles = $baseDisk->files('staging_programas/' . $folder);
+        $this->assertEmpty($stagingFiles, 'El archivo temporal no verificado debe eliminarse de staging');
+
+        // 4. El episodio anterior en emisión permanece intacto
+        $this->assertTrue($baseDisk->exists($previousFile));
+        $this->assertSame($previousContent, $baseDisk->get($previousFile));
+
+        // 5. status_message es breve (<= 255 chars) y no expone credenciales
+        $this->assertNotNull($episode->status_message);
+        $this->assertLessThanOrEqual(255, mb_strlen($episode->status_message));
+        $this->assertStringNotContainsString('rb_super_secret_pass_99', (string) $episode->status_message);
+        $this->assertStringNotContainsString('rb_secret_user', (string) $episode->status_message);
+        $this->assertStringNotContainsString('rb_super_secret_pass_99', (string) $episode->radioboss_last_error);
+        $this->assertStringNotContainsString('rb_secret_user', (string) $episode->radioboss_last_error);
+    }
+
+    /**
+     * 36. Rotación antigua rechazada en Frigideira Acústica (nombre no ASCII) con nueva entrega segura:
+     * Si RadioBOSS rechaza mover el archivo antiguo '011.- FRIGIDEIRA ACÚSTICA 01-11-2026.mp3' por sus caracteres,
+     * se conserva intacto en la carpeta de emisión y se continúa con el nuevo episodio '012.- FRIGIDEIRA ACUSTICA 08-11-2026.mp3'
+     * porque su ruta final es distinta, está libre y la promoción se verifica íntegramente.
+     */
+    public function test_frigideira_legacy_non_ascii_rotation_rejected_preserves_old_file_and_delivers_new_when_destination_distinct_and_free(): void
+    {
+        Mail::fake();
+        Log::spy();
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        config([
+            'services.radioboss.archive_to_respaldo' => true,
+            'services.radioboss.preserve_unrotatable_legacy_files' => true,
+        ]);
+
+        $folder = '07.- DOMINGO/20.- FRIGIDEIRA ACUSTICA';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'FRIGIDEIRA ACÚSTICA',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'DOMINGO',
+            'hora_transmision' => '20:00:00',
+            'duracion_minutos' => 60,
+            'timezone' => 'America/Caracas',
+        ]);
+
+        Carbon::setTestNow(Carbon::parse('2026-11-08 12:00:00', 'America/Caracas'));
+
+        $legacyFile = $folder . '/011.- FRIGIDEIRA ACÚSTICA 01-11-2026.mp3';
+        $legacyContent = 'audio-frigideira-acustica-011-legado-intacto';
+        Storage::disk('radioboss')->put($legacyFile, $legacyContent);
+
+        $r2Source = 'programas_procesados/frigideira-acustica/012.- FRIGIDEIRA ACÚSTICA 08-11-2026.mp3';
+        $newContent = 'audio-frigideira-acustica-012-nuevo-verificado';
+        Storage::disk('r2')->put($r2Source, $newContent);
+        $this->mockR2LocalPath($r2Source, $newContent);
+
+        $newEpisode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'FRIGIDEIRA ACÚSTICA Ep 012',
+            'conductor' => 'Locutor Frigideira',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        $baseDisk = Storage::disk('radioboss');
+        $frigideiraDisk = new class($baseDisk) {
+            public function __construct(private $inner) {}
+
+            public function move($from, $to)
+            {
+                // RadioBOSS rechaza mover el archivo antiguo por contener caracteres no ASCII ('Ú')
+                if (preg_match('/[^\x20-\x7E]/', (string) $from)) {
+                    throw new \RuntimeException("Unable to move file from {$from} to {$to}: 550 File not found or invalid characters.");
+                }
+
+                return $this->inner->move($from, $to);
+            }
+
+            public function __call($name, $arguments)
+            {
+                return $this->inner->{$name}(...$arguments);
+            }
+        };
+        Storage::set('radioboss', $frigideiraDisk);
+
+        $job = new UploadRadiobossJob($newEpisode->id);
+        $job->handle();
+
+        $newEpisode->refresh();
+
+        // 1. El archivo antiguo no ASCII permanece intacto
+        $this->assertTrue($baseDisk->exists($legacyFile));
+        $this->assertSame($legacyContent, $baseDisk->get($legacyFile));
+
+        // 2. El nuevo archivo en ruta distinta y libre fue promovido y verificado
+        $expectedNewDestination = $folder . '/012.- FRIGIDEIRA ACUSTICA 08-11-2026.mp3';
+        $this->assertNotSame($legacyFile, $expectedNewDestination);
+        $this->assertTrue($baseDisk->exists($expectedNewDestination));
+        $this->assertSame($newContent, $baseDisk->get($expectedNewDestination));
+
+        // 3. El episodio queda marcado como entregado y verificado con status_message dentro del límite
+        $this->assertTrue((bool) $newEpisode->enviado_radioboss);
+        $this->assertSame('radioboss_verified', $newEpisode->radioboss_status);
+        $this->assertNotNull($newEpisode->radioboss_verified_at);
+        $this->assertLessThanOrEqual(255, mb_strlen((string) $newEpisode->status_message));
+        $this->assertContains($legacyFile, $newEpisode->radioboss_metadata['unrotated_legacy_files'] ?? []);
+    }
+
+    /**
+     * 37. Destino final ocupado sin sobrescritura (incluso con archive_to_respaldo activo):
+     * Si la ruta final nueva ya existe en RadioBOSS, la subida se detiene antes de sobrescribir
+     * o mover ese archivo, conserva intacto el archivo existente, guarda un status_message breve
+     * y registra el detalle completo en el log sin credenciales.
+     */
+    public function test_occupied_final_destination_halts_without_overwriting_and_redacts_credentials_in_logs(): void
+    {
+        Mail::fake();
+        Log::spy();
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        config([
+            'services.radioboss.archive_to_respaldo' => true,
+            'filesystems.disks.radioboss.username' => 'ftp_admin_user',
+            'filesystems.disks.radioboss.password' => 'ftp_admin_secret_key',
+        ]);
+
+        $folder = '03.- MIERCOLES/22.- ESTACION ROCK';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'ESTACIÓN ROCK',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'MIERCOLES',
+            'hora_transmision' => '22:00:00',
+            'duracion_minutos' => 60,
+            'timezone' => 'America/Caracas',
+        ]);
+
+        Carbon::setTestNow(Carbon::parse('2026-11-11 14:00:00', 'America/Caracas'));
+
+        // La ruta final del nuevo episodio YA está ocupada en RadioBOSS por otro archivo
+        $occupiedDestination = $folder . '/045.- ESTACION ROCK 11-11-2026.mp3';
+        $existingProtectedContent = 'contenido-existente-en-destino-que-no-debe-sobrescribirse';
+        Storage::disk('radioboss')->put($occupiedDestination, $existingProtectedContent);
+
+        $r2Source = 'programas_procesados/estacion-rock/045.- ESTACIÓN ROCK 11-11-2026.mp3';
+        $newAttemptContent = 'contenido-nuevo-que-colisiona-con-destino-ocupado';
+        Storage::disk('r2')->put($r2Source, $newAttemptContent);
+        $this->mockR2LocalPath($r2Source, $newAttemptContent);
+
+        $episode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'ESTACIÓN ROCK Ep 045 Colisión',
+            'conductor' => 'Locutor Estación Rock',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        $job = new UploadRadiobossJob($episode->id);
+        $job->handle();
+
+        $episode->refresh();
+
+        // 1. El archivo existente en el destino final permanece 100% intacto y no fue movido a respaldos ni sobrescrito
+        $this->assertTrue(Storage::disk('radioboss')->exists($occupiedDestination));
+        $this->assertSame($existingProtectedContent, Storage::disk('radioboss')->get($occupiedDestination));
+        $this->assertFalse(Storage::disk('radioboss')->exists('respaldos_programas/' . $occupiedDestination));
+
+        // 2. El episodio NO se marca como entregado
+        $this->assertFalse((bool) $episode->enviado_radioboss);
+        $this->assertSame('radioboss_error', $episode->radioboss_status);
+        $this->assertNull($episode->radioboss_verified_at);
+
+        // 3. status_message es breve (<= 255 caracteres) y el detalle completo queda registrado en el log y en radioboss_last_error
+        $this->assertNotNull($episode->status_message);
+        $this->assertLessThanOrEqual(255, mb_strlen($episode->status_message));
+        $this->assertStringContainsString('Entrega detenida para no sobrescribir un archivo existente', (string) $episode->radioboss_last_error);
+        $this->assertStringNotContainsString('ftp_admin_secret_key', (string) $episode->radioboss_last_error);
+
+        Log::shouldHaveReceived('warning')->withArgs(function (string $message, array $context) use ($occupiedDestination): bool {
+            return str_contains($message, 'fallo la subida a RadioBOSS')
+                && ($context['remote_path'] ?? null) === $occupiedDestination
+                && str_contains((string) ($context['message'] ?? ''), 'Entrega detenida para no sobrescribir un archivo existente');
+        })->atLeast()->once();
+    }
+
     private function mockR2LocalPath(string $key, ?string $content = null): void
     {
         $path = tempnam(sys_get_temp_dir(), 'radioboss-test-');

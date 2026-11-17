@@ -114,28 +114,44 @@ class PostController extends Controller
 
     public function update(Request $request, Post $post): RedirectResponse
     {
-        return DB::transaction(function () use ($request, $post) {
-            // Bloqueo pesimista para evitar condiciones de carrera en concurrencia
-            $lockedPost = Post::lockForUpdate()->findOrFail($post->id);
+        try {
+            return DB::transaction(function () use ($request, $post) {
+                // Bloqueo pesimista para evitar condiciones de carrera en concurrencia
+                $lockedPost = Post::lockForUpdate()->findOrFail($post->id);
 
-            $data = $this->validated($request, $lockedPost->id);
-            $categories = $data['categories'];
-            $tags = $data['tags'];
-            unset($data['categories'], $data['tags']);
-            $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
-            $data['featured_image'] = $this->resolveImage($request, $lockedPost->featured_image, $data['featured_image'] ?? null);
-            $data = $this->persistableAttributes($data);
+                $data = $this->validated($request, $lockedPost->id, $lockedPost);
+                $categories = $data['categories'];
+                $tags = $data['tags'];
+                unset($data['categories'], $data['tags']);
+                $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
+                $data['featured_image'] = $this->resolveImage($request, $lockedPost->featured_image, $data['featured_image'] ?? null);
+                $data = $this->persistableAttributes($data);
 
-            // Si el post procede de la ingesta editorial de correo, exigir las compuertas editoriales
-            if ($lockedPost->isFromEmailPipeline()) {
-                $this->validateEditorialRestrictions($lockedPost, $data);
+                // Si el post procede de la ingesta editorial de correo, exigir las compuertas editoriales
+                if ($lockedPost->isFromEmailPipeline()) {
+                    $this->validateEditorialRestrictions($lockedPost, $data);
+                }
+
+                $lockedPost->update($data);
+                $this->syncTaxonomies($lockedPost, $categories, $tags);
+
+                return redirect()->route('admin.posts.index')->with('status', 'Post updated.');
+            });
+        } catch (\Throwable $exception) {
+            if ($exception instanceof ValidationException) {
+                throw $exception;
             }
 
-            $lockedPost->update($data);
-            $this->syncTaxonomies($lockedPost, $categories, $tags);
+            Log::error('Error al actualizar post', [
+                'post_id' => $post->id,
+                'exception' => $exception,
+                'input' => $request->except(['featured_image_file']),
+            ]);
 
-            return redirect()->route('admin.posts.index')->with('status', 'Post updated.');
-        });
+            return back()
+                ->withInput()
+                ->withErrors(['general' => 'No se pudo actualizar el post: ' . $exception->getMessage()]);
+        }
     }
 
     /**
@@ -218,7 +234,7 @@ class PostController extends Controller
         $evalPost->fill($proposedAttributes);
 
         $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
-        $safetyReport = $safetyValidator->validatePost($evalPost, $targetEvalDate);
+        $safetyReport = $safetyValidator->validatePost($evalPost, $targetEvalDate, ['require_cover_image' => true]);
 
         if (!$safetyReport['is_safe']) {
             $violations = implode('; ', $safetyReport['violations']);
@@ -272,12 +288,44 @@ class PostController extends Controller
         ]);
     }
 
-    private function validated(Request $request, ?int $ignoreId = null): array
+    private function validated(Request $request, ?int $ignoreId = null, ?Post $existingPost = null): array
     {
         $slug = $request->filled('slug')
             ? Str::slug($request->input('slug'))
             : Str::slug($request->input('title') ?? '');
         $request->merge(['slug' => $slug]);
+
+        $rawFeaturedImage = $request->input('featured_image');
+        if (is_string($rawFeaturedImage) && trim($rawFeaturedImage) !== '') {
+            $trimmedImage = trim($rawFeaturedImage);
+            $parsedUrl = parse_url($trimmedImage);
+            $host = strtolower($parsedUrl['host'] ?? '');
+            $path = strtolower($parsedUrl['path'] ?? '');
+
+            // 1. Detectar páginas web interactivas / HTML de Facebook y redes sociales
+            $isSocialPage = false;
+            if (str_contains($host, 'facebook.com') || str_contains($host, 'fb.com')) {
+                // Las páginas de Facebook (/photo, /photo.php, /permalink, /story, etc.) son HTML, no imágenes directas de CDN (.fbcdn.net)
+                if (! str_contains($host, 'fbcdn.net') || str_starts_with($path, '/photo') || str_starts_with($path, '/permalink') || str_starts_with($path, '/story') || str_starts_with($path, '/posts')) {
+                    $isSocialPage = true;
+                }
+            } elseif (str_contains($host, 'instagram.com') && (str_starts_with($path, '/p/') || str_starts_with($path, '/reel/') || str_starts_with($path, '/tv/'))) {
+                $isSocialPage = true;
+            } elseif (str_contains($host, 'twitter.com') || str_contains($host, 'x.com')) {
+                $isSocialPage = true;
+            }
+
+            if ($isSocialPage) {
+                throw ValidationException::withMessages([
+                    'featured_image' => 'La URL introducida corresponde a una página de Facebook o red social, no a un archivo directo de imagen (.jpg, .png, etc.). Debe ingresar el enlace directo al archivo de imagen o subir una imagen desde su equipo.',
+                ]);
+            }
+
+            // Las URLs remotas sin extensión se validan más abajo por host autorizado,
+            // Content-Type y firma binaria. No inferir el formato solo por el path.
+        }
+
+        $action = $request->input('_action', 'publish');
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -293,7 +341,15 @@ class PostController extends Controller
             'content_blocks' => ['nullable', 'string'],
             'content' => ['nullable'],
             'quote' => ['nullable', 'string'],
-            'featured_image' => ['nullable', 'string', 'max:2048', 'required_without:featured_image_file'],
+            'featured_image' => [
+                'nullable',
+                'string',
+                // The database stores this value in a VARCHAR(255) path column.
+                // Social-media page URLs are not image files and can exceed that limit;
+                // reject them as validation feedback instead of letting MySQL return 500.
+                'max:255',
+                Rule::requiredIf(fn () => empty($existingPost?->featured_image) && ! $request->hasFile('featured_image_file') && $action !== 'draft'),
+            ],
             'featured_image_file' => ['nullable', 'image', 'max:6144'],
             'facebook_url' => ['nullable', 'url', 'max:2048'],
             'instagram_url' => ['nullable', 'url', 'max:2048'],
@@ -315,6 +371,8 @@ class PostController extends Controller
             'timezone' => ['nullable', 'string', 'timezone:all'],
             'en_memoria' => ['nullable', 'boolean'],
             'en_memoria_nombre' => ['nullable', 'string', 'max:255'],
+        ], [
+            'featured_image.max' => 'La ruta o URL de portada no puede superar 255 caracteres. Para fotos de Facebook u otras redes, descarga la imagen y súbela como archivo; el enlace de la publicación no es una imagen directa.',
         ]);
 
         $validated['en_memoria'] = $request->boolean('en_memoria');
@@ -342,7 +400,6 @@ class PostController extends Controller
         $validated['content'] = WordPressContent::toRenderableBlocks($contentSource);
         $validated['categories'] = $this->splitCsv((string) ($validated['categories_text'] ?? ''));
         $validated['tags'] = $this->splitCsv((string) ($validated['tags_text'] ?? ''));
-        $action = $request->input('_action', 'publish');
 
         switch ($action) {
             case 'schedule':
@@ -358,6 +415,23 @@ class PostController extends Controller
                 $validated['is_published'] = true;
                 $validated['status'] = 'published';
                 break;
+        }
+
+        // Validación estricta de portada utilizable al publicar o programar
+        if (in_array($action, ['publish', 'schedule'], true)) {
+            $effectiveImage = $request->hasFile('featured_image_file')
+                ? 'file_upload_pending'
+                : $this->resolveImage($request, $existingPost?->featured_image, $validated['featured_image'] ?? null);
+
+            if ($effectiveImage !== 'file_upload_pending') {
+                $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+                $coverValidation = $safetyValidator->validatePublishableCoverImage($effectiveImage);
+                if (! $coverValidation['is_safe']) {
+                    throw ValidationException::withMessages([
+                        'featured_image' => $coverValidation['violation'],
+                    ]);
+                }
+            }
         }
 
         unset(

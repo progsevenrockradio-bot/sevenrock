@@ -11,6 +11,7 @@
             quickViewLoading: false,
             quickViewData: null,
             quickViewTab: 'summary',
+            selectedSourceUrls: [],
             
             scheduleModalOpen: false,
             scheduleTargetId: null,
@@ -22,7 +23,18 @@
 
             bulkScheduleOpen: false,
             bulkScheduleDate: '',
+            bulkApproveConfirmOpen: false,
+            bulkRejectConfirmOpen: false,
+            singleApproveOpen: false,
+            singleApproveId: null,
+            singleApproveTitle: '',
             isSubmitting: false,
+
+            openSingleApprove(postId, postTitle) {
+                this.singleApproveId = postId;
+                this.singleApproveTitle = postTitle;
+                this.singleApproveOpen = true;
+            },
 
             toggleAll(event) {
                 const checked = event.target.checked;
@@ -50,6 +62,7 @@
                     this.quickViewLoading = false;
                     if (res.success) {
                         this.quickViewData = res.data;
+                        this.selectedSourceUrls = [...((res.data.meta && res.data.meta.pending_sources) || [])];
                     } else {
                         alert(res.message || 'Error al cargar vista rápida');
                         this.quickViewOpen = false;
@@ -77,7 +90,7 @@
         class="space-y-6"
     >
         {{-- Alertas de Sesión --}}
-        @if (session('success'))
+        @if (session('success') && !session('bulk_results'))
             <div class="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
                 <div class="flex items-center gap-2">
                     <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -97,22 +110,253 @@
             </div>
         @endif
 
+        {{-- Reporte de Resultados de Acción Masiva --}}
         @if (session('bulk_results'))
-            @php $bulk = session('bulk_results'); @endphp
-            <div class="rounded-xl border border-white/10 bg-[#101012] p-4 text-sm text-gray-200 space-y-3 shadow-xl">
-                <div class="font-display uppercase tracking-wider text-xs font-semibold text-white">Reporte de Acción Masiva</div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <div class="p-2.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">✅ Aprobadas: <strong>{{ count($bulk['approved']) }}</strong></div>
-                    <div class="p-2.5 rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-300">⏳ Programadas: <strong>{{ count($bulk['scheduled']) }}</strong></div>
-                    <div class="p-2.5 rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-300">❌ Rechazadas: <strong>{{ count($bulk['rejected']) }}</strong></div>
-                    <div class="p-2.5 rounded-lg border border-white/10 bg-white/5 text-gray-300">⚠️ Retenidas: <strong>{{ count($bulk['blocked']) }}</strong></div>
+            @php
+                $bulk = session('bulk_results');
+                $approvedCount = count($bulk['approved'] ?? []);
+                $rawBlocked = $bulk['blocked'] ?? [];
+                $rawErrors = array_map(fn($e) => [
+                    'id' => $e['id'] ?? '?',
+                    'title' => 'Noticia #' . ($e['id'] ?? '?'),
+                    'reason' => 'Error durante el procesamiento: ' . ($e['reason'] ?? 'Error desconocido')
+                ], $bulk['errors'] ?? []);
+                $blockedItems = array_merge($rawBlocked, $rawErrors);
+                $blockedCount = count($blockedItems);
+                $scheduledCount = count($bulk['scheduled'] ?? []);
+                $rejectedCount = count($bulk['rejected'] ?? []);
+
+                // Clasificación de motivos para insignias compactas
+                $categorizeReason = function (string $reason): array {
+                    $lower = mb_strtolower($reason);
+                    if (str_contains($lower, 'portada') || str_contains($lower, 'cover') || str_contains($lower, 'imagen')) {
+                        return [
+                            'tag' => 'Sin portada utilizable',
+                            'class' => 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+                            'icon' => '🖼️'
+                        ];
+                    }
+                    if (str_contains($lower, 'fuente') || str_contains($lower, 'no verificada')) {
+                        return [
+                            'tag' => 'Fuentes pendientes',
+                            'class' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+                            'icon' => '🔗'
+                        ];
+                    }
+                    if (str_contains($lower, 'embargo')) {
+                        return [
+                            'tag' => 'Bajo embargo',
+                            'class' => 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+                            'icon' => '⏳'
+                        ];
+                    }
+                    if (str_contains($lower, 'incidencia')) {
+                        return [
+                            'tag' => 'Incidencia activa',
+                            'class' => 'border-rose-500/30 bg-rose-500/10 text-rose-300',
+                            'icon' => '🚨'
+                        ];
+                    }
+                    if (str_contains($lower, 'ya se encuentra publicada')) {
+                        return [
+                            'tag' => 'Ya publicada',
+                            'class' => 'border-blue-500/30 bg-blue-500/10 text-blue-300',
+                            'icon' => 'ℹ️'
+                        ];
+                    }
+                    return [
+                        'tag' => 'Seguridad editorial',
+                        'class' => 'border-zinc-500/30 bg-zinc-500/10 text-gray-300',
+                        'icon' => '🛡️'
+                    ];
+                };
+
+                // Truncado y formateo de URLs largas para evitar saturación visual y desbordes
+                $formatReasonWithoutLongUrls = function (string $reason): string {
+                    return preg_replace_callback('/https?:\/\/[^\s,;<>"\']+/i', function ($matches) {
+                        $url = $matches[0];
+                        $host = parse_url($url, PHP_URL_HOST) ?? '';
+                        $path = parse_url($url, PHP_URL_PATH) ?? '';
+                        $filename = $path ? basename($path) : '';
+                        if ($host) {
+                            $short = ($filename && $filename !== $host) 
+                                ? $host . '/…/' . Str::limit($filename, 20, '…') 
+                                : $host;
+                            return '‹' . $short . '›';
+                        }
+                        return '‹' . Str::limit($url, 35, '…') . '›';
+                    }, $reason);
+                };
+            @endphp
+
+            <div 
+                x-data="{ showBlockedDetails: {{ ($blockedCount > 0 && $approvedCount === 0) ? 'true' : 'false' }} }"
+                class="rounded-xl border border-white/10 bg-[#101012] p-4 sm:p-5 shadow-2xl space-y-4"
+            >
+                {{-- Encabezado del Reporte --}}
+                <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-2.5 h-2.5 rounded-full {{ $blockedCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400' }}"></span>
+                        <h2 class="font-display uppercase tracking-wider text-sm font-semibold text-white">
+                            Resultado de la Acción Masiva
+                        </h2>
+                    </div>
+                    <button 
+                        type="button" 
+                        @click="$el.closest('.rounded-xl').remove()" 
+                        class="text-gray-400 hover:text-white text-xs px-2 py-1 rounded hover:bg-white/5 transition-colors"
+                        title="Cerrar reporte"
+                    >
+                        ✕ Cerrar
+                    </button>
                 </div>
-                @if (!empty($bulk['blocked']))
-                    <div class="mt-2 text-xs text-rose-300 space-y-1">
-                        <div class="font-medium text-gray-400">Detalle de elementos retenidos por seguridad o conflicto:</div>
-                        @foreach ($bulk['blocked'] as $item)
-                            <div>• #{{ $item['id'] }} <strong>{{ Str::limit($item['title'], 40) }}</strong>: {{ $item['reason'] }}</div>
-                        @endforeach
+
+                {{-- Resumen Claro de Métricas --}}
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    {{-- Aprobadas / Publicadas --}}
+                    <div class="p-3 rounded-lg border {{ $approvedCount > 0 ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-white/5 bg-white/[0.02] text-gray-400' }}">
+                        <div class="text-[10px] uppercase font-bold tracking-wider opacity-75">Aprobadas / Publicadas</div>
+                        <div class="font-display text-xl sm:text-2xl font-bold mt-1 {{ $approvedCount > 0 ? 'text-emerald-400' : 'text-gray-500' }}">
+                            {{ $approvedCount }}
+                        </div>
+                        <div class="text-[10px] mt-0.5 opacity-80">
+                            {{ $approvedCount === 1 ? 'Noticia publicada' : 'Noticias publicadas' }}
+                        </div>
+                    </div>
+
+                    {{-- Retenidas / Bloqueadas --}}
+                    <div class="p-3 rounded-lg border {{ $blockedCount > 0 ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : 'border-white/5 bg-white/[0.02] text-gray-400' }}">
+                        <div class="text-[10px] uppercase font-bold tracking-wider opacity-75">Retenidas en Borrador</div>
+                        <div class="font-display text-xl sm:text-2xl font-bold mt-1 {{ $blockedCount > 0 ? 'text-rose-400' : 'text-gray-500' }}">
+                            {{ $blockedCount }}
+                        </div>
+                        <div class="text-[10px] mt-0.5 opacity-80">
+                            {{ $blockedCount === 1 ? 'Noticia a resguardo' : 'Noticias a resguardo' }}
+                        </div>
+                    </div>
+
+                    {{-- Programadas (si las hay) --}}
+                    @if ($scheduledCount > 0)
+                        <div class="p-3 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-300">
+                            <div class="text-[10px] uppercase font-bold tracking-wider opacity-75">Programadas</div>
+                            <div class="font-display text-xl sm:text-2xl font-bold mt-1 text-blue-400">
+                                {{ $scheduledCount }}
+                            </div>
+                            <div class="text-[10px] mt-0.5 opacity-80">Con fecha futura asignada</div>
+                        </div>
+                    @endif
+
+                    {{-- Rechazadas (si las hay) --}}
+                    @if ($rejectedCount > 0)
+                        <div class="p-3 rounded-lg border border-zinc-500/30 bg-zinc-500/10 text-zinc-300">
+                            <div class="text-[10px] uppercase font-bold tracking-wider opacity-75">Rechazadas</div>
+                            <div class="font-display text-xl sm:text-2xl font-bold mt-1 text-zinc-200">
+                                {{ $rejectedCount }}
+                            </div>
+                            <div class="text-[10px] mt-0.5 opacity-80">Conservadas con trazabilidad</div>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Resumen de Estado Informativo --}}
+                <div class="text-xs text-gray-300 bg-white/[0.02] border border-white/5 rounded-lg px-3.5 py-2.5 flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        @if ($blockedCount === 0)
+                            <span class="text-emerald-400">✅</span>
+                            <span>Todas las noticias seleccionadas superaron los controles de seguridad y han sido publicadas con éxito.</span>
+                        @elseif ($approvedCount === 0)
+                            <span class="text-amber-400">⚠️</span>
+                            <span>Ninguna de las noticias seleccionadas cumplía las condiciones para publicación directa. Han permanecido en borrador a resguardo.</span>
+                        @else
+                            <span class="text-blue-400">ℹ️</span>
+                            <span>Se publicaron <strong>{{ $approvedCount }}</strong> noticias. Otras <strong>{{ $blockedCount }}</strong> no cumplían requisitos y continúan a resguardo en borrador.</span>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Sección Desplegable: Detalle de Noticias Retenidas con Motivos Compactos --}}
+                @if ($blockedCount > 0)
+                    <div class="border border-white/10 rounded-xl bg-black/30 overflow-hidden">
+                        {{-- Botón Cabecera del Desplegable --}}
+                        <button 
+                            type="button" 
+                            @click="showBlockedDetails = !showBlockedDetails"
+                            class="w-full flex items-center justify-between p-3 sm:px-4 text-left hover:bg-white/[0.02] transition-colors cursor-pointer"
+                        >
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-rose-300 flex items-center gap-1.5">
+                                    <span>⚠️</span>
+                                    <span>Detalle de las {{ $blockedCount }} {{ $blockedCount === 1 ? 'noticia retenida' : 'noticias retenidas' }}</span>
+                                </span>
+                                <span class="text-[11px] text-gray-400 hidden sm:inline">• Haz clic para <span x-text="showBlockedDetails ? 'plegar' : 'desplegar'"></span> motivos</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-xs text-gray-400">
+                                <span x-text="showBlockedDetails ? 'Ocultar' : 'Ver motivos'"></span>
+                                <svg 
+                                    class="w-4 h-4 transform transition-transform duration-200" 
+                                    :class="showBlockedDetails ? 'rotate-180' : ''" 
+                                    fill="none" 
+                                    viewBox="0 0 24 24" 
+                                    stroke="currentColor"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+
+                        {{-- Contenido Desplegable: Lista Compacta --}}
+                        <div 
+                            x-show="showBlockedDetails" 
+                            x-cloak
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 -translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            class="border-t border-white/10 p-3 sm:p-4 space-y-2 text-xs"
+                        >
+                            <div class="text-[11px] text-gray-400 pb-1">
+                                Las siguientes noticias se mantuvieron intactas como <strong>borrador</strong> para permitir su corrección editorial:
+                            </div>
+
+                            <div class="divide-y divide-white/5 border border-white/5 rounded-lg overflow-hidden bg-[#101012]">
+                                @foreach ($blockedItems as $item)
+                                    @php
+                                        $cat = $categorizeReason($item['reason']);
+                                        $cleanReason = $formatReasonWithoutLongUrls($item['reason']);
+                                    @endphp
+                                    <div class="p-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 hover:bg-white/[0.01] transition-colors">
+                                        <div class="space-y-1 min-w-0 flex-1">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="font-mono text-[11px] font-semibold text-gray-300 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded">
+                                                    #{{ $item['id'] }}
+                                                </span>
+                                                <span class="font-medium text-white truncate max-w-md" title="{{ $item['title'] }}">
+                                                    {{ $item['title'] }}
+                                                </span>
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border {{ $cat['class'] }}">
+                                                    <span>{{ $cat['icon'] }}</span>
+                                                    <span>{{ $cat['tag'] }}</span>
+                                                </span>
+                                            </div>
+                                            <div class="text-[11px] text-gray-400 leading-relaxed pl-0.5">
+                                                {{ $cleanReason }}
+                                            </div>
+                                        </div>
+                                        
+                                        @if (is_numeric($item['id']))
+                                            <div class="shrink-0 pt-0.5">
+                                                <a 
+                                                    href="{{ route('admin.posts.edit', $item['id']) }}" 
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 text-[11px] font-medium transition-colors"
+                                                    title="Abrir editor para corregir portada o fuentes"
+                                                >
+                                                    <span>✏️ Resolver</span>
+                                                </a>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
                 @endif
             </div>
@@ -254,52 +498,39 @@
 
             <div class="flex flex-wrap items-center gap-2">
                 {{-- Botón Aprobar Masivo --}}
-                <form action="{{ route('admin.editorial.bulk-action') }}" method="POST" @submit="isSubmitting = true">
-                    @csrf
-                    <input type="hidden" name="action" value="approve">
-                    <template x-for="id in selectedPosts" :key="id">
-                        <input type="hidden" name="post_ids[]" :value="id">
-                    </template>
-                    <button 
-                        type="submit" 
-                        :disabled="isSubmitting"
-                        class="h-8 px-3 bg-emerald-600/30 border border-emerald-500 text-emerald-300 hover:text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                        onclick="return confirm('¿Aprobar y publicar las noticias seleccionadas que cumplan los requisitos de seguridad y no tengan embargos ni incidencias pendientes?')"
-                    >
-                        ✅ Publicar Seleccionadas
-                    </button>
-                </form>
+                <button 
+                    type="button" 
+                    @click="bulkApproveConfirmOpen = true"
+                    :disabled="isSubmitting || selectedPosts.length === 0"
+                    class="h-8 px-3 bg-emerald-600/30 border border-emerald-500 text-emerald-300 hover:text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                    <span>✅ Publicar Seleccionadas</span>
+                </button>
 
                 {{-- Botón Programar Masivo --}}
                 <button 
                     type="button" 
                     @click="bulkScheduleOpen = true"
-                    class="h-8 px-3 bg-amber-600/20 border border-amber-500 text-amber-200 hover:text-white rounded-lg text-xs font-medium transition-colors"
+                    :disabled="isSubmitting || selectedPosts.length === 0"
+                    class="h-8 px-3 bg-amber-600/20 border border-amber-500 text-amber-200 hover:text-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
                 >
                     ⏳ Programar Fecha
                 </button>
 
                 {{-- Botón Rechazar Masivo --}}
-                <form action="{{ route('admin.editorial.bulk-action') }}" method="POST" @submit="isSubmitting = true">
-                    @csrf
-                    <input type="hidden" name="action" value="reject">
-                    <template x-for="id in selectedPosts" :key="id">
-                        <input type="hidden" name="post_ids[]" :value="id">
-                    </template>
-                    <button 
-                        type="submit" 
-                        :disabled="isSubmitting"
-                        class="h-8 px-3 bg-rose-950/40 border border-rose-800 text-rose-300 hover:text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                        onclick="return confirm('¿Rechazar las publicaciones seleccionadas conservando trazabilidad?')"
-                    >
-                        ❌ Rechazar
-                    </button>
-                </form>
+                <button 
+                    type="button" 
+                    @click="bulkRejectConfirmOpen = true"
+                    :disabled="isSubmitting || selectedPosts.length === 0"
+                    class="h-8 px-3 bg-rose-950/40 border border-rose-800 text-rose-300 hover:text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                    <span>❌ Rechazar</span>
+                </button>
 
                 <button 
                     type="button" 
                     @click="selectedPosts = []; document.querySelectorAll('.post-select-checkbox').forEach(c => c.checked = false); selectAllPage = false;"
-                    class="h-8 px-2.5 text-xs text-gray-400 hover:text-white"
+                    class="h-8 px-2.5 text-xs text-gray-400 hover:text-white cursor-pointer"
                 >
                     Limpiar
                 </button>
@@ -511,16 +742,14 @@
                                                     Revisar Fuentes
                                                 </button>
                                             @else
-                                                <form action="{{ route('admin.editorial.approve', $post) }}" method="POST" class="inline" onsubmit="return confirm('¿Aprobar y publicar inmediatamente esta noticia?')">
-                                                    @csrf
-                                                    <button 
-                                                        type="submit" 
-                                                        class="inline-flex items-center justify-center h-7 px-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 text-xs font-medium"
-                                                        title="Aprobar y Publicar Ahora"
-                                                    >
-                                                        Publicar
-                                                    </button>
-                                                </form>
+                                                <button 
+                                                    type="button" 
+                                                    @click="openSingleApprove({{ $post->id }}, '{{ addslashes($post->title) }}')"
+                                                    class="inline-flex items-center justify-center h-7 px-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 text-xs font-medium cursor-pointer"
+                                                    title="Aprobar y Publicar Ahora"
+                                                >
+                                                    Publicar
+                                                </button>
                                             @endif
                                         @endif
                                     </div>
@@ -684,19 +913,32 @@
                                         <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-amber-500/20 text-amber-200 border border-amber-500/30" x-text="quickViewData.meta.pending_sources.length + ' pendientes'"></span>
                                     </div>
                                     <p class="text-[11px] text-gray-300">
-                                        Para publicar este artículo, verifica y autoriza las siguientes direcciones externas consultadas:
+                                        Para publicar este artículo, verifica y autoriza las siguientes direcciones externas consultadas. La aprobación es solo para las URLs marcadas y solo para esta noticia.
                                     </p>
                                     <ul class="space-y-1.5 mt-2">
                                         <template x-for="url in quickViewData.meta.pending_sources" :key="url">
                                             <li class="flex items-center justify-between gap-2 p-2 rounded bg-black/40 border border-amber-500/20 text-[11px] font-mono text-amber-200/90 break-all">
-                                                <div class="flex items-center gap-1.5 min-w-0">
-                                                    <span class="text-amber-400 font-bold shrink-0">•</span>
+                                                <label class="flex items-center gap-2 min-w-0 cursor-pointer">
+                                                    <input type="checkbox" :value="url" x-model="selectedSourceUrls" class="shrink-0 rounded border-white/20 bg-black/40">
                                                     <a :href="url" target="_blank" rel="noopener noreferrer" class="hover:text-white underline hover:no-underline truncate" x-text="url"></a>
-                                                </div>
+                                                </label>
                                                 <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">Pendiente</span>
                                             </li>
                                         </template>
                                     </ul>
+
+                                    {{-- Acción 1: guardar la aprobación de las URLs marcadas, SIN publicar ni programar --}}
+                                    <form :action="'/admin/editorial/' + quickViewData.id + '/approve-urls'" method="POST" class="pt-2" @submit="if (selectedSourceUrls.length === 0) { $event.preventDefault(); }">
+                                        @csrf
+                                        <template x-for="url in selectedSourceUrls" :key="'sel-' + url">
+                                            <input type="hidden" name="urls[]" :value="url">
+                                        </template>
+                                        <button type="submit" :disabled="selectedSourceUrls.length === 0" class="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold disabled:opacity-50">
+                                            💾 Guardar aprobación de estas fuentes
+                                        </button>
+                                        <p class="mt-1.5 text-[10px] text-gray-400" x-show="selectedSourceUrls.length === 0">Marca al menos una URL para guardar su aprobación.</p>
+                                        <p class="mt-1.5 text-[10px] text-gray-400">Esto no publica la noticia. Publícala después con el botón de publicación.</p>
+                                    </form>
                                 </div>
                             </template>
 
@@ -805,6 +1047,184 @@
                     <div class="flex justify-end gap-2 pt-2">
                         <button type="button" @click="bulkScheduleOpen = false" class="inline-flex items-center justify-center h-8 px-3 rounded-lg border border-white/10 bg-white/5 text-gray-300 text-xs hover:bg-white/10">Cancelar</button>
                         <button type="submit" class="inline-flex items-center justify-center h-8 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold">Programar Todas</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {{-- MODAL MASIVO: CONFIRMAR PUBLICACIÓN SELECCIONADAS --}}
+        <div 
+            x-show="bulkApproveConfirmOpen" 
+            x-cloak 
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            @keydown.escape.window="bulkApproveConfirmOpen = false"
+        >
+            <div 
+                class="w-full max-w-lg rounded-2xl border border-white/10 bg-[#101012] p-6 shadow-2xl space-y-4"
+                @click.away="bulkApproveConfirmOpen = false"
+            >
+                <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-emerald-400 text-lg">🛡️</span>
+                        <h3 class="font-display text-lg uppercase tracking-wider text-white">Confirmar Publicación</h3>
+                    </div>
+                    <button type="button" @click="bulkApproveConfirmOpen = false" class="text-gray-400 hover:text-white text-sm cursor-pointer">✕</button>
+                </div>
+
+                <div class="space-y-3 text-xs text-gray-300 leading-relaxed">
+                    <p>
+                        ¿Deseas procesar la publicación de las <strong class="text-white" x-text="selectedPosts.length"></strong> noticias seleccionadas?
+                    </p>
+                    <div class="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-2 text-gray-400">
+                        <div class="text-[11px] font-semibold text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>⚙️ Protocolo de Protección Editorial</span>
+                        </div>
+                        <ul class="space-y-1 text-[11px] text-gray-400 list-disc list-inside">
+                            <li>Cada noticia se valida individualmente de forma aislada.</li>
+                            <li>Noticias sin portada utilizable o con fuentes pendientes <strong class="text-amber-300">no se publicarán</strong> y quedarán a resguardo en borrador.</li>
+                            <li>Al finalizar recibirás un informe compacto con las noticias aprobadas y las retenidas.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <form action="{{ route('admin.editorial.bulk-action') }}" method="POST" @submit="isSubmitting = true">
+                    @csrf
+                    <input type="hidden" name="action" value="approve">
+                    <template x-for="id in selectedPosts" :key="id">
+                        <input type="hidden" name="post_ids[]" :value="id">
+                    </template>
+
+                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                        <button 
+                            type="button" 
+                            @click="bulkApproveConfirmOpen = false" 
+                            class="inline-flex items-center justify-center h-8 px-3 rounded-lg border border-white/10 bg-white/5 text-gray-300 text-xs hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            type="submit" 
+                            :disabled="isSubmitting"
+                            class="inline-flex items-center justify-center h-8 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                            <span x-show="!isSubmitting">Publicar Seleccionadas</span>
+                            <span x-show="isSubmitting" class="flex items-center gap-1.5">
+                                <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full"></span>
+                                <span>Publicando...</span>
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- MODAL MASIVO: CONFIRMAR RECHAZO SELECCIONADAS --}}
+        <div 
+            x-show="bulkRejectConfirmOpen" 
+            x-cloak 
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            @keydown.escape.window="bulkRejectConfirmOpen = false"
+        >
+            <div 
+                class="w-full max-w-lg rounded-2xl border border-white/10 bg-[#101012] p-6 shadow-2xl space-y-4"
+                @click.away="bulkRejectConfirmOpen = false"
+            >
+                <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-rose-400 text-lg">⚠️</span>
+                        <h3 class="font-display text-lg uppercase tracking-wider text-white">Rechazar Selección Masiva</h3>
+                    </div>
+                    <button type="button" @click="bulkRejectConfirmOpen = false" class="text-gray-400 hover:text-white text-sm cursor-pointer">✕</button>
+                </div>
+
+                <div class="space-y-3 text-xs text-gray-300 leading-relaxed">
+                    <p>
+                        ¿Deseas rechazar las <strong class="text-white" x-text="selectedPosts.length"></strong> noticias seleccionadas?
+                    </p>
+                    <p class="text-[11px] text-gray-400">
+                        Las noticias seleccionadas cambiarán a estado rechazado conservando su trazabilidad e historial en el sistema sin eliminarse de la base de datos.
+                    </p>
+                </div>
+
+                <form action="{{ route('admin.editorial.bulk-action') }}" method="POST" @submit="isSubmitting = true">
+                    @csrf
+                    <input type="hidden" name="action" value="reject">
+                    <template x-for="id in selectedPosts" :key="id">
+                        <input type="hidden" name="post_ids[]" :value="id">
+                    </template>
+
+                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                        <button 
+                            type="button" 
+                            @click="bulkRejectConfirmOpen = false" 
+                            class="inline-flex items-center justify-center h-8 px-3 rounded-lg border border-white/10 bg-white/5 text-gray-300 text-xs hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            type="submit" 
+                            :disabled="isSubmitting"
+                            class="inline-flex items-center justify-center h-8 px-4 rounded-lg bg-rose-900 hover:bg-rose-800 text-rose-200 text-xs font-semibold shadow-md transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                            <span x-show="!isSubmitting">Confirmar Rechazo</span>
+                            <span x-show="isSubmitting" class="flex items-center gap-1.5">
+                                <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full"></span>
+                                <span>Rechazando...</span>
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- MODAL INDIVIDUAL: CONFIRMAR PUBLICACIÓN DIRECTA --}}
+        <div 
+            x-show="singleApproveOpen" 
+            x-cloak 
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            @keydown.escape.window="singleApproveOpen = false"
+        >
+            <div 
+                class="w-full max-w-md rounded-2xl border border-white/10 bg-[#101012] p-6 shadow-2xl space-y-4"
+                @click.away="singleApproveOpen = false"
+            >
+                <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-emerald-400 text-lg">🛡️</span>
+                        <h3 class="font-display text-lg uppercase tracking-wider text-white">Publicar Noticia</h3>
+                    </div>
+                    <button type="button" @click="singleApproveOpen = false" class="text-gray-400 hover:text-white text-sm cursor-pointer">✕</button>
+                </div>
+
+                <div class="space-y-3 text-xs text-gray-300 leading-relaxed">
+                    <p>
+                        ¿Aprobar y publicar de inmediato la noticia: <strong class="text-white" x-text="singleApproveTitle"></strong>?
+                    </p>
+                    <p class="text-[11px] text-gray-400">
+                        Se verificará la existencia y validez de su imagen de portada, ausencia de embargos activos y estado de sus fuentes de información.
+                    </p>
+                </div>
+
+                <form :action="'/admin/editorial/' + singleApproveId + '/approve'" method="POST" @submit="isSubmitting = true">
+                    @csrf
+                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                        <button 
+                            type="button" 
+                            @click="singleApproveOpen = false" 
+                            class="inline-flex items-center justify-center h-8 px-3 rounded-lg border border-white/10 bg-white/5 text-gray-300 text-xs hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            type="submit" 
+                            :disabled="isSubmitting"
+                            class="inline-flex items-center justify-center h-8 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                            <span x-show="!isSubmitting">Publicar Ahora</span>
+                            <span x-show="isSubmitting" class="flex items-center gap-1.5">
+                                <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full"></span>
+                                <span>Publicando...</span>
+                            </span>
+                        </button>
                     </div>
                 </form>
             </div>

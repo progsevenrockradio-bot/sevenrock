@@ -197,7 +197,7 @@
 
             {{-- Programas de hoy --}}
             @php
-                $todayKey = ['DOMINGO','LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO'][date('w')];
+                $todayKey = ['DOMINGO','LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO'][now('America/Caracas')->dayOfWeek];
                 $todayGroup = collect($programsByDay)->firstWhere('day', $todayKey);
             @endphp
             <div class="lucille-flat-surface flex flex-col justify-between p-6">

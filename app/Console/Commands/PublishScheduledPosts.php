@@ -53,6 +53,42 @@ class PublishScheduledPosts extends Command
                     }
                 }
 
+                // Validación estricta de portada utilizable antes de publicar
+                $coverCheck = $safetyValidator->validatePublishableCoverImage($post);
+                if (! $coverCheck['is_safe']) {
+                    $reason = $coverCheck['violation'];
+                    $this->warn(sprintf('  ⚠️ Publicación detenida por falta de portada utilizable: [%d] %s (motivo: %s)', $post->id, $post->title, $reason));
+                    Log::warning('posts:publish-scheduled bloqueado por falta de portada utilizable', [
+                        'post_id' => $post->id,
+                        'title'   => $post->title,
+                        'reason'  => $reason,
+                    ]);
+
+                    $post->update(['status' => 'draft']);
+
+                    if ($meta = $post->sanitizedMeta) {
+                        $meta->security_status = 'needs_review';
+                        $meta->incident_reason = $reason;
+                        $meta->editorial_notes = ($meta->editorial_notes ? $meta->editorial_notes . ' | ' : '') . "Publicación programada cancelada: {$reason}";
+                        $meta->save();
+                    }
+
+                    if (\Illuminate\Support\Facades\Schema::hasTable('editorial_incidents')) {
+                        \App\Models\EditorialIncident::create([
+                            'post_id'              => $post->id,
+                            'source_message_id'    => $meta?->source_message_id ?? "scheduled-{$post->id}",
+                            'incident_type'        => 'missing_cover_image',
+                            'priority'             => 'high',
+                            'post_previous_status' => 'scheduled',
+                            'action_taken'         => 'halted_scheduled_post',
+                            'resolution_status'    => 'pending_review',
+                            'resolution_notes'     => $reason,
+                        ]);
+                    }
+
+                    continue;
+                }
+
                 // Validación estricta de seguridad editorial antes de publicar
                 if (! $safetyValidator->isSafeToPublish($post)) {
 

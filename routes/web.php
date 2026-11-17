@@ -265,6 +265,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::post('/media', 'uploadMedia')->name('media.store');
         Route::post('/', 'store')->name('store');
         Route::get('/{post}/edit', 'edit')->name('edit');
+        Route::get('/{post}', fn (\App\Models\Post $post) => redirect()->route('admin.posts.edit', $post))->name('show');
         Route::put('/{post}', 'update')->name('update');
         Route::delete('/{post}', 'destroy')->name('destroy');
         Route::match(['POST', 'PUT'], '/{post}/retry-image', 'retryImage')->name('retry-image');
@@ -328,6 +329,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/{newRelease}/edit', 'edit')->name('edit');
         Route::put('/{newRelease}', 'update')->name('update');
         Route::delete('/{newRelease}', 'destroy')->name('destroy');
+        Route::post('/{newRelease}/approve-broadcast', 'approveBroadcast')->name('approve-broadcast');
     });
 
     Route::controller(AdminThemeSettingsController::class)->prefix('settings')->name('settings.')->middleware('role:Super Admin')->group(function (): void {

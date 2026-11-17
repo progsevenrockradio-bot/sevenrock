@@ -213,6 +213,7 @@ class Phase7EndToEndSimulationTest extends TestCase
             'source_subject' => 'Megadeth nuevo disco (EMBARGO)',
             'status'         => 'draft',
             'is_published'   => false,
+            'featured_image' => 'assets/lucille/logo.png',
             'content'        => [['type' => 'paragraph', 'data' => ['text' => 'Embargado.']]],
         ]);
 
@@ -502,6 +503,7 @@ class Phase7EndToEndSimulationTest extends TestCase
             'source_subject' => 'Lanzamiento Secreto (EMBARGO)',
             'status'         => 'draft',
             'is_published'   => false,
+            'featured_image' => 'assets/lucille/logo.png',
             'content'        => [['type' => 'paragraph', 'data' => ['text' => 'Contenido embargado.']]],
         ]);
 
@@ -568,6 +570,7 @@ class Phase7EndToEndSimulationTest extends TestCase
             'source_subject' => 'Limpio 1',
             'status'         => 'draft',
             'is_published'   => false,
+            'featured_image' => 'assets/lucille/logo.png',
             'content'        => [['type' => 'paragraph', 'data' => ['text' => 'Texto 1']]],
         ]);
         EmailPostSanitizedMeta::create(['post_id' => $postClean1->id, 'source_subject' => 'Limpio 1']);
@@ -578,6 +581,7 @@ class Phase7EndToEndSimulationTest extends TestCase
             'source_subject' => 'Limpio 2',
             'status'         => 'draft',
             'is_published'   => false,
+            'featured_image' => 'assets/lucille/logo.png',
             'content'        => [['type' => 'paragraph', 'data' => ['text' => 'Texto 2']]],
         ]);
         EmailPostSanitizedMeta::create(['post_id' => $postClean2->id, 'source_subject' => 'Limpio 2']);

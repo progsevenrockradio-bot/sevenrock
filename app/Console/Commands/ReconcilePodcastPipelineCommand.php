@@ -71,6 +71,25 @@ final class ReconcilePodcastPipelineCommand extends Command
                 continue;
             }
 
+            if (! $program->hasPreparedBroadcastAudio()) {
+                $reported++;
+
+                Log::warning('Podcast pipeline reconciliation skipped distribution because broadcast audio is not processed.', [
+                    'program_id' => $program->id,
+                    'archivo_mp3' => $program->archivo_mp3,
+                    'archivo_mp3_disk' => $program->archivo_mp3_disk,
+                    'delivery_status' => $program->delivery_status,
+                ]);
+
+                $this->warn(sprintf(
+                    'Episodio #%d no tiene un MP3 procesado definitivo (%s); se omite distribución.',
+                    $program->id,
+                    (string) $program->archivo_mp3
+                ));
+
+                continue;
+            }
+
             if ($program->isEditorialApproved() && $program->radioboss_status !== 'radioboss_verified' && $program->radioboss_status !== 'archive_skipped') {
                 UploadRadiobossJob::dispatch($program->id);
                 $actions[] = 'RadioBOSS';

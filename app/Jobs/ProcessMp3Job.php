@@ -83,10 +83,10 @@ class ProcessMp3Job implements ShouldQueue
             RadioProgram::withoutEvents(function () use ($radioProgram): void {
                 $radioProgram->forceFill([
                     'processing_started_at' => $radioProgram->processing_started_at ?? now(),
+                    'processing_finished_at' => null,
                     'status_message' => 'Procesando y etiquetando el MP3.',
                     'delivery_status' => 'delivery_pending',
-                    'radioboss_status' => 'radioboss_pending',
-                    'archive_org_status' => 'archive_pending',
+                    'delivery_last_error' => null,
                 ])->saveQuietly();
             });
 
@@ -116,13 +116,18 @@ class ProcessMp3Job implements ShouldQueue
             // 1. Subir y verificar el archivo definitivo procesado en Cloudflare R2 (sin crear copia local permanente)
             $this->publishWorkingCopy($workingPath, $finalPath, $targetDisk);
 
+            if (! RadioProgram::isProcessedStoragePath($finalPath) || ! Storage::disk($targetDisk)->exists($finalPath)) {
+                throw new \RuntimeException("El archivo normalizado definitivo ('{$finalPath}') no pudo verificarse en el almacenamiento definitivo ({$targetDisk}).");
+            }
+
             $finishedAt = now();
             $processedSize = is_file($workingPath) ? (int) filesize($workingPath) : 0;
             $processedSha256 = is_file($workingPath) ? (hash_file('sha256', $workingPath) ?: null) : null;
 
             // 2. Persistir la referencia del definitivo en la base de datos ANTES de eliminar el original de podcast-inbox.
             // Si la actualización de base de datos falla, se lanza excepción antes de borrar el original para que sea recuperable.
-            $existingMetadata = (array) ($radioProgram->delivery_metadata ?? []);
+            $latestProgram = RadioProgram::query()->find($radioProgram->id);
+            $existingMetadata = (array) ($latestProgram?->delivery_metadata ?? $radioProgram->delivery_metadata ?? []);
             $updatedMetadata = array_merge($existingMetadata, [
                 'definitive_disk' => $targetDisk,
                 'definitive_path' => $finalPath,
@@ -142,13 +147,19 @@ class ProcessMp3Job implements ShouldQueue
                 'archivo_mp3' => $finalPath,
                 'archivo_mp3_disk' => $targetDisk,
                 'processing_finished_at' => $finishedAt,
+                'delivery_last_error' => null,
                 'status_message' => 'MP3 procesado y subido a almacenamiento definitivo (R2). Preparando entregas.',
                 'delivery_metadata' => $updatedMetadata,
             ])->save();
 
-            $freshCheck = RadioProgram::query()->whereKey($radioProgram->id)->value('archivo_mp3');
-            if (! $persisted || trim((string) $freshCheck) !== $finalPath) {
-                throw new \RuntimeException('No se pudo persistir la referencia del archivo definitivo en la base de datos; se conserva el original para reintento.');
+            $freshProgram = RadioProgram::query()->find($radioProgram->id);
+            if (
+                ! $persisted
+                || ! $freshProgram instanceof RadioProgram
+                || trim((string) $freshProgram->archivo_mp3) !== $finalPath
+                || ! $freshProgram->hasPreparedBroadcastAudio()
+            ) {
+                throw new \RuntimeException('No se pudo persistir y verificar la referencia del archivo definitivo en la base de datos; se conserva el original para reintento.');
             }
 
             // 3. Limpiar el original temporal de podcast-inbox SOLO después de haber guardado y verificado la referencia en BD
@@ -192,6 +203,10 @@ class ProcessMp3Job implements ShouldQueue
             if ($this->dispatchNextJobs) {
                 PodcastProcessed::dispatch($radioProgram->id);
             }
+        } catch (Throwable $exception) {
+            $this->persistFailureState($exception);
+
+            throw $exception;
         } finally {
             if (is_string($workingPath) && $workingPath !== '') {
                 $this->cleanupWorkingCopy($workingPath);
@@ -205,19 +220,10 @@ class ProcessMp3Job implements ShouldQueue
 
     public function failed(Throwable $exception): void
     {
-        $radioProgram = $this->radioProgram->fresh(['masterProgram']) ?? $this->radioProgram;
+        $radioProgram = $this->persistFailureState($exception);
         if (! $radioProgram instanceof RadioProgram) {
             return;
         }
-
-        RadioProgram::withoutEvents(function () use ($radioProgram, $exception): void {
-            $radioProgram->forceFill([
-                'processing_finished_at' => now(),
-                'delivery_status' => 'delivery_failed',
-                'delivery_last_error' => $exception->getMessage(),
-                'status_message' => 'El procesamiento local falló.',
-            ])->saveQuietly();
-        });
 
         app(PodcastPipelineAuditService::class)->record($radioProgram, 'ERROR', 'Falló el procesamiento local del MP3.', [
             'stage' => 'processing_local',
@@ -227,6 +233,37 @@ class ProcessMp3Job implements ShouldQueue
         PodcastUploadFailed::dispatch($radioProgram->id, 'processing_local', $exception->getMessage(), [
             'exception_class' => $exception::class,
         ]);
+    }
+
+    private function persistFailureState(Throwable $exception): ?RadioProgram
+    {
+        $radioProgram = $this->radioProgram->fresh(['masterProgram']) ?? $this->radioProgram;
+        if (! $radioProgram instanceof RadioProgram) {
+            return null;
+        }
+
+        RadioProgram::withoutEvents(function () use ($radioProgram, $exception): void {
+            $updates = [
+                'processing_finished_at' => now(),
+                'delivery_status' => 'delivery_failed',
+                'delivery_last_error' => $exception->getMessage(),
+                'status_message' => RadioProgram::sanitizeStatusMessage('Falló el procesamiento del audio: ' . $exception->getMessage()),
+            ];
+
+            if (! $radioProgram->hasPreparedBroadcastAudio()) {
+                $updates['enviado_radioboss'] = false;
+                if ($radioProgram->radioboss_status !== 'radioboss_verified') {
+                    $updates['radioboss_status'] = 'skipped';
+                }
+                if ($radioProgram->archive_org_status !== 'archive_verified') {
+                    $updates['archive_org_status'] = 'skipped';
+                }
+            }
+
+            $radioProgram->forceFill($updates)->saveQuietly();
+        });
+
+        return $radioProgram;
     }
 
     private function buildProcessedPath(

@@ -5,8 +5,12 @@
             $isEditorialApproved = $upload->isEditorialApproved();
 
             $isProcessedInR2 = $upload->isProcessedInR2();
-            $isProcessingAudio = $upload->processing_started_at !== null && $upload->processing_finished_at === null;
-            $hasAudioFailed = $upload->delivery_status === 'delivery_failed' && ! $upload->isProcessedPath();
+            $hasAudioFailed = ! $upload->isProcessedPath() && (
+                $upload->delivery_status === 'delivery_failed'
+                || filled($upload->delivery_last_error)
+                || ($upload->radioboss_status === 'radioboss_error' && str_contains((string) $upload->radioboss_last_error, 'no es una versión procesada definitiva'))
+            );
+            $isProcessingAudio = $upload->processing_started_at !== null && $upload->processing_finished_at === null && ! $hasAudioFailed;
 
             $radioStatus = (string) ($upload->radioboss_status ?? ($upload->enviado_radioboss ? 'radioboss_verified' : 'radioboss_pending'));
             $archiveStatus = (string) ($upload->archive_org_status ?? 'archive_pending');
@@ -359,6 +363,12 @@
                 @endif
 
                 {{-- Errores detallados si existen --}}
+                @if ($upload->delivery_last_error)
+                    <div class="rounded-lg border border-rose-900/40 bg-rose-950/20 p-3 text-xs text-rose-300 font-sans space-y-1">
+                        <div class="font-semibold text-rose-200">Error en procesamiento de audio:</div>
+                        <p class="leading-relaxed">{{ $upload->delivery_last_error }}</p>
+                    </div>
+                @endif
                 @if ($upload->radioboss_last_error)
                     <div class="rounded-lg border border-rose-900/40 bg-rose-950/20 p-3 text-xs text-rose-300 font-sans space-y-1">
                         <div class="font-semibold text-rose-200">Error en RadioBOSS FTP:</div>

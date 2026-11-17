@@ -272,6 +272,23 @@ class AdminEditorialController extends Controller
         $this->ensureAuthorized();
         $this->ensureFromEmailPipeline($post);
 
+        // Si ya está publicado, abortar de inmediato con 409 sin llamadas de red
+        if ($post->is_published || $post->status === 'published') {
+            $msg = 'La publicación ya fue aprobada o publicada anteriormente por otro administrador.';
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $msg, 'code' => 'already_published'], 409)
+                : back()->with('error', $msg);
+        }
+
+        // Pre-validar portada utilizable ANTES de abrir transacción y bloquear fila
+        $coverValidation = $this->safetyValidator->validatePublishableCoverImage($post);
+        if (! $coverValidation['is_safe']) {
+            $msg = $coverValidation['violation'];
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $msg, 'code' => 'safety_violation', 'violations' => [$msg]], 422)
+                : back()->with('error', $msg);
+        }
+
         DB::beginTransaction();
         try {
             // Bloqueo pesimista para evitar colisiones de concurrencia
@@ -386,7 +403,16 @@ class AdminEditorialController extends Controller
                 }
             }
 
-            // 4. Validación centralizada de seguridad de contenido
+            // 4. Validación estricta de portada utilizable y seguridad centralizada
+            $coverValidation = $this->safetyValidator->validatePublishableCoverImage($lockedPost);
+            if (! $coverValidation['is_safe']) {
+                DB::rollBack();
+                $msg = $coverValidation['violation'];
+                return $request->wantsJson()
+                    ? response()->json(['success' => false, 'message' => $msg, 'code' => 'safety_violation', 'violations' => [$msg]], 422)
+                    : back()->with('error', $msg);
+            }
+
             $safety = $this->safetyValidator->validatePost($lockedPost);
             if (!$safety['is_safe']) {
                 DB::rollBack();
@@ -444,6 +470,22 @@ class AdminEditorialController extends Controller
     {
         $this->ensureAuthorized();
         $this->ensureFromEmailPipeline($post);
+
+        if ($post->is_published || $post->status === 'published') {
+            $msg = 'La publicación ya fue aprobada o publicada anteriormente.';
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $msg], 409)
+                : back()->with('error', $msg);
+        }
+
+        // Pre-validar portada utilizable ANTES de abrir transacción y bloquear fila
+        $coverValidation = $this->safetyValidator->validatePublishableCoverImage($post);
+        if (! $coverValidation['is_safe']) {
+            $msg = $coverValidation['violation'];
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $msg, 'code' => 'safety_violation', 'violations' => [$msg]], 422)
+                : back()->with('error', $msg);
+        }
 
         $request->validate([
             'scheduled_at' => ['required', 'date', 'after:now'],
@@ -541,7 +583,16 @@ class AdminEditorialController extends Controller
                 }
             }
 
-            // 3. Validación de seguridad (respetando fecha programada posterior al embargo)
+            // 3. Validación estricta de portada utilizable y seguridad (respetando fecha programada posterior al embargo)
+            $coverValidation = $this->safetyValidator->validatePublishableCoverImage($lockedPost);
+            if (! $coverValidation['is_safe']) {
+                DB::rollBack();
+                $msg = $coverValidation['violation'];
+                return $request->wantsJson()
+                    ? response()->json(['success' => false, 'message' => $msg, 'code' => 'safety_violation', 'violations' => [$msg]], 422)
+                    : back()->with('error', $msg);
+            }
+
             $safety = $this->safetyValidator->validatePost($lockedPost, $scheduledAt);
             if (!$safety['is_safe']) {
                 DB::rollBack();
@@ -802,6 +853,31 @@ class AdminEditorialController extends Controller
         ];
 
         foreach ($postIds as $postId) {
+            $candidatePost = Post::find($postId);
+
+            // Validar existencia y origen antes de abrir transacción
+            if (!$candidatePost || !$candidatePost->isFromEmailPipeline()) {
+                $results['blocked'][] = [
+                    'id'     => $postId,
+                    'title'  => $candidatePost?->title ?? 'Desconocido',
+                    'reason' => 'No pertenece al circuito de ingesta editorial de correo.',
+                ];
+                continue;
+            }
+
+            // Pre-validar portada utilizable ANTES de abrir transacción y bloquear fila
+            if (in_array($action, ['approve', 'schedule'], true)) {
+                $coverValidation = $this->safetyValidator->validatePublishableCoverImage($candidatePost);
+                if (! $coverValidation['is_safe']) {
+                    $results['blocked'][] = [
+                        'id'     => $postId,
+                        'title'  => $candidatePost->title,
+                        'reason' => $coverValidation['violation'],
+                    ];
+                    continue;
+                }
+            }
+
             DB::beginTransaction();
             try {
                 $post = Post::lockForUpdate()->find($postId);
@@ -889,6 +965,14 @@ class AdminEditorialController extends Controller
                         }
                     }
 
+                    // Validar portada utilizable
+                    $coverValidation = $this->safetyValidator->validatePublishableCoverImage($post);
+                    if (! $coverValidation['is_safe']) {
+                        DB::rollBack();
+                        $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => $coverValidation['violation']];
+                        continue;
+                    }
+
                     // Validar seguridad
                     $safety = $this->safetyValidator->validatePost($post);
                     if (!$safety['is_safe']) {
@@ -941,6 +1025,14 @@ class AdminEditorialController extends Controller
                     if ($post->incidents()->where('resolution_status', 'pending_review')->exists()) {
                         DB::rollBack();
                         $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => 'Incidencia editorial pendiente.'];
+                        continue;
+                    }
+
+                    // Validar portada utilizable
+                    $coverValidation = $this->safetyValidator->validatePublishableCoverImage($post);
+                    if (! $coverValidation['is_safe']) {
+                        DB::rollBack();
+                        $results['blocked'][] = ['id' => $postId, 'title' => $post->title, 'reason' => $coverValidation['violation']];
                         continue;
                     }
 

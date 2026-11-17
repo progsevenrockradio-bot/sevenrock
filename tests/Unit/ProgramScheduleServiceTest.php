@@ -34,7 +34,7 @@ class ProgramScheduleServiceTest extends TestCase
 
     public function test_home_uses_the_actual_repeat_slot_and_keeps_upcoming_programs_in_time_order(): void
     {
-        Carbon::setTestNow(Carbon::parse('2026-11-10 18:00', 'America/Caracas'));
+        Carbon::setTestNow(Carbon::parse('2026-11-10 14:00', 'America/Caracas'));
         $program = MasterProgram::query()->create([
             'nombre' => 'Uno por semana', 'conductor' => 'Lucho',
             'dia_transmision' => 'VIERNES', 'hora_transmision' => '17:05',
@@ -43,7 +43,7 @@ class ProgramScheduleServiceTest extends TestCase
         ]);
         $program->emisiones()->createMany([
             ['dia_semana' => 'VIERNES', 'hora_inicio' => '17:05', 'tipo' => 'en_vivo', 'activo' => true, 'enlace' => 'https://example.com/live'],
-            ['dia_semana' => 'MARTES', 'hora_inicio' => '17:05', 'tipo' => 'retransmision', 'activo' => true],
+            ['dia_semana' => 'MARTES', 'hora_inicio' => '13:05', 'tipo' => 'retransmision', 'activo' => true],
         ]);
         foreach ([
             ['Siguiente martes', 'MARTES', '20:00'],
@@ -59,7 +59,7 @@ class ProgramScheduleServiceTest extends TestCase
 
         $service = app(ProgramScheduleService::class);
         $payload = $service->resolve(fresh: true);
-        $this->assertSame('MARTES · 10/11 · 17:05', $payload['schedule']);
+        $this->assertSame('MARTES · 10/11 · 13:05', $payload['schedule']);
         $this->assertSame('retransmision', $payload['tipo_emision']);
         $this->assertSame('En emisión', $payload['badge']);
         $this->assertNull($payload['enlace_en_vivo']);
@@ -68,9 +68,9 @@ class ProgramScheduleServiceTest extends TestCase
             array_column($payload['upcoming'], 'show')
         );
 
-        Carbon::setTestNow(Carbon::parse('2026-11-10 16:00', 'America/Caracas'));
+        Carbon::setTestNow(Carbon::parse('2026-11-10 11:00', 'America/Caracas'));
         $payload = $service->resolve(fresh: true);
-        $this->assertSame('MARTES · 10/11 · 17:05', $payload['schedule']);
+        $this->assertSame('MARTES · 10/11 · 13:05', $payload['schedule']);
         $this->assertSame('A continuación', $payload['badge']);
         $this->assertSame('retransmision', $payload['tipo_emision']);
 
@@ -261,5 +261,127 @@ class ProgramScheduleServiceTest extends TestCase
         $newService = app(ProgramScheduleService::class);
         $updatedPayload = $newService->resolve();
         $this->assertSame('Versión Actualizada', $updatedPayload['show']);
+    }
+
+    public function test_multimedia_first_then_programs_shares_complete_emisiones_catalog_including_tuesday_repeat_at_1305(): void
+    {
+        \Illuminate\Support\Facades\Http::fake();
+
+        $program = MasterProgram::query()->create([
+            'nombre' => 'Uno por semana',
+            'conductor' => 'Lucho',
+            'dia_transmision' => 'VIERNES',
+            'hora_transmision' => '17:05',
+            'timezone' => 'America/Caracas',
+            'duracion_minutos' => 120,
+            'genero' => 'ROCK',
+            'activo' => true,
+        ]);
+        $program->emisiones()->createMany([
+            ['dia_semana' => 'VIERNES', 'hora_inicio' => '17:05', 'tipo' => 'en_vivo', 'activo' => true, 'enlace' => 'https://example.com/live'],
+            ['dia_semana' => 'MARTES', 'hora_inicio' => '13:05', 'tipo' => 'retransmision', 'activo' => true],
+        ]);
+
+        Cache::flush();
+        Carbon::setTestNow(Carbon::parse('2026-11-10 10:00:00', 'America/Caracas')); // Martes
+
+        // 1. Acceso primero a /multimedia (calienta la caché compartida)
+        $multimediaResponse = $this->get(route('multimedia'));
+        $multimediaResponse->assertOk();
+        $multimediaResponse->assertSee('Uno por semana');
+        $multimediaResponse->assertSee('13:05 hs');
+
+        $multimediaByDay = collect($multimediaResponse->viewData('programsByDay'))->keyBy('day');
+        $this->assertTrue($multimediaByDay->has('MARTES'));
+        $this->assertTrue($multimediaByDay->has('VIERNES'));
+        $this->assertSame('13:05', $multimediaByDay['MARTES']['programs'][0]['hora']);
+        $this->assertSame('MARTES · 13:05', $multimediaByDay['MARTES']['programs'][0]['schedule']);
+        $this->assertSame('retransmision', $multimediaByDay['MARTES']['programs'][0]['tipo_emision']);
+        $this->assertSame('17:05', $multimediaByDay['VIERNES']['programs'][0]['hora']);
+        $this->assertSame('en_vivo', $multimediaByDay['VIERNES']['programs'][0]['tipo_emision']);
+
+        // 2. Acceso posterior a /programas (consume la caché calentada por /multimedia)
+        $programsResponse = $this->get(route('programs'));
+        $programsResponse->assertOk();
+        $programsByDay = collect($programsResponse->viewData('programsByDay'))->keyBy('day');
+        $this->assertSame('13:05', $programsByDay['MARTES']['programs'][0]['hora']);
+        $this->assertSame('retransmision', $programsByDay['MARTES']['programs'][0]['tipo_emision']);
+        $this->assertSame('17:05', $programsByDay['VIERNES']['programs'][0]['hora']);
+        $this->assertSame('en_vivo', $programsByDay['VIERNES']['programs'][0]['tipo_emision']);
+        $this->assertSame('https://example.com/live', $programsByDay['VIERNES']['programs'][0]['enlace_en_vivo']);
+    }
+
+    public function test_programs_first_then_multimedia_shares_complete_emisiones_catalog_on_both_tuesday_and_friday(): void
+    {
+        \Illuminate\Support\Facades\Http::fake();
+
+        $program = MasterProgram::query()->create([
+            'nombre' => 'Uno por semana',
+            'conductor' => 'Lucho',
+            'dia_transmision' => 'VIERNES',
+            'hora_transmision' => '17:05',
+            'timezone' => 'America/Caracas',
+            'duracion_minutos' => 120,
+            'genero' => 'ROCK',
+            'activo' => true,
+        ]);
+        $program->emisiones()->createMany([
+            ['dia_semana' => 'VIERNES', 'hora_inicio' => '17:05', 'tipo' => 'en_vivo', 'activo' => true, 'enlace' => 'https://example.com/live'],
+            ['dia_semana' => 'MARTES', 'hora_inicio' => '13:05', 'tipo' => 'retransmision', 'activo' => true],
+        ]);
+
+        Cache::flush();
+        Carbon::setTestNow(Carbon::parse('2026-11-10 10:00:00', 'America/Caracas')); // Martes
+
+        // 1. Acceso primero a /programas (calienta la caché compartida)
+        $programsResponse = $this->get(route('programs'));
+        $programsResponse->assertOk();
+
+        // 2. Acceso posterior a /multimedia en martes (usa la caché calentada por /programas)
+        $multimediaTuesday = $this->get(route('multimedia'));
+        $multimediaTuesday->assertOk();
+        $multimediaTuesday->assertSee('Uno por semana');
+        $multimediaTuesday->assertSee('13:05 hs');
+
+        // 3. Acceso a /multimedia en viernes muestra la emisión de estreno a las 17:05 hs
+        Carbon::setTestNow(Carbon::parse('2026-11-13 10:00:00', 'America/Caracas')); // Viernes
+        $multimediaFriday = $this->get(route('multimedia'));
+        $multimediaFriday->assertOk();
+        $multimediaFriday->assertSee('Uno por semana');
+        $multimediaFriday->assertSee('17:05 hs');
+    }
+
+    public function test_multimedia_and_programs_fallback_to_base_schedule_for_historical_programs_without_emisiones(): void
+    {
+        \Illuminate\Support\Facades\Http::fake();
+
+        MasterProgram::query()->create([
+            'nombre' => 'Clásicos de Sábado',
+            'conductor' => 'DJ Vintage',
+            'dia_transmision' => 'SABADO',
+            'hora_transmision' => '19:30:00',
+            'timezone' => 'America/Caracas',
+            'duracion_minutos' => 90,
+            'genero' => 'CLASSIC ROCK',
+            'activo' => true,
+        ]);
+
+        Cache::flush();
+        Carbon::setTestNow(Carbon::parse('2026-11-14 12:00:00', 'America/Caracas')); // Sábado
+
+        $multimediaResponse = $this->get(route('multimedia'));
+        $multimediaResponse->assertOk();
+        $multimediaResponse->assertSee('Clásicos de Sábado');
+        $multimediaResponse->assertSee('19:30 hs');
+
+        $programsResponse = $this->get(route('programs'));
+        $programsResponse->assertOk();
+        $programsByDay = collect($programsResponse->viewData('programsByDay'))->keyBy('day');
+
+        $this->assertTrue($programsByDay->has('SABADO'));
+        $this->assertSame('Clásicos de Sábado', $programsByDay['SABADO']['programs'][0]['name']);
+        $this->assertSame('19:30', $programsByDay['SABADO']['programs'][0]['hora']);
+        $this->assertSame('SABADO · 19:30', $programsByDay['SABADO']['programs'][0]['schedule']);
+        $this->assertSame('normal', $programsByDay['SABADO']['programs'][0]['tipo_emision']);
     }
 }

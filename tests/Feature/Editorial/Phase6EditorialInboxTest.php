@@ -255,6 +255,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Angelus Apatrida News',
             'author_email'   => 'promo@centurymedia.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create([
             'post_id'           => $post->id,
@@ -289,6 +290,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'CONFIDENTIAL EMBARGO: Crisix',
             'author_email'   => 'press@crisix.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
 
         EmailPostSanitizedMeta::create([
@@ -325,6 +327,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Ghost Tour Dates',
             'author_email'   => 'press@loma-vista.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create([
             'post_id'           => $post->id,
@@ -438,6 +441,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Embargoed Release',
             'author_email'   => 'label@nuclearblast.de',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create([
             'post_id'           => $post->id,
@@ -529,6 +533,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Asunto 1',
             'author_email'   => 'pr1@media.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create(['post_id' => $p1->id, 'security_status' => 'passed', 'received_at' => now()]);
 
@@ -580,6 +585,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Asunto 4',
             'author_email'   => 'pr4@media.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create(['post_id' => $p4->id, 'security_status' => 'passed', 'received_at' => now()]);
 
@@ -729,6 +735,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Press Notification Test',
             'author_email'   => 'external_agency@promorock.es',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create([
             'post_id'           => $post->id,
@@ -762,6 +769,7 @@ class Phase6EditorialInboxTest extends TestCase
             'is_published'   => false,
             'source_subject' => 'Concurrent test',
             'author_email'   => 'band@race.com',
+            'featured_image' => 'assets/lucille/logo.png',
         ]);
         EmailPostSanitizedMeta::create([
             'post_id'           => $post->id,
@@ -856,5 +864,111 @@ class Phase6EditorialInboxTest extends TestCase
         $resIncidents->assertOk();
         $resIncidents->assertSee('Incidencias y Rectificaciones Editoriales');
         $resIncidents->assertSee('diffModalOpen');
+    }
+
+    /**
+     * 20. La UI de aprobación masiva sustituye confirm() por un modal integrado y presenta
+     * un resumen claro con desplegable compacto sin volcar URLs kilométricas completas.
+     */
+    public function test_bulk_approval_ui_renders_integrated_modal_and_compact_collapsible_summary_without_raw_long_urls(): void
+    {
+        $longUrl = 'https://media.rocknews-international-press.com/archive/2026/11/heavy-metal-special-exclusive-tour-dates-and-lineup-announcement-full-details-edition.jpg';
+
+        $bulkSessionData = [
+            'approved'  => [
+                ['id' => 10, 'title' => 'Noticia Aprobada Con Éxito'],
+            ],
+            'blocked'   => [
+                [
+                    'id'     => 11,
+                    'title'  => 'Noticia Retenida Por Portada',
+                    'reason' => 'La imagen de portada remota no es accesible o no responde con una imagen válida: ' . $longUrl,
+                ],
+                [
+                    'id'     => 12,
+                    'title'  => 'Noticia Retenida Sin Portada',
+                    'reason' => 'La noticia no tiene una imagen de portada válida para ser publicada o programada.',
+                ],
+            ],
+            'scheduled' => [],
+            'rejected'  => [],
+            'held'      => [],
+            'errors'    => [],
+        ];
+
+        $response = $this->actingAs($this->admin)
+            ->withSession(['bulk_results' => $bulkSessionData])
+            ->get(route('admin.editorial.index'));
+
+        $response->assertOk();
+
+        // 1. Sustitución de confirm() nativo por modal integrado Lucille
+        $response->assertDontSee('onclick="return confirm(\'¿Aprobar y publicar las noticias seleccionadas', false);
+        $response->assertSee('bulkApproveConfirmOpen = true', false);
+        $response->assertSee('Confirmar Publicación');
+        $response->assertSee('Protocolo de Protección Editorial');
+
+        // 2. Resumen claro con contadores de aprobadas vs retenidas
+        $response->assertSee('Resultado de la Acción Masiva');
+        $response->assertSee('Aprobadas / Publicadas');
+        $response->assertSee('Retenidas en Borrador');
+        $response->assertSee('1'); // 1 aprobada
+        $response->assertSee('2'); // 2 retenidas
+
+        // 3. Lista compacta y desplegable identificando cada noticia
+        $response->assertSee('showBlockedDetails', false);
+        $response->assertSee('#11');
+        $response->assertSee('Noticia Retenida Por Portada');
+        $response->assertSee('#12');
+        $response->assertSee('Noticia Retenida Sin Portada');
+        $response->assertSee('Sin portada utilizable');
+
+        // 4. Evita volcar la URL larga completa sin formato
+        $response->assertDontSee($longUrl, false);
+        $response->assertSee('media.rocknews-international-press.com', false);
+    }
+
+    /**
+     * 21. Confirma que una noticia sin portada sometida a aprobación masiva permanece
+     * bloqueada en borrador y nunca se publica.
+     */
+    public function test_post_without_cover_is_blocked_in_bulk_action_and_remains_draft(): void
+    {
+        $postWithoutCover = Post::create([
+            'title'          => 'Noticia Sin Portada Para Prueba',
+            'slug'           => 'noticia-sin-portada-' . uniqid(),
+            'content'        => '<p>Contenido de prueba sin imagen de portada.</p>',
+            'status'         => 'draft',
+            'is_published'   => false,
+            'source_subject' => 'Asunto Sin Portada',
+            'author_email'   => 'dark.vader.agent@gmail.com',
+            'featured_image' => null,
+        ]);
+
+        EmailPostSanitizedMeta::create([
+            'post_id'           => $postWithoutCover->id,
+            'security_status'   => 'sanitized',
+            'sender_email'      => 'dark.vader.agent@gmail.com',
+            'is_embargo_active' => false,
+            'received_at'       => now(),
+        ]);
+
+        $response = $this->actingAs($this->admin)->post(route('admin.editorial.bulk-action'), [
+            'action'   => 'approve',
+            'post_ids' => [$postWithoutCover->id],
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('bulk_results');
+
+        $bulkResults = session('bulk_results');
+        $this->assertCount(0, $bulkResults['approved']);
+        $this->assertCount(1, $bulkResults['blocked']);
+        $this->assertSame($postWithoutCover->id, $bulkResults['blocked'][0]['id']);
+        $this->assertStringContainsString('portada utilizable', $bulkResults['blocked'][0]['reason']);
+
+        $postWithoutCover->refresh();
+        $this->assertFalse((bool) $postWithoutCover->is_published);
+        $this->assertSame('draft', $postWithoutCover->status);
     }
 }

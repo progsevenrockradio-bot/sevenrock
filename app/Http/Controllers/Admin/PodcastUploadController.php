@@ -450,27 +450,39 @@ final class PodcastUploadController extends Controller
                 if ($job instanceof ProcessMp3Job) {
                     $updates['processing_started_at'] = $radioProgram->processing_started_at ?? now();
                     $updates['processing_finished_at'] = null;
-                    $updates['radioboss_status'] = 'radioboss_pending';
                     $updates['enviado_radioboss'] = false;
-                    $updates['archive_org_status'] = 'archive_pending';
                     $updates['delivery_last_error'] = null;
+                    if (in_array($target, ['all', 'radioboss'], true)) {
+                        $updates['radioboss_last_error'] = null;
+                    }
+                    if (in_array($target, ['all', 'archive'], true)) {
+                        $updates['archive_org_last_error'] = null;
+                    }
                 }
                 if ($job instanceof UploadRadiobossJob) {
                     $updates['radioboss_status'] = 'radioboss_pending';
+                    $updates['radioboss_last_error'] = null;
                     $updates['enviado_radioboss'] = false;
                 }
                 if ($job instanceof UploadArchiveOrgJob) {
                     $updates['archive_org_status'] = 'archive_pending';
+                    $updates['archive_org_last_error'] = null;
                 }
             }
             if ($updates !== []) {
                 $updates['status_message'] = 'Procesando reintento solicitado desde el panel...';
                 $updates['delivery_status'] = 'delivery_pending';
+                // Preservar cualquier metadata que haya establecido buildSelectiveRetryPlan
+                $freshMeta = $radioProgram->fresh()?->delivery_metadata;
+                if ($freshMeta !== null) {
+                    $updates['delivery_metadata'] = $freshMeta;
+                }
+                $radioProgram = $radioProgram->fresh() ?? $radioProgram;
                 $radioProgram->forceFill($updates)->saveQuietly();
             }
 
             foreach ($retryPlan['jobs'] as $job) {
-                dispatch($job);
+                app(\Illuminate\Contracts\Bus\Dispatcher::class)->dispatch($job);
             }
         } catch (Throwable $exception) {
             return back()->with('status', 'El reintento falló: ' . $exception->getMessage());
@@ -589,13 +601,19 @@ final class PodcastUploadController extends Controller
         $labels = [];
 
         $storedPath = ltrim(str_replace('\\', '/', trim((string) ($radioProgram->archivo_mp3 ?? ''))), '/');
-        $needsProcessing = $storedPath !== ''
-            && (
-                ! RadioProgram::isProcessedStoragePath($storedPath)
-                || ($radioProgram->archivo_mp3_disk !== 'r2' && ! (bool) data_get($radioProgram->delivery_metadata, 'r2_verified', false))
-            );
+        $needsProcessing = $storedPath !== '' && ! $radioProgram->hasPreparedBroadcastAudio();
 
-        if ($needsProcessing && in_array($target, ['all', 'process'], true)) {
+        if ($needsProcessing) {
+            $normalizedTarget = in_array($target, ['all', 'process', 'radioboss', 'archive'], true) ? $target : 'all';
+            $dispatchNextJobs = $normalizedTarget !== 'process';
+
+            $radioProgram = $radioProgram->fresh() ?? $radioProgram;
+            $metadata = (array) ($radioProgram->delivery_metadata ?? []);
+            $metadata['requested_distribution_target'] = $dispatchNextJobs ? $normalizedTarget : 'none';
+            \Illuminate\Support\Facades\DB::table('radio_programs')
+                ->where('id', $radioProgram->id)
+                ->update(['delivery_metadata' => json_encode($metadata)]);
+
             $audioSource = $radioProgram->fresh(['masterProgram']) ?? $radioProgram;
             $jobs[] = new ProcessMp3Job(
                 $audioSource,
@@ -604,12 +622,19 @@ final class PodcastUploadController extends Controller
                 Auth::id(),
                 Auth::user()?->name,
                 Auth::user()?->email,
-                true,
+                $dispatchNextJobs,
             );
+
+            $targetLabel = match ($normalizedTarget) {
+                'radioboss' => 'Etiquetado MP3, R2 y RadioBOSS',
+                'archive' => 'Etiquetado MP3, R2 y Archive.org',
+                'process' => 'Etiquetado MP3 y R2',
+                default => 'Etiquetado MP3, R2, RadioBOSS, Archive.org',
+            };
 
             return [
                 'jobs' => $jobs,
-                'message' => 'Procesando reintento para: Etiquetado MP3, R2, RadioBOSS, Archive.org.',
+                'message' => "Procesando reintento para: {$targetLabel}.",
             ];
         }
 

@@ -307,6 +307,9 @@
                 <div>
                     <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Ruta o URL de imagen</label>
                     <input name="featured_image" value="{{ old('featured_image', $post->featured_image) }}" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 placeholder-gray-500 focus:border-[#c32720] focus:outline-none" placeholder="https://... o ruta relativa">
+                    @error('featured_image')
+                        <p class="mt-1 text-xs text-rose-400 font-medium">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div>
