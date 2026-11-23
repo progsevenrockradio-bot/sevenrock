@@ -27,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(\App\Services\AuditTrailService::class);
         $this->app->singleton(ArchiveOrgPodcastServiceContract::class, ArchiveOrgPodcastService::class);
         $this->app->singleton(MercadoPagoWebhookAuthenticatorInterface::class, MercadoPagoWebhookAuthenticator::class);
 

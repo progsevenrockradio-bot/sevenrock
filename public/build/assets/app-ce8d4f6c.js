@@ -236,7 +236,7 @@ $1`).replace(/[ \t]{2,}/g,` `).trim()},buildSignature({title:e=``,artist:t=``,co
                                 }
                             }
                         }
-                        safeHeaders['Content-Type'] = file.type || 'audio/mpeg';
+                        safeHeaders['Content-Type'] = data.headers?.['Content-Type'] || data.headers?.['content-type'] || file.type || 'audio/mpeg';
 
                         this.setPhase('Transfiriendo', `Subiendo archivo directamente a Cloudflare R2 (~${this.formatBytes(file.size)})...`);
                         this.startStallWatchdog(() => this.handleStall());

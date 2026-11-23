@@ -22,6 +22,9 @@ final class TrackAdminAuditTrail
         $request->attributes->set('_audit_started_at', microtime(true));
         $request->attributes->set('_audit_request_id', (string) Str::uuid());
 
+        // Capturar metadatos de archivos antes del movimiento por parte del controlador
+        $this->auditTrailService->precaptureFiles($request);
+
         try {
             $response = $next($request);
         } catch (Throwable $exception) {

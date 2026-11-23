@@ -18,6 +18,75 @@ use Throwable;
 final class AuditTrailService
 {
     /**
+     * Cache de metadatos de archivos subidos antes de que sean movidos por los controladores.
+     *
+     * @var array<int, array{name: string, mime: string, size: int}>
+     */
+    private array $precapturedFileMeta = [];
+
+    /**
+     * Pre-captura los metadatos de los archivos presentes en la petición antes de que
+     * los controladores los muevan o eliminen del directorio temporal.
+     */
+    public function precaptureFiles(Request $request): void
+    {
+        foreach ($request->allFiles() as $value) {
+            $this->precaptureFileRecursive($value);
+        }
+
+        $request->attributes->set('_audit_files_meta', $this->precapturedFileMeta);
+    }
+
+    private function precaptureFileRecursive(mixed $value): void
+    {
+        if ($value instanceof UploadedFile) {
+            $id = spl_object_id($value);
+            $this->precapturedFileMeta[$id] = $this->extractUploadedFileMeta($value);
+
+            return;
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                $this->precaptureFileRecursive($item);
+            }
+        }
+    }
+
+    /**
+     * Extrae de forma segura los metadatos del archivo mientras el temporal aún existe.
+     *
+     * @return array{name: string, mime: string, size: int}
+     */
+    private function extractUploadedFileMeta(UploadedFile $file): array
+    {
+        try {
+            $name = $file->getClientOriginalName();
+        } catch (Throwable) {
+            $name = 'unknown';
+        }
+
+        try {
+            $mime = $file->getClientMimeType();
+        } catch (Throwable) {
+            $mime = 'application/octet-stream';
+        }
+
+        try {
+            $path = $file->getPathname();
+            $size = (is_string($path) && $path !== '' && file_exists($path)) ? $file->getSize() : 0;
+        } catch (Throwable) {
+            $size = 0;
+        }
+
+        return [
+            'name' => $name,
+            'mime' => $mime,
+            'size' => $size,
+        ];
+    }
+
+    /**
      * @param array<string, mixed> $context
      */
     public function recordHttp(Request $request, ?Response $response, array $context = []): ?AuditLog
@@ -249,11 +318,12 @@ final class AuditTrailService
 
     private function describeUploadedFile(UploadedFile $file): array
     {
-        return [
-            'name' => $file->getClientOriginalName(),
-            'mime' => $file->getClientMimeType(),
-            'size' => $file->getSize(),
-        ];
+        $id = spl_object_id($file);
+        if (isset($this->precapturedFileMeta[$id])) {
+            return $this->precapturedFileMeta[$id];
+        }
+
+        return $this->extractUploadedFileMeta($file);
     }
 
     private function isSensitiveKey(string $key): bool

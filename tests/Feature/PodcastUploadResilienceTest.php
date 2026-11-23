@@ -220,4 +220,34 @@ final class PodcastUploadResilienceTest extends TestCase
             $lock->release();
         }
     }
+
+    public function test_audit_trail_captures_uploaded_file_metadata_before_controller_moves_it(): void
+    {
+        $this->actingAs($this->admin);
+
+        $uploadId = 'test_chk_audit_' . Str::random(8);
+        $chunkContent = str_repeat('X', 512 * 1024); // 512 KB
+        $chunkFile = UploadedFile::fake()->createWithContent('chunk_0.part', $chunkContent);
+
+        $response = $this->postJson(route('admin.podcast-uploads.chunk'), [
+            'upload_id' => $uploadId,
+            'chunk_index' => 0,
+            'total_chunks' => 1,
+            'file' => $chunkFile,
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['status' => 'chunk_uploaded']);
+
+        $auditLog = \App\Models\AuditLog::query()
+            ->where('route_name', 'admin.podcast-uploads.chunk')
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($auditLog);
+        $this->assertSame(200, $auditLog->status_code);
+        $this->assertArrayHasKey('files', $auditLog->request_meta);
+        $this->assertSame('chunk_0.part', $auditLog->request_meta['files']['file']['name'] ?? null);
+        $this->assertSame(strlen($chunkContent), $auditLog->request_meta['files']['file']['size'] ?? null);
+    }
 }

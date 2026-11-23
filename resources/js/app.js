@@ -171,7 +171,7 @@ Alpine.data('bandProfilePicker', (options = {}) => ({
         }, 160);
     },
     async search() {
-        if (! this.searchUrl) {
+        if (!this.searchUrl) {
             return;
         }
 
@@ -237,7 +237,7 @@ Alpine.data('bandProfilePicker', (options = {}) => ({
         }, 120);
     },
     move(delta) {
-        if (! this.results.length) {
+        if (!this.results.length) {
             return;
         }
 
@@ -342,7 +342,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
             };
             try {
                 this.uppy.cancelAll();
-            } catch (e) {}
+            } catch (e) { }
 
             const file = this.selectedFile;
             if (file) {
@@ -364,15 +364,15 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         this.clearStallWatchdog();
 
         if (this.activeAbortController) {
-            try { this.activeAbortController.abort(); } catch (e) {}
+            try { this.activeAbortController.abort(); } catch (e) { }
             this.activeAbortController = null;
         }
         if (this.activeXhr) {
-            try { this.activeXhr.abort(); } catch (e) {}
+            try { this.activeXhr.abort(); } catch (e) { }
             this.activeXhr = null;
         }
         if (this.uppy) {
-            try { this.uppy.cancelAll(); } catch (e) {}
+            try { this.uppy.cancelAll(); } catch (e) { }
         }
 
         this.uploading = false;
@@ -438,7 +438,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                 limit: 1,
                 timeout: 0,
                 getUploadParameters: (file) => {
-                    const csrfToken = document.querySelector('input[name="_token"]')?.value 
+                    const csrfToken = document.querySelector('input[name="_token"]')?.value
                         || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
                         || '';
 
@@ -461,44 +461,44 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                             attempt_id: this.attemptId,
                         }),
                     })
-                    .then((response) => {
-                        clearTimeout(presignTimeout);
-                        if (!response.ok) {
-                            return response.json().then(errData => {
-                                throw new Error(errData?.error || `Error HTTP ${response.status} en autorización`);
-                            }).catch(() => {
-                                throw new Error(`Fallo de autorización HTTP ${response.status}`);
-                            });
-                        }
-                        return response.json();
-                    })
-                    .then((data) => {
-                        this.uppy.setFileMeta(file.id, { r2Key: data.key });
-                        const safeHeaders = {};
-                        if (data.headers && typeof data.headers === 'object') {
-                            for (const [hk, hv] of Object.entries(data.headers)) {
-                                if (hk.toLowerCase() !== 'host') {
-                                    safeHeaders[hk] = hv;
+                        .then((response) => {
+                            clearTimeout(presignTimeout);
+                            if (!response.ok) {
+                                return response.json().then(errData => {
+                                    throw new Error(errData?.error || `Error HTTP ${response.status} en autorización`);
+                                }).catch(() => {
+                                    throw new Error(`Fallo de autorización HTTP ${response.status}`);
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then((data) => {
+                            this.uppy.setFileMeta(file.id, { r2Key: data.key });
+                            const safeHeaders = {};
+                            if (data.headers && typeof data.headers === 'object') {
+                                for (const [hk, hv] of Object.entries(data.headers)) {
+                                    if (hk.toLowerCase() !== 'host') {
+                                        safeHeaders[hk] = hv;
+                                    }
                                 }
                             }
-                        }
-                        safeHeaders['Content-Type'] = file.type || 'audio/mpeg';
+                            safeHeaders['Content-Type'] = data.headers?.['Content-Type'] || data.headers?.['content-type'] || file.type || 'audio/mpeg';
 
-                        this.setPhase('Transfiriendo', `Subiendo archivo directamente a Cloudflare R2 (~${this.formatBytes(file.size)})...`);
-                        this.startStallWatchdog(() => this.handleStall());
+                            this.setPhase('Transfiriendo', `Subiendo archivo directamente a Cloudflare R2 (~${this.formatBytes(file.size)})...`);
+                            this.startStallWatchdog(() => this.handleStall());
 
-                        return {
-                            url: data.url,
-                            method: data.method || 'PUT',
-                            headers: safeHeaders,
-                            fields: data.fields || {},
-                        };
-                    })
-                    .catch((err) => {
-                        clearTimeout(presignTimeout);
-                        this.logEvent('Preparando subida', 'presign_failed', { message: err.message });
-                        throw err;
-                    });
+                            return {
+                                url: data.url,
+                                method: data.method || 'PUT',
+                                headers: safeHeaders,
+                                fields: data.fields || {},
+                            };
+                        })
+                        .catch((err) => {
+                            clearTimeout(presignTimeout);
+                            this.logEvent('Preparando subida', 'presign_failed', { message: err.message });
+                            throw err;
+                        });
                 },
             });
 
@@ -507,7 +507,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                 const percent = Math.min(100, Math.max(0, Math.round((progress.bytesUploaded / progress.bytesTotal) * 100)));
                 this.progress = percent;
                 this.progressLabel = `${percent}%`;
-                
+
                 if (progress.bytesUploaded > 0) {
                     if (progress.eta) {
                         this.uploadEtaLabel = `Restan ~${this.formatDuration(progress.eta)}`;
@@ -612,7 +612,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         }
     },
     getActiveProgramSelect(form) {
-        if (! form) return null;
+        if (!form) return null;
         if (this.activeDay) {
             const panel = form.querySelector(`[data-day-panel="${this.activeDay}"]`);
             const select = panel?.querySelector('select[name="master_program_id"]');
@@ -636,7 +636,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         return 'editorial';
     },
     focusField(form, field) {
-        if (! field) {
+        if (!field) {
             return;
         }
 
@@ -676,7 +676,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
 
         this.focusField(form, firstField);
 
-        if (! firstField) {
+        if (!firstField) {
             window.setTimeout(() => {
                 form?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
             }, 50);
@@ -773,23 +773,23 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
 
         const programSelect = this.getActiveProgramSelect(form);
         const programId = programSelect?.value?.trim?.() ?? '';
-        if (! programId) {
+        if (!programId) {
             issues.master_program_id = ['Debes seleccionar un programa maestro.'];
         }
 
         const liveTitle = form.querySelector('[name="live_title"]')?.value?.trim?.() ?? '';
-        if (! liveTitle) {
+        if (!liveTitle) {
             issues.live_title = ['El título del episodio es obligatorio.'];
         }
 
         const fechaEmision = form.querySelector('[name="fecha_emision"]')?.value?.trim?.() ?? '';
-        if (! fechaEmision) {
+        if (!fechaEmision) {
             issues.fecha_emision = ['La fecha de emisión es obligatoria.'];
         }
 
         const input = form.querySelector('input[name="archivo_mp3"]');
         const file = input?.files?.[0] ?? this.selectedFile;
-        if (! file) {
+        if (!file) {
             issues.archivo_mp3 = ['Debes adjuntar el archivo MP3 del programa.'];
         }
 
@@ -906,7 +906,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         return `${amount} ${units[exponent]}`;
     },
     updateUploadEstimate(file) {
-        if (! file?.size) {
+        if (!file?.size) {
             this.fileSizeLabel = '';
             this.uploadEtaLabel = '';
             return;
@@ -931,14 +931,14 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         const CHUNK_SIZE = 4 * 1024 * 1024; // 4 MB
         const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
         const uploadId = 'chunk_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-        const csrfToken = document.querySelector('input[name="_token"]')?.value 
+        const csrfToken = document.querySelector('input[name="_token"]')?.value
             || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
             || '';
 
         this.uploading = true;
         this.canRetry = false;
-        this.setPhase('Transfiriendo', this.originalR2Error 
-            ? `Subida alternativa por fragmentos de 4 MB (1/${totalChunks})` 
+        this.setPhase('Transfiriendo', this.originalR2Error
+            ? `Subida alternativa por fragmentos de 4 MB (1/${totalChunks})`
             : `Subiendo por fragmentos de 4 MB (1/${totalChunks})...`);
         this.statusMessage = `Subiendo por partes de seguridad (1/${totalChunks})...`;
 
@@ -994,7 +994,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                             try {
                                 const parsed = JSON.parse(xhr.responseText);
                                 if (parsed?.error) serverErr = parsed.error;
-                            } catch (e) {}
+                            } catch (e) { }
                             reject(new Error(`Error al subir el fragmento ${i + 1}: ${serverErr}`));
                         }
                     };
@@ -1060,7 +1060,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
             this.phaseLabel = 'Error';
             this.phaseDetailLabel = 'La subida por fragmentos falló.';
             this.statusMessage = error.message || 'Error durante la subida por fragmentos.';
-            
+
             const errList = [error.message || 'Error de transferencia por fragmentos.'];
             if (this.originalR2Error) {
                 errList.push(`Fallo previo en Cloudflare R2: ${this.originalR2Error.message}`);
@@ -1177,7 +1177,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         if (activeProgramId) {
             formData.set('master_program_id', activeProgramId);
         }
-        
+
         formData.delete('archivo_mp3');
         formData.append('r2_key', r2Key);
         formData.set('pipeline_action', this.pipelineAction || 'process');
@@ -1271,7 +1271,7 @@ Alpine.data('podcastUploadsDashboard', (options = {}) => ({
     timer: null,
     requestToken: 0,
     init() {
-        if (! this.recentUrl) {
+        if (!this.recentUrl) {
             return;
         }
 
@@ -1298,7 +1298,7 @@ Alpine.data('podcastUploadsDashboard', (options = {}) => ({
         }, this.refreshInterval);
     },
     stopTimer() {
-        if (! this.timer) {
+        if (!this.timer) {
             return;
         }
 
@@ -1338,7 +1338,7 @@ Alpine.data('podcastUploadsDashboard', (options = {}) => ({
         }
     },
     async refresh(silent = false) {
-        if (! this.recentUrl) {
+        if (!this.recentUrl) {
             return;
         }
 
@@ -1363,7 +1363,7 @@ Alpine.data('podcastUploadsDashboard', (options = {}) => ({
                 credentials: 'same-origin',
             });
 
-            if (! response.ok) {
+            if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
 
@@ -1379,7 +1379,7 @@ Alpine.data('podcastUploadsDashboard', (options = {}) => ({
             const now = new Date();
             this.lastUpdatedLabel = `Actualizado: ${now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
 
-            if (! hasActiveEntries) {
+            if (!hasActiveEntries) {
                 this.stopTimer();
             } else {
                 this.startTimer();
@@ -1402,7 +1402,7 @@ Alpine.data('postContentEditor', (options = {}) => ({
     serialized: '',
     serializedBlocks: '',
     init() {
-        if (! this.blocks.length) {
+        if (!this.blocks.length) {
             this.blocks = [this.createBlock('paragraph')];
         } else {
             this.blocks = this.blocks.map((block) => this.normalizeBlock(block));
@@ -1446,7 +1446,7 @@ Alpine.data('postContentEditor', (options = {}) => ({
     },
     addBlock(type) {
         const block = this.createBlock(type);
-        if (type === 'gallery' && ! block.items.length) {
+        if (type === 'gallery' && !block.items.length) {
             block.items.push({ id: `item-${Date.now()}`, src: '', alt: '' });
         }
 
@@ -1490,7 +1490,7 @@ Alpine.data('postContentEditor', (options = {}) => ({
     },
     async uploadImageForBlock(block, event) {
         const file = event?.target?.files?.[0] ?? null;
-        if (! file) {
+        if (!file) {
             return;
         }
 
@@ -1499,7 +1499,7 @@ Alpine.data('postContentEditor', (options = {}) => ({
     },
     async uploadGalleryImages(block, event) {
         const files = Array.from(event?.target?.files ?? []);
-        if (! files.length) {
+        if (!files.length) {
             return;
         }
 
@@ -1507,7 +1507,7 @@ Alpine.data('postContentEditor', (options = {}) => ({
         event.target.value = '';
     },
     async uploadToBlock(block, files, appendMultiple) {
-        if (! this.uploadUrl) {
+        if (!this.uploadUrl) {
             this.uploadError = 'No upload endpoint configured.';
             return;
         }
@@ -1536,7 +1536,7 @@ Alpine.data('postContentEditor', (options = {}) => ({
             const payload = await response.json();
             const urls = Array.isArray(payload?.data?.urls) ? payload.data.urls.filter(Boolean) : [];
 
-            if (! response.ok) {
+            if (!response.ok) {
                 throw new Error(payload?.message || 'Upload failed');
             }
 
@@ -1560,7 +1560,7 @@ Alpine.data('postContentEditor', (options = {}) => ({
         }
     },
     addGalleryItem(block) {
-        if (! Array.isArray(block.items)) {
+        if (!Array.isArray(block.items)) {
             block.items = [];
         }
 
@@ -1572,12 +1572,12 @@ Alpine.data('postContentEditor', (options = {}) => ({
         this.sync();
     },
     removeGalleryItem(block, index) {
-        if (! Array.isArray(block.items)) {
+        if (!Array.isArray(block.items)) {
             return;
         }
 
         block.items.splice(index, 1);
-        if (! block.items.length) {
+        if (!block.items.length) {
             block.items.push({
                 id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
                 src: '',
@@ -1602,7 +1602,7 @@ Alpine.data('postContentEditor', (options = {}) => ({
             case 'image':
                 return src ? `<figure class="wp-block-image"><img src="${this.escapeAttr(src)}" alt="${this.escapeAttr(alt)}"></figure>` : '';
             case 'gallery':
-                if (! Array.isArray(block.items) || ! block.items.length) {
+                if (!Array.isArray(block.items) || !block.items.length) {
                     return '';
                 }
 
