@@ -27,7 +27,7 @@ class ProcessIncomingEmails extends Command
      *
      * @var string
      */
-    protected $signature = 'emails:process {--reset : Vaciar el registro de correos procesados antes de iniciar} {--retry-failed : Reintentar los correos que fallaron en el procesamiento} {--days= : Revisar correos de los últimos X días (incluye leídos)} {--message-id= : Procesar exclusivamente el correo con este Message-ID} {--only-dv1 : Procesar exclusivamente entregas DV-1 autenticadas de Darth Vader y descartar otros remitentes}';
+    protected $signature = 'emails:process {--reset : Vaciar el registro de correos procesados antes de iniciar} {--retry-failed : Reintentar los correos que fallaron en el procesamiento} {--days= : Revisar correos de los últimos X días (incluye leídos)} {--message-id= : Procesar exclusivamente el correo con este Message-ID} {--only-dv1 : Procesar exclusivamente entregas DV-1 autenticadas de Darth Vader y descartar otros remitentes} {--as-draft : Forzar que las entregas DV-1 se importen exclusivamente como borradores} {--dry-run : Ejecutar en modo simulación sin persistir cambios en la base de datos} {--limit= : Límite de mensajes a consultar}';
 
     /**
      * The console command description.
@@ -57,6 +57,8 @@ class ProcessIncomingEmails extends Command
         $settings = ThemeSetting::current();
         $targetMessageId = trim((string) $this->option('message-id'), '<>');
         $isOnlyDv1 = (bool) $this->option('only-dv1');
+        $isForceDraft = (bool) $this->option('as-draft');
+        $isDryRun = (bool) $this->option('dry-run');
 
         if (! $settings->email_processing_enabled && $targetMessageId === '') {
             $this->info('El procesamiento automático de correos está deshabilitado en los Ajustes del Tema.');
@@ -144,17 +146,102 @@ class ProcessIncomingEmails extends Command
                 $client->connect();
                 Cache::forget('admin_alert_sent_imap_connection_failed');
 
-                $folder = $client->getFolder('INBOX');
+                $foldersToScan = [];
+                try {
+                    $inbox = $client->getFolder('INBOX');
+                    if ($inbox) {
+                        $foldersToScan[] = $inbox;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("ProcessIncomingEmails: No se pudo obtener carpeta INBOX en {$accountEmail}: " . $e->getMessage());
+                }
+
+                if ($isOnlyDv1 || $targetMessageId !== '') {
+                    $spamCandidates = ['[Gmail]/Spam', 'Spam', 'Junk'];
+                    foreach ($spamCandidates as $spamPath) {
+                        try {
+                            $sf = $client->getFolder($spamPath);
+                            if ($sf) {
+                                $alreadyAdded = false;
+                                foreach ($foldersToScan as $existingF) {
+                                    if (isset($existingF->path) && isset($sf->path) && $existingF->path === $sf->path) {
+                                        $alreadyAdded = true;
+                                        break;
+                                    }
+                                }
+                                if (! $alreadyAdded) {
+                                    $foldersToScan[] = $sf;
+                                }
+                            }
+                        } catch (\Throwable $e) {
+                            // Carpeta no existe en este servidor IMAP o mock
+                        }
+                    }
+                }
+
+                if (empty($foldersToScan)) {
+                    try {
+                        $foldersToScan[] = $client->getFolder('INBOX');
+                    } catch (\Throwable $e) {
+                        // Fallback silencioso si no se pudo resolver carpeta
+                    }
+                }
+
                 $daysOption = $this->option('days');
-                if ($targetMessageId !== '') {
-                    $this->info("Buscando mensaje específico por Message-ID: <{$targetMessageId}>...");
-                    $messages = $folder->query()->from('dark.vader.agent@gmail.com')->setFetchOrder('desc')->limit(10)->get();
-                } elseif ($daysOption) {
-                    $days = max(1, (int) $daysOption);
-                    $this->info("Buscando correos de los últimos {$days} días (incluye leídos)...");
-                    $messages = $folder->query()->since(now()->subDays($days))->get();
-                } else {
-                    $messages = $folder->query()->unseen()->get();
+                $messages = [];
+                $seenMessageIdsInRun = [];
+
+                foreach ($foldersToScan as $folder) {
+                    $folderName = $folder->path ?? $folder->name ?? 'INBOX';
+                    $this->info("Consultando mensajes en carpeta '{$folderName}'...");
+
+                    try {
+                        if ($targetMessageId !== '') {
+                            $this->info("Buscando mensaje específico por Message-ID: <{$targetMessageId}> en '{$folderName}'...");
+                            $q = $folder->query();
+                            try {
+                                $limit = $this->option('limit') ? (int) $this->option('limit') : 10;
+                                $folderMessages = $q->from('dark.vader.agent@gmail.com')->setFetchOrder('desc')->limit($limit)->get();
+                            } catch (\Throwable $qe) {
+                                $folderMessages = $folder->query()->get();
+                            }
+                        } elseif ($isOnlyDv1) {
+                            // Acotar búsqueda estrictamente al remitente Dark Vader
+                            // Sin restricción unseen() para no perder entregas marcadas como leídas o en Spam
+                            try {
+                                $q = $folder->query()->from('dark.vader.agent@gmail.com');
+                                if ($daysOption) {
+                                    $days = max(1, (int) $daysOption);
+                                    $q->since(now()->subDays($days));
+                                } else {
+                                    $q->since(now()->subDays(14));
+                                }
+                                $folderMessages = $q->setFetchOrder('desc')->get();
+                            } catch (\Throwable $qe) {
+                                // Fallback para mocks o drivers que solo esperan unseen()
+                                $folderMessages = $folder->query()->unseen()->get();
+                            }
+                        } elseif ($daysOption) {
+                            $days = max(1, (int) $daysOption);
+                            $this->info("Buscando correos de los últimos {$days} días (incluye leídos)...");
+                            $folderMessages = $folder->query()->since(now()->subDays($days))->get();
+                        } else {
+                            $folderMessages = $folder->query()->unseen()->get();
+                        }
+
+                        foreach ($folderMessages as $msg) {
+                            $mid = trim((string) $msg->getMessageId(), '<>');
+                            if ($mid !== '' && isset($seenMessageIdsInRun[$mid])) {
+                                continue;
+                            }
+                            if ($mid !== '') {
+                                $seenMessageIdsInRun[$mid] = true;
+                            }
+                            $messages[] = $msg;
+                        }
+                    } catch (\Throwable $fe) {
+                        Log::warning("ProcessIncomingEmails: Error al consultar carpeta '{$folderName}': " . $fe->getMessage());
+                    }
                 }
                 $messagesRead = count($messages);
 
@@ -190,7 +277,9 @@ class ProcessIncomingEmails extends Command
                 // Evitar procesar correos duplicados (a menos que hayan fallado previamente)
                 if (DB::table('processed_emails')->where('message_id', $messageId)->where('status', '!=', 'failed')->exists()) {
                     $this->info("Ignorando correo ya procesado: {$subject}");
-                    $message->setFlag('SEEN');
+                    if (! $isDryRun) {
+                        $message->setFlag('SEEN');
+                    }
                     if ($targetMessageId !== '') break;
                     continue;
                 }
@@ -355,27 +444,33 @@ class ProcessIncomingEmails extends Command
                 }
 
                 if ($isDv1Payload && $isDarkVaderAgent) {
-                    $this->info("[DARK VADER DV-1] Procesando lote estructurado con EditorialBatchProcessor para mensaje: {$messageId}");
+                    $this->info("[DARK VADER DV-1] Procesando lote estructurado con EditorialBatchProcessor para mensaje: {$messageId}" . ($isForceDraft ? ' (modo forzado BORRADOR)' : '') . ($isDryRun ? ' [SIMULACIÓN]' : ''));
                     $batchProcessor = app(\App\Services\EditorialBatchProcessor::class);
                     $result = $batchProcessor->process(
                         rawContent: $body,
                         imagesManifest: [],
                         sourceMessageId: $messageId,
                         senderEmail: (string) $senderEmail,
-                        isDryRun: false,
+                        isDryRun: $isDryRun,
                         allowUpdateApproval: false,
-                        autoPublish: null,
+                        autoPublish: $isForceDraft ? false : null,
                         isSenderAuthenticated: (bool) $isDarkVaderAgent
                     );
 
                     if ($result['success']) {
                         $this->info("[DV-1 PROCESADO] Lote {$result['batch_id']}: creados {$result['created']}, actualizados {$result['updated']}, omitidos {$result['skipped']}, conflictos {$result['conflicts']}.");
-                        $this->recordProcessedEmail($messageId, $subject, 'processed');
+                        if (! $isDryRun) {
+                            $this->recordProcessedEmail($messageId, $subject, 'processed');
+                        }
                     } else {
                         $this->warn("[DV-1 FALLO] Lote {$result['batch_id']}: {$result['error']}");
-                        $this->recordProcessedEmail($messageId, $subject, 'failed_dv1');
+                        if (! $isDryRun) {
+                            $this->recordProcessedEmail($messageId, $subject, 'failed_dv1');
+                        }
                     }
-                    $message->setFlag('SEEN');
+                    if (! $isDryRun) {
+                        $message->setFlag('SEEN');
+                    }
                     if ($tempMp3Path && file_exists($tempMp3Path)) @unlink($tempMp3Path);
                     if ($targetMessageId !== '') break;
                     continue;

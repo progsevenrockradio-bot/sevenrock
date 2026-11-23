@@ -272,24 +272,28 @@ class EditorialBatchProcessor
                 $revisionRequerida = true;
                 $motivoRevision = "[IMAGEN_PENDIENTE] Imagen no proporcionada ('{$rawPath}')" . ($motivoRevision ? " | {$motivoRevision}" : "");
             } elseif (! empty($imagePath) && (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://'))) {
-                $imageService = app(\App\Services\EditorialImageService::class);
-                $imgResult = $imageService->resolveAndStore($imagePath, $batchId, $elemId, Str::slug($title), $imageCredit);
-
-                if ($imgResult['success'] && ! empty($imgResult['path'])) {
-                    $imagePath = $imgResult['path'];
-                    if (! empty($imgResult['credit'])) {
-                        $imageCredit = $imgResult['credit'];
-                    }
-                    if (! empty($imgResult['structured_meta'])) {
-                        $imageMeta = [
-                            'path' => $imagePath,
-                            'meta' => $imgResult['structured_meta'],
-                        ];
-                    }
+                if ($isDryRun) {
+                    // En simulación (dry-run): NUNCA descargar ni almacenar imágenes de la red
                 } else {
-                    $imagePath = null;
-                    $revisionRequerida = true;
-                    $motivoRevision = "[IMAGEN_PENDIENTE] " . ($imgResult['error'] ?? 'Fallo de descarga de imagen') . ($motivoRevision ? " | {$motivoRevision}" : "");
+                    $imageService = app(\App\Services\EditorialImageService::class);
+                    $imgResult = $imageService->resolveAndStore($imagePath, $batchId, $elemId, Str::slug($title), $imageCredit);
+
+                    if ($imgResult['success'] && ! empty($imgResult['path'])) {
+                        $imagePath = $imgResult['path'];
+                        if (! empty($imgResult['credit'])) {
+                            $imageCredit = $imgResult['credit'];
+                        }
+                        if (! empty($imgResult['structured_meta'])) {
+                            $imageMeta = [
+                                'path' => $imagePath,
+                                'meta' => $imgResult['structured_meta'],
+                            ];
+                        }
+                    } else {
+                        $imagePath = null;
+                        $revisionRequerida = true;
+                        $motivoRevision = "[IMAGEN_PENDIENTE] " . ($imgResult['error'] ?? 'Fallo de descarga de imagen') . ($motivoRevision ? " | {$motivoRevision}" : "");
+                    }
                 }
             } elseif (! empty($imagePath)) {
                 // Ruta local: validar existencia
