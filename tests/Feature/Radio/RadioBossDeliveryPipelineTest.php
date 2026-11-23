@@ -2779,17 +2779,17 @@ class RadioBossDeliveryPipelineTest extends TestCase
 
         // La ruta final del nuevo episodio YA está ocupada en RadioBOSS por otro archivo
         $occupiedDestination = $folder . '/045.- ESTACION ROCK 11-11-2026.mp3';
-        $existingProtectedContent = 'contenido-existente-en-destino-que-no-debe-sobrescribirse';
+        $existingProtectedContent = 'contenido-existente-en-destino-que-debe-respaldarse';
         Storage::disk('radioboss')->put($occupiedDestination, $existingProtectedContent);
 
         $r2Source = 'programas_procesados/estacion-rock/045.- ESTACIÓN ROCK 11-11-2026.mp3';
-        $newAttemptContent = 'contenido-nuevo-que-colisiona-con-destino-ocupado';
+        $newAttemptContent = 'contenido-nuevo-que-reemplaza-con-sustitucion-segura';
         Storage::disk('r2')->put($r2Source, $newAttemptContent);
         $this->mockR2LocalPath($r2Source, $newAttemptContent);
 
         $episode = RadioProgram::create([
             'master_program_id' => $master->id,
-            'titulo_programa' => 'ESTACIÓN ROCK Ep 045 Colisión',
+            'titulo_programa' => 'ESTACIÓN ROCK Ep 045 Reemplazo',
             'conductor' => 'Locutor Estación Rock',
             'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
             'editorial_version' => 1,
@@ -2803,27 +2803,154 @@ class RadioBossDeliveryPipelineTest extends TestCase
 
         $episode->refresh();
 
-        // 1. El archivo existente en el destino final permanece 100% intacto y no fue movido a respaldos ni sobrescrito
+        // 1. El nuevo archivo se verificó y quedó en la ruta final de emisión
         $this->assertTrue(Storage::disk('radioboss')->exists($occupiedDestination));
-        $this->assertSame($existingProtectedContent, Storage::disk('radioboss')->get($occupiedDestination));
-        $this->assertFalse(Storage::disk('radioboss')->exists('respaldos_programas/' . $occupiedDestination));
+        $this->assertSame($newAttemptContent, Storage::disk('radioboss')->get($occupiedDestination));
+        $this->assertTrue((bool) $episode->enviado_radioboss);
+        $this->assertSame('radioboss_verified', $episode->radioboss_status);
+        $this->assertNotNull($episode->radioboss_verified_at);
 
-        // 2. El episodio NO se marca como entregado
+        // 2. El archivo previo fue trasladado de forma segura a respaldos_programas
+        $backupPath = 'respaldos_programas/' . $occupiedDestination;
+        $this->assertTrue(Storage::disk('radioboss')->exists($backupPath));
+        $this->assertSame($existingProtectedContent, Storage::disk('radioboss')->get($backupPath));
+    }
+
+    public function test_existing_destination_currently_playing_postpones_replacement_and_leaves_pending(): void
+    {
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        Log::spy();
+
+        $folder = '03.- MIERCOLES/22.- ESTACION ROCK';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'ESTACIÓN ROCK',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'MIERCOLES',
+            'hora_transmision' => '22:00:00',
+            'duracion_minutos' => 60,
+            'timezone' => 'America/Caracas',
+        ]);
+
+        Carbon::setTestNow(Carbon::parse('2026-11-11 14:00:00', 'America/Caracas'));
+
+        $occupiedDestination = $folder . '/045.- ESTACION ROCK 11-11-2026.mp3';
+        $existingProtectedContent = 'contenido-actualmente-en-reproduccion';
+        Storage::disk('radioboss')->put($occupiedDestination, $existingProtectedContent);
+
+        // Simular que el archivo está actualmente en reproducción en el player
+        $stateStore = app(\App\Support\RadioPlayerStateStore::class);
+        $stateStore->write([
+            'filename' => '045.- ESTACION ROCK 11-11-2026.mp3',
+            'title' => 'ESTACION ROCK 11-11-2026',
+        ]);
+
+        $r2Source = 'programas_procesados/estacion-rock/045.- ESTACIÓN ROCK 11-11-2026.mp3';
+        $newAttemptContent = 'contenido-nuevo-que-debe-posponerse';
+        Storage::disk('r2')->put($r2Source, $newAttemptContent);
+        $this->mockR2LocalPath($r2Source, $newAttemptContent);
+
+        $episode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'titulo_programa' => 'ESTACIÓN ROCK Ep 045',
+            'conductor' => 'Locutor Estación Rock',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+        ]);
+
+        $job = new UploadRadiobossJob($episode->id);
+        $job->handle();
+
+        $episode->refresh();
+
+        // 1. La entrega se pospone y queda pendiente para reintento tras finalizar la emisión
+        $this->assertSame('radioboss_pending', $episode->radioboss_status);
         $this->assertFalse((bool) $episode->enviado_radioboss);
-        $this->assertSame('radioboss_error', $episode->radioboss_status);
-        $this->assertNull($episode->radioboss_verified_at);
+        $this->assertStringContainsString('en reproducción en la emisora', (string) $episode->status_message);
 
-        // 3. status_message es breve (<= 255 caracteres) y el detalle completo queda registrado en el log y en radioboss_last_error
-        $this->assertNotNull($episode->status_message);
-        $this->assertLessThanOrEqual(255, mb_strlen($episode->status_message));
-        $this->assertStringContainsString('Entrega detenida para no sobrescribir un archivo existente', (string) $episode->radioboss_last_error);
-        $this->assertStringNotContainsString('ftp_admin_secret_key', (string) $episode->radioboss_last_error);
+        // 2. El archivo en emisión permanece intacto y no fue reemplazado
+        $this->assertSame($existingProtectedContent, Storage::disk('radioboss')->get($occupiedDestination));
+    }
 
-        Log::shouldHaveReceived('warning')->withArgs(function (string $message, array $context) use ($occupiedDestination): bool {
-            return str_contains($message, 'fallo la subida a RadioBOSS')
-                && ($context['remote_path'] ?? null) === $occupiedDestination
-                && str_contains((string) ($context['message'] ?? ''), 'Entrega detenida para no sobrescribir un archivo existente');
-        })->atLeast()->once();
+    public function test_older_retry_does_not_supersede_newer_verified_revision(): void
+    {
+        Storage::fake('radioboss');
+        Storage::fake('r2');
+        Log::spy();
+
+        $folder = '02.- MARTES/17.- METAL ADICTO';
+        $master = MasterProgram::factory()->create([
+            'nombre' => 'METAL ADICTO',
+            'ruta_ftp' => $folder,
+            'dia_transmision' => 'MARTES',
+            'hora_transmision' => '20:00:00',
+            'duracion_minutos' => 120,
+            'timezone' => 'America/Caracas',
+        ]);
+
+        Carbon::setTestNow(Carbon::parse('2026-11-24 14:00:00', 'America/Caracas'));
+
+        // Revisión posterior (ID mayor) ya verificada en RadioBOSS
+        $occupiedDestination = $folder . '/044.- METAL ADICTO 24-11-2026.mp3';
+        $newerVerifiedContent = 'contenido-revision-nueva-verificada';
+        Storage::disk('radioboss')->put($occupiedDestination, $newerVerifiedContent);
+
+        $newerEpisode = RadioProgram::create([
+            'master_program_id' => $master->id,
+            'numero_episodio' => 44,
+            'fecha_emision' => '2026-11-24',
+            'titulo_programa' => 'METAL ADICTO 44 (Revisión Nueva)',
+            'conductor' => 'Conductor Metal Adicto',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => 'programas_procesados/metal-adicto/044.- METAL ADICTO 24-11-2026.mp3',
+            'archivo_mp3_disk' => 'r2',
+            'enviado_radioboss' => true,
+            'radioboss_status' => 'radioboss_verified',
+            'radioboss_verified_at' => now(),
+            'delivery_status' => 'delivery_verified',
+        ]);
+
+        // Reintento antiguo de una revisión anterior (ID menor)
+        $olderRetryContent = 'contenido-reintento-antiguo-que-no-debe-desplazar';
+        $r2Source = 'programas_procesados/metal-adicto/044.- METAL ADICTO 24-11-2026_old.mp3';
+        Storage::disk('r2')->put($r2Source, $olderRetryContent);
+        $this->mockR2LocalPath($r2Source, $olderRetryContent);
+
+        $olderEpisode = RadioProgram::forceCreate([
+            'id' => $newerEpisode->id - 10,
+            'master_program_id' => $master->id,
+            'numero_episodio' => 44,
+            'fecha_emision' => '2026-11-24',
+            'titulo_programa' => 'METAL ADICTO 44 (Revisión Antigua)',
+            'conductor' => 'Conductor Metal Adicto',
+            'editorial_status' => RadioProgram::EDITORIAL_STATUS_APPROVED,
+            'editorial_version' => 1,
+            'editorial_approved_version' => 1,
+            'archivo_mp3' => $r2Source,
+            'archivo_mp3_disk' => 'r2',
+            'enviado_radioboss' => false,
+            'radioboss_status' => 'radioboss_pending',
+        ]);
+
+        $job = new UploadRadiobossJob($olderEpisode->id);
+        $job->handle();
+
+        $olderEpisode->refresh();
+
+        // 1. La emisión activa conserva el contenido de la revisión más nueva
+        $this->assertSame($newerVerifiedContent, Storage::disk('radioboss')->get($occupiedDestination));
+
+        // 2. El reintento antiguo se archivó en respaldos sin desplazar la emisión activa
+        $this->assertTrue((bool) $olderEpisode->enviado_radioboss);
+        $this->assertSame('radioboss_verified', $olderEpisode->radioboss_status);
+        $this->assertTrue((bool) ($olderEpisode->radioboss_metadata['archived_in_backup'] ?? false));
+        $this->assertSame($newerEpisode->id, $olderEpisode->radioboss_metadata['superseded_by_id'] ?? null);
+    }
     }
 
     private function mockR2LocalPath(string $key, ?string $content = null): void

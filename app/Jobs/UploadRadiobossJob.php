@@ -279,43 +279,78 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                 ]);
             }
 
-            // 5. Protección del destino final: si existe o no se puede comprobar, detener sin sobrescribir
+            // 5. Destino final y autorización de reemplazo seguro
             $archiveToRespaldo = (bool) config('services.radioboss.archive_to_respaldo', true);
-            $isSameEpisodeVersionUpgrade = (bool) $radioProgram->enviado_radioboss
-                && ($previousMeta['remote_path'] ?? '') === $destinationPath
-                && (int) ($previousMeta['version'] ?? 0) > 0
-                && (int) ($previousMeta['version'] ?? 0) < $currentVersion;
 
             try {
                 $destinationExists = (bool) $ftpDisk->exists($destinationPath);
                 if ($destinationExists) {
-                    if (! $archiveToRespaldo) {
-                        $filenameWithoutExt = pathinfo($baseName, PATHINFO_FILENAME);
-                        $ext = pathinfo($baseName, PATHINFO_EXTENSION);
-                        $versionedBaseName = "{$filenameWithoutExt}_v{$currentVersion}.{$ext}";
-                        $versionedPath = trim($folder, '/\\') . '/' . $versionedBaseName;
-                        $versionedPath = trim(str_replace(['//', '\\'], ['/', '/'], $versionedPath), '/');
+                    // 5.0 Idempotencia sobre destino: si el archivo en destino ya existe y coincide en tamaño y contenido
+                    $destinationPrecheck = $this->verifyRemoteUploadedFile(
+                        $ftpDisk,
+                        $destinationPath,
+                        $localSize,
+                        $localSha256,
+                        (int) $radioProgram->id,
+                        'destination_precheck'
+                    );
 
-                        if ($ftpDisk->exists($versionedPath)) {
-                            $this->markFailure(
-                                $radioProgram,
-                                "Destino existente en RadioBOSS ('{$versionedPath}'). Entrega detenida para no sobrescribir un archivo potencialmente en uso o en emisión.",
-                                $versionedPath
-                            );
+                    if ($destinationPrecheck['verified']) {
+                        Log::info('UploadRadiobossJob: archivo en destino ya coincide con el contenido local verificado.', [
+                            'program_id' => $radioProgram->id,
+                            'remote_path' => $destinationPath,
+                            'size' => $destinationPrecheck['size'],
+                            'sha256' => $localSha256,
+                        ]);
 
-                            return;
-                        }
-
-                        $destinationPath = $versionedPath;
-                    } elseif (! $isSameEpisodeVersionUpgrade) {
-                        $this->markFailure(
+                        $this->completeSuccessfulDelivery(
                             $radioProgram,
-                            "Destino existente en RadioBOSS ('{$destinationPath}'). Entrega detenida para no sobrescribir un archivo existente.",
-                            $destinationPath
+                            $currentVersion,
+                            $sourcePath,
+                            $disk,
+                            $destinationPath,
+                            $localSha256,
+                            $localSize,
+                            $folder,
+                            $attempt,
+                            $startedAt,
+                            $audit,
+                            $destinationPrecheck,
+                            $destinationPrecheck
                         );
 
                         return;
                     }
+
+                    // 5.1 Comprobar si el archivo en destino se encuentra en reproducción
+                    if ($this->isRemoteFileCurrentlyPlaying($baseName)) {
+                        $this->postponeForCurrentlyPlaying($radioProgram, $baseName, $audit);
+
+                        return;
+                    }
+
+                    // 5.2 Comprobar si estamos dentro de la ventana de protección de emisión en vivo
+                    $liveWindowPreCheck = $this->isInsideLiveBroadcastProtectionWindow($radioProgram);
+                    if ($liveWindowPreCheck !== null) {
+                        if ($liveWindowPreCheck['status'] === 'inside_window') {
+                            $this->postponeForLiveProtection($radioProgram, $liveWindowPreCheck, $audit);
+
+                            return;
+                        }
+
+                        if ($liveWindowPreCheck['status'] === 'insufficient_info') {
+                            $this->holdForInsufficientInfo($radioProgram, $liveWindowPreCheck['reason'], $audit);
+
+                            return;
+                        }
+                    }
+
+                    // 5.3 Reemplazo autorizado: el archivo existente será respaldado y sustituido de forma segura
+                    Log::info('UploadRadiobossJob: destino existente en RadioBOSS. Reemplazo seguro autorizado.', [
+                        'program_id' => $radioProgram->id,
+                        'destination_path' => $destinationPath,
+                        'incoming_size' => $localSize,
+                    ]);
                 }
             } catch (\RuntimeException $re) {
                 $this->markFailure($radioProgram, $this->sanitizeLogMessage($re->getMessage()), $destinationPath);
@@ -504,6 +539,17 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
 
                     return;
                 }
+            }
+
+            // 7.2.1 Comprobar si el archivo en destino entró en reproducción durante la subida a staging
+            if ($this->isRemoteFileCurrentlyPlaying($baseName)) {
+                if ($ftpDisk->exists($tempRemotePath)) {
+                    @$ftpDisk->delete($tempRemotePath);
+                }
+
+                $this->postponeForCurrentlyPlaying($freshProgram ?? $radioProgram, $baseName, $audit);
+
+                return;
             }
 
             // 7.3 Protección por programa: si este episodio está superado por una emisión posterior verificada,
@@ -797,14 +843,26 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
             }
 
             if ($destinationStillOccupied) {
-                $this->restoreBackedUpFiles($ftpDisk, $backedUpFiles);
+                // Respaldar archivo existente antes de la promoción definitiva
+                $backupRoot = (string) config('services.radioboss.backup_root', 'respaldos_programas');
+                $backupDir = trim($backupRoot, '/') . '/' . trim($folder, '/');
                 try {
-                    if ($ftpDisk->exists($tempRemotePath)) {
-                        @$ftpDisk->delete($tempRemotePath);
-                    }
+                    $ftpDisk->makeDirectory($backupDir);
                 } catch (Throwable) {
                 }
-                throw new \RuntimeException("Destino existente en RadioBOSS ('{$destinationPath}'). Promoción detenida para no sobrescribir el archivo existente.");
+                $backupTarget = $this->resolveAvailableBackupPath($ftpDisk, $backupDir, basename($destinationPath));
+                $movedToBackup = (bool) $ftpDisk->move($destinationPath, $backupTarget);
+                if (! $movedToBackup && ! $ftpDisk->exists($backupTarget)) {
+                    $this->restoreBackedUpFiles($ftpDisk, $backedUpFiles);
+                    try {
+                        if ($ftpDisk->exists($tempRemotePath)) {
+                            @$ftpDisk->delete($tempRemotePath);
+                        }
+                    } catch (Throwable) {
+                    }
+                    throw new \RuntimeException("Destino existente en RadioBOSS ('{$destinationPath}'). Fallo al respaldar el archivo existente antes de la promoción definitiva.");
+                }
+                $backedUpFiles[] = ['from' => $destinationPath, 'to' => $backupTarget];
             }
 
             $ftpDisk->makeDirectory($folder);
@@ -848,62 +906,22 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
             }
 
             // 9.1. Registro condicional atómico: verificar por segunda vez bajo lock antes de certificar radioboss_verified
-            $persistedSuccessfully = (bool) DB::transaction(function () use ($currentVersion, $sourcePath, $disk, $destinationPath, $localSha256, $localSize, $unrotatedLegacyFiles, $stagingVerification, $finalVerification, &$freshProgram): bool {
-                /** @var RadioProgram|null $finalLocked */
-                $finalLocked = RadioProgram::query()->lockForUpdate()->find($this->radioProgramId);
-                if (! $finalLocked instanceof RadioProgram) {
-                    return false;
-                }
-
-                $freshProgram = $finalLocked;
-                $finalVersion = (int) ($finalLocked->editorial_version ?: 1);
-                if ($finalVersion !== $currentVersion) {
-                    return false;
-                }
-
-                if ($finalLocked->editorial_status !== RadioProgram::EDITORIAL_STATUS_NOT_REQUIRED) {
-                    if (! $finalLocked->isEditorialApproved() || (int) $finalLocked->editorial_approved_version !== $currentVersion) {
-                        return false;
-                    }
-                }
-
-                if (trim((string) $finalLocked->archivo_mp3) !== $sourcePath || (string) ($finalLocked->archivo_mp3_disk ?: 'public') !== $disk) {
-                    return false;
-                }
-
-                $metaUpdates = [
-                    'status' => 'radioboss_verified',
-                    'remote_path' => $destinationPath,
-                    'local_path' => (string) $finalLocked->archivo_mp3,
-                    'content_sha256' => $localSha256,
-                    'version' => $currentVersion,
-                    'size' => $localSize,
-                    'staging_verification_method' => $stagingVerification['method'] ?? 'ftp_size',
-                    'final_verification_method' => $finalVerification['method'] ?? 'ftp_size',
-                    'verified_at' => now()->toIso8601String(),
-                ];
-
-                if (! empty($unrotatedLegacyFiles)) {
-                    $metaUpdates['unrotated_legacy_files'] = $unrotatedLegacyFiles;
-                    $metaUpdates['coexistence_notice'] = 'Episodio nuevo verificado en destino. Se conservó intacto el episodio anterior legado por restricción de nombres del servidor FTP.';
-                }
-
-                $statusMsg = empty($unrotatedLegacyFiles)
-                    ? 'RadioBOSS verificado. Archive.org pendiente.'
-                    : 'RadioBOSS verificado (coexistiendo con episodio legado). Archive.org pendiente.';
-
-                $finalLocked->forceFill([
-                    'enviado_radioboss' => true,
-                    'radioboss_status' => 'radioboss_verified',
-                    'radioboss_verified_at' => now(),
-                    'radioboss_finished_at' => now(),
-                    'radioboss_last_error' => null,
-                    'radioboss_metadata' => array_merge((array) ($finalLocked->radioboss_metadata ?? []), $metaUpdates),
-                    'status_message' => RadioProgram::sanitizeStatusMessage($statusMsg),
-                ])->saveQuietly();
-
-                return true;
-            });
+            $persistedSuccessfully = $this->completeSuccessfulDelivery(
+                $radioProgram,
+                $currentVersion,
+                $sourcePath,
+                $disk,
+                $destinationPath,
+                $localSha256,
+                $localSize,
+                $folder,
+                $attempt,
+                $startedAt,
+                $audit,
+                $stagingVerification,
+                $finalVerification,
+                $unrotatedLegacyFiles
+            );
 
             if (! $persistedSuccessfully) {
                 $this->restoreBackedUpFiles($ftpDisk, $backedUpFiles);
@@ -912,42 +930,7 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                     @$ftpDisk->delete($destinationPath);
                 }
 
-                $this->markSuperseded(
-                    $freshProgram ?? $radioProgram,
-                    $currentVersion,
-                    $destinationPath,
-                    "La entrega para la versión v{$currentVersion} fue invalidada antes de certificar la verificación (versión actual: v" . (int) (($freshProgram ?? $radioProgram)->editorial_version ?: 1) . ').'
-                );
-
                 return;
-            }
-
-            $completedAuditContext = [
-                'program_id' => $radioProgram->id,
-                'attempt' => $attempt,
-                'folder' => $folder,
-                'remote_path' => $destinationPath,
-                'size_bytes' => $finalSize,
-                'sha256' => $localSha256,
-                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
-            ];
-            if (! empty($unrotatedLegacyFiles)) {
-                $completedAuditContext['unrotated_legacy_files'] = $unrotatedLegacyFiles;
-            }
-
-            $audit->record($radioProgram, 'RADIOBOSS_UPLOAD_COMPLETED', 'La subida a RadioBOSS finalizó correctamente y fue verificada.', $completedAuditContext);
-
-            $audit->record($radioProgram, 'RADIOBOSS_VERIFIED', 'RadioBOSS quedó verificado con destino sin colisión.', [
-                'program_id' => $radioProgram->id,
-                'attempt' => $attempt,
-            ]);
-
-            PodcastRadiobossUploaded::dispatch($radioProgram->id);
-
-            $freshProgram = $radioProgram->fresh() ?? $radioProgram;
-            $archiveStatus = (string) ($freshProgram->archive_org_status ?? '');
-            if ($archiveStatus === 'archive_verified' || $archiveStatus === 'archive_skipped') {
-                PodcastDeliveryVerified::dispatch($freshProgram->id);
             }
         } catch (Throwable $exception) {
             if (isset($tempRemotePath) && isset($ftpDisk)) {
@@ -1634,6 +1617,28 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
             return null;
         }
 
+        // 1. Revisión posterior del mismo episodio (mismo programa maestro y mismo episodio/fecha, pero con ID mayor ya verificado)
+        $newerRevisionQuery = RadioProgram::query()
+            ->where('master_program_id', $radioProgram->master_program_id)
+            ->where('id', '>', $radioProgram->id)
+            ->where(function ($q): void {
+                $q->where('radioboss_status', 'radioboss_verified')
+                  ->orWhere('delivery_status', 'delivery_verified')
+                  ->orWhere('enviado_radioboss', true);
+            });
+
+        if ($radioProgram->numero_episodio) {
+            $newerRevisionQuery->where('numero_episodio', $radioProgram->numero_episodio);
+        } elseif ($radioProgram->fecha_emision) {
+            $newerRevisionQuery->where('fecha_emision', $radioProgram->fecha_emision);
+        }
+
+        $newerRevision = $newerRevisionQuery->orderByDesc('id')->first();
+        if ($newerRevision !== null) {
+            return $newerRevision;
+        }
+
+        // 2. Episodio posterior (fecha de emisión posterior o número de episodio posterior)
         $query = RadioProgram::query()
             ->where('master_program_id', $radioProgram->master_program_id)
             ->where('id', '!=', $radioProgram->id)
@@ -1652,6 +1657,221 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
         }
 
         return $query->orderByDesc('fecha_emision')->orderByDesc('numero_episodio')->first();
+    }
+
+    private function completeSuccessfulDelivery(
+        RadioProgram $radioProgram,
+        int $currentVersion,
+        string $sourcePath,
+        string $disk,
+        string $destinationPath,
+        string $localSha256,
+        int $localSize,
+        string $folder,
+        int $attempt,
+        float $startedAt,
+        PodcastPipelineAuditService $audit,
+        array $stagingVerification,
+        array $finalVerification,
+        array $unrotatedLegacyFiles = []
+    ): bool {
+        $freshProgram = null;
+        $persistedSuccessfully = (bool) DB::transaction(function () use ($currentVersion, $sourcePath, $disk, $destinationPath, $localSha256, $localSize, $unrotatedLegacyFiles, $stagingVerification, $finalVerification, &$freshProgram): bool {
+            /** @var RadioProgram|null $finalLocked */
+            $finalLocked = RadioProgram::query()->lockForUpdate()->find($this->radioProgramId);
+            if (! $finalLocked instanceof RadioProgram) {
+                return false;
+            }
+
+            $freshProgram = $finalLocked;
+            $finalVersion = (int) ($finalLocked->editorial_version ?: 1);
+            if ($finalVersion !== $currentVersion) {
+                return false;
+            }
+
+            if ($finalLocked->editorial_status !== RadioProgram::EDITORIAL_STATUS_NOT_REQUIRED) {
+                if (! $finalLocked->isEditorialApproved() || (int) $finalLocked->editorial_approved_version !== $currentVersion) {
+                    return false;
+                }
+            }
+
+            if (trim((string) $finalLocked->archivo_mp3) !== $sourcePath || (string) ($finalLocked->archivo_mp3_disk ?: 'public') !== $disk) {
+                return false;
+            }
+
+            $metaUpdates = [
+                'status' => 'radioboss_verified',
+                'remote_path' => $destinationPath,
+                'local_path' => (string) $finalLocked->archivo_mp3,
+                'content_sha256' => $localSha256,
+                'version' => $currentVersion,
+                'size' => $localSize,
+                'staging_verification_method' => $stagingVerification['method'] ?? 'ftp_size',
+                'final_verification_method' => $finalVerification['method'] ?? 'ftp_size',
+                'verified_at' => now()->toIso8601String(),
+            ];
+
+            if (! empty($unrotatedLegacyFiles)) {
+                $metaUpdates['unrotated_legacy_files'] = $unrotatedLegacyFiles;
+                $metaUpdates['coexistence_notice'] = 'Episodio nuevo verificado en destino. Se conservó intacto el episodio anterior legado por restricción de nombres del servidor FTP.';
+            }
+
+            $statusMsg = empty($unrotatedLegacyFiles)
+                ? 'RadioBOSS verificado. Archive.org pendiente.'
+                : 'RadioBOSS verificado (coexistiendo con episodio legado). Archive.org pendiente.';
+
+            $finalLocked->forceFill([
+                'enviado_radioboss' => true,
+                'radioboss_status' => 'radioboss_verified',
+                'radioboss_verified_at' => now(),
+                'radioboss_finished_at' => now(),
+                'radioboss_last_error' => null,
+                'radioboss_metadata' => array_merge((array) ($finalLocked->radioboss_metadata ?? []), $metaUpdates),
+                'status_message' => RadioProgram::sanitizeStatusMessage($statusMsg),
+            ])->saveQuietly();
+
+            return true;
+        });
+
+        if (! $persistedSuccessfully) {
+            $this->markSuperseded(
+                $freshProgram ?? $radioProgram,
+                $currentVersion,
+                $destinationPath,
+                "La entrega para la versión v{$currentVersion} fue invalidada antes de certificar la verificación (versión actual: v" . (int) (($freshProgram ?? $radioProgram)->editorial_version ?: 1) . ').'
+            );
+
+            return false;
+        }
+
+        $finalSize = $finalVerification['size'] ?? $localSize;
+        $completedAuditContext = [
+            'program_id' => $radioProgram->id,
+            'attempt' => $attempt,
+            'folder' => $folder,
+            'remote_path' => $destinationPath,
+            'size_bytes' => $finalSize,
+            'sha256' => $localSha256,
+            'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+        ];
+        if (! empty($unrotatedLegacyFiles)) {
+            $completedAuditContext['unrotated_legacy_files'] = $unrotatedLegacyFiles;
+        }
+
+        $audit->record($radioProgram, 'RADIOBOSS_UPLOAD_COMPLETED', 'La subida a RadioBOSS finalizó correctamente y fue verificada.', $completedAuditContext);
+
+        $audit->record($radioProgram, 'RADIOBOSS_VERIFIED', 'RadioBOSS quedó verificado con destino sin colisión.', [
+            'program_id' => $radioProgram->id,
+            'attempt' => $attempt,
+        ]);
+
+        PodcastRadiobossUploaded::dispatch($radioProgram->id);
+
+        $freshProgram = $radioProgram->fresh() ?? $radioProgram;
+        $archiveStatus = (string) ($freshProgram->archive_org_status ?? '');
+        if ($archiveStatus === 'archive_verified' || $archiveStatus === 'archive_skipped') {
+            PodcastDeliveryVerified::dispatch($freshProgram->id);
+        }
+
+        return true;
+    }
+
+    public function isRemoteFileCurrentlyPlaying(string $baseName): bool
+    {
+        try {
+            $store = app(\App\Support\RadioPlayerStateStore::class);
+            $rawState = $store->read();
+            if (! empty($rawState)) {
+                $searchTerms = array_filter([
+                    strtolower(basename($baseName)),
+                    strtolower((string) pathinfo($baseName, PATHINFO_FILENAME)),
+                ]);
+
+                $checkFields = ['filename', 'file', 'path', 'song', 'title', 'current_track'];
+                foreach ($checkFields as $field) {
+                    $val = strtolower((string) ($rawState[$field] ?? ''));
+                    if ($val === '') {
+                        continue;
+                    }
+                    foreach ($searchTerms as $term) {
+                        if ($term !== '' && str_contains($val, $term)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            $service = app(\App\Services\RadioPlayerService::class);
+            $status = $service->currentState();
+            $trackTitle = strtolower((string) ($status['track']['title'] ?? ''));
+            $trackArtist = strtolower((string) ($status['track']['artist'] ?? ''));
+            $baseStem = strtolower((string) pathinfo($baseName, PATHINFO_FILENAME));
+            if ($baseStem !== '' && (str_contains($trackTitle, $baseStem) || str_contains($trackArtist, $baseStem))) {
+                return true;
+            }
+        } catch (Throwable $e) {
+            Log::debug('UploadRadiobossJob: error comprobando si el archivo está en reproducción.', [
+                'error' => $this->sanitizeLogMessage($e->getMessage()),
+            ]);
+        }
+
+        return false;
+    }
+
+    private function postponeForCurrentlyPlaying(RadioProgram $radioProgram, string $baseName, PodcastPipelineAuditService $audit): void
+    {
+        $delaySeconds = 300;
+        $retryAt = now()->addSeconds($delaySeconds)->toIso8601String();
+        $currentPostponements = (int) ($radioProgram->radioboss_metadata['postponement_count'] ?? 0) + 1;
+
+        if ($currentPostponements > self::MAX_POSTPONEMENTS) {
+            $msg = 'Se superó la política máxima de aplazamientos (' . self::MAX_POSTPONEMENTS . ") para el programa durante la reproducción de '{$baseName}'.";
+            $this->markFailure($radioProgram, $msg);
+            $audit->record($radioProgram, 'ERROR', $msg, [
+                'program_id' => $radioProgram->id,
+                'postponement_count' => $currentPostponements,
+            ]);
+
+            return;
+        }
+
+        $msg = "El archivo '{$baseName}' se encuentra actualmente en reproducción en la emisora. Reemplazo aplazado {$delaySeconds}s hasta finalizar la emisión (reintento programado para: {$retryAt}).";
+
+        Log::info('UploadRadiobossJob: reemplazo aplazado por archivo en reproducción.', [
+            'program_id' => $radioProgram->id,
+            'file' => $baseName,
+            'delay_seconds' => $delaySeconds,
+            'retry_at' => $retryAt,
+            'postponement_count' => $currentPostponements,
+        ]);
+
+        RadioProgram::withoutEvents(function () use ($radioProgram, $delaySeconds, $retryAt, $currentPostponements, $msg): void {
+            $radioProgram->forceFill([
+                'radioboss_status' => 'radioboss_pending',
+                'delivery_status' => 'delivery_partial',
+                'radioboss_last_error' => null,
+                'status_message' => RadioProgram::sanitizeStatusMessage($msg),
+                'radioboss_metadata' => array_merge((array) ($radioProgram->radioboss_metadata ?? []), [
+                    'status' => 'radioboss_postponed',
+                    'postponed_until' => $retryAt,
+                    'postponed_at' => now()->toIso8601String(),
+                    'reason' => 'file_currently_playing',
+                    'retry_delay_seconds' => $delaySeconds,
+                    'postponement_count' => $currentPostponements,
+                ]),
+            ])->saveQuietly();
+        });
+
+        $audit->record($radioProgram, 'RADIOBOSS_DELIVERY_POSTPONED', $msg, [
+            'program_id' => $radioProgram->id,
+            'delay_seconds' => $delaySeconds,
+            'retry_at' => $retryAt,
+            'postponement_count' => $currentPostponements,
+        ]);
+
+        if ($this->job) {
+            $this->release($delaySeconds);
+        }
     }
 
     public static function extractEpisodeIdentity(string $filename): array
