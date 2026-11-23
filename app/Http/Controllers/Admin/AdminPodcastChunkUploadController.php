@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -19,11 +20,12 @@ final class AdminPodcastChunkUploadController extends Controller
             'upload_id' => ['required', 'string', 'regex:/^[a-zA-Z0-9_\-]+$/'],
             'chunk_index' => ['required', 'integer', 'min:0'],
             'total_chunks' => ['required', 'integer', 'min:1'],
-            'file' => ['required', 'file', 'max:51200'], // 50 MB max per chunk
+            'file' => ['required', 'file', 'max:10240'], // 10 MB máx por fragmento (cliente envía 4 MB)
         ]);
 
         $uploadId = (string) $request->input('upload_id');
         $chunkIndex = (int) $request->input('chunk_index');
+        $totalChunks = (int) $request->input('total_chunks');
 
         $chunkDir = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, storage_path("app/podcast-chunks/{$uploadId}"));
         File::ensureDirectoryExists($chunkDir, 0777);
@@ -40,7 +42,7 @@ final class AdminPodcastChunkUploadController extends Controller
         try {
             $chunkFile->move($chunkDir, $targetName);
         } catch (\Symfony\Component\HttpFoundation\File\Exception\FileException $e) {
-            // Fallback para entornos Windows donde is_writable() sobre directorios reporta false
+            // Fallback para entornos donde is_writable() sobre directorios reporta false
             $sourcePath = $chunkFile->getPathname();
             $targetPath = $chunkDir . DIRECTORY_SEPARATOR . $targetName;
             if (is_file($sourcePath) && (@rename($sourcePath, $targetPath) || @copy($sourcePath, $targetPath))) {
@@ -49,6 +51,12 @@ final class AdminPodcastChunkUploadController extends Controller
                 throw $e;
             }
         }
+
+        Log::info('Podcast chunk received', [
+            'upload_id' => $uploadId,
+            'chunk_index' => $chunkIndex,
+            'total_chunks' => $totalChunks,
+        ]);
 
         return response()->json([
             'status' => 'chunk_uploaded',
@@ -122,6 +130,14 @@ final class AdminPodcastChunkUploadController extends Controller
 
         fclose($outHandle);
         @rmdir($chunkDir);
+
+        $finalSize = file_exists($finalFullPath) ? filesize($finalFullPath) : 0;
+        Log::info('Podcast chunks assembled successfully', [
+            'upload_id' => $uploadId,
+            'chunked_key' => $finalRelPath,
+            'total_chunks' => $totalChunks,
+            'bytes' => $finalSize,
+        ]);
 
         return response()->json([
             'status' => 'completed',

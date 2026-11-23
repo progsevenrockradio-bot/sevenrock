@@ -267,32 +267,48 @@ final class PodcastUploadController extends Controller
         ]);
 
         $master = MasterProgram::query()->findOrFail((int) $data['master_program_id']);
-        
-        $isR2 = $request->filled('r2_key');
-        $isChunked = $request->filled('chunked_key');
 
-        if ($isR2) {
-            $rawPath = trim((string) $request->input('r2_key'));
-            $disk = 'r2';
-        } elseif ($isChunked) {
-            $chunkedKey = trim((string) $request->input('chunked_key'));
-            if (! Storage::disk('public')->exists($chunkedKey)) {
-                return back()->withInput()->withErrors(['archivo_mp3' => 'El archivo subido por partes no se encuentra en el servidor.']);
-            }
-            $rawPath = $chunkedKey;
-            $disk = 'public';
-        } else {
-            $rawFileName = $this->buildRawFileName($data);
-            $rawPath = $this->storeRawMp3(
-                $request->file('archivo_mp3'),
-                $rawFileName,
-            );
-            $disk = 'public';
-
-            if ($rawPath === '') {
-                return back()->withInput()->withErrors(['archivo_mp3' => 'No se pudo guardar el archivo localmente.']);
-            }
+        // Protección contra transferencias concurrentes del mismo programa
+        $programLock = Cache::lock("podcast_upload_master_{$master->id}", 60);
+        if (! $programLock->get()) {
+            return back()->withInput()->withErrors([
+                'archivo_mp3' => 'Ya hay una subida en curso para este programa. Espera a que finalice antes de iniciar otra.',
+            ]);
         }
+
+        try {
+            $isR2 = $request->filled('r2_key');
+            $isChunked = $request->filled('chunked_key');
+
+            if ($isR2) {
+                $rawPath = trim((string) $request->input('r2_key'));
+                $disk = 'r2';
+            } elseif ($isChunked) {
+                $chunkedKey = trim((string) $request->input('chunked_key'));
+                if (! Storage::disk('public')->exists($chunkedKey)) {
+                    return back()->withInput()->withErrors(['archivo_mp3' => 'El archivo subido por partes no se encuentra en el servidor.']);
+                }
+                $rawPath = $chunkedKey;
+                $disk = 'public';
+            } else {
+                $rawFileName = $this->buildRawFileName($data);
+                $rawPath = $this->storeRawMp3(
+                    $request->file('archivo_mp3'),
+                    $rawFileName,
+                );
+                $disk = 'public';
+
+                if ($rawPath === '') {
+                    return back()->withInput()->withErrors(['archivo_mp3' => 'No se pudo guardar el archivo localmente.']);
+                }
+            }
+
+            // Protección contra subidas duplicadas del mismo archivo exacto
+            if ($rawPath !== '' && RadioProgram::query()->where('archivo_mp3', $rawPath)->exists()) {
+                return back()->withInput()->withErrors([
+                    'archivo_mp3' => 'Este archivo de audio ya fue subido y asignado a una emisión anteriormente.',
+                ]);
+            }
 
         $durationSeconds = 0;
         $realFileDurationSeconds = null;
@@ -330,6 +346,20 @@ final class PodcastUploadController extends Controller
         $manualEpisodeNumber = isset($data['numero_episodio']) && $data['numero_episodio'] !== ''
             ? max(1, (int) $data['numero_episodio'])
             : null;
+
+        // Protección contra duplicados por número de episodio en el mismo programa
+        if ($manualEpisodeNumber !== null) {
+            $existingEpisode = RadioProgram::query()
+                ->where('master_program_id', $master->id)
+                ->where('numero_episodio', $manualEpisodeNumber)
+                ->first();
+            if ($existingEpisode) {
+                return back()->withInput()->withErrors([
+                    'numero_episodio' => "El episodio #{$manualEpisodeNumber} de {$master->nombre} ya existe en el sistema.",
+                ]);
+            }
+        }
+
         $syncArchiveOrg = $request->boolean('sync_archive_org', $master->sync_archive_org ?? true);
         $pipelineAction = strtolower(trim((string) $request->input('pipeline_action', 'process')));
         $shouldProcessPipeline = $pipelineAction !== 'save';
@@ -413,15 +443,18 @@ final class PodcastUploadController extends Controller
             $message = 'Episodio guardado como borrador. El pipeline no se ha iniciado.';
         }
 
-        if ($request->expectsJson()) {
-            return response()->json([
-                'status' => $message,
-                'redirect_url' => route('admin.podcast-uploads.index'),
-                'pipeline_action' => $shouldProcessPipeline ? 'process' : 'save',
-            ], $shouldProcessPipeline ? 202 : 201);
-        }
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => $message,
+                    'redirect_url' => route('admin.podcast-uploads.index'),
+                    'pipeline_action' => $shouldProcessPipeline ? 'process' : 'save',
+                ], $shouldProcessPipeline ? 202 : 201);
+            }
 
-        return back()->with('status', $message);
+            return back()->with('status', $message);
+        } finally {
+            $programLock->release();
+        }
     }
 
     public function retry(Request $request, RadioProgram $radioProgram): RedirectResponse

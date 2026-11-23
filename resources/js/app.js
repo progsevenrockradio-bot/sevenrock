@@ -266,6 +266,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
     dateSuggestion: '',
     dateSuggestionType: '',
     uploading: false,
+    canRetry: false,
     progress: 0,
     progressLabel: '0%',
     statusMessage: '',
@@ -275,6 +276,15 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
     downloading: false,
     uploadEtaLabel: '',
     fileSizeLabel: '',
+    originalR2Error: null,
+    attemptId: null,
+    attemptStartTime: null,
+    stallWatchdogTimer: null,
+    activeXhr: null,
+    activeAbortController: null,
+    selectedFile: null,
+    formToSubmit: null,
+    pipelineAction: 'process',
     estimatedUploadRateBytesPerSec: Number(options.estimatedUploadRateBytesPerSec ?? 8 * 1024 * 1024),
     fieldLabelMap: {
         master_program_id: 'Programa maestro',
@@ -287,18 +297,124 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         biografia_invitado: 'Invitado',
         resena: 'Descripción / resumen',
     },
+    logEvent(phase, event, extra = {}) {
+        const now = new Date().toISOString();
+        const duration = this.attemptStartTime ? Math.round(performance.now() - this.attemptStartTime) : 0;
+        console.log(`[AudioUpload] [${now}] [${this.attemptId || 'none'}] Phase: ${phase} | Event: ${event} | Duration: ${duration}ms`, extra);
+    },
+    setPhase(phase, detail = '') {
+        this.phaseLabel = phase;
+        this.phaseDetailLabel = detail;
+        this.logEvent(phase, 'phase_change', { detail });
+    },
+    startStallWatchdog(onStall) {
+        this.clearStallWatchdog();
+        this.stallWatchdogTimer = setTimeout(() => {
+            this.logEvent(this.phaseLabel, 'stall_detected', { timeout_ms: 45000 });
+            onStall();
+        }, 45000);
+    },
+    touchProgress() {
+        if (this.stallWatchdogTimer) {
+            clearTimeout(this.stallWatchdogTimer);
+            this.stallWatchdogTimer = setTimeout(() => {
+                this.logEvent(this.phaseLabel, 'stall_detected', { timeout_ms: 45000 });
+                this.handleStall();
+            }, 45000);
+        }
+    },
+    clearStallWatchdog() {
+        if (this.stallWatchdogTimer) {
+            clearTimeout(this.stallWatchdogTimer);
+            this.stallWatchdogTimer = null;
+        }
+    },
+    handleStall() {
+        this.clearStallWatchdog();
+        if (!this.uploading) return;
+
+        if (this.phaseLabel === 'Transfiriendo' && this.uppy && !this.originalR2Error) {
+            this.logEvent('Transfiriendo', 'r2_stalled_falling_back_to_chunks');
+            this.originalR2Error = {
+                message: 'Falta de progreso en Cloudflare R2 (más de 45s sin avance en la transferencia).',
+                phase: 'r2_transfer',
+                timestamp: new Date().toISOString(),
+            };
+            try {
+                this.uppy.cancelAll();
+            } catch (e) {}
+
+            const file = this.selectedFile;
+            if (file) {
+                this.uploadByChunks(file);
+            }
+        } else {
+            this.uploading = false;
+            this.canRetry = true;
+            this.phaseLabel = 'Error';
+            this.phaseDetailLabel = 'La transferencia se detuvo por falta de respuesta del servidor (tiempo de espera agotado).';
+            this.statusMessage = 'La conexión se interrumpió por falta de progreso. Puedes pulsar «Reintentar» para reanudar.';
+            this.errorMessages = ['Falta de respuesta del servidor durante la transferencia (45s sin datos).'];
+            this.uploadEtaLabel = '';
+        }
+    },
+    cancelUpload() {
+        if (!this.uploading) return;
+        this.logEvent(this.phaseLabel, 'upload_cancelled_by_user');
+        this.clearStallWatchdog();
+
+        if (this.activeAbortController) {
+            try { this.activeAbortController.abort(); } catch (e) {}
+            this.activeAbortController = null;
+        }
+        if (this.activeXhr) {
+            try { this.activeXhr.abort(); } catch (e) {}
+            this.activeXhr = null;
+        }
+        if (this.uppy) {
+            try { this.uppy.cancelAll(); } catch (e) {}
+        }
+
+        this.uploading = false;
+        this.canRetry = true;
+        this.phaseLabel = 'Cancelado';
+        this.phaseDetailLabel = 'Subida cancelada por el usuario.';
+        this.statusMessage = 'Subida cancelada. El archivo seleccionado se conserva. Pulsa «Reintentar» cuando desees reanudar.';
+        this.uploadEtaLabel = '';
+    },
+    retryUpload() {
+        if (this.uploading) return;
+        this.logEvent('Retry', 'upload_retried_by_user');
+        const form = this.formToSubmit || document.querySelector('form[action*="podcast-uploads"]');
+        if (!form) return;
+
+        this.errorMessages = [];
+        this.originalR2Error = null;
+        this.canRetry = false;
+        this.progress = 0;
+        this.progressLabel = '0%';
+
+        this.submitFormProcess(form, this.pipelineAction || 'process');
+    },
     engancharFichero(event) {
         const file = event.target.files?.[0];
-        if (!file || !this.uppy) return;
-        this.uppy.cancelAll();
-        try {
-            this.uppy.addFile({
-                name: file.name,
-                type: file.type || 'audio/mpeg',
-                data: file,
-            });
-        } catch (e) {
-            /* duplicado: ignorar */
+        if (!file) return;
+        this.selectedFile = file;
+        this.canRetry = false;
+        this.errorMessages = [];
+        this.originalR2Error = null;
+
+        if (this.uppy) {
+            this.uppy.cancelAll();
+            try {
+                this.uppy.addFile({
+                    name: file.name,
+                    type: file.type || 'audio/mpeg',
+                    data: file,
+                });
+            } catch (e) {
+                /* duplicado: ignorar */
+            }
         }
         this.updateUploadEstimate(file);
     },
@@ -314,7 +430,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                 autoProceed: false,
                 restrictions: {
                     maxNumberOfFiles: 1,
-                    allowedFileTypes: ['audio/mpeg', 'audio/mp3'],
+                    allowedFileTypes: ['audio/mpeg', 'audio/mp3', 'audio/x-mp3', 'audio/mpg', 'audio/mpeg3', '.mp3'],
                 }
             });
 
@@ -325,8 +441,15 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                     const csrfToken = document.querySelector('input[name="_token"]')?.value 
                         || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
                         || '';
+
+                    this.activeAbortController = new AbortController();
+                    const presignTimeout = setTimeout(() => {
+                        this.activeAbortController?.abort();
+                    }, 30000);
+
                     return fetch('/admin/podcast-uploads/presign', {
                         method: 'POST',
+                        signal: this.activeAbortController.signal,
                         headers: {
                             'Content-Type': 'application/json',
                             'Accept': 'application/json',
@@ -335,27 +458,52 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                         body: JSON.stringify({
                             filename: file.name,
                             contentType: file.type || 'audio/mpeg',
+                            attempt_id: this.attemptId,
                         }),
                     })
                     .then((response) => {
+                        clearTimeout(presignTimeout);
                         if (!response.ok) {
-                            throw new Error('Failed to generate presigned URL');
+                            return response.json().then(errData => {
+                                throw new Error(errData?.error || `Error HTTP ${response.status} en autorización`);
+                            }).catch(() => {
+                                throw new Error(`Fallo de autorización HTTP ${response.status}`);
+                            });
                         }
                         return response.json();
                     })
                     .then((data) => {
                         this.uppy.setFileMeta(file.id, { r2Key: data.key });
+                        const safeHeaders = {};
+                        if (data.headers && typeof data.headers === 'object') {
+                            for (const [hk, hv] of Object.entries(data.headers)) {
+                                if (hk.toLowerCase() !== 'host') {
+                                    safeHeaders[hk] = hv;
+                                }
+                            }
+                        }
+                        safeHeaders['Content-Type'] = file.type || 'audio/mpeg';
+
+                        this.setPhase('Transfiriendo', `Subiendo archivo directamente a Cloudflare R2 (~${this.formatBytes(file.size)})...`);
+                        this.startStallWatchdog(() => this.handleStall());
+
                         return {
                             url: data.url,
-                            method: data.method,
-                            headers: data.headers,
-                            fields: data.fields,
+                            method: data.method || 'PUT',
+                            headers: safeHeaders,
+                            fields: data.fields || {},
                         };
+                    })
+                    .catch((err) => {
+                        clearTimeout(presignTimeout);
+                        this.logEvent('Preparando subida', 'presign_failed', { message: err.message });
+                        throw err;
                     });
                 },
             });
 
             this.uppy.on('upload-progress', (file, progress) => {
+                this.touchProgress();
                 const percent = Math.min(100, Math.max(0, Math.round((progress.bytesUploaded / progress.bytesTotal) * 100)));
                 this.progress = percent;
                 this.progressLabel = `${percent}%`;
@@ -370,23 +518,38 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
             });
 
             this.uppy.on('upload-success', (file, response) => {
-                const r2Key = file.meta.r2Key;
+                this.clearStallWatchdog();
+                this.logEvent('Transfiriendo', 'r2_upload_success', { r2Key: file.meta?.r2Key });
+                const r2Key = file.meta?.r2Key;
+                this.setPhase('Confirmando archivo', 'Registrando episodio y verificando archivo en el servidor...');
                 this.submitFormWithR2Key(r2Key);
             });
 
             this.uppy.on('upload-error', (file, error, response) => {
+                this.clearStallWatchdog();
+                this.logEvent('Transfiriendo', 'r2_upload_error', { message: error?.message });
                 console.warn('Uppy R2 upload error, falling back to chunked upload:', error);
-                const rawFile = file?.data;
+
+                if (!this.originalR2Error) {
+                    this.originalR2Error = {
+                        message: error?.message || 'Error de conexión con Cloudflare R2.',
+                        phase: 'r2_upload',
+                        timestamp: new Date().toISOString(),
+                    };
+                }
+
+                const rawFile = file?.data || this.selectedFile;
                 if (rawFile && rawFile instanceof Blob) {
-                    this.statusMessage = 'Subida directa a R2 no disponible. Iniciando subida de seguridad por partes...';
-                    this.phaseLabel = 'Subida alternativa';
-                    this.phaseDetailLabel = 'Transfiriendo por fragmentos de seguridad para evitar error 413...';
+                    this.statusMessage = 'Subida directa a R2 interrumpida. Iniciando subida de seguridad por partes de 4 MB...';
+                    this.setPhase('Transfiriendo', `Subida por fragmentos de 4 MB (Fallo R2: ${this.originalR2Error.message})`);
                     this.uploadByChunks(rawFile);
                 } else {
                     this.uploading = false;
+                    this.canRetry = true;
                     this.phaseLabel = 'Error';
                     this.phaseDetailLabel = 'La subida a Cloudflare R2 falló.';
                     this.statusMessage = 'La subida falló: ' + (error?.message || 'Error de red.');
+                    this.errorMessages = [error?.message || 'Error de red en Cloudflare R2.'];
                     this.uploadEtaLabel = '';
                 }
             });
@@ -483,6 +646,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         const firstField = Object.keys(validationErrors ?? {})[0] ?? '';
 
         this.uploading = false;
+        this.canRetry = true;
         this.progress = 0;
         this.progressLabel = '0%';
         this.phaseLabel = 'Validando';
@@ -505,23 +669,24 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         if (label.includes('valid')) {
             return 'border-[#3b3b3b] bg-[rgba(255,255,255,.03)] text-[#c7c7c7]';
         }
-
-        if (label.includes('subiend') || label.includes('transfer')) {
+        if (label.includes('preparando')) {
+            return 'border-sky-800/50 bg-sky-950/30 text-sky-300';
+        }
+        if (label.includes('transf') || label.includes('subiend')) {
             return 'border-[#5a4315] bg-[rgba(118,86,22,.18)] text-[#f2d89b]';
         }
-
+        if (label.includes('confirmando') || label.includes('guardando') || label.includes('uniendo')) {
+            return 'border-indigo-800/50 bg-indigo-950/30 text-indigo-300';
+        }
         if (label.includes('sincronizando')) {
             return 'border-[#31553f] bg-[rgba(30,76,49,.2)] text-[#b8e2c7]';
         }
-
-        if (label.includes('procesando') || label.includes('preparando')) {
-            return 'border-[#3f4f2c] bg-[rgba(60,82,35,.2)] text-[#d5e7aa]';
+        if (label.includes('cancel')) {
+            return 'border-zinc-700 bg-zinc-800/50 text-zinc-300';
         }
-
         if (label.includes('error') || label.includes('fall')) {
             return 'border-[#5d2b2b] bg-[rgba(92,35,35,.28)] text-[#ffd0d0]';
         }
-
         if (label.includes('listo') || label.includes('complet')) {
             return 'border-[#2d5440] bg-[rgba(29,72,45,.18)] text-[#c8ead6]';
         }
@@ -534,128 +699,39 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         if (phase.includes('valid')) {
             return 'Validando campos obligatorios antes de iniciar la carga.';
         }
-
-        if (phase.includes('subiend')) {
-            return 'Subiendo el MP3 al servidor de la radio.';
+        if (phase.includes('preparando')) {
+            return 'Preparando la subida y autorizando con el servidor.';
         }
-
+        if (phase.includes('transf') || phase.includes('subiend')) {
+            return 'Transfiriendo el archivo de audio MP3.';
+        }
+        if (phase.includes('confirmando') || phase.includes('guardando')) {
+            return 'Confirmando archivo y registrando en la base de datos.';
+        }
         if (phase.includes('procesando')) {
             return 'Escribiendo metadatos y enviando a RadioBOSS.';
         }
-
         if (phase.includes('sincronizando')) {
             return 'Sincronizando el episodio con Archive.org.';
         }
-
-        if (phase.includes('preparando')) {
-            return 'La transferencia terminó. Preparando la descarga local.';
-        }
-
-        if (phase.includes('error')) {
-            return 'La operación se detuvo por un problema de red, validación o servidor.';
-        }
-
-        if (phase.includes('listo')) {
-            return 'Todo quedó listo para iniciar una nueva carga.';
+        if (phase.includes('cancel')) {
+            return 'La transferencia fue detenida por el usuario.';
         }
 
         return '';
     },
-    formatBytes(bytes) {
-        const size = Number(bytes ?? 0);
-        if (!Number.isFinite(size) || size <= 0) {
-            return '';
-        }
-
-        const units = ['B', 'KB', 'MB', 'GB'];
-        let value = size;
-        let unitIndex = 0;
-
-        while (value >= 1024 && unitIndex < units.length - 1) {
-            value /= 1024;
-            unitIndex += 1;
-        }
-
-        const precision = unitIndex === 0 ? 0 : value >= 10 ? 1 : 2;
-
-        return `${value.toFixed(precision)} ${units[unitIndex]}`;
-    },
-    formatDuration(seconds) {
-        const total = Math.max(0, Math.ceil(Number(seconds ?? 0)));
-        const hrs = Math.floor(total / 3600);
-        const mins = Math.floor((total % 3600) / 60);
-        const secs = total % 60;
-
-        if (hrs > 0) {
-            return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-        }
-
-        return `${mins}:${String(secs).padStart(2, '0')}`;
-    },
-    updateUploadEstimate(file) {
-        const size = Number(file?.size ?? 0);
-        this.fileSizeLabel = this.formatBytes(size);
-
-        if (size <= 0) {
-            this.uploadEtaLabel = '';
-            return;
-        }
-
-        const seconds = Math.max(1, Math.ceil(size / Math.max(1, this.estimatedUploadRateBytesPerSec)));
-        this.uploadEtaLabel = `Estimado de carga: ~${this.formatDuration(seconds)}`;
-    },
-    validateBeforeSubmit(form) {
-        const errors = [];
-        const masterProgram = form.querySelector(`[data-day-panel="${this.activeDay}"] select[name="master_program_id"]`);
-        const title = form.querySelector('[name="live_title"]');
-        const date = form.querySelector('[name="fecha_emision"]');
-        const audioInput = form.querySelector('[name="archivo_mp3"]');
-        const audioFile = audioInput?.files?.[0] ?? null;
-
-        if (!masterProgram?.value) {
-            errors.push('Programa maestro: selecciona un programa.');
-        }
-
-        if (!String(title?.value ?? '').trim()) {
-            errors.push('Título del episodio: este campo es obligatorio.');
-        }
-
-        if (!String(date?.value ?? '').trim()) {
-            errors.push('Fecha de emisión: selecciona una fecha.');
-        }
-
-        if (!audioFile) {
-            errors.push('Archivo MP3: selecciona un archivo antes de continuar.');
-        } else if (audioFile.size <= 0) {
-            errors.push('Archivo MP3: el archivo seleccionado no es válido.');
-        } else if (audioFile.size > 512000 * 1024) {
-            errors.push('Archivo MP3: no puede superar 500 MB.');
-        }
-
-        if (errors.length > 0) {
-            this.showValidationIssues(form, {
-                master_program_id: !masterProgram?.value ? ['Debes seleccionar un programa maestro.'] : [],
-                live_title: !String(title?.value ?? '').trim() ? ['El título del episodio es obligatorio.'] : [],
-                fecha_emision: !String(date?.value ?? '').trim() ? ['La fecha de emisión es obligatoria.'] : [],
-                archivo_mp3: !audioFile ? ['Debes seleccionar un archivo MP3.'] : [],
-            });
-
-            return null;
-        }
-
-        this.updateUploadEstimate(audioFile);
-
-        return audioFile;
-    },
     formatValidationErrors(validationErrors = {}) {
-        return Object.entries(validationErrors).flatMap(([field, messages]) => {
-            const label = this.fieldLabelMap[field] ?? field.replaceAll('_', ' ');
-            const normalizedMessages = Array.isArray(messages) ? messages : [messages];
+        return Object.entries(validationErrors).flatMap(([field, errors]) => {
+            const label = this.fieldLabelMap[field] ?? field;
 
-            return normalizedMessages
+            return (Array.isArray(errors) ? errors : [errors])
                 .filter(Boolean)
                 .map((message) => {
                     const text = String(message).trim();
+
+                    if (field === 'master_program_id' && /required/i.test(text)) {
+                        return `${label}: debes seleccionar un programa maestro.`;
+                    }
 
                     if (field === 'live_title' && /required/i.test(text)) {
                         return `${label}: este campo es obligatorio.`;
@@ -673,6 +749,37 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                 });
         });
     },
+    validateBeforeSubmit(form) {
+        const issues = {};
+
+        const programId = form.querySelector('[name="master_program_id"]')?.value?.trim?.() ?? '';
+        if (! programId) {
+            issues.master_program_id = ['Debes seleccionar un programa maestro.'];
+        }
+
+        const liveTitle = form.querySelector('[name="live_title"]')?.value?.trim?.() ?? '';
+        if (! liveTitle) {
+            issues.live_title = ['El título del episodio es obligatorio.'];
+        }
+
+        const fechaEmision = form.querySelector('[name="fecha_emision"]')?.value?.trim?.() ?? '';
+        if (! fechaEmision) {
+            issues.fecha_emision = ['La fecha de emisión es obligatoria.'];
+        }
+
+        const input = form.querySelector('input[name="archivo_mp3"]');
+        const file = input?.files?.[0] ?? this.selectedFile;
+        if (! file) {
+            issues.archivo_mp3 = ['Debes adjuntar el archivo MP3 del programa.'];
+        }
+
+        if (Object.keys(issues).length > 0) {
+            this.showValidationIssues(form, issues);
+            return null;
+        }
+
+        return file;
+    },
     submit(event) {
         const form = event?.target;
         if (!form || this.uploading) {
@@ -684,11 +791,15 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         const action = String(submitter?.value ?? 'process').toLowerCase();
         const pipelineAction = action === 'save' ? 'save' : 'process';
 
+        this.submitFormProcess(form, pipelineAction);
+    },
+    submitFormProcess(form, pipelineAction) {
         this.phaseLabel = 'Validando';
         const audioFile = this.validateBeforeSubmit(form);
         if (!audioFile) {
             return;
         }
+        this.selectedFile = audioFile;
 
         const pipelineInput = form.querySelector('input[name="pipeline_action"]');
         if (pipelineInput) {
@@ -698,22 +809,26 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         }
 
         this.uploading = true;
+        this.canRetry = false;
         this.downloading = false;
         this.progress = 0;
         this.progressLabel = '0%';
-        this.phaseLabel = 'Subiendo';
-        this.phaseDetailLabel = this.phaseDetailText();
-        this.statusMessage = 'Subiendo archivo...';
+        this.attemptId = 'att_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+        this.attemptStartTime = performance.now();
+        this.originalR2Error = null;
+
+        this.setPhase('Preparando subida', 'Verificando archivo y solicitando autorización...');
+        this.statusMessage = 'Preparando subida...';
         this.errorMessages = [];
         this.uploadEtaLabel = this.uploadEtaLabel || 'Calculando tiempo estimado...';
 
         this.pipelineAction = pipelineAction;
         this.formToSubmit = form;
 
-        // T2: Rescate - Asegurar que el archivo seleccionado esté cargado en Uppy
+        // Asegurar que el archivo seleccionado esté cargado en Uppy
         if (this.uppy) {
             const input = form.querySelector('input[name="archivo_mp3"]');
-            const file = input?.files?.[0] ?? null;
+            const file = input?.files?.[0] ?? this.selectedFile;
             if (file && this.uppy.getFiles().length === 0) {
                 try {
                     this.uppy.addFile({ name: file.name, type: file.type || 'audio/mpeg', data: file });
@@ -723,153 +838,77 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
             }
         }
 
-        // T3: Prohibido el fallback silencioso al servidor con ficheros grandes (>100 MB)
-        const fichero = form.querySelector('input[name="archivo_mp3"]')?.files?.[0] ?? null;
-        const sinUppy = !this.uppy;
-        if (fichero && fichero.size > 100 * 1024 * 1024 && sinUppy) {
-            this.uploading = false;
-            this.phaseLabel = 'No se puede subir así';
-            this.phaseDetailLabel = 'Fichero mayor de 100 MB sin subida directa';
-            this.statusMessage = 'Los ficheros grandes necesitan la subida directa a R2 y no está disponible. Recarga la página (Ctrl+F5) o avisa al administrador.';
-            return;
-        }
-
         if (this.uppy && this.uppy.getFiles().length > 0) {
             this.statusMessage = 'Subiendo directamente a Cloudflare R2...';
-            this.phaseLabel = 'Subiendo';
-            this.phaseDetailLabel = 'Subiendo archivo al almacenamiento intermedio.';
+            this.setPhase('Preparando subida', 'Conectando con Cloudflare R2...');
+
             this.uppy.upload().catch((err) => {
                 console.warn('Fallo al iniciar uppy.upload(), probando subida por partes:', err);
-                if (audioFile) {
-                    this.uploadByChunks(audioFile);
+                if (!this.originalR2Error) {
+                    this.originalR2Error = {
+                        message: err?.message || 'Error al iniciar subida a R2',
+                        phase: 'r2_init',
+                        timestamp: new Date().toISOString(),
+                    };
+                }
+                const targetFile = this.selectedFile || form.querySelector('input[name="archivo_mp3"]')?.files?.[0];
+                if (targetFile) {
+                    this.uploadByChunks(targetFile);
                 }
             });
             return;
         }
 
-        const xhr = new XMLHttpRequest();
-        xhr.open(form.method || 'POST', form.action, true);
-        xhr.responseType = 'text';
-        xhr.setRequestHeader('Accept', 'application/json');
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        const uploadStartedAt = performance.now();
-
-        xhr.upload.onprogress = (progressEvent) => {
-            if (!progressEvent.lengthComputable) {
-                return;
-            }
-
-            const percent = Math.min(100, Math.max(0, Math.round((progressEvent.loaded / progressEvent.total) * 100)));
-            this.progress = percent;
-            this.progressLabel = `${percent}%`;
-
-            if (progressEvent.loaded > 0) {
-                const elapsedSeconds = Math.max(0.1, (performance.now() - uploadStartedAt) / 1000);
-                const bytesPerSecond = progressEvent.loaded / elapsedSeconds;
-                if (bytesPerSecond > 0 && progressEvent.total > progressEvent.loaded) {
-                    const remainingSeconds = Math.ceil((progressEvent.total - progressEvent.loaded) / bytesPerSecond);
-                    this.uploadEtaLabel = `Restan ~${this.formatDuration(remainingSeconds)}`;
-                } else if (percent >= 99) {
-                    this.uploadEtaLabel = 'Finalizando transferencia...';
-                }
-            }
-        };
-
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState !== XMLHttpRequest.DONE) {
-                return;
-            }
-
-            this.uploading = false;
-
-            let payload = null;
-            try {
-                payload = xhr.responseText ? JSON.parse(xhr.responseText) : null;
-            } catch {
-                payload = null;
-            }
-
-            if (xhr.status >= 200 && xhr.status < 300) {
-                this.progress = 100;
-                this.progressLabel = '100%';
-                this.statusMessage = payload?.status ?? 'Episodio procesado correctamente.';
-                this.errorMessages = [];
-                this.uploadEtaLabel = 'Transferencia completada.';
-
-                if (payload?.pipeline_action === 'save') {
-                    this.phaseLabel = 'Guardado';
-                    this.phaseDetailLabel = 'Episodio creado sin iniciar el pipeline.';
-                } else {
-                    this.phaseLabel = payload?.download_url
-                        ? 'Preparando descarga'
-                        : (form.querySelector('[name="sync_archive_org"]')?.checked ? 'Sincronizando Archive.org' : 'Procesando RadioBOSS');
-                    this.phaseDetailLabel = this.phaseDetailText();
-                }
-
-                window.dispatchEvent(new CustomEvent('podcast-upload-complete', {
-                    detail: {
-                        status: payload?.status ?? 'Episodio procesado correctamente.',
-                        redirectUrl: payload?.redirect_url ?? null,
-                    },
-                }));
-
-                if (payload?.download_url) {
-                    this.downloading = true;
-                    const anchor = document.createElement('a');
-                    anchor.href = payload.download_url;
-                    anchor.rel = 'noopener';
-                    anchor.target = '_self';
-                    document.body.appendChild(anchor);
-                    anchor.click();
-                    anchor.remove();
-                }
-
-                if (payload?.redirect_url) {
-                    window.setTimeout(() => {
-                        window.location.href = payload.redirect_url;
-                    }, payload?.download_url ? 900 : 300);
-                }
-
-                return;
-            }
-
-            const validationErrors = payload?.errors ?? {};
-            if (xhr.status === 422 || Object.keys(validationErrors).length > 0) {
-                this.showValidationIssues(form, validationErrors);
-                return;
-            }
-
-            if (xhr.status === 413) {
-                this.phaseLabel = 'Error de límite';
-                this.phaseDetailLabel = 'Archivo demasiado pesado';
-                this.statusMessage = 'El servidor rechazó la subida (Error 413).';
-                this.errorMessages = ['El archivo excede el límite máximo permitido por tu servidor o Cloudflare (suele ser de 100 MB a 256 MB). La subida ha ido por el servidor en vez de por R2.'];
-            } else {
-                this.phaseLabel = 'Error del servidor';
-                this.phaseDetailLabel = `Error HTTP ${xhr.status}`;
-                this.statusMessage = 'No se pudo completar la subida.';
-                this.errorMessages = payload?.message ? [payload.message] : [];
-            }
-            this.uploadEtaLabel = '';
-        };
-
-        xhr.onerror = () => {
-            this.uploading = false;
-            this.phaseLabel = 'Error';
-            this.phaseDetailLabel = this.phaseDetailText();
-            this.statusMessage = 'La subida falló por un error de red o del servidor.';
-            this.uploadEtaLabel = '';
-        };
-
-        xhr.send(new FormData(form));
+        // Si Uppy no está activo, subida por fragmentos de seguridad directamente
+        this.uploadByChunks(audioFile);
     },
-    async uploadByChunks(file) {
-        if (!file) {
-            this.uploading = false;
+    formatDuration(seconds) {
+        const total = Math.max(0, Math.round(Number(seconds ?? 0)));
+        const mins = Math.floor(total / 60);
+        const secs = total % 60;
+
+        if (mins <= 0) {
+            return `${secs}s`;
+        }
+
+        return `${mins}m ${String(secs).padStart(2, '0')}s`;
+    },
+    formatBytes(bytes) {
+        const value = Number(bytes ?? 0);
+        if (value <= 0) {
+            return '0 B';
+        }
+
+        const units = ['B', 'KB', 'MB', 'GB'];
+        const exponent = Math.min(units.length - 1, Math.floor(Math.log(value) / Math.log(1024)));
+        const amount = (value / Math.pow(1024, exponent)).toFixed(1);
+
+        return `${amount} ${units[exponent]}`;
+    },
+    updateUploadEstimate(file) {
+        if (! file?.size) {
+            this.fileSizeLabel = '';
+            this.uploadEtaLabel = '';
             return;
         }
 
-        const CHUNK_SIZE = 40 * 1024 * 1024; // 40 MB
+        this.fileSizeLabel = this.formatBytes(file.size);
+        const rate = Math.max(1024 * 1024, this.estimatedUploadRateBytesPerSec);
+        const estimatedSeconds = Math.ceil(file.size / rate);
+        this.uploadEtaLabel = `Tiempo estimado: ~${this.formatDuration(estimatedSeconds)}`;
+    },
+    async uploadByChunks(file) {
+        if (!file) {
+            file = this.selectedFile;
+        }
+        if (!file) {
+            this.uploading = false;
+            this.canRetry = true;
+            return;
+        }
+
+        // Fragmentos de 4 MB respetan el límite de request body del servidor web de Hostinger (~6-7 MB)
+        const CHUNK_SIZE = 4 * 1024 * 1024; // 4 MB
         const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
         const uploadId = 'chunk_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
         const csrfToken = document.querySelector('input[name="_token"]')?.value 
@@ -877,11 +916,18 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
             || '';
 
         this.uploading = true;
-        this.phaseLabel = 'Subiendo por fragmentos';
+        this.canRetry = false;
+        this.setPhase('Transfiriendo', this.originalR2Error 
+            ? `Subida alternativa por fragmentos de 4 MB (1/${totalChunks})` 
+            : `Subiendo por fragmentos de 4 MB (1/${totalChunks})...`);
         this.statusMessage = `Subiendo por partes de seguridad (1/${totalChunks})...`;
 
         try {
             for (let i = 0; i < totalChunks; i++) {
+                if (!this.uploading) {
+                    throw new Error('Subida cancelada por el usuario.');
+                }
+
                 const start = i * CHUNK_SIZE;
                 const end = Math.min(file.size, start + CHUNK_SIZE);
                 const chunkBlob = file.slice(start, end);
@@ -892,15 +938,24 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                 formData.append('total_chunks', totalChunks);
                 formData.append('file', chunkBlob, file.name);
 
-                this.phaseDetailLabel = `Enviando fragmento ${i + 1} de ${totalChunks} (~${this.formatBytes(chunkBlob.size)})...`;
+                this.setPhase('Transfiriendo', `Enviando fragmento ${i + 1} de ${totalChunks} (~${this.formatBytes(chunkBlob.size)})...`);
+                this.statusMessage = `Subiendo fragmento ${i + 1} de ${totalChunks}...`;
 
                 await new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
+                    this.activeXhr = xhr;
+
+                    this.startStallWatchdog(() => {
+                        xhr.abort();
+                        reject(new Error(`Falta de respuesta del servidor durante el fragmento ${i + 1} (45s sin avance).`));
+                    });
+
                     xhr.open('POST', '/admin/podcast-uploads/chunk', true);
                     xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
                     xhr.setRequestHeader('Accept', 'application/json');
 
                     xhr.upload.onprogress = (e) => {
+                        this.touchProgress();
                         if (e.lengthComputable) {
                             const chunkPercent = e.loaded / e.total;
                             const overallPercent = Math.min(99, Math.round(((i + chunkPercent) / totalChunks) * 100));
@@ -910,24 +965,47 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                     };
 
                     xhr.onload = () => {
+                        this.clearStallWatchdog();
+                        this.activeXhr = null;
                         if (xhr.status >= 200 && xhr.status < 300) {
                             resolve(xhr.responseText);
                         } else {
-                            reject(new Error(`Error al subir el fragmento ${i + 1}: HTTP ${xhr.status}`));
+                            let serverErr = `Error HTTP ${xhr.status}`;
+                            try {
+                                const parsed = JSON.parse(xhr.responseText);
+                                if (parsed?.error) serverErr = parsed.error;
+                            } catch (e) {}
+                            reject(new Error(`Error al subir el fragmento ${i + 1}: ${serverErr}`));
                         }
                     };
 
-                    xhr.onerror = () => reject(new Error(`Fallo de red al enviar fragmento ${i + 1}`));
+                    xhr.onerror = () => {
+                        this.clearStallWatchdog();
+                        this.activeXhr = null;
+                        reject(new Error(`El navegador no expone la causa del fallo de red (conexión interrumpida o rechazada por el servidor en fragmento ${i + 1}).`));
+                    };
+
+                    xhr.onabort = () => {
+                        this.clearStallWatchdog();
+                        this.activeXhr = null;
+                        reject(new Error('Transferencia cancelada.'));
+                    };
+
                     xhr.send(formData);
                 });
             }
 
-            this.phaseLabel = 'Uniendo fragmentos';
-            this.phaseDetailLabel = 'Ensamblando archivo en el servidor...';
-            this.statusMessage = 'Completando archivo...';
+            this.setPhase('Confirmando archivo', 'Ensamblando fragmentos en el servidor...');
+            this.statusMessage = 'Uniendo fragmentos...';
+
+            this.activeAbortController = new AbortController();
+            const completeTimeout = setTimeout(() => {
+                this.activeAbortController?.abort();
+            }, 60000);
 
             const completeResponse = await fetch('/admin/podcast-uploads/chunk/complete', {
                 method: 'POST',
+                signal: this.activeAbortController.signal,
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
@@ -939,29 +1017,41 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                     filename: file.name,
                 }),
             });
+            clearTimeout(completeTimeout);
+            this.activeAbortController = null;
 
             if (!completeResponse.ok) {
                 const errJson = await completeResponse.json().catch(() => ({}));
-                throw new Error(errJson.error || 'Error al completar la unión de fragmentos.');
+                throw new Error(errJson.error || `Error al completar la unión de fragmentos (HTTP ${completeResponse.status}).`);
             }
 
             const completeData = await completeResponse.json();
+            this.setPhase('Confirmando archivo', 'Archivo transferido. Guardando episodio...');
             this.submitFormWithChunkedKey(completeData.chunked_key);
 
         } catch (error) {
+            this.clearStallWatchdog();
+            this.activeXhr = null;
+            this.activeAbortController = null;
             console.error('Error en subida por partes:', error);
+
             this.uploading = false;
+            this.canRetry = true;
             this.phaseLabel = 'Error';
             this.phaseDetailLabel = 'La subida por fragmentos falló.';
             this.statusMessage = error.message || 'Error durante la subida por fragmentos.';
-            this.errorMessages = [error.message || 'Error de transferencia por fragmentos.'];
+            
+            const errList = [error.message || 'Error de transferencia por fragmentos.'];
+            if (this.originalR2Error) {
+                errList.push(`Fallo previo en Cloudflare R2: ${this.originalR2Error.message}`);
+            }
+            this.errorMessages = errList;
             this.uploadEtaLabel = '';
         }
     },
     submitFormWithChunkedKey(chunkedKey) {
         this.statusMessage = 'Archivo transferido con éxito. Guardando episodio...';
-        this.phaseLabel = 'Guardando';
-        this.phaseDetailLabel = 'Registrando episodio en la base de datos.';
+        this.setPhase('Confirmando archivo', 'Registrando episodio en la base de datos...');
 
         const form = this.formToSubmit || document.querySelector('form[action*="podcast-uploads"]');
         const formData = new FormData(form);
@@ -971,6 +1061,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         formData.set('pipeline_action', this.pipelineAction || 'process');
 
         const xhr = new XMLHttpRequest();
+        this.activeXhr = xhr;
         xhr.open(form.method || 'POST', form.action, true);
         xhr.responseType = 'text';
         xhr.setRequestHeader('Accept', 'application/json');
@@ -981,6 +1072,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                 return;
             }
 
+            this.activeXhr = null;
             this.uploading = false;
 
             let payload = null;
@@ -1021,6 +1113,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                 return;
             }
 
+            this.canRetry = true;
             const validationErrors = payload?.errors ?? {};
             if (xhr.status === 422 || Object.keys(validationErrors).length > 0) {
                 this.showValidationIssues(form, validationErrors);
@@ -1030,12 +1123,14 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
             this.phaseLabel = 'Error';
             this.phaseDetailLabel = `Error HTTP ${xhr.status}`;
             this.statusMessage = 'No se pudo completar el registro.';
-            this.errorMessages = payload?.message ? [payload.message] : [];
+            this.errorMessages = payload?.message ? [payload.message] : [`Error HTTP ${xhr.status} al guardar episodio.`];
             this.uploadEtaLabel = '';
         };
 
         xhr.onerror = () => {
+            this.activeXhr = null;
             this.uploading = false;
+            this.canRetry = true;
             this.phaseLabel = 'Error';
             this.phaseDetailLabel = 'Error de red al guardar';
             this.statusMessage = 'No se pudo contactar al servidor tras transferir el archivo.';
@@ -1046,10 +1141,9 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
     },
     submitFormWithR2Key(r2Key) {
         this.statusMessage = 'Archivo subido a R2. Guardando información del episodio...';
-        this.phaseLabel = 'Guardando';
-        this.phaseDetailLabel = 'Registrando episodio en la base de datos.';
+        this.setPhase('Confirmando archivo', 'Registrando episodio en la base de datos...');
 
-        const form = this.formToSubmit;
+        const form = this.formToSubmit || document.querySelector('form[action*="podcast-uploads"]');
         const formData = new FormData(form);
         
         formData.delete('archivo_mp3');
@@ -1057,6 +1151,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         formData.set('pipeline_action', this.pipelineAction || 'process');
 
         const xhr = new XMLHttpRequest();
+        this.activeXhr = xhr;
         xhr.open(form.method || 'POST', form.action, true);
         xhr.responseType = 'text';
         xhr.setRequestHeader('Accept', 'application/json');
@@ -1067,6 +1162,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                 return;
             }
 
+            this.activeXhr = null;
             this.uploading = false;
 
             let payload = null;
@@ -1107,6 +1203,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
                 return;
             }
 
+            this.canRetry = true;
             const validationErrors = payload?.errors ?? {};
             if (xhr.status === 422 || Object.keys(validationErrors).length > 0) {
                 this.showValidationIssues(form, validationErrors);
@@ -1116,12 +1213,14 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
             this.phaseLabel = 'Error';
             this.phaseDetailLabel = `Error HTTP ${xhr.status}`;
             this.statusMessage = 'No se pudo completar el registro.';
-            this.errorMessages = payload?.message ? [payload.message] : [];
+            this.errorMessages = payload?.message ? [payload.message] : [`Error HTTP ${xhr.status} al guardar episodio.`];
             this.uploadEtaLabel = '';
         };
 
         xhr.onerror = () => {
+            this.activeXhr = null;
             this.uploading = false;
+            this.canRetry = true;
             this.phaseLabel = 'Error';
             this.phaseDetailLabel = 'Error de red al guardar el episodio.';
             this.statusMessage = 'El registro falló por un error de red o del servidor.';

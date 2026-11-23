@@ -185,11 +185,25 @@
             </div>
 
             <template x-if="errorMessages.length > 0">
-                <ul class="mt-3 space-y-1.5 text-xs text-rose-300">
-                    <template x-for="(message, index) in errorMessages" :key="`${index}-${message}`">
-                        <li class="rounded-lg border border-rose-900/30 bg-rose-950/20 px-3 py-2" x-text="message"></li>
-                    </template>
-                </ul>
+                <div class="mt-3 space-y-2">
+                    <ul class="space-y-1.5 text-xs text-rose-300">
+                        <template x-for="(message, index) in errorMessages" :key="`${index}-${message}`">
+                            <li class="rounded-lg border border-rose-900/30 bg-rose-950/20 px-3 py-2" x-text="message"></li>
+                        </template>
+                    </ul>
+                    <div x-show="canRetry" x-cloak class="pt-1 flex items-center gap-2">
+                        <button
+                            type="button"
+                            @click="retryUpload()"
+                            class="px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-950/50 text-amber-200 hover:bg-amber-900/70 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 shadow"
+                        >
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Reintentar subida conservando el archivo
+                        </button>
+                    </div>
+                </div>
             </template>
         </div>
 

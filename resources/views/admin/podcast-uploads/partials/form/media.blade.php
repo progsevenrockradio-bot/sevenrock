@@ -24,7 +24,7 @@
                 <input
                     type="file"
                     name="archivo_mp3"
-                    accept="audio/mpeg,audio/mp3"
+                    accept="audio/mpeg,audio/mp3,.mp3"
                     class="block w-full text-xs text-gray-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/15 file:cursor-pointer cursor-pointer border border-white/10 rounded-lg bg-black/50 p-1.5 focus:border-[#c32720] focus:outline-none transition-colors"
                     x-on:change="engancharFichero($event)"
                 >
@@ -49,7 +49,7 @@
                 </div>
             </div>
 
-            {{-- Monitor de Progreso de Subida --}}
+            {{-- Monitor de Progreso de Subida con Fases Diferenciadas --}}
             <div class="rounded-xl border border-white/5 bg-black/40 p-4 space-y-2.5">
                 <div class="flex items-center justify-between text-xs">
                     <span class="font-medium text-gray-300 font-sans">Progreso de transferencia</span>
@@ -66,13 +66,54 @@
                 </div>
 
                 <div class="flex items-center justify-between text-xs text-gray-400 font-sans">
-                    <span x-text="uploading ? 'Cargando archivo...' : (statusMessage || 'Esperando archivo...')"></span>
-                    <span class="font-mono text-white text-xs font-semibold" x-text="progressLabel"></span>
+                    <span class="truncate max-w-[75%]" x-text="uploading ? (phaseDetailLabel || statusMessage || 'Cargando archivo...') : (statusMessage || 'Esperando archivo...')"></span>
+                    <span class="font-mono text-white text-xs font-semibold shrink-0" x-text="progressLabel"></span>
+                </div>
+
+                {{-- Diferenciación visual de fases --}}
+                <div class="grid grid-cols-3 gap-1 pt-1 text-[10px] font-mono uppercase tracking-wider text-center" x-show="uploading || progress > 0" x-cloak>
+                    <div class="rounded py-1 px-1.5 transition-colors border"
+                         :class="phaseLabel === 'Preparando subida' ? 'bg-sky-950/60 border-sky-500/50 text-sky-300 font-semibold' : (progress > 0 ? 'bg-black/30 border-white/5 text-gray-500' : 'bg-black/20 border-white/5 text-gray-600')">
+                        1. Preparando
+                    </div>
+                    <div class="rounded py-1 px-1.5 transition-colors border"
+                         :class="phaseLabel === 'Transfiriendo' ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 font-semibold animate-pulse' : (progress >= 100 ? 'bg-black/30 border-white/5 text-gray-500' : 'bg-black/20 border-white/5 text-gray-600')">
+                        2. Transfiriendo
+                    </div>
+                    <div class="rounded py-1 px-1.5 transition-colors border"
+                         :class="phaseLabel === 'Confirmando archivo' ? 'bg-indigo-950/60 border-indigo-500/50 text-indigo-300 font-semibold animate-pulse' : (['Listo', 'Guardado'].includes(phaseLabel) ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 font-semibold' : 'bg-black/20 border-white/5 text-gray-600')">
+                        3. Confirmando
+                    </div>
                 </div>
 
                 <div class="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-white/5 font-sans">
                     <span x-text="fileSizeLabel ? `Tamaño: ${fileSizeLabel}` : ''"></span>
-                    <span x-text="uploadEtaLabel"></span>
+                    <div class="flex items-center gap-2">
+                        <span x-text="uploadEtaLabel"></span>
+                        {{-- Botón Cancelar durante subida activa --}}
+                        <button
+                            type="button"
+                            x-show="uploading"
+                            x-cloak
+                            @click="cancelUpload()"
+                            class="px-2 py-0.5 rounded border border-rose-500/40 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 text-[10px] font-semibold transition-colors"
+                        >
+                            Cancelar subida
+                        </button>
+                        {{-- Botón Reintentar si falló o canceló conservando el archivo --}}
+                        <button
+                            type="button"
+                            x-show="!uploading && canRetry"
+                            x-cloak
+                            @click="retryUpload()"
+                            class="px-2.5 py-0.5 rounded border border-amber-500/40 bg-amber-950/40 text-amber-300 hover:bg-amber-900/60 text-[10px] font-semibold transition-colors inline-flex items-center gap-1"
+                        >
+                            <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Reintentar
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

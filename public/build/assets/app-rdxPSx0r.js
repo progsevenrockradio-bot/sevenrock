@@ -13,6 +13,976 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 `).replace(/ *\n */g,`
 `).replace(/\b(Contexto de catalogo|Contexto de catálogo|Miembros relacionados|Alias \/ variaciones)\b/gi,`
 
-$1`).replace(/[ \t]{2,}/g,` `).trim()},buildSignature({title:e=``,artist:t=``,cover:n=``,program:r=``}={}){return[e,t,n,r].join(`|`)},readNowPlayingWidget(){let e=document.getElementById(this.widgetIds.root),t=document.getElementById(this.widgetIds.cover),n=document.getElementById(this.widgetIds.timerElapsed),r=document.getElementById(this.widgetIds.timerRemaining),i=n?.closest?.(`.rbcloud_tracktimer`)||r?.closest?.(`.rbcloud_tracktimer`),a=this.cleanWidgetText(e?.innerText||e?.textContent||``),o=this.parseWidgetNowPlaying(a),s=this.readTrackTimerWidget(i,n,r);return{cover:t?.getAttribute(`src`)||t?.currentSrc||``,artist:o.artist,title:o.title,elapsed:s.elapsed||o.elapsed,duration:s.elapsed>0&&s.remaining>0?s.elapsed+s.remaining:o.duration,text:a}},readTrackTimerWidget(e=null,t=null,n=null){let r=this.cleanWidgetText(t?.innerText||t?.textContent||e?.querySelector?.(`#${this.widgetIds.timerElapsed}`)?.innerText||``),i=this.cleanWidgetText(n?.innerText||n?.textContent||e?.querySelector?.(`#${this.widgetIds.timerRemaining}`)?.innerText||``),a=this.parseWidgetDuration(r),o=this.parseWidgetDuration(i);if(a>0||o>0)return{elapsed:a,remaining:o};let s=this.cleanWidgetText(e?.innerText||e?.textContent||``),c=Array.from(s.matchAll(/\b(\d{1,3}:\d{2})\b/g),e=>e[1]);return{elapsed:this.parseWidgetDuration(c[0]||``),remaining:this.parseWidgetDuration(c[1]||``)}},inferWidgetTrack(e={}){let t=this.cleanWidgetText(e.title||``),n=this.normalizeBandArtist(e.artist||``);if(n)return{title:t,artist:n,cover:e.cover||``,elapsed:Number(e.elapsed||0),duration:Number(e.duration||0)};let r=t.includes(` - `)?t.split(` - `):[];if(r.length>=2){let t=r[r.length-1]||``;return{title:this.cleanWidgetText(r.slice(0,-1).join(` - `)),artist:this.normalizeBandArtist(t),cover:e.cover||``,elapsed:Number(e.elapsed||0),duration:Number(e.duration||0)}}return{title:t,artist:``,cover:e.cover||``,elapsed:Number(e.elapsed||0),duration:Number(e.duration||0)}},parseWidgetNowPlaying(e){let t=this.cleanWidgetText(e);if(!t)return{title:``,artist:``,elapsed:0,duration:0};let n=t.replace(/\u00A0/g,` `).replace(/\s{2,}/g,` `).trim(),r=Array.from(n.matchAll(/\b(\d{1,3}:\d{2})\b/g),e=>e[1]),i=this.parseWidgetDuration(r[r.length-1]||``),a=this.parseWidgetDuration(r[r.length-2]||``),o=n.replace(/\b\d{1,3}:\d{2}\b/g,` `).replace(/\s{2,}/g,` `).trim().replace(/^(?:reproduciendo ahora|now playing|nowplaying|reproduciendo|playing now)\s*/i,``).trim()||n,s=this.splitWidgetArtistTitle(o);return{title:this.normalizeTrackTitle(s.title||o),artist:this.normalizeBandArtist(s.artist||``),elapsed:a,duration:i}},parseWidgetDuration(e){let t=String(e||``);if(t.toLowerCase()===`undefined`)return 0;let n=t.replace(/[^\d:]/g,``);if(!n)return 0;let r=n.split(`:`).map(e=>Number(e));return r.some(e=>!Number.isFinite(e))?0:r.length===3?r[0]*3600+r[1]*60+r[2]:r.length===2?r[0]*60+r[1]:r.length===1?r[0]:0},splitWidgetArtistTitle(e){let t=this.cleanWidgetText(e);if(!t)return{title:``,artist:``};let n=t.includes(` - `)?t.split(` - `):[];if(n.length>=2){let e=this.cleanWidgetText(n[0]||``);return{title:this.cleanWidgetText(n.slice(1).join(` - `)),artist:e}}return{title:t,artist:``}},normalizeBandArtist(e){let t=this.cleanWidgetText(e);if(!t)return``;let n=t.replace(/^\s*(?:remasterizado|remastered)\s*\d{0,4}\s*[-:]\s*/i,``).replace(/\s*\((?:feat\.?|ft\.?|with)[^)]+\)\s*$/i,``).replace(/\s+(?:feat\.?|ft\.?|featuring|with)\b.*$/i,``).replace(/\s{2,}/g,` `).trim();return n?n.toLowerCase()===`transmisión oficial`||n.toLowerCase()===`transmisiÃ³n oficial`?``:n:``},normalizeTrackTitle(e){let t=this.cleanWidgetText(e);if(!t||t.toLowerCase()===`transmisión oficial`)return``;let n=t.includes(` - `)?t.split(` - `):[];return n.length>=2?this.cleanWidgetText(n[0]):t},cleanWidgetText(e){let t=String(e||``).replace(/\s+/g,` `).trim();return!t||t===`...`||t===`&nbsp;`||t.toLowerCase()===`cargando...`||t.toLowerCase()===`undefined`?``:t},tickProgress(){if(!this.playing)return;let e=this.$refs?.audio;if(e&&Number.isFinite(e.currentTime)&&e.currentTime>0&&!this.track.is_live)this.currentTime=Math.round(e.currentTime);else if(this.track&&this.track.is_live){if(this.fixedDuration>0){let e=this.timeSample&&this.timeSample.sampledAt>0?Math.floor((Date.now()-this.timeSample.sampledAt)/1e3):0,t=this.timeSample&&this.timeSample.sampledAt>0?this.timeSample.sampleElapsed+e:this.currentTime;if(this.currentTime>=this.fixedDuration+5||t>=this.fixedDuration+8){this.fixedDuration=0,this.currentTime=0,this.timeSample=null,this.syncProgress();return}this.currentTime+=1}else this.currentTime=0;if(this.syncCounter+=1,this.syncCounter>=5&&(this.syncCounter=0,!this.track.es_bloque_programa)){let e=this.resolveWidgetTrack();if(e&&this.isWidgetMatchingCurrentTrack(e)){let e=document.getElementById(this.widgetIds.timerElapsed),t=document.getElementById(this.widgetIds.timerRemaining),n=e?.closest?.(`.rbcloud_tracktimer`)||t?.closest?.(`.rbcloud_tracktimer`);if(n){let r=this.readTrackTimerWidget(n,e,t);r.elapsed>=0&&(r.elapsed>0||r.remaining>0)&&(Math.abs(this.currentTime-r.elapsed)>=2&&(this.currentTime=r.elapsed),r.remaining>0&&(this.fixedDuration=r.elapsed+r.remaining),this.timeSample={trackSignature:this.track.signature,duration:this.fixedDuration,sampleElapsed:this.currentTime,sampledAt:Date.now(),source:`widget`})}}}}else this.currentTime+=1;this.syncProgress()},syncProgress(){if(this.progress.elapsed=this.currentTime,this.progress.duration=this.fixedDuration,this.fixedDuration<=0){this.progress.ratio=0;return}this.progress.ratio=Math.max(0,Math.min(100,Math.round(this.currentTime/this.fixedDuration*100)))},seek(e){if(this.track&&this.track.is_live)return;let t=this.$refs?.audio;if(!t||this.fixedDuration<=0)return;let n=e.currentTarget.getBoundingClientRect(),r=(e.clientX-n.left)/n.width,i=Math.max(0,Math.min(1,r));this.currentTime=Math.round(this.fixedDuration*i),this.syncProgress(),this.track.audio_url&&Number.isFinite(t.duration)&&t.duration>0&&(t.currentTime=t.duration*i)},hasReliableTime(){if(!this.track)return!1;if(!this.track.is_live)return this.fixedDuration>0||this.progress.duration>0;if(this.fixedDuration<=0||this.currentTime<0||this.currentTime>this.fixedDuration+5)return!1;if(this.timeSample&&this.timeSample.sampledAt>0){let e=Math.floor((Date.now()-this.timeSample.sampledAt)/1e3);if(this.timeSample.sampleElapsed+e>this.fixedDuration+8)return!1}return!0},formatTime(e){let t=Math.max(0,Number(e)||0);return`${String(Math.floor(t/60)).padStart(2,`0`)}:${String(Math.floor(t%60)).padStart(2,`0`)}`},setTab(e){this.userHasChosenTab=!0,this.activeTab=e,n(`sr-player-tab`,e),e===`program`&&this.track.es_bloque_programa&&!this.hasRealSong()&&!this.programInfo&&this.openProgramWindow(this.track.program_id)},programText(){if(this.program){let e=[this.program.name,this.program.host,this.program.schedule,this.program.description].filter(Boolean);if(e.length>0)return e.join(` · `)}if(this.track.es_bloque_programa){let e=[this.track.program_name,this.track.program_host,this.track.program_schedule,this.track.program_description].filter(Boolean);if(e.length>0)return e.join(` · `)}return`No hay programa activo.`},isFavoriteCurrent(){return this.favorites.some(e=>e.signature&&e.signature===this.track.signature)},async syncFavorites(e=``,t=!0){if(!(!this.favoritesUrl||this.favoriteSyncInFlight)){this.favoriteSyncInFlight=!0;try{let n=new URL(this.favoritesUrl,window.location.origin);e&&n.searchParams.set(`signature`,e);let a=await(await fetch(n.toString(),{headers:{Accept:`application/json`}})).json();if(!a?.success)throw Error(`Invalid favorites payload`);let o=a.data||{},s=Array.isArray(o.favorites)?o.favorites:[];if(t&&s.length===0){let t=Array.isArray(this.favorites)&&this.favorites.length>0?[...this.favorites]:r();await this.importLegacyFavorites(t),this.favoriteSyncInFlight=!1,await this.syncFavorites(e,!1);return}this.favorites=s,this.favoriteCount=Number(o.track_count??0),i(this.favorites),this.favoriteSyncReady=!0}catch{this.favorites=r()}finally{this.favoriteSyncInFlight=!1}}},async importLegacyFavorites(e=null){if(t(`sr-player-favorites-migrated-v1`,`0`)===`1`)return;let a=Array.isArray(e)?e:r();if(!(!a.length||!this.favoritesImportUrl))try{let e=await(await fetch(this.favoritesImportUrl,{method:`POST`,headers:{Accept:`application/json`,"Content-Type":`application/json`,"X-Requested-With":`XMLHttpRequest`},body:JSON.stringify({favorites:a})})).json();if(!e?.success)throw Error(`Invalid favorites import payload`);let t=e.data||{};this.favorites=Array.isArray(t.favorites)?t.favorites:a,i(this.favorites),n(`sr-player-favorites-migrated-v1`,`1`)}catch{}},async toggleFavorite(){if(!this.track.signature||!this.favoritesToggleUrl)return;let e={signature:this.track.signature,title:this.track.title,artist:this.track.artist,cover:this.track.cover},t=[...this.favorites],n=this.favoriteCount;this.isFavoriteCurrent()?(this.favorites=this.favorites.filter(e=>e.signature!==this.track.signature),this.favoriteCount=Math.max(0,this.favoriteCount-1)):(this.favorites=[...this.favorites,e].slice(-50),this.favoriteCount+=1),i(this.favorites);try{let t=await(await fetch(this.favoritesToggleUrl,{method:`POST`,headers:{Accept:`application/json`,"Content-Type":`application/json`,"X-Requested-With":`XMLHttpRequest`},body:JSON.stringify(e)})).json();if(!t?.success)throw Error(`Invalid favorites toggle payload`);let n=t.data||{};this.favorites=Array.isArray(n.favorites)?n.favorites:this.favorites,this.favoriteCount=Number(n.track_count??this.favoriteCount),i(this.favorites),this.toastMessage(n.is_favorite?`Añadido a favoritos`:`Favorito eliminado`)}catch{this.favorites=t,this.favoriteCount=n,i(this.favorites),this.toastMessage(`No se pudo sincronizar`)}},toggleSharePanel(){this.sharePanelOpen=!this.sharePanelOpen},async updateShareKey(){let e=this.tituloVisible,t=this.subtituloVisible,n=this.track.program_name||``,r=this.track.cover||this.fallbackCover||``;try{let i=await fetch(`/api/player/share-track`,{method:`POST`,headers:{"Content-Type":`application/json`},body:JSON.stringify({title:e,artist:t,cover:r,program:n})});if(i.ok){let e=await i.json();if(e&&e.key){this.shareKey=e.key;return}}}catch{}this.shareKey=``},shareContext(){let e=this.tituloVisible,t=this.subtituloVisible,n=this.track.program_name||``,r=this.track.cover||this.fallbackCover||``,i=window.location.origin+`/`,a=i;if(this.shareKey)a=`${i}?v=${encodeURIComponent(String(this.shareKey))}`;else{let e=this.track.signature||this.track.audio_url||this.track.program_id||``;e&&(a=`${i}?v=${encodeURIComponent(String(e))}`)}let o=`¡Todas las épocas del rock, están aquí! en Seven Rock Radio 🤘\nEscuchanos!!: ${a}`;return{title:e,artist:t,program:n,cover:r,url:a,text:o,encodedUrl:encodeURIComponent(a),encodedTitle:encodeURIComponent(e),encodedText:encodeURIComponent(o)}},shareTargets(){let e=this.shareContext();return{twitter:`https://twitter.com/intent/tweet?text=${e.encodedTitle}&url=${e.encodedUrl}`,facebook:`https://www.facebook.com/sharer/sharer.php?u=${e.encodedUrl}`,whatsapp:`https://api.whatsapp.com/send?text=${e.encodedText}`,telegram:`https://t.me/share/url?url=${e.encodedUrl}&text=${e.encodedTitle}`,linkedin:`https://www.linkedin.com/sharing/share-offsite/?url=${e.encodedUrl}`,pinterest:`https://pinterest.com/pin/create/button/?url=${e.encodedUrl}${e.cover?`&media=${encodeURIComponent(e.cover)}`:``}&description=${e.encodedTitle}`}},async shareCurrent(){let{text:e,url:t}=this.shareContext();if(navigator.share)try{await navigator.share({title:`Seven Rock Radio`,text:e,url:t}),this.toastMessage(`Compartido`);return}catch{}try{await navigator.clipboard.writeText(`${e} ${t}`.trim()),this.toastMessage(`Copiado al portapapeles`)}catch{this.toastMessage(`No se pudo compartir`)}},async handleHotkeys(e){let t=(e.target?.tagName||``).toLowerCase();if(![`input`,`textarea`,`select`].includes(t)){if(e.code===`Space`){e.preventDefault(),this.togglePlay();return}if(e.code===`ArrowUp`){e.preventDefault(),this.volume=Math.min(1,Math.round((this.volume+.05)*100)/100),this.updateVolume();return}if(e.code===`ArrowDown`){e.preventDefault(),this.volume=Math.max(0,Math.round((this.volume-.05)*100)/100),this.updateVolume();return}if(e.code===`KeyM`){e.preventDefault(),this.toggleMute();return}if(e.code===`KeyL`){this.setTab(`lyrics`);return}if(e.code===`KeyB`){this.setTab(`band`);return}if(e.code===`KeyP`){this.setTab(`program`);return}if(e.code===`KeyH`){this.setTab(`history`);return}e.code===`Escape`&&this.mode!==`page`&&(this.closeTransientOverlays(),n(`sr-player-expanded`,`0`))}},toastMessage(e){this.toast.message=e,this.toast.visible=!0,this.toastHandle&&clearTimeout(this.toastHandle),this.toastHandle=setTimeout(()=>{this.toast.visible=!1,this.toast.message=``,this.toastHandle=null},2200)},updateMediaSession(e){if(!(`mediaSession`in navigator)||!window.MediaMetadata)return;let t=this.tituloVisible||`Seven Rock Radio`,n=this.subtituloVisible||`En vivo`,r=e.cover||e.band_thumbnail||this.bandPanel.cover||this.fallbackCover,i=r?r.startsWith(`http`)?r:window.location.origin+r:``;navigator.mediaSession.metadata=new MediaMetadata({title:t,artist:n,album:`Seven Rock Radio`,artwork:i?[{src:i,sizes:`96x96`},{src:i,sizes:`128x128`},{src:i,sizes:`192x192`},{src:i,sizes:`256x256`},{src:i,sizes:`384x384`},{src:i,sizes:`512x512`}]:[]}),this.setupMediaSessionHandlers()},setupMediaSessionHandlers(){if(`mediaSession`in navigator)try{navigator.mediaSession.setActionHandler(`play`,()=>{this.playing||this.attemptPlayWithFallback()}),navigator.mediaSession.setActionHandler(`pause`,()=>{this.playing&&this.attemptPlayWithFallback()}),navigator.mediaSession.setActionHandler(`previoustrack`,null),navigator.mediaSession.setActionHandler(`nexttrack`,null)}catch{}},updateMediaSessionPlaybackState(e){`mediaSession`in navigator&&(navigator.mediaSession.playbackState=e?`playing`:`paused`)},bandLinks(){let e=Array.isArray(this.bandWindowView.socialLinks)?this.bandWindowView.socialLinks:[];return e.length?e.map(e=>typeof e==`string`?{label:e,url:e}:e&&typeof e==`object`?{label:e.label||e.name||e.title||e.url||`Enlace`,url:e.url||e.href||e.link||``}:null).filter(e=>e&&e.url):[]},countryFlag(e){return!e||typeof e!=`string`?``:{argentina:`🇦🇷`,españa:`🇪🇸`,espana:`🇪🇸`,spain:`🇪🇸`,chile:`🇨🇱`,venezuela:`🇻🇪`,méxico:`🇲🇽`,mexico:`🇲🇽`,"estados unidos":`🇺🇸`,eeuu:`🇺🇸`,usa:`🇺🇸`,"reino unido":`🇬🇧`,uk:`🇬🇧`,"gran bretaña":`🇬🇧`,"gran bretana":`🇬🇧`,colombia:`🇨🇴`,perú:`🇵🇪`,peru:`🇵🇪`,uruguay:`🇺🇾`,brasil:`🇧🇷`,brazil:`🇧🇷`,alemania:`🇩🇪`,germany:`🇩🇪`,francia:`🇫🇷`,france:`🇫🇷`,italia:`🇮🇹`,italy:`🇮🇹`,australia:`🇦🇺`,canadá:`🇨🇦`,canada:`🇨🇦`}[e.trim().toLowerCase()]||`🌍`},bandLineup(){return(Array.isArray(this.bandWindowView.bandMembers)?this.bandWindowView.bandMembers:[]).map(e=>{if(typeof e==`string`){let t=this.cleanWidgetText(e);return t?{name:t,role:``}:null}if(e&&typeof e==`object`){let t=this.cleanWidgetText(e.name||e.member||e.title||``),n=this.cleanWidgetText(e.role||e.instrument||e.position||``);return t?{name:t,role:n}:null}return null}).filter(Boolean)},get resumenBio(){let e=this.bandWindowView.info||``;if(!e)return``;if(e.length<=180)return e;let t=e.substring(0,177),n=t.lastIndexOf(` `);return(n>0?t.substring(0,n):t)+`...`},get biographyExpanded(){return this.bandWindowView.biography||``},get tituloVisible(){if(this.track?.es_bloque_programa){let e=(this.track?.title??``).trim(),t=(this.defaultTitle??``).trim().toLowerCase();return!e||e.toLowerCase()===t||e.toLowerCase()===`transmisión oficial`||e.toLowerCase()===`transmision oficial`||e.toLowerCase()===`seven rock radio`?this.track?.program_name||this.track?.title||this.defaultTitle:this.track.title}return(this.track?.title??``)===``?this.defaultTitle:this.track.title},get subtituloVisible(){return this.track?.es_bloque_programa?this.track?.program_host||this.track?.program_schedule||this.track?.artist||this.defaultArtist:(this.track?.artist??``)===``?this.defaultArtist:this.track.artist},get coverVisible(){let e=!!this.track?.es_bloque_programa,t=this.programInfo?.cover||this.track?.program_cover||``;if(e&&t&&!s(t,this.fallbackCover,this.logoUrl))return t;let n=this.track?.cover||``;return n&&(this.track?.cover_is_fallback===!1||!s(n,this.fallbackCover,this.logoUrl))?n:this.fallbackCover}}))}var Sf=new Set([`listen_click`,`playback_started`,`playback_error`,`podcast_play`,`podcast_seek`,`band_registration_started`,`band_registration_completed`,`search_no_results`,`contact_success`]),Cf={listen_click:[`source`,`stream_type`],playback_started:[`stream_type`,`time_to_start_ms`],playback_error:[`stream_type`,`error_code`],podcast_play:[`episode_id`,`program_slug`],podcast_seek:[`episode_id`,`seek_position_seconds`],band_registration_started:[`category`],band_registration_completed:[`category`,`plan`],search_no_results:[`section`,`query_length`],contact_success:[`form_name`,`subject_category`]},wf=`GTM-5NCG6PN`,Tf=new class{constructor(){this.eventLog=[],this.maxLogSize=100,this.seekThrottleTimers={},this.gtmLoaded=!1,this.initConsent()}isTestOrDev(){if(typeof window>`u`)return!0;let e=window.location.hostname||``,t=window.location.pathname||``,n=window.location.search||``;return e===`localhost`||e===`127.0.0.1`||e.endsWith(`.test`)||t.startsWith(`/dev/`)||n.includes(`test=1`)||n.includes(`sr_test=true`)||window.SR_IS_ADMIN===!0||window.SR_FORCE_DEV_LOG===!0}initConsent(){this.preferences={necessary:!0,analytics:!1,personalization:!1};try{let e=localStorage.getItem(`sevenrock_cookie_consent`);if(e){let t=JSON.parse(e);this.preferences.analytics=!!t.analytics,this.preferences.personalization=!!t.personalization}}catch{}this.hasAnalyticsConsent()&&this.loadGtmOnce()}hasAnalyticsConsent(){return!!(this.preferences&&this.preferences.analytics===!0)}loadGtmOnce(){if(this.gtmLoaded||typeof window>`u`||typeof document>`u`||!(typeof window<`u`&&window.SR_EXTERNAL_ANALYTICS_ENABLED===!0))return;this.gtmLoaded=!0,window.dataLayer=window.dataLayer||[],window.dataLayer.push({"gtm.start":new Date().getTime(),event:`gtm.js`});let e=document.createElement(`script`);e.async=!0,e.src=`https://www.googletagmanager.com/gtm.js?id=${wf}`,e.setAttribute(`data-sr-gtm`,`true`);let t=document.getElementsByTagName(`script`)[0];t&&t.parentNode?t.parentNode.insertBefore(e,t):document.head&&document.head.appendChild(e)}setConsent(e){this.hasAnalyticsConsent(),this.preferences={necessary:!0,analytics:!!e.analytics,personalization:!!e.personalization};try{localStorage.setItem(`sevenrock_cookie_consent`,JSON.stringify(this.preferences))}catch{}typeof window<`u`&&typeof window.gtag==`function`&&window.gtag(`consent`,`update`,{analytics_storage:this.preferences.analytics?`granted`:`denied`,functionality_storage:this.preferences.personalization?`granted`:`denied`}),this.preferences.analytics?(this.gtmLoaded||this.loadGtmOnce(),window.dataLayer.push({event:`consent_granted`,consent_level:`analytics_allowed`})):this.gtmLoaded&&window.dataLayer.push({event:`consent_revoked`,consent_level:`necessary_only`}),this.isTestOrDev()&&this.recordLocalEvent(`consent_update`,{analytics:this.preferences.analytics,personalization:this.preferences.personalization},this.preferences.analytics?`consent_granted`:`consent_revoked`)}track(e,t={}){if(!Sf.has(e))return!1;let n=Cf[e]||[],r={};for(let e of n)if(e in t&&t[e]!==void 0&&t[e]!==null){let n=t[e];typeof n==`number`?r[e]=Number.isFinite(n)?Math.round(n):0:typeof n==`boolean`?r[e]=n:r[e]=String(n).trim().slice(0,60)}if(e===`podcast_seek`){let e=r.episode_id||`default`,t=Date.now();if(t-(this.seekThrottleTimers[e]||0)<1500)return!1;this.seekThrottleTimers[e]=t}let i=this.isTestOrDev(),a=this.hasAnalyticsConsent();if(i){let t=a?`dispatched`:`blocked_by_consent`;this.recordLocalEvent(e,r,t)}return typeof window<`u`&&typeof window.dispatchEvent==`function`&&window.dispatchEvent(new CustomEvent(`sevenrock:analytics`,{detail:{event:e,params:r,consent:a}})),a?(window.dataLayer=window.dataLayer||[],window.dataLayer.push({event:e,...r}),!0):!1}recordLocalEvent(e,t,n){if(!this.isTestOrDev())return null;let r={id:`evt_`+Math.random().toString(36).substr(2,9),timestamp:new Date().toISOString(),event:e,params:t,status:n};return this.eventLog.push(r),this.eventLog.length>this.maxLogSize&&this.eventLog.shift(),r}getEventLog(){return this.isTestOrDev()?[...this.eventLog]:[]}clearEventLog(){this.eventLog=[]}};typeof window<`u`&&(window.SevenRockAnalytics=Tf),T.plugin(Ro),T.plugin(Da),window.Alpine=T,window.__srUserGesture=!1;var Ef=()=>{window.__srUserGesture=!0};window.addEventListener(`pointerdown`,Ef,{once:!0,passive:!0}),window.addEventListener(`keydown`,Ef,{once:!0});var Df={LUNES:1,MARTES:2,MIERCOLES:3,JUEVES:4,VIERNES:5,SABADO:6,DOMINGO:7};T.data(`rocksHero`,(e=[])=>({active:0,slides:e,interval:null,init(){this.slides.length<2||(this.interval=setInterval(()=>this.next(),3e3))},next(){this.active=(this.active+1)%this.slides.length},go(e){this.active=e}})),T.data(`rocksNav`,()=>({open:!1,searchOpen:!1,sticky:!1,init(){this.sticky=window.scrollY>100,window.addEventListener(`scroll`,()=>{this.sticky=window.scrollY>100},{passive:!0})}})),T.data(`backToTopButton`,()=>({visible:!1,threshold:420,onScroll:null,init(){this.onScroll=()=>{this.visible=window.scrollY>this.threshold},this.onScroll(),window.addEventListener(`scroll`,this.onScroll,{passive:!0})},destroy(){this.onScroll&&window.removeEventListener(`scroll`,this.onScroll)},scrollToTop(){window.scrollTo({top:0,behavior:`smooth`})}})),T.data(`galleryLightbox`,(e=[])=>({images:e,active:0,open:!1,touchStartX:0,get current(){return this.images[this.active]??{src:``,caption:``}},show(e){this.active=e,this.open=!0,document.body.classList.add(`lb-disable-scrolling`),this.preloadAround()},close(){this.open=!1,document.body.classList.remove(`lb-disable-scrolling`)},next(){this.images.length&&(this.active=(this.active+1)%this.images.length,this.preloadAround())},prev(){this.images.length&&(this.active=(this.active-1+this.images.length)%this.images.length,this.preloadAround())},preloadAround(){[this.active-1,this.active+1].forEach(e=>{let t=this.images[(e+this.images.length)%this.images.length];if(t?.src){let e=new Image;e.src=t.src}})},swipeEnd(e){let t=e.changedTouches[0].clientX-this.touchStartX;Math.abs(t)<40||(t<0?this.next():this.prev())}})),T.data(`bandProfilePicker`,(e={})=>({searchUrl:e.searchUrl??``,selectedId:e.selectedId?String(e.selectedId):``,selectedLabel:e.selectedLabel??``,minLength:Number.isFinite(Number(e.minLength))?Math.max(1,Number(e.minLength)):3,query:e.selectedLabel??``,results:[],activeIndex:-1,open:!1,loading:!1,timer:null,requestToken:0,init(){this.query=this.selectedLabel||``},onInput(){this.selectedId=``,this.selectedLabel=``,this.activeIndex=-1,this.scheduleSearch()},scheduleSearch(){if(clearTimeout(this.timer),this.query.trim().length<this.minLength){this.results=[],this.open=!1,this.activeIndex=-1;return}this.timer=setTimeout(()=>{this.search()},160)},async search(){if(!this.searchUrl)return;let e=++this.requestToken;this.loading=!0;try{let t=new URL(this.searchUrl,window.location.origin);t.searchParams.set(`q`,this.query.trim()),this.open=!0;let n=await(await fetch(t.toString(),{headers:{Accept:`application/json`},credentials:`same-origin`})).json();if(e!==this.requestToken)return;this.results=Array.isArray(n?.data?.results)?n.data.results:[],this.activeIndex=this.results.length?0:-1,this.open=!0}catch{e===this.requestToken&&(this.results=[],this.open=!1,this.activeIndex=-1)}finally{e===this.requestToken&&(this.loading=!1)}},choose(e){this.selectedId=String(e.id??``),this.selectedLabel=e.text??``,this.query=this.selectedLabel,this.results=[],this.open=!1,this.activeIndex=-1},clear(){this.selectedId=``,this.selectedLabel=``,this.query=``,this.results=[],this.open=!1,this.activeIndex=-1},focus(){this.results.length>0&&(this.open=!0)},closeSoon(){window.setTimeout(()=>{this.open=!1},120)},move(e){this.results.length&&(this.open=!0,this.activeIndex=(this.activeIndex+e+this.results.length)%this.results.length)},commitActive(e){this.activeIndex<0||this.activeIndex>=this.results.length||(e?.preventDefault?.(),this.choose(this.results[this.activeIndex]))},handleEnter(e){this.open&&this.activeIndex>=0&&this.activeIndex<this.results.length&&this.commitActive(e)}})),T.data(`podcastUploadForm`,(e={})=>({activeDay:e.initialDay??`LUNES`,activeTab:e.initialTab??`multimedia`,fecha_emision:e.initialDate??``,dateSuggestion:``,dateSuggestionType:``,uploading:!1,progress:0,progressLabel:`0%`,statusMessage:``,phaseLabel:`Listo`,phaseDetailLabel:``,errorMessages:[],downloading:!1,uploadEtaLabel:``,fileSizeLabel:``,estimatedUploadRateBytesPerSec:Number(e.estimatedUploadRateBytesPerSec??8*1024*1024),fieldLabelMap:{master_program_id:`Programa maestro`,live_title:`Título del episodio`,fecha_emision:`Fecha de emisión`,numero_episodio:`Capítulo / episodio`,archivo_mp3:`Archivo MP3`,imagen_episodio_url:`URL de imagen`,imagen_episodio_file:`Archivo de imagen`,biografia_invitado:`Invitado`,resena:`Descripción / resumen`},engancharFichero(e){let t=e.target.files?.[0];if(!(!t||!this.uppy)){this.uppy.cancelAll();try{this.uppy.addFile({name:t.name,type:t.type||`audio/mpeg`,data:t})}catch{}this.updateUploadEstimate(t)}},init(){this.computeDateForDay(this.activeDay),this.$watch(`activeDay`,e=>{this.computeDateForDay(e)});try{this.uppy=new _c({autoProceed:!1,restrictions:{maxNumberOfFiles:1,allowedFileTypes:[`audio/mpeg`,`audio/mp3`]}}),this.uppy.use(bf,{limit:1,timeout:0,getUploadParameters:e=>{let t=document.querySelector(`input[name="_token"]`)?.value||document.querySelector(`meta[name="csrf-token"]`)?.getAttribute(`content`)||``;return fetch(`/admin/podcast-uploads/presign`,{method:`POST`,headers:{"Content-Type":`application/json`,Accept:`application/json`,"X-CSRF-TOKEN":t},body:JSON.stringify({filename:e.name,contentType:e.type||`audio/mpeg`})}).then(e=>{if(!e.ok)throw Error(`Failed to generate presigned URL`);return e.json()}).then(t=>(this.uppy.setFileMeta(e.id,{r2Key:t.key}),{url:t.url,method:t.method,headers:t.headers,fields:t.fields}))}}),this.uppy.on(`upload-progress`,(e,t)=>{let n=Math.min(100,Math.max(0,Math.round(t.bytesUploaded/t.bytesTotal*100)));this.progress=n,this.progressLabel=`${n}%`,t.bytesUploaded>0&&(t.eta?this.uploadEtaLabel=`Restan ~${this.formatDuration(t.eta)}`:n>=99&&(this.uploadEtaLabel=`Finalizando transferencia...`))}),this.uppy.on(`upload-success`,(e,t)=>{let n=e.meta.r2Key;this.submitFormWithR2Key(n)}),this.uppy.on(`upload-error`,(e,t,n)=>{console.warn(`Uppy R2 upload error, falling back to chunked upload:`,t);let r=e?.data;r&&r instanceof Blob?(this.statusMessage=`Subida directa a R2 no disponible. Iniciando subida de seguridad por partes...`,this.phaseLabel=`Subida alternativa`,this.phaseDetailLabel=`Transfiriendo por fragmentos de seguridad para evitar error 413...`,this.uploadByChunks(r)):(this.uploading=!1,this.phaseLabel=`Error`,this.phaseDetailLabel=`La subida a Cloudflare R2 falló.`,this.statusMessage=`La subida falló: `+(t?.message||`Error de red.`),this.uploadEtaLabel=``)})}catch(e){console.error(`Error al inicializar Uppy:`,e),this.uppy=null}},computeDateForDay(e){let t=Df[String(e??``).toUpperCase()];if(!t)return;let n=new Date,r=n.getDay(),i=r===0?7:r,a=new Date(n);if(t===i){this.dateSuggestionType=`today`,this.dateSuggestion=`Hoy es el día correcto`,this.fecha_emision=this.toDateInputValue(n);return}let o=t>i?t-i:7-i+t;a.setDate(n.getDate()+o),this.dateSuggestionType=t>i?`future`:`next`,this.dateSuggestion=`Próximo ${this.formatWeekday(a)} = ${this.formatDayMonth(a)}`,this.fecha_emision=this.toDateInputValue(a)},formatWeekday(e){return e.toLocaleDateString(`es-ES`,{weekday:`long`})},formatDayMonth(e){return e.toLocaleDateString(`es-ES`,{day:`numeric`,month:`long`})},toDateInputValue(e){return`${e.getFullYear()}-${String(e.getMonth()+1).padStart(2,`0`)}-${String(e.getDate()).padStart(2,`0`)}`},updateEpisodeNumber(e){let t=e.target.options[e.target.selectedIndex]?.getAttribute(`data-next-episode`),n=document.querySelector(`input[name="numero_episodio"]`);n&&(n.value=t||``)},tabForField(e){return[`archivo_mp3`,`imagen_episodio_url`,`imagen_episodio_file`].includes(e)?`multimedia`:[`sync_archive_org`,`download_processed_mp3`].includes(e)?`distribution`:`editorial`},focusField(e,t){t&&(this.activeTab=this.tabForField(t),window.setTimeout(()=>{let n=`[name="${CSS.escape(t)}"]`,r=e.querySelector(n);r?.scrollIntoView&&r.scrollIntoView({behavior:`smooth`,block:`center`}),r?.focus&&r.focus({preventScroll:!0})},50))},showValidationIssues(e,t={}){let n=this.formatValidationErrors(t),r=Object.keys(t??{})[0]??``;this.uploading=!1,this.progress=0,this.progressLabel=`0%`,this.phaseLabel=`Validando`,this.phaseDetailLabel=this.phaseDetailText(),this.statusMessage=`Faltan campos obligatorios. Revisa el formulario.`,this.errorMessages=n.length>0?n:[`Revisa los campos marcados.`],this.uploadEtaLabel=``,this.focusField(e,r),r||window.setTimeout(()=>{e?.scrollIntoView?.({behavior:`smooth`,block:`start`})},50)},phaseClass(){let e=String(this.phaseLabel??``).toLowerCase();return e.includes(`valid`)?`border-[#3b3b3b] bg-[rgba(255,255,255,.03)] text-[#c7c7c7]`:e.includes(`subiend`)||e.includes(`transfer`)?`border-[#5a4315] bg-[rgba(118,86,22,.18)] text-[#f2d89b]`:e.includes(`sincronizando`)?`border-[#31553f] bg-[rgba(30,76,49,.2)] text-[#b8e2c7]`:e.includes(`procesando`)||e.includes(`preparando`)?`border-[#3f4f2c] bg-[rgba(60,82,35,.2)] text-[#d5e7aa]`:e.includes(`error`)||e.includes(`fall`)?`border-[#5d2b2b] bg-[rgba(92,35,35,.28)] text-[#ffd0d0]`:e.includes(`listo`)||e.includes(`complet`)?`border-[#2d5440] bg-[rgba(29,72,45,.18)] text-[#c8ead6]`:`border-[#2b2b2b] bg-[rgba(255,255,255,.03)] text-[#bdbdbd]`},phaseDetailText(){let e=String(this.phaseLabel??``).toLowerCase();return e.includes(`valid`)?`Validando campos obligatorios antes de iniciar la carga.`:e.includes(`subiend`)?`Subiendo el MP3 al servidor de la radio.`:e.includes(`procesando`)?`Escribiendo metadatos y enviando a RadioBOSS.`:e.includes(`sincronizando`)?`Sincronizando el episodio con Archive.org.`:e.includes(`preparando`)?`La transferencia terminó. Preparando la descarga local.`:e.includes(`error`)?`La operación se detuvo por un problema de red, validación o servidor.`:e.includes(`listo`)?`Todo quedó listo para iniciar una nueva carga.`:``},formatBytes(e){let t=Number(e??0);if(!Number.isFinite(t)||t<=0)return``;let n=[`B`,`KB`,`MB`,`GB`],r=t,i=0;for(;r>=1024&&i<n.length-1;)r/=1024,i+=1;let a=i===0?0:r>=10?1:2;return`${r.toFixed(a)} ${n[i]}`},formatDuration(e){let t=Math.max(0,Math.ceil(Number(e??0))),n=Math.floor(t/3600),r=Math.floor(t%3600/60),i=t%60;return n>0?`${n}:${String(r).padStart(2,`0`)}:${String(i).padStart(2,`0`)}`:`${r}:${String(i).padStart(2,`0`)}`},updateUploadEstimate(e){let t=Number(e?.size??0);if(this.fileSizeLabel=this.formatBytes(t),t<=0){this.uploadEtaLabel=``;return}let n=Math.max(1,Math.ceil(t/Math.max(1,this.estimatedUploadRateBytesPerSec)));this.uploadEtaLabel=`Estimado de carga: ~${this.formatDuration(n)}`},validateBeforeSubmit(e){let t=[],n=e.querySelector(`[data-day-panel="${this.activeDay}"] select[name="master_program_id"]`),r=e.querySelector(`[name="live_title"]`),i=e.querySelector(`[name="fecha_emision"]`),a=e.querySelector(`[name="archivo_mp3"]`)?.files?.[0]??null;return n?.value||t.push(`Programa maestro: selecciona un programa.`),String(r?.value??``).trim()||t.push(`Título del episodio: este campo es obligatorio.`),String(i?.value??``).trim()||t.push(`Fecha de emisión: selecciona una fecha.`),a?a.size<=0?t.push(`Archivo MP3: el archivo seleccionado no es válido.`):a.size>512e3*1024&&t.push(`Archivo MP3: no puede superar 500 MB.`):t.push(`Archivo MP3: selecciona un archivo antes de continuar.`),t.length>0?(this.showValidationIssues(e,{master_program_id:n?.value?[]:[`Debes seleccionar un programa maestro.`],live_title:String(r?.value??``).trim()?[]:[`El título del episodio es obligatorio.`],fecha_emision:String(i?.value??``).trim()?[]:[`La fecha de emisión es obligatoria.`],archivo_mp3:a?[]:[`Debes seleccionar un archivo MP3.`]}),null):(this.updateUploadEstimate(a),a)},formatValidationErrors(e={}){return Object.entries(e).flatMap(([e,t])=>{let n=this.fieldLabelMap[e]??e.replaceAll(`_`,` `);return(Array.isArray(t)?t:[t]).filter(Boolean).map(t=>{let r=String(t).trim();return e===`live_title`&&/required/i.test(r)?`${n}: este campo es obligatorio.`:e===`archivo_mp3`&&/required/i.test(r)?`${n}: debes seleccionar un MP3 para continuar.`:r.replace(/^The\s+/i,``).replace(/\s+field is required\.?$/i,``)?`${n}: ${r}`:`${n}: revisión pendiente`})})},submit(e){let t=e?.target;if(!t||this.uploading)return;e.preventDefault();let n=e?.submitter??null,r=String(n?.value??`process`).toLowerCase()===`save`?`save`:`process`;this.phaseLabel=`Validando`;let i=this.validateBeforeSubmit(t);if(!i)return;let a=t.querySelector(`input[name="pipeline_action"]`);if(a?a.value=r:t.insertAdjacentHTML(`beforeend`,`<input type="hidden" name="pipeline_action" value="${r}" data-pipeline-action-field="1">`),this.uploading=!0,this.downloading=!1,this.progress=0,this.progressLabel=`0%`,this.phaseLabel=`Subiendo`,this.phaseDetailLabel=this.phaseDetailText(),this.statusMessage=`Subiendo archivo...`,this.errorMessages=[],this.uploadEtaLabel=this.uploadEtaLabel||`Calculando tiempo estimado...`,this.pipelineAction=r,this.formToSubmit=t,this.uppy){let e=t.querySelector(`input[name="archivo_mp3"]`)?.files?.[0]??null;if(e&&this.uppy.getFiles().length===0)try{this.uppy.addFile({name:e.name,type:e.type||`audio/mpeg`,data:e})}catch{}}let o=t.querySelector(`input[name="archivo_mp3"]`)?.files?.[0]??null,s=!this.uppy;if(o&&o.size>100*1024*1024&&s){this.uploading=!1,this.phaseLabel=`No se puede subir así`,this.phaseDetailLabel=`Fichero mayor de 100 MB sin subida directa`,this.statusMessage=`Los ficheros grandes necesitan la subida directa a R2 y no está disponible. Recarga la página (Ctrl+F5) o avisa al administrador.`;return}if(this.uppy&&this.uppy.getFiles().length>0){this.statusMessage=`Subiendo directamente a Cloudflare R2...`,this.phaseLabel=`Subiendo`,this.phaseDetailLabel=`Subiendo archivo al almacenamiento intermedio.`,this.uppy.upload().catch(e=>{console.warn(`Fallo al iniciar uppy.upload(), probando subida por partes:`,e),i&&this.uploadByChunks(i)});return}let c=new XMLHttpRequest;c.open(t.method||`POST`,t.action,!0),c.responseType=`text`,c.setRequestHeader(`Accept`,`application/json`),c.setRequestHeader(`X-Requested-With`,`XMLHttpRequest`);let l=performance.now();c.upload.onprogress=e=>{if(!e.lengthComputable)return;let t=Math.min(100,Math.max(0,Math.round(e.loaded/e.total*100)));if(this.progress=t,this.progressLabel=`${t}%`,e.loaded>0){let n=Math.max(.1,(performance.now()-l)/1e3),r=e.loaded/n;if(r>0&&e.total>e.loaded){let t=Math.ceil((e.total-e.loaded)/r);this.uploadEtaLabel=`Restan ~${this.formatDuration(t)}`}else t>=99&&(this.uploadEtaLabel=`Finalizando transferencia...`)}},c.onreadystatechange=()=>{if(c.readyState!==XMLHttpRequest.DONE)return;this.uploading=!1;let e=null;try{e=c.responseText?JSON.parse(c.responseText):null}catch{e=null}if(c.status>=200&&c.status<300){if(this.progress=100,this.progressLabel=`100%`,this.statusMessage=e?.status??`Episodio procesado correctamente.`,this.errorMessages=[],this.uploadEtaLabel=`Transferencia completada.`,e?.pipeline_action===`save`?(this.phaseLabel=`Guardado`,this.phaseDetailLabel=`Episodio creado sin iniciar el pipeline.`):(this.phaseLabel=e?.download_url?`Preparando descarga`:t.querySelector(`[name="sync_archive_org"]`)?.checked?`Sincronizando Archive.org`:`Procesando RadioBOSS`,this.phaseDetailLabel=this.phaseDetailText()),window.dispatchEvent(new CustomEvent(`podcast-upload-complete`,{detail:{status:e?.status??`Episodio procesado correctamente.`,redirectUrl:e?.redirect_url??null}})),e?.download_url){this.downloading=!0;let t=document.createElement(`a`);t.href=e.download_url,t.rel=`noopener`,t.target=`_self`,document.body.appendChild(t),t.click(),t.remove()}e?.redirect_url&&window.setTimeout(()=>{window.location.href=e.redirect_url},e?.download_url?900:300);return}let n=e?.errors??{};if(c.status===422||Object.keys(n).length>0){this.showValidationIssues(t,n);return}c.status===413?(this.phaseLabel=`Error de límite`,this.phaseDetailLabel=`Archivo demasiado pesado`,this.statusMessage=`El servidor rechazó la subida (Error 413).`,this.errorMessages=[`El archivo excede el límite máximo permitido por tu servidor o Cloudflare (suele ser de 100 MB a 256 MB). La subida ha ido por el servidor en vez de por R2.`]):(this.phaseLabel=`Error del servidor`,this.phaseDetailLabel=`Error HTTP ${c.status}`,this.statusMessage=`No se pudo completar la subida.`,this.errorMessages=e?.message?[e.message]:[]),this.uploadEtaLabel=``},c.onerror=()=>{this.uploading=!1,this.phaseLabel=`Error`,this.phaseDetailLabel=this.phaseDetailText(),this.statusMessage=`La subida falló por un error de red o del servidor.`,this.uploadEtaLabel=``},c.send(new FormData(t))},async uploadByChunks(e){if(!e){this.uploading=!1;return}let t=40*1024*1024,n=Math.ceil(e.size/t),r=`chunk_`+Date.now()+`_`+Math.random().toString(36).substring(2,9),i=document.querySelector(`input[name="_token"]`)?.value||document.querySelector(`meta[name="csrf-token"]`)?.getAttribute(`content`)||``;this.uploading=!0,this.phaseLabel=`Subiendo por fragmentos`,this.statusMessage=`Subiendo por partes de seguridad (1/${n})...`;try{for(let a=0;a<n;a++){let o=a*t,s=Math.min(e.size,o+t),c=e.slice(o,s),l=new FormData;l.append(`upload_id`,r),l.append(`chunk_index`,a),l.append(`total_chunks`,n),l.append(`file`,c,e.name),this.phaseDetailLabel=`Enviando fragmento ${a+1} de ${n} (~${this.formatBytes(c.size)})...`,await new Promise((e,t)=>{let r=new XMLHttpRequest;r.open(`POST`,`/admin/podcast-uploads/chunk`,!0),r.setRequestHeader(`X-CSRF-TOKEN`,i),r.setRequestHeader(`Accept`,`application/json`),r.upload.onprogress=e=>{if(e.lengthComputable){let t=e.loaded/e.total,r=Math.min(99,Math.round((a+t)/n*100));this.progress=r,this.progressLabel=`${r}%`}},r.onload=()=>{r.status>=200&&r.status<300?e(r.responseText):t(Error(`Error al subir el fragmento ${a+1}: HTTP ${r.status}`))},r.onerror=()=>t(Error(`Fallo de red al enviar fragmento ${a+1}`)),r.send(l)})}this.phaseLabel=`Uniendo fragmentos`,this.phaseDetailLabel=`Ensamblando archivo en el servidor...`,this.statusMessage=`Completando archivo...`;let a=await fetch(`/admin/podcast-uploads/chunk/complete`,{method:`POST`,headers:{"Content-Type":`application/json`,Accept:`application/json`,"X-CSRF-TOKEN":i},body:JSON.stringify({upload_id:r,total_chunks:n,filename:e.name})});if(!a.ok){let e=await a.json().catch(()=>({}));throw Error(e.error||`Error al completar la unión de fragmentos.`)}let o=await a.json();this.submitFormWithChunkedKey(o.chunked_key)}catch(e){console.error(`Error en subida por partes:`,e),this.uploading=!1,this.phaseLabel=`Error`,this.phaseDetailLabel=`La subida por fragmentos falló.`,this.statusMessage=e.message||`Error durante la subida por fragmentos.`,this.errorMessages=[e.message||`Error de transferencia por fragmentos.`],this.uploadEtaLabel=``}},submitFormWithChunkedKey(e){this.statusMessage=`Archivo transferido con éxito. Guardando episodio...`,this.phaseLabel=`Guardando`,this.phaseDetailLabel=`Registrando episodio en la base de datos.`;let t=this.formToSubmit||document.querySelector(`form[action*="podcast-uploads"]`),n=new FormData(t);n.delete(`archivo_mp3`),n.append(`chunked_key`,e),n.set(`pipeline_action`,this.pipelineAction||`process`);let r=new XMLHttpRequest;r.open(t.method||`POST`,t.action,!0),r.responseType=`text`,r.setRequestHeader(`Accept`,`application/json`),r.setRequestHeader(`X-Requested-With`,`XMLHttpRequest`),r.onreadystatechange=()=>{if(r.readyState!==XMLHttpRequest.DONE)return;this.uploading=!1;let e=null;try{e=r.responseText?JSON.parse(r.responseText):null}catch{e=null}if(r.status>=200&&r.status<300){this.progress=100,this.progressLabel=`100%`,this.statusMessage=e?.status??`Episodio procesado correctamente.`,this.errorMessages=[],this.uploadEtaLabel=`Transferencia completada.`,e?.pipeline_action===`save`?(this.phaseLabel=`Guardado`,this.phaseDetailLabel=`Episodio creado sin iniciar el pipeline.`):(this.phaseLabel=`Procesando RadioBOSS`,this.phaseDetailLabel=`El archivo está siendo procesado en segundo plano.`),window.dispatchEvent(new CustomEvent(`podcast-upload-complete`,{detail:{status:e?.status??`Episodio procesado correctamente.`,redirectUrl:e?.redirect_url??null}})),e?.redirect_url&&window.setTimeout(()=>{window.location.href=e.redirect_url},300);return}let n=e?.errors??{};if(r.status===422||Object.keys(n).length>0){this.showValidationIssues(t,n);return}this.phaseLabel=`Error`,this.phaseDetailLabel=`Error HTTP ${r.status}`,this.statusMessage=`No se pudo completar el registro.`,this.errorMessages=e?.message?[e.message]:[],this.uploadEtaLabel=``},r.onerror=()=>{this.uploading=!1,this.phaseLabel=`Error`,this.phaseDetailLabel=`Error de red al guardar`,this.statusMessage=`No se pudo contactar al servidor tras transferir el archivo.`,this.uploadEtaLabel=``},r.send(n)},submitFormWithR2Key(e){this.statusMessage=`Archivo subido a R2. Guardando información del episodio...`,this.phaseLabel=`Guardando`,this.phaseDetailLabel=`Registrando episodio en la base de datos.`;let t=this.formToSubmit,n=new FormData(t);n.delete(`archivo_mp3`),n.append(`r2_key`,e),n.set(`pipeline_action`,this.pipelineAction||`process`);let r=new XMLHttpRequest;r.open(t.method||`POST`,t.action,!0),r.responseType=`text`,r.setRequestHeader(`Accept`,`application/json`),r.setRequestHeader(`X-Requested-With`,`XMLHttpRequest`),r.onreadystatechange=()=>{if(r.readyState!==XMLHttpRequest.DONE)return;this.uploading=!1;let e=null;try{e=r.responseText?JSON.parse(r.responseText):null}catch{e=null}if(r.status>=200&&r.status<300){this.progress=100,this.progressLabel=`100%`,this.statusMessage=e?.status??`Episodio procesado correctamente.`,this.errorMessages=[],this.uploadEtaLabel=`Transferencia completada.`,e?.pipeline_action===`save`?(this.phaseLabel=`Guardado`,this.phaseDetailLabel=`Episodio creado sin iniciar el pipeline.`):(this.phaseLabel=`Procesando RadioBOSS`,this.phaseDetailLabel=`El archivo está siendo procesado en segundo plano.`),window.dispatchEvent(new CustomEvent(`podcast-upload-complete`,{detail:{status:e?.status??`Episodio procesado correctamente.`,redirectUrl:e?.redirect_url??null}})),e?.redirect_url&&window.setTimeout(()=>{window.location.href=e.redirect_url},300);return}let n=e?.errors??{};if(r.status===422||Object.keys(n).length>0){this.showValidationIssues(t,n);return}this.phaseLabel=`Error`,this.phaseDetailLabel=`Error HTTP ${r.status}`,this.statusMessage=`No se pudo completar el registro.`,this.errorMessages=e?.message?[e.message]:[],this.uploadEtaLabel=``},r.onerror=()=>{this.uploading=!1,this.phaseLabel=`Error`,this.phaseDetailLabel=`Error de red al guardar el episodio.`,this.statusMessage=`El registro falló por un error de red o del servidor.`,this.uploadEtaLabel=``},r.send(n)}})),T.data(`podcastUploadsDashboard`,(e={})=>({recentUrl:e.recentUrl??``,refreshInterval:Number.isFinite(Number(e.refreshInterval))?Math.max(5e3,Number(e.refreshInterval)):15e3,isRefreshing:!1,lastUpdatedLabel:``,timer:null,requestToken:0,init(){this.recentUrl&&(this.refresh(!1),this.startTimer())},destroy(){this.stopTimer()},handleUploadSuccess(){this.startPolling(),this.refresh(!0)},startPolling(){this.startTimer()},startTimer(){this.timer||=window.setInterval(()=>{this.refresh(!0)},this.refreshInterval)},stopTimer(){this.timer&&=(window.clearInterval(this.timer),null)},hasActiveEntries(e=document){return(e.querySelectorAll?.(`[data-podcast-refresh-active="1"]`)??[]).length>0},parseHtml(e){let t=document.createElement(`template`);return t.innerHTML=e,t.content},renderHtml(e){if(this.$refs.recentUploads){let t=document.activeElement,n=this.$refs.recentUploads.contains(t),r=t?.getAttribute?.(`href`),i=t?.getAttribute?.(`name`),a=t?.getAttribute?.(`value`);if(this.$refs.recentUploads.innerHTML=e,n&&t){let e=null;r?e=this.$refs.recentUploads.querySelector(`a[href="${CSS.escape(r)}"]`):i&&a&&(e=this.$refs.recentUploads.querySelector(`button[name="${CSS.escape(i)}"][value="${CSS.escape(a)}"]`)),e&&typeof e.focus==`function`&&e.focus({preventScroll:!0})}}},async refresh(e=!1){if(!this.recentUrl||this.isRefreshing)return;let t=++this.requestToken;this.isRefreshing=!0;try{let e=new URL(this.recentUrl,window.location.origin);new URLSearchParams(window.location.search).forEach((t,n)=>{e.searchParams.set(n,t)});let n=await fetch(e.toString(),{headers:{"X-Requested-With":`XMLHttpRequest`,Accept:`text/html`},credentials:`same-origin`});if(!n.ok)throw Error(`HTTP ${n.status}`);let r=await n.text();if(t!==this.requestToken)return;let i=this.parseHtml(r),a=this.hasActiveEntries(i);this.renderHtml(r);let o=new Date;this.lastUpdatedLabel=`Actualizado: ${o.toLocaleTimeString(`es-ES`,{hour:`2-digit`,minute:`2-digit`,second:`2-digit`})}`,a?this.startTimer():this.stopTimer()}catch(e){console.warn(`podcastUploadsDashboard: no se pudo actualizar la lista de episodios.`,e)}finally{t===this.requestToken&&(this.isRefreshing=!1)}}})),T.data(`postContentEditor`,(e={})=>({blocks:Array.isArray(e.initialBlocks)?e.initialBlocks:[],uploadUrl:e.uploadUrl??``,uploading:!1,uploadError:``,serialized:``,serializedBlocks:``,init(){this.blocks.length?this.blocks=this.blocks.map(e=>this.normalizeBlock(e)):this.blocks=[this.createBlock(`paragraph`)],this.sync()},createBlock(e=`paragraph`){return{id:`block-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,type:e,value:``,src:``,alt:``,cite:``,caption:``,items:[]}},normalizeBlock(e={}){let t=this.createBlock(e.type||`paragraph`),n=Array.isArray(e.items)?e.items.map(e=>({id:e?.id??`item-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,src:typeof e?.src==`string`?e.src:``,alt:typeof e?.alt==`string`?e.alt:``})):[];return{...t,...e,type:[`paragraph`,`heading`,`quote`,`image`,`raw`].includes(e.type)?e.type:`paragraph`,value:typeof e.value==`string`?e.value:``,src:typeof e.src==`string`?e.src:``,alt:typeof e.alt==`string`?e.alt:``,cite:typeof e.cite==`string`?e.cite:``,caption:typeof e.caption==`string`?e.caption:``,items:e.type===`gallery`?n:[]}},addBlock(e){let t=this.createBlock(e);e===`gallery`&&!t.items.length&&t.items.push({id:`item-${Date.now()}`,src:``,alt:``}),this.blocks.push(t),this.sync()},removeBlock(e){if(this.blocks.length<=1){this.blocks=[this.createBlock(`paragraph`)],this.sync();return}this.blocks.splice(e,1),this.sync()},moveBlock(e,t){let n=e+t;if(n<0||n>=this.blocks.length)return;let[r]=this.blocks.splice(e,1);this.blocks.splice(n,0,r),this.sync()},sync(){this.serialized=this.blocks.map(e=>this.serializeBlock(e)).filter(e=>e!==``).join(`
+$1`).replace(/[ \t]{2,}/g,` `).trim()},buildSignature({title:e=``,artist:t=``,cover:n=``,program:r=``}={}){return[e,t,n,r].join(`|`)},readNowPlayingWidget(){let e=document.getElementById(this.widgetIds.root),t=document.getElementById(this.widgetIds.cover),n=document.getElementById(this.widgetIds.timerElapsed),r=document.getElementById(this.widgetIds.timerRemaining),i=n?.closest?.(`.rbcloud_tracktimer`)||r?.closest?.(`.rbcloud_tracktimer`),a=this.cleanWidgetText(e?.innerText||e?.textContent||``),o=this.parseWidgetNowPlaying(a),s=this.readTrackTimerWidget(i,n,r);return{cover:t?.getAttribute(`src`)||t?.currentSrc||``,artist:o.artist,title:o.title,elapsed:s.elapsed||o.elapsed,duration:s.elapsed>0&&s.remaining>0?s.elapsed+s.remaining:o.duration,text:a}},readTrackTimerWidget(e=null,t=null,n=null){let r=this.cleanWidgetText(t?.innerText||t?.textContent||e?.querySelector?.(`#${this.widgetIds.timerElapsed}`)?.innerText||``),i=this.cleanWidgetText(n?.innerText||n?.textContent||e?.querySelector?.(`#${this.widgetIds.timerRemaining}`)?.innerText||``),a=this.parseWidgetDuration(r),o=this.parseWidgetDuration(i);if(a>0||o>0)return{elapsed:a,remaining:o};let s=this.cleanWidgetText(e?.innerText||e?.textContent||``),c=Array.from(s.matchAll(/\b(\d{1,3}:\d{2})\b/g),e=>e[1]);return{elapsed:this.parseWidgetDuration(c[0]||``),remaining:this.parseWidgetDuration(c[1]||``)}},inferWidgetTrack(e={}){let t=this.cleanWidgetText(e.title||``),n=this.normalizeBandArtist(e.artist||``);if(n)return{title:t,artist:n,cover:e.cover||``,elapsed:Number(e.elapsed||0),duration:Number(e.duration||0)};let r=t.includes(` - `)?t.split(` - `):[];if(r.length>=2){let t=r[r.length-1]||``;return{title:this.cleanWidgetText(r.slice(0,-1).join(` - `)),artist:this.normalizeBandArtist(t),cover:e.cover||``,elapsed:Number(e.elapsed||0),duration:Number(e.duration||0)}}return{title:t,artist:``,cover:e.cover||``,elapsed:Number(e.elapsed||0),duration:Number(e.duration||0)}},parseWidgetNowPlaying(e){let t=this.cleanWidgetText(e);if(!t)return{title:``,artist:``,elapsed:0,duration:0};let n=t.replace(/\u00A0/g,` `).replace(/\s{2,}/g,` `).trim(),r=Array.from(n.matchAll(/\b(\d{1,3}:\d{2})\b/g),e=>e[1]),i=this.parseWidgetDuration(r[r.length-1]||``),a=this.parseWidgetDuration(r[r.length-2]||``),o=n.replace(/\b\d{1,3}:\d{2}\b/g,` `).replace(/\s{2,}/g,` `).trim().replace(/^(?:reproduciendo ahora|now playing|nowplaying|reproduciendo|playing now)\s*/i,``).trim()||n,s=this.splitWidgetArtistTitle(o);return{title:this.normalizeTrackTitle(s.title||o),artist:this.normalizeBandArtist(s.artist||``),elapsed:a,duration:i}},parseWidgetDuration(e){let t=String(e||``);if(t.toLowerCase()===`undefined`)return 0;let n=t.replace(/[^\d:]/g,``);if(!n)return 0;let r=n.split(`:`).map(e=>Number(e));return r.some(e=>!Number.isFinite(e))?0:r.length===3?r[0]*3600+r[1]*60+r[2]:r.length===2?r[0]*60+r[1]:r.length===1?r[0]:0},splitWidgetArtistTitle(e){let t=this.cleanWidgetText(e);if(!t)return{title:``,artist:``};let n=t.includes(` - `)?t.split(` - `):[];if(n.length>=2){let e=this.cleanWidgetText(n[0]||``);return{title:this.cleanWidgetText(n.slice(1).join(` - `)),artist:e}}return{title:t,artist:``}},normalizeBandArtist(e){let t=this.cleanWidgetText(e);if(!t)return``;let n=t.replace(/^\s*(?:remasterizado|remastered)\s*\d{0,4}\s*[-:]\s*/i,``).replace(/\s*\((?:feat\.?|ft\.?|with)[^)]+\)\s*$/i,``).replace(/\s+(?:feat\.?|ft\.?|featuring|with)\b.*$/i,``).replace(/\s{2,}/g,` `).trim();return n?n.toLowerCase()===`transmisión oficial`||n.toLowerCase()===`transmisiÃ³n oficial`?``:n:``},normalizeTrackTitle(e){let t=this.cleanWidgetText(e);if(!t||t.toLowerCase()===`transmisión oficial`)return``;let n=t.includes(` - `)?t.split(` - `):[];return n.length>=2?this.cleanWidgetText(n[0]):t},cleanWidgetText(e){let t=String(e||``).replace(/\s+/g,` `).trim();return!t||t===`...`||t===`&nbsp;`||t.toLowerCase()===`cargando...`||t.toLowerCase()===`undefined`?``:t},tickProgress(){if(!this.playing)return;let e=this.$refs?.audio;if(e&&Number.isFinite(e.currentTime)&&e.currentTime>0&&!this.track.is_live)this.currentTime=Math.round(e.currentTime);else if(this.track&&this.track.is_live){if(this.fixedDuration>0){let e=this.timeSample&&this.timeSample.sampledAt>0?Math.floor((Date.now()-this.timeSample.sampledAt)/1e3):0,t=this.timeSample&&this.timeSample.sampledAt>0?this.timeSample.sampleElapsed+e:this.currentTime;if(this.currentTime>=this.fixedDuration+5||t>=this.fixedDuration+8){this.fixedDuration=0,this.currentTime=0,this.timeSample=null,this.syncProgress();return}this.currentTime+=1}else this.currentTime=0;if(this.syncCounter+=1,this.syncCounter>=5&&(this.syncCounter=0,!this.track.es_bloque_programa)){let e=this.resolveWidgetTrack();if(e&&this.isWidgetMatchingCurrentTrack(e)){let e=document.getElementById(this.widgetIds.timerElapsed),t=document.getElementById(this.widgetIds.timerRemaining),n=e?.closest?.(`.rbcloud_tracktimer`)||t?.closest?.(`.rbcloud_tracktimer`);if(n){let r=this.readTrackTimerWidget(n,e,t);r.elapsed>=0&&(r.elapsed>0||r.remaining>0)&&(Math.abs(this.currentTime-r.elapsed)>=2&&(this.currentTime=r.elapsed),r.remaining>0&&(this.fixedDuration=r.elapsed+r.remaining),this.timeSample={trackSignature:this.track.signature,duration:this.fixedDuration,sampleElapsed:this.currentTime,sampledAt:Date.now(),source:`widget`})}}}}else this.currentTime+=1;this.syncProgress()},syncProgress(){if(this.progress.elapsed=this.currentTime,this.progress.duration=this.fixedDuration,this.fixedDuration<=0){this.progress.ratio=0;return}this.progress.ratio=Math.max(0,Math.min(100,Math.round(this.currentTime/this.fixedDuration*100)))},seek(e){if(this.track&&this.track.is_live)return;let t=this.$refs?.audio;if(!t||this.fixedDuration<=0)return;let n=e.currentTarget.getBoundingClientRect(),r=(e.clientX-n.left)/n.width,i=Math.max(0,Math.min(1,r));this.currentTime=Math.round(this.fixedDuration*i),this.syncProgress(),this.track.audio_url&&Number.isFinite(t.duration)&&t.duration>0&&(t.currentTime=t.duration*i)},hasReliableTime(){if(!this.track)return!1;if(!this.track.is_live)return this.fixedDuration>0||this.progress.duration>0;if(this.fixedDuration<=0||this.currentTime<0||this.currentTime>this.fixedDuration+5)return!1;if(this.timeSample&&this.timeSample.sampledAt>0){let e=Math.floor((Date.now()-this.timeSample.sampledAt)/1e3);if(this.timeSample.sampleElapsed+e>this.fixedDuration+8)return!1}return!0},formatTime(e){let t=Math.max(0,Number(e)||0);return`${String(Math.floor(t/60)).padStart(2,`0`)}:${String(Math.floor(t%60)).padStart(2,`0`)}`},setTab(e){this.userHasChosenTab=!0,this.activeTab=e,n(`sr-player-tab`,e),e===`program`&&this.track.es_bloque_programa&&!this.hasRealSong()&&!this.programInfo&&this.openProgramWindow(this.track.program_id)},programText(){if(this.program){let e=[this.program.name,this.program.host,this.program.schedule,this.program.description].filter(Boolean);if(e.length>0)return e.join(` · `)}if(this.track.es_bloque_programa){let e=[this.track.program_name,this.track.program_host,this.track.program_schedule,this.track.program_description].filter(Boolean);if(e.length>0)return e.join(` · `)}return`No hay programa activo.`},isFavoriteCurrent(){return this.favorites.some(e=>e.signature&&e.signature===this.track.signature)},async syncFavorites(e=``,t=!0){if(!(!this.favoritesUrl||this.favoriteSyncInFlight)){this.favoriteSyncInFlight=!0;try{let n=new URL(this.favoritesUrl,window.location.origin);e&&n.searchParams.set(`signature`,e);let a=await(await fetch(n.toString(),{headers:{Accept:`application/json`}})).json();if(!a?.success)throw Error(`Invalid favorites payload`);let o=a.data||{},s=Array.isArray(o.favorites)?o.favorites:[];if(t&&s.length===0){let t=Array.isArray(this.favorites)&&this.favorites.length>0?[...this.favorites]:r();await this.importLegacyFavorites(t),this.favoriteSyncInFlight=!1,await this.syncFavorites(e,!1);return}this.favorites=s,this.favoriteCount=Number(o.track_count??0),i(this.favorites),this.favoriteSyncReady=!0}catch{this.favorites=r()}finally{this.favoriteSyncInFlight=!1}}},async importLegacyFavorites(e=null){if(t(`sr-player-favorites-migrated-v1`,`0`)===`1`)return;let a=Array.isArray(e)?e:r();if(!(!a.length||!this.favoritesImportUrl))try{let e=await(await fetch(this.favoritesImportUrl,{method:`POST`,headers:{Accept:`application/json`,"Content-Type":`application/json`,"X-Requested-With":`XMLHttpRequest`},body:JSON.stringify({favorites:a})})).json();if(!e?.success)throw Error(`Invalid favorites import payload`);let t=e.data||{};this.favorites=Array.isArray(t.favorites)?t.favorites:a,i(this.favorites),n(`sr-player-favorites-migrated-v1`,`1`)}catch{}},async toggleFavorite(){if(!this.track.signature||!this.favoritesToggleUrl)return;let e={signature:this.track.signature,title:this.track.title,artist:this.track.artist,cover:this.track.cover},t=[...this.favorites],n=this.favoriteCount;this.isFavoriteCurrent()?(this.favorites=this.favorites.filter(e=>e.signature!==this.track.signature),this.favoriteCount=Math.max(0,this.favoriteCount-1)):(this.favorites=[...this.favorites,e].slice(-50),this.favoriteCount+=1),i(this.favorites);try{let t=await(await fetch(this.favoritesToggleUrl,{method:`POST`,headers:{Accept:`application/json`,"Content-Type":`application/json`,"X-Requested-With":`XMLHttpRequest`},body:JSON.stringify(e)})).json();if(!t?.success)throw Error(`Invalid favorites toggle payload`);let n=t.data||{};this.favorites=Array.isArray(n.favorites)?n.favorites:this.favorites,this.favoriteCount=Number(n.track_count??this.favoriteCount),i(this.favorites),this.toastMessage(n.is_favorite?`Añadido a favoritos`:`Favorito eliminado`)}catch{this.favorites=t,this.favoriteCount=n,i(this.favorites),this.toastMessage(`No se pudo sincronizar`)}},toggleSharePanel(){this.sharePanelOpen=!this.sharePanelOpen},async updateShareKey(){let e=this.tituloVisible,t=this.subtituloVisible,n=this.track.program_name||``,r=this.track.cover||this.fallbackCover||``;try{let i=await fetch(`/api/player/share-track`,{method:`POST`,headers:{"Content-Type":`application/json`},body:JSON.stringify({title:e,artist:t,cover:r,program:n})});if(i.ok){let e=await i.json();if(e&&e.key){this.shareKey=e.key;return}}}catch{}this.shareKey=``},shareContext(){let e=this.tituloVisible,t=this.subtituloVisible,n=this.track.program_name||``,r=this.track.cover||this.fallbackCover||``,i=window.location.origin+`/`,a=i;if(this.shareKey)a=`${i}?v=${encodeURIComponent(String(this.shareKey))}`;else{let e=this.track.signature||this.track.audio_url||this.track.program_id||``;e&&(a=`${i}?v=${encodeURIComponent(String(e))}`)}let o=`¡Todas las épocas del rock, están aquí! en Seven Rock Radio 🤘\nEscuchanos!!: ${a}`;return{title:e,artist:t,program:n,cover:r,url:a,text:o,encodedUrl:encodeURIComponent(a),encodedTitle:encodeURIComponent(e),encodedText:encodeURIComponent(o)}},shareTargets(){let e=this.shareContext();return{twitter:`https://twitter.com/intent/tweet?text=${e.encodedTitle}&url=${e.encodedUrl}`,facebook:`https://www.facebook.com/sharer/sharer.php?u=${e.encodedUrl}`,whatsapp:`https://api.whatsapp.com/send?text=${e.encodedText}`,telegram:`https://t.me/share/url?url=${e.encodedUrl}&text=${e.encodedTitle}`,linkedin:`https://www.linkedin.com/sharing/share-offsite/?url=${e.encodedUrl}`,pinterest:`https://pinterest.com/pin/create/button/?url=${e.encodedUrl}${e.cover?`&media=${encodeURIComponent(e.cover)}`:``}&description=${e.encodedTitle}`}},async shareCurrent(){let{text:e,url:t}=this.shareContext();if(navigator.share)try{await navigator.share({title:`Seven Rock Radio`,text:e,url:t}),this.toastMessage(`Compartido`);return}catch{}try{await navigator.clipboard.writeText(`${e} ${t}`.trim()),this.toastMessage(`Copiado al portapapeles`)}catch{this.toastMessage(`No se pudo compartir`)}},async handleHotkeys(e){let t=(e.target?.tagName||``).toLowerCase();if(![`input`,`textarea`,`select`].includes(t)){if(e.code===`Space`){e.preventDefault(),this.togglePlay();return}if(e.code===`ArrowUp`){e.preventDefault(),this.volume=Math.min(1,Math.round((this.volume+.05)*100)/100),this.updateVolume();return}if(e.code===`ArrowDown`){e.preventDefault(),this.volume=Math.max(0,Math.round((this.volume-.05)*100)/100),this.updateVolume();return}if(e.code===`KeyM`){e.preventDefault(),this.toggleMute();return}if(e.code===`KeyL`){this.setTab(`lyrics`);return}if(e.code===`KeyB`){this.setTab(`band`);return}if(e.code===`KeyP`){this.setTab(`program`);return}if(e.code===`KeyH`){this.setTab(`history`);return}e.code===`Escape`&&this.mode!==`page`&&(this.closeTransientOverlays(),n(`sr-player-expanded`,`0`))}},toastMessage(e){this.toast.message=e,this.toast.visible=!0,this.toastHandle&&clearTimeout(this.toastHandle),this.toastHandle=setTimeout(()=>{this.toast.visible=!1,this.toast.message=``,this.toastHandle=null},2200)},updateMediaSession(e){if(!(`mediaSession`in navigator)||!window.MediaMetadata)return;let t=this.tituloVisible||`Seven Rock Radio`,n=this.subtituloVisible||`En vivo`,r=e.cover||e.band_thumbnail||this.bandPanel.cover||this.fallbackCover,i=r?r.startsWith(`http`)?r:window.location.origin+r:``;navigator.mediaSession.metadata=new MediaMetadata({title:t,artist:n,album:`Seven Rock Radio`,artwork:i?[{src:i,sizes:`96x96`},{src:i,sizes:`128x128`},{src:i,sizes:`192x192`},{src:i,sizes:`256x256`},{src:i,sizes:`384x384`},{src:i,sizes:`512x512`}]:[]}),this.setupMediaSessionHandlers()},setupMediaSessionHandlers(){if(`mediaSession`in navigator)try{navigator.mediaSession.setActionHandler(`play`,()=>{this.playing||this.attemptPlayWithFallback()}),navigator.mediaSession.setActionHandler(`pause`,()=>{this.playing&&this.attemptPlayWithFallback()}),navigator.mediaSession.setActionHandler(`previoustrack`,null),navigator.mediaSession.setActionHandler(`nexttrack`,null)}catch{}},updateMediaSessionPlaybackState(e){`mediaSession`in navigator&&(navigator.mediaSession.playbackState=e?`playing`:`paused`)},bandLinks(){let e=Array.isArray(this.bandWindowView.socialLinks)?this.bandWindowView.socialLinks:[];return e.length?e.map(e=>typeof e==`string`?{label:e,url:e}:e&&typeof e==`object`?{label:e.label||e.name||e.title||e.url||`Enlace`,url:e.url||e.href||e.link||``}:null).filter(e=>e&&e.url):[]},countryFlag(e){return!e||typeof e!=`string`?``:{argentina:`🇦🇷`,españa:`🇪🇸`,espana:`🇪🇸`,spain:`🇪🇸`,chile:`🇨🇱`,venezuela:`🇻🇪`,méxico:`🇲🇽`,mexico:`🇲🇽`,"estados unidos":`🇺🇸`,eeuu:`🇺🇸`,usa:`🇺🇸`,"reino unido":`🇬🇧`,uk:`🇬🇧`,"gran bretaña":`🇬🇧`,"gran bretana":`🇬🇧`,colombia:`🇨🇴`,perú:`🇵🇪`,peru:`🇵🇪`,uruguay:`🇺🇾`,brasil:`🇧🇷`,brazil:`🇧🇷`,alemania:`🇩🇪`,germany:`🇩🇪`,francia:`🇫🇷`,france:`🇫🇷`,italia:`🇮🇹`,italy:`🇮🇹`,australia:`🇦🇺`,canadá:`🇨🇦`,canada:`🇨🇦`}[e.trim().toLowerCase()]||`🌍`},bandLineup(){return(Array.isArray(this.bandWindowView.bandMembers)?this.bandWindowView.bandMembers:[]).map(e=>{if(typeof e==`string`){let t=this.cleanWidgetText(e);return t?{name:t,role:``}:null}if(e&&typeof e==`object`){let t=this.cleanWidgetText(e.name||e.member||e.title||``),n=this.cleanWidgetText(e.role||e.instrument||e.position||``);return t?{name:t,role:n}:null}return null}).filter(Boolean)},get resumenBio(){let e=this.bandWindowView.info||``;if(!e)return``;if(e.length<=180)return e;let t=e.substring(0,177),n=t.lastIndexOf(` `);return(n>0?t.substring(0,n):t)+`...`},get biographyExpanded(){return this.bandWindowView.biography||``},get tituloVisible(){if(this.track?.es_bloque_programa){let e=(this.track?.title??``).trim(),t=(this.defaultTitle??``).trim().toLowerCase();return!e||e.toLowerCase()===t||e.toLowerCase()===`transmisión oficial`||e.toLowerCase()===`transmision oficial`||e.toLowerCase()===`seven rock radio`?this.track?.program_name||this.track?.title||this.defaultTitle:this.track.title}return(this.track?.title??``)===``?this.defaultTitle:this.track.title},get subtituloVisible(){return this.track?.es_bloque_programa?this.track?.program_host||this.track?.program_schedule||this.track?.artist||this.defaultArtist:(this.track?.artist??``)===``?this.defaultArtist:this.track.artist},get coverVisible(){let e=!!this.track?.es_bloque_programa,t=this.programInfo?.cover||this.track?.program_cover||``;if(e&&t&&!s(t,this.fallbackCover,this.logoUrl))return t;let n=this.track?.cover||``;return n&&(this.track?.cover_is_fallback===!1||!s(n,this.fallbackCover,this.logoUrl))?n:this.fallbackCover}}))}var Sf=new Set([`listen_click`,`playback_started`,`playback_error`,`podcast_play`,`podcast_seek`,`band_registration_started`,`band_registration_completed`,`search_no_results`,`contact_success`]),Cf={listen_click:[`source`,`stream_type`],playback_started:[`stream_type`,`time_to_start_ms`],playback_error:[`stream_type`,`error_code`],podcast_play:[`episode_id`,`program_slug`],podcast_seek:[`episode_id`,`seek_position_seconds`],band_registration_started:[`category`],band_registration_completed:[`category`,`plan`],search_no_results:[`section`,`query_length`],contact_success:[`form_name`,`subject_category`]},wf=`GTM-5NCG6PN`,Tf=new class{constructor(){this.eventLog=[],this.maxLogSize=100,this.seekThrottleTimers={},this.gtmLoaded=!1,this.initConsent()}isTestOrDev(){if(typeof window>`u`)return!0;let e=window.location.hostname||``,t=window.location.pathname||``,n=window.location.search||``;return e===`localhost`||e===`127.0.0.1`||e.endsWith(`.test`)||t.startsWith(`/dev/`)||n.includes(`test=1`)||n.includes(`sr_test=true`)||window.SR_IS_ADMIN===!0||window.SR_FORCE_DEV_LOG===!0}initConsent(){this.preferences={necessary:!0,analytics:!1,personalization:!1};try{let e=localStorage.getItem(`sevenrock_cookie_consent`);if(e){let t=JSON.parse(e);this.preferences.analytics=!!t.analytics,this.preferences.personalization=!!t.personalization}}catch{}this.hasAnalyticsConsent()&&this.loadGtmOnce()}hasAnalyticsConsent(){return!!(this.preferences&&this.preferences.analytics===!0)}loadGtmOnce(){if(this.gtmLoaded||typeof window>`u`||typeof document>`u`||!(typeof window<`u`&&window.SR_EXTERNAL_ANALYTICS_ENABLED===!0))return;this.gtmLoaded=!0,window.dataLayer=window.dataLayer||[],window.dataLayer.push({"gtm.start":new Date().getTime(),event:`gtm.js`});let e=document.createElement(`script`);e.async=!0,e.src=`https://www.googletagmanager.com/gtm.js?id=${wf}`,e.setAttribute(`data-sr-gtm`,`true`);let t=document.getElementsByTagName(`script`)[0];t&&t.parentNode?t.parentNode.insertBefore(e,t):document.head&&document.head.appendChild(e)}setConsent(e){this.hasAnalyticsConsent(),this.preferences={necessary:!0,analytics:!!e.analytics,personalization:!!e.personalization};try{localStorage.setItem(`sevenrock_cookie_consent`,JSON.stringify(this.preferences))}catch{}typeof window<`u`&&typeof window.gtag==`function`&&window.gtag(`consent`,`update`,{analytics_storage:this.preferences.analytics?`granted`:`denied`,functionality_storage:this.preferences.personalization?`granted`:`denied`}),this.preferences.analytics?(this.gtmLoaded||this.loadGtmOnce(),window.dataLayer.push({event:`consent_granted`,consent_level:`analytics_allowed`})):this.gtmLoaded&&window.dataLayer.push({event:`consent_revoked`,consent_level:`necessary_only`}),this.isTestOrDev()&&this.recordLocalEvent(`consent_update`,{analytics:this.preferences.analytics,personalization:this.preferences.personalization},this.preferences.analytics?`consent_granted`:`consent_revoked`)}track(e,t={}){if(!Sf.has(e))return!1;let n=Cf[e]||[],r={};for(let e of n)if(e in t&&t[e]!==void 0&&t[e]!==null){let n=t[e];typeof n==`number`?r[e]=Number.isFinite(n)?Math.round(n):0:typeof n==`boolean`?r[e]=n:r[e]=String(n).trim().slice(0,60)}if(e===`podcast_seek`){let e=r.episode_id||`default`,t=Date.now();if(t-(this.seekThrottleTimers[e]||0)<1500)return!1;this.seekThrottleTimers[e]=t}let i=this.isTestOrDev(),a=this.hasAnalyticsConsent();if(i){let t=a?`dispatched`:`blocked_by_consent`;this.recordLocalEvent(e,r,t)}return typeof window<`u`&&typeof window.dispatchEvent==`function`&&window.dispatchEvent(new CustomEvent(`sevenrock:analytics`,{detail:{event:e,params:r,consent:a}})),a?(window.dataLayer=window.dataLayer||[],window.dataLayer.push({event:e,...r}),!0):!1}recordLocalEvent(e,t,n){if(!this.isTestOrDev())return null;let r={id:`evt_`+Math.random().toString(36).substr(2,9),timestamp:new Date().toISOString(),event:e,params:t,status:n};return this.eventLog.push(r),this.eventLog.length>this.maxLogSize&&this.eventLog.shift(),r}getEventLog(){return this.isTestOrDev()?[...this.eventLog]:[]}clearEventLog(){this.eventLog=[]}};typeof window<`u`&&(window.SevenRockAnalytics=Tf),T.plugin(Ro),T.plugin(Da),window.Alpine=T,window.__srUserGesture=!1;var Ef=()=>{window.__srUserGesture=!0};window.addEventListener(`pointerdown`,Ef,{once:!0,passive:!0}),window.addEventListener(`keydown`,Ef,{once:!0});var Df={LUNES:1,MARTES:2,MIERCOLES:3,JUEVES:4,VIERNES:5,SABADO:6,DOMINGO:7};T.data(`rocksHero`,(e=[])=>({active:0,slides:e,interval:null,init(){this.slides.length<2||(this.interval=setInterval(()=>this.next(),3e3))},next(){this.active=(this.active+1)%this.slides.length},go(e){this.active=e}})),T.data(`rocksNav`,()=>({open:!1,searchOpen:!1,sticky:!1,init(){this.sticky=window.scrollY>100,window.addEventListener(`scroll`,()=>{this.sticky=window.scrollY>100},{passive:!0})}})),T.data(`backToTopButton`,()=>({visible:!1,threshold:420,onScroll:null,init(){this.onScroll=()=>{this.visible=window.scrollY>this.threshold},this.onScroll(),window.addEventListener(`scroll`,this.onScroll,{passive:!0})},destroy(){this.onScroll&&window.removeEventListener(`scroll`,this.onScroll)},scrollToTop(){window.scrollTo({top:0,behavior:`smooth`})}})),T.data(`galleryLightbox`,(e=[])=>({images:e,active:0,open:!1,touchStartX:0,get current(){return this.images[this.active]??{src:``,caption:``}},show(e){this.active=e,this.open=!0,document.body.classList.add(`lb-disable-scrolling`),this.preloadAround()},close(){this.open=!1,document.body.classList.remove(`lb-disable-scrolling`)},next(){this.images.length&&(this.active=(this.active+1)%this.images.length,this.preloadAround())},prev(){this.images.length&&(this.active=(this.active-1+this.images.length)%this.images.length,this.preloadAround())},preloadAround(){[this.active-1,this.active+1].forEach(e=>{let t=this.images[(e+this.images.length)%this.images.length];if(t?.src){let e=new Image;e.src=t.src}})},swipeEnd(e){let t=e.changedTouches[0].clientX-this.touchStartX;Math.abs(t)<40||(t<0?this.next():this.prev())}})),T.data(`bandProfilePicker`,(e={})=>({searchUrl:e.searchUrl??``,selectedId:e.selectedId?String(e.selectedId):``,selectedLabel:e.selectedLabel??``,minLength:Number.isFinite(Number(e.minLength))?Math.max(1,Number(e.minLength)):3,query:e.selectedLabel??``,results:[],activeIndex:-1,open:!1,loading:!1,timer:null,requestToken:0,init(){this.query=this.selectedLabel||``},onInput(){this.selectedId=``,this.selectedLabel=``,this.activeIndex=-1,this.scheduleSearch()},scheduleSearch(){if(clearTimeout(this.timer),this.query.trim().length<this.minLength){this.results=[],this.open=!1,this.activeIndex=-1;return}this.timer=setTimeout(()=>{this.search()},160)},async search(){if(!this.searchUrl)return;let e=++this.requestToken;this.loading=!0;try{let t=new URL(this.searchUrl,window.location.origin);t.searchParams.set(`q`,this.query.trim()),this.open=!0;let n=await(await fetch(t.toString(),{headers:{Accept:`application/json`},credentials:`same-origin`})).json();if(e!==this.requestToken)return;this.results=Array.isArray(n?.data?.results)?n.data.results:[],this.activeIndex=this.results.length?0:-1,this.open=!0}catch{e===this.requestToken&&(this.results=[],this.open=!1,this.activeIndex=-1)}finally{e===this.requestToken&&(this.loading=!1)}},choose(e){this.selectedId=String(e.id??``),this.selectedLabel=e.text??``,this.query=this.selectedLabel,this.results=[],this.open=!1,this.activeIndex=-1},clear(){this.selectedId=``,this.selectedLabel=``,this.query=``,this.results=[],this.open=!1,this.activeIndex=-1},focus(){this.results.length>0&&(this.open=!0)},closeSoon(){window.setTimeout(()=>{this.open=!1},120)},move(e){this.results.length&&(this.open=!0,this.activeIndex=(this.activeIndex+e+this.results.length)%this.results.length)},commitActive(e){this.activeIndex<0||this.activeIndex>=this.results.length||(e?.preventDefault?.(),this.choose(this.results[this.activeIndex]))},handleEnter(e){this.open&&this.activeIndex>=0&&this.activeIndex<this.results.length&&this.commitActive(e)}})),T.data('podcastUploadForm', (options = {}) => ({
+    activeDay: options.initialDay ?? 'LUNES',
+    activeTab: options.initialTab ?? 'multimedia',
+    fecha_emision: options.initialDate ?? '',
+    dateSuggestion: '',
+    dateSuggestionType: '',
+    uploading: false,
+    canRetry: false,
+    progress: 0,
+    progressLabel: '0%',
+    statusMessage: '',
+    phaseLabel: 'Listo',
+    phaseDetailLabel: '',
+    errorMessages: [],
+    downloading: false,
+    uploadEtaLabel: '',
+    fileSizeLabel: '',
+    originalR2Error: null,
+    attemptId: null,
+    attemptStartTime: null,
+    stallWatchdogTimer: null,
+    activeXhr: null,
+    activeAbortController: null,
+    selectedFile: null,
+    formToSubmit: null,
+    pipelineAction: 'process',
+    estimatedUploadRateBytesPerSec: Number(options.estimatedUploadRateBytesPerSec ?? 8 * 1024 * 1024),
+    fieldLabelMap: {
+        master_program_id: 'Programa maestro',
+        live_title: 'Título del episodio',
+        fecha_emision: 'Fecha de emisión',
+        numero_episodio: 'Capítulo / episodio',
+        archivo_mp3: 'Archivo MP3',
+        imagen_episodio_url: 'URL de imagen',
+        imagen_episodio_file: 'Archivo de imagen',
+        biografia_invitado: 'Invitado',
+        resena: 'Descripción / resumen',
+    },
+    logEvent(phase, event, extra = {}) {
+        const now = new Date().toISOString();
+        const duration = this.attemptStartTime ? Math.round(performance.now() - this.attemptStartTime) : 0;
+        console.log(`[AudioUpload] [${now}] [${this.attemptId || 'none'}] Phase: ${phase} | Event: ${event} | Duration: ${duration}ms`, extra);
+    },
+    setPhase(phase, detail = '') {
+        this.phaseLabel = phase;
+        this.phaseDetailLabel = detail;
+        this.logEvent(phase, 'phase_change', { detail });
+    },
+    startStallWatchdog(onStall) {
+        this.clearStallWatchdog();
+        this.stallWatchdogTimer = setTimeout(() => {
+            this.logEvent(this.phaseLabel, 'stall_detected', { timeout_ms: 45000 });
+            onStall();
+        }, 45000);
+    },
+    touchProgress() {
+        if (this.stallWatchdogTimer) {
+            clearTimeout(this.stallWatchdogTimer);
+            this.stallWatchdogTimer = setTimeout(() => {
+                this.logEvent(this.phaseLabel, 'stall_detected', { timeout_ms: 45000 });
+                this.handleStall();
+            }, 45000);
+        }
+    },
+    clearStallWatchdog() {
+        if (this.stallWatchdogTimer) {
+            clearTimeout(this.stallWatchdogTimer);
+            this.stallWatchdogTimer = null;
+        }
+    },
+    handleStall() {
+        this.clearStallWatchdog();
+        if (!this.uploading) return;
+
+        if (this.phaseLabel === 'Transfiriendo' && this.uppy && !this.originalR2Error) {
+            this.logEvent('Transfiriendo', 'r2_stalled_falling_back_to_chunks');
+            this.originalR2Error = {
+                message: 'Falta de progreso en Cloudflare R2 (más de 45s sin avance en la transferencia).',
+                phase: 'r2_transfer',
+                timestamp: new Date().toISOString(),
+            };
+            try {
+                this.uppy.cancelAll();
+            } catch (e) {}
+
+            const file = this.selectedFile;
+            if (file) {
+                this.uploadByChunks(file);
+            }
+        } else {
+            this.uploading = false;
+            this.canRetry = true;
+            this.phaseLabel = 'Error';
+            this.phaseDetailLabel = 'La transferencia se detuvo por falta de respuesta del servidor (tiempo de espera agotado).';
+            this.statusMessage = 'La conexión se interrumpió por falta de progreso. Puedes pulsar «Reintentar» para reanudar.';
+            this.errorMessages = ['Falta de respuesta del servidor durante la transferencia (45s sin datos).'];
+            this.uploadEtaLabel = '';
+        }
+    },
+    cancelUpload() {
+        if (!this.uploading) return;
+        this.logEvent(this.phaseLabel, 'upload_cancelled_by_user');
+        this.clearStallWatchdog();
+
+        if (this.activeAbortController) {
+            try { this.activeAbortController.abort(); } catch (e) {}
+            this.activeAbortController = null;
+        }
+        if (this.activeXhr) {
+            try { this.activeXhr.abort(); } catch (e) {}
+            this.activeXhr = null;
+        }
+        if (this.uppy) {
+            try { this.uppy.cancelAll(); } catch (e) {}
+        }
+
+        this.uploading = false;
+        this.canRetry = true;
+        this.phaseLabel = 'Cancelado';
+        this.phaseDetailLabel = 'Subida cancelada por el usuario.';
+        this.statusMessage = 'Subida cancelada. El archivo seleccionado se conserva. Pulsa «Reintentar» cuando desees reanudar.';
+        this.uploadEtaLabel = '';
+    },
+    retryUpload() {
+        if (this.uploading) return;
+        this.logEvent('Retry', 'upload_retried_by_user');
+        const form = this.formToSubmit || document.querySelector('form[action*="podcast-uploads"]');
+        if (!form) return;
+
+        this.errorMessages = [];
+        this.originalR2Error = null;
+        this.canRetry = false;
+        this.progress = 0;
+        this.progressLabel = '0%';
+
+        this.submitFormProcess(form, this.pipelineAction || 'process');
+    },
+    engancharFichero(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        this.selectedFile = file;
+        this.canRetry = false;
+        this.errorMessages = [];
+        this.originalR2Error = null;
+
+        if (this.uppy) {
+            this.uppy.cancelAll();
+            try {
+                this.uppy.addFile({
+                    name: file.name,
+                    type: file.type || 'audio/mpeg',
+                    data: file,
+                });
+            } catch (e) {
+                /* duplicado: ignorar */
+            }
+        }
+        this.updateUploadEstimate(file);
+    },
+    init() {
+        this.computeDateForDay(this.activeDay);
+
+        this.$watch('activeDay', (day) => {
+            this.computeDateForDay(day);
+        });
+
+        try {
+            this.uppy = new _c({
+                autoProceed: false,
+                restrictions: {
+                    maxNumberOfFiles: 1,
+                    allowedFileTypes: ['audio/mpeg', 'audio/mp3', 'audio/x-mp3', 'audio/mpg', 'audio/mpeg3', '.mp3'],
+                }
+            });
+
+            this.uppy.use(bf, {
+                limit: 1,
+                timeout: 0,
+                getUploadParameters: (file) => {
+                    const csrfToken = document.querySelector('input[name="_token"]')?.value 
+                        || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                        || '';
+
+                    this.activeAbortController = new AbortController();
+                    const presignTimeout = setTimeout(() => {
+                        this.activeAbortController?.abort();
+                    }, 30000);
+
+                    return fetch('/admin/podcast-uploads/presign', {
+                        method: 'POST',
+                        signal: this.activeAbortController.signal,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: JSON.stringify({
+                            filename: file.name,
+                            contentType: file.type || 'audio/mpeg',
+                            attempt_id: this.attemptId,
+                        }),
+                    })
+                    .then((response) => {
+                        clearTimeout(presignTimeout);
+                        if (!response.ok) {
+                            return response.json().then(errData => {
+                                throw new Error(errData?.error || `Error HTTP ${response.status} en autorización`);
+                            }).catch(() => {
+                                throw new Error(`Fallo de autorización HTTP ${response.status}`);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then((data) => {
+                        this.uppy.setFileMeta(file.id, { r2Key: data.key });
+                        const safeHeaders = {};
+                        if (data.headers && typeof data.headers === 'object') {
+                            for (const [hk, hv] of Object.entries(data.headers)) {
+                                if (hk.toLowerCase() !== 'host') {
+                                    safeHeaders[hk] = hv;
+                                }
+                            }
+                        }
+                        safeHeaders['Content-Type'] = file.type || 'audio/mpeg';
+
+                        this.setPhase('Transfiriendo', `Subiendo archivo directamente a Cloudflare R2 (~${this.formatBytes(file.size)})...`);
+                        this.startStallWatchdog(() => this.handleStall());
+
+                        return {
+                            url: data.url,
+                            method: data.method || 'PUT',
+                            headers: safeHeaders,
+                            fields: data.fields || {},
+                        };
+                    })
+                    .catch((err) => {
+                        clearTimeout(presignTimeout);
+                        this.logEvent('Preparando subida', 'presign_failed', { message: err.message });
+                        throw err;
+                    });
+                },
+            });
+
+            this.uppy.on('upload-progress', (file, progress) => {
+                this.touchProgress();
+                const percent = Math.min(100, Math.max(0, Math.round((progress.bytesUploaded / progress.bytesTotal) * 100)));
+                this.progress = percent;
+                this.progressLabel = `${percent}%`;
+                
+                if (progress.bytesUploaded > 0) {
+                    if (progress.eta) {
+                        this.uploadEtaLabel = `Restan ~${this.formatDuration(progress.eta)}`;
+                    } else if (percent >= 99) {
+                        this.uploadEtaLabel = 'Finalizando transferencia...';
+                    }
+                }
+            });
+
+            this.uppy.on('upload-success', (file, response) => {
+                this.clearStallWatchdog();
+                this.logEvent('Transfiriendo', 'r2_upload_success', { r2Key: file.meta?.r2Key });
+                const r2Key = file.meta?.r2Key;
+                this.setPhase('Confirmando archivo', 'Registrando episodio y verificando archivo en el servidor...');
+                this.submitFormWithR2Key(r2Key);
+            });
+
+            this.uppy.on('upload-error', (file, error, response) => {
+                this.clearStallWatchdog();
+                this.logEvent('Transfiriendo', 'r2_upload_error', { message: error?.message });
+                console.warn('Uppy R2 upload error, falling back to chunked upload:', error);
+
+                if (!this.originalR2Error) {
+                    this.originalR2Error = {
+                        message: error?.message || 'Error de conexión con Cloudflare R2.',
+                        phase: 'r2_upload',
+                        timestamp: new Date().toISOString(),
+                    };
+                }
+
+                const rawFile = file?.data || this.selectedFile;
+                if (rawFile && rawFile instanceof Blob) {
+                    this.statusMessage = 'Subida directa a R2 interrumpida. Iniciando subida de seguridad por partes de 4 MB...';
+                    this.setPhase('Transfiriendo', `Subida por fragmentos de 4 MB (Fallo R2: ${this.originalR2Error.message})`);
+                    this.uploadByChunks(rawFile);
+                } else {
+                    this.uploading = false;
+                    this.canRetry = true;
+                    this.phaseLabel = 'Error';
+                    this.phaseDetailLabel = 'La subida a Cloudflare R2 falló.';
+                    this.statusMessage = 'La subida falló: ' + (error?.message || 'Error de red.');
+                    this.errorMessages = [error?.message || 'Error de red en Cloudflare R2.'];
+                    this.uploadEtaLabel = '';
+                }
+            });
+        } catch (err) {
+            console.error('Error al inicializar Uppy:', err);
+            this.uppy = null;
+        }
+    },
+    computeDateForDay(dayKey) {
+        const targetDay = DAY_MAP[String(dayKey ?? '').toUpperCase()];
+        if (!targetDay) {
+            return;
+        }
+
+        const today = new Date();
+        const currentDay = today.getDay();
+        const currentDayIso = currentDay === 0 ? 7 : currentDay;
+        const targetDate = new Date(today);
+
+        if (targetDay === currentDayIso) {
+            this.dateSuggestionType = 'today';
+            this.dateSuggestion = 'Hoy es el día correcto';
+            this.fecha_emision = this.toDateInputValue(today);
+            return;
+        }
+
+        const diff = targetDay > currentDayIso
+            ? targetDay - currentDayIso
+            : 7 - currentDayIso + targetDay;
+
+        targetDate.setDate(today.getDate() + diff);
+        this.dateSuggestionType = targetDay > currentDayIso ? 'future' : 'next';
+        this.dateSuggestion = `Próximo ${this.formatWeekday(targetDate)} = ${this.formatDayMonth(targetDate)}`;
+        this.fecha_emision = this.toDateInputValue(targetDate);
+    },
+    formatWeekday(date) {
+        return date.toLocaleDateString('es-ES', {
+            weekday: 'long',
+        });
+    },
+    formatDayMonth(date) {
+        return date.toLocaleDateString('es-ES', {
+            day: 'numeric',
+            month: 'long',
+        });
+    },
+    toDateInputValue(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+
+        return `${y}-${m}-${d}`;
+    },
+    updateEpisodeNumber(event) {
+        const selectedOption = event.target.options[event.target.selectedIndex];
+        const nextEpisode = selectedOption?.getAttribute('data-next-episode');
+        const input = document.querySelector('input[name="numero_episodio"]');
+        if (input) {
+            input.value = nextEpisode || '';
+        }
+    },
+    tabForField(field) {
+        if (['archivo_mp3', 'imagen_episodio_url', 'imagen_episodio_file'].includes(field)) {
+            return 'multimedia';
+        }
+
+        if (['sync_archive_org', 'download_processed_mp3'].includes(field)) {
+            return 'distribution';
+        }
+
+        return 'editorial';
+    },
+    focusField(form, field) {
+        if (! field) {
+            return;
+        }
+
+        this.activeTab = this.tabForField(field);
+
+        window.setTimeout(() => {
+            const selector = `[name="${CSS.escape(field)}"]`;
+            const element = form.querySelector(selector);
+            if (element?.scrollIntoView) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            if (element?.focus) {
+                element.focus({ preventScroll: true });
+            }
+        }, 50);
+    },
+    showValidationIssues(form, validationErrors = {}) {
+        const messages = this.formatValidationErrors(validationErrors);
+        const firstField = Object.keys(validationErrors ?? {})[0] ?? '';
+
+        this.uploading = false;
+        this.canRetry = true;
+        this.progress = 0;
+        this.progressLabel = '0%';
+        this.phaseLabel = 'Validando';
+        this.phaseDetailLabel = this.phaseDetailText();
+        this.statusMessage = 'Faltan campos obligatorios. Revisa el formulario.';
+        this.errorMessages = messages.length > 0 ? messages : ['Revisa los campos marcados.'];
+        this.uploadEtaLabel = '';
+
+        this.focusField(form, firstField);
+
+        if (! firstField) {
+            window.setTimeout(() => {
+                form?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+            }, 50);
+        }
+    },
+    phaseClass() {
+        const label = String(this.phaseLabel ?? '').toLowerCase();
+
+        if (label.includes('valid')) {
+            return 'border-[#3b3b3b] bg-[rgba(255,255,255,.03)] text-[#c7c7c7]';
+        }
+        if (label.includes('preparando')) {
+            return 'border-sky-800/50 bg-sky-950/30 text-sky-300';
+        }
+        if (label.includes('transf') || label.includes('subiend')) {
+            return 'border-[#5a4315] bg-[rgba(118,86,22,.18)] text-[#f2d89b]';
+        }
+        if (label.includes('confirmando') || label.includes('guardando') || label.includes('uniendo')) {
+            return 'border-indigo-800/50 bg-indigo-950/30 text-indigo-300';
+        }
+        if (label.includes('sincronizando')) {
+            return 'border-[#31553f] bg-[rgba(30,76,49,.2)] text-[#b8e2c7]';
+        }
+        if (label.includes('cancel')) {
+            return 'border-zinc-700 bg-zinc-800/50 text-zinc-300';
+        }
+        if (label.includes('error') || label.includes('fall')) {
+            return 'border-[#5d2b2b] bg-[rgba(92,35,35,.28)] text-[#ffd0d0]';
+        }
+        if (label.includes('listo') || label.includes('complet')) {
+            return 'border-[#2d5440] bg-[rgba(29,72,45,.18)] text-[#c8ead6]';
+        }
+
+        return 'border-[#2b2b2b] bg-[rgba(255,255,255,.03)] text-[#bdbdbd]';
+    },
+    phaseDetailText() {
+        const phase = String(this.phaseLabel ?? '').toLowerCase();
+
+        if (phase.includes('valid')) {
+            return 'Validando campos obligatorios antes de iniciar la carga.';
+        }
+        if (phase.includes('preparando')) {
+            return 'Preparando la subida y autorizando con el servidor.';
+        }
+        if (phase.includes('transf') || phase.includes('subiend')) {
+            return 'Transfiriendo el archivo de audio MP3.';
+        }
+        if (phase.includes('confirmando') || phase.includes('guardando')) {
+            return 'Confirmando archivo y registrando en la base de datos.';
+        }
+        if (phase.includes('procesando')) {
+            return 'Escribiendo metadatos y enviando a RadioBOSS.';
+        }
+        if (phase.includes('sincronizando')) {
+            return 'Sincronizando el episodio con Archive.org.';
+        }
+        if (phase.includes('cancel')) {
+            return 'La transferencia fue detenida por el usuario.';
+        }
+
+        return '';
+    },
+    formatValidationErrors(validationErrors = {}) {
+        return Object.entries(validationErrors).flatMap(([field, errors]) => {
+            const label = this.fieldLabelMap[field] ?? field;
+
+            return (Array.isArray(errors) ? errors : [errors])
+                .filter(Boolean)
+                .map((message) => {
+                    const text = String(message).trim();
+
+                    if (field === 'master_program_id' && /required/i.test(text)) {
+                        return `${label}: debes seleccionar un programa maestro.`;
+                    }
+
+                    if (field === 'live_title' && /required/i.test(text)) {
+                        return `${label}: este campo es obligatorio.`;
+                    }
+
+                    if (field === 'archivo_mp3' && /required/i.test(text)) {
+                        return `${label}: debes seleccionar un MP3 para continuar.`;
+                    }
+
+                    return text
+                        .replace(/^The\s+/i, '')
+                        .replace(/\s+field is required\.?$/i, '')
+                        ? `${label}: ${text}`
+                        : `${label}: revisión pendiente`;
+                });
+        });
+    },
+    validateBeforeSubmit(form) {
+        const issues = {};
+
+        const programId = form.querySelector('[name="master_program_id"]')?.value?.trim?.() ?? '';
+        if (! programId) {
+            issues.master_program_id = ['Debes seleccionar un programa maestro.'];
+        }
+
+        const liveTitle = form.querySelector('[name="live_title"]')?.value?.trim?.() ?? '';
+        if (! liveTitle) {
+            issues.live_title = ['El título del episodio es obligatorio.'];
+        }
+
+        const fechaEmision = form.querySelector('[name="fecha_emision"]')?.value?.trim?.() ?? '';
+        if (! fechaEmision) {
+            issues.fecha_emision = ['La fecha de emisión es obligatoria.'];
+        }
+
+        const input = form.querySelector('input[name="archivo_mp3"]');
+        const file = input?.files?.[0] ?? this.selectedFile;
+        if (! file) {
+            issues.archivo_mp3 = ['Debes adjuntar el archivo MP3 del programa.'];
+        }
+
+        if (Object.keys(issues).length > 0) {
+            this.showValidationIssues(form, issues);
+            return null;
+        }
+
+        return file;
+    },
+    submit(event) {
+        const form = event?.target;
+        if (!form || this.uploading) {
+            return;
+        }
+
+        event.preventDefault();
+        const submitter = event?.submitter ?? null;
+        const action = String(submitter?.value ?? 'process').toLowerCase();
+        const pipelineAction = action === 'save' ? 'save' : 'process';
+
+        this.submitFormProcess(form, pipelineAction);
+    },
+    submitFormProcess(form, pipelineAction) {
+        this.phaseLabel = 'Validando';
+        const audioFile = this.validateBeforeSubmit(form);
+        if (!audioFile) {
+            return;
+        }
+        this.selectedFile = audioFile;
+
+        const pipelineInput = form.querySelector('input[name="pipeline_action"]');
+        if (pipelineInput) {
+            pipelineInput.value = pipelineAction;
+        } else {
+            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="pipeline_action" value="${pipelineAction}" data-pipeline-action-field="1">`);
+        }
+
+        this.uploading = true;
+        this.canRetry = false;
+        this.downloading = false;
+        this.progress = 0;
+        this.progressLabel = '0%';
+        this.attemptId = 'att_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+        this.attemptStartTime = performance.now();
+        this.originalR2Error = null;
+
+        this.setPhase('Preparando subida', 'Verificando archivo y solicitando autorización...');
+        this.statusMessage = 'Preparando subida...';
+        this.errorMessages = [];
+        this.uploadEtaLabel = this.uploadEtaLabel || 'Calculando tiempo estimado...';
+
+        this.pipelineAction = pipelineAction;
+        this.formToSubmit = form;
+
+        // Asegurar que el archivo seleccionado esté cargado en Uppy
+        if (this.uppy) {
+            const input = form.querySelector('input[name="archivo_mp3"]');
+            const file = input?.files?.[0] ?? this.selectedFile;
+            if (file && this.uppy.getFiles().length === 0) {
+                try {
+                    this.uppy.addFile({ name: file.name, type: file.type || 'audio/mpeg', data: file });
+                } catch (e) {
+                    /* duplicado: ignorar */
+                }
+            }
+        }
+
+        if (this.uppy && this.uppy.getFiles().length > 0) {
+            this.statusMessage = 'Subiendo directamente a Cloudflare R2...';
+            this.setPhase('Preparando subida', 'Conectando con Cloudflare R2...');
+
+            this.uppy.upload().catch((err) => {
+                console.warn('Fallo al iniciar uppy.upload(), probando subida por partes:', err);
+                if (!this.originalR2Error) {
+                    this.originalR2Error = {
+                        message: err?.message || 'Error al iniciar subida a R2',
+                        phase: 'r2_init',
+                        timestamp: new Date().toISOString(),
+                    };
+                }
+                const targetFile = this.selectedFile || form.querySelector('input[name="archivo_mp3"]')?.files?.[0];
+                if (targetFile) {
+                    this.uploadByChunks(targetFile);
+                }
+            });
+            return;
+        }
+
+        // Si Uppy no está activo, subida por fragmentos de seguridad directamente
+        this.uploadByChunks(audioFile);
+    },
+    formatDuration(seconds) {
+        const total = Math.max(0, Math.round(Number(seconds ?? 0)));
+        const mins = Math.floor(total / 60);
+        const secs = total % 60;
+
+        if (mins <= 0) {
+            return `${secs}s`;
+        }
+
+        return `${mins}m ${String(secs).padStart(2, '0')}s`;
+    },
+    formatBytes(bytes) {
+        const value = Number(bytes ?? 0);
+        if (value <= 0) {
+            return '0 B';
+        }
+
+        const units = ['B', 'KB', 'MB', 'GB'];
+        const exponent = Math.min(units.length - 1, Math.floor(Math.log(value) / Math.log(1024)));
+        const amount = (value / Math.pow(1024, exponent)).toFixed(1);
+
+        return `${amount} ${units[exponent]}`;
+    },
+    updateUploadEstimate(file) {
+        if (! file?.size) {
+            this.fileSizeLabel = '';
+            this.uploadEtaLabel = '';
+            return;
+        }
+
+        this.fileSizeLabel = this.formatBytes(file.size);
+        const rate = Math.max(1024 * 1024, this.estimatedUploadRateBytesPerSec);
+        const estimatedSeconds = Math.ceil(file.size / rate);
+        this.uploadEtaLabel = `Tiempo estimado: ~${this.formatDuration(estimatedSeconds)}`;
+    },
+    async uploadByChunks(file) {
+        if (!file) {
+            file = this.selectedFile;
+        }
+        if (!file) {
+            this.uploading = false;
+            this.canRetry = true;
+            return;
+        }
+
+        // Fragmentos de 4 MB respetan el límite de request body del servidor web de Hostinger (~6-7 MB)
+        const CHUNK_SIZE = 4 * 1024 * 1024; // 4 MB
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        const uploadId = 'chunk_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+        const csrfToken = document.querySelector('input[name="_token"]')?.value 
+            || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+            || '';
+
+        this.uploading = true;
+        this.canRetry = false;
+        this.setPhase('Transfiriendo', this.originalR2Error 
+            ? `Subida alternativa por fragmentos de 4 MB (1/${totalChunks})` 
+            : `Subiendo por fragmentos de 4 MB (1/${totalChunks})...`);
+        this.statusMessage = `Subiendo por partes de seguridad (1/${totalChunks})...`;
+
+        try {
+            for (let i = 0; i < totalChunks; i++) {
+                if (!this.uploading) {
+                    throw new Error('Subida cancelada por el usuario.');
+                }
+
+                const start = i * CHUNK_SIZE;
+                const end = Math.min(file.size, start + CHUNK_SIZE);
+                const chunkBlob = file.slice(start, end);
+
+                const formData = new FormData();
+                formData.append('upload_id', uploadId);
+                formData.append('chunk_index', i);
+                formData.append('total_chunks', totalChunks);
+                formData.append('file', chunkBlob, file.name);
+
+                this.setPhase('Transfiriendo', `Enviando fragmento ${i + 1} de ${totalChunks} (~${this.formatBytes(chunkBlob.size)})...`);
+                this.statusMessage = `Subiendo fragmento ${i + 1} de ${totalChunks}...`;
+
+                await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    this.activeXhr = xhr;
+
+                    this.startStallWatchdog(() => {
+                        xhr.abort();
+                        reject(new Error(`Falta de respuesta del servidor durante el fragmento ${i + 1} (45s sin avance).`));
+                    });
+
+                    xhr.open('POST', '/admin/podcast-uploads/chunk', true);
+                    xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+                    xhr.setRequestHeader('Accept', 'application/json');
+
+                    xhr.upload.onprogress = (e) => {
+                        this.touchProgress();
+                        if (e.lengthComputable) {
+                            const chunkPercent = e.loaded / e.total;
+                            const overallPercent = Math.min(99, Math.round(((i + chunkPercent) / totalChunks) * 100));
+                            this.progress = overallPercent;
+                            this.progressLabel = `${overallPercent}%`;
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        this.clearStallWatchdog();
+                        this.activeXhr = null;
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(xhr.responseText);
+                        } else {
+                            let serverErr = `Error HTTP ${xhr.status}`;
+                            try {
+                                const parsed = JSON.parse(xhr.responseText);
+                                if (parsed?.error) serverErr = parsed.error;
+                            } catch (e) {}
+                            reject(new Error(`Error al subir el fragmento ${i + 1}: ${serverErr}`));
+                        }
+                    };
+
+                    xhr.onerror = () => {
+                        this.clearStallWatchdog();
+                        this.activeXhr = null;
+                        reject(new Error(`El navegador no expone la causa del fallo de red (conexión interrumpida o rechazada por el servidor en fragmento ${i + 1}).`));
+                    };
+
+                    xhr.onabort = () => {
+                        this.clearStallWatchdog();
+                        this.activeXhr = null;
+                        reject(new Error('Transferencia cancelada.'));
+                    };
+
+                    xhr.send(formData);
+                });
+            }
+
+            this.setPhase('Confirmando archivo', 'Ensamblando fragmentos en el servidor...');
+            this.statusMessage = 'Uniendo fragmentos...';
+
+            this.activeAbortController = new AbortController();
+            const completeTimeout = setTimeout(() => {
+                this.activeAbortController?.abort();
+            }, 60000);
+
+            const completeResponse = await fetch('/admin/podcast-uploads/chunk/complete', {
+                method: 'POST',
+                signal: this.activeAbortController.signal,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    upload_id: uploadId,
+                    total_chunks: totalChunks,
+                    filename: file.name,
+                }),
+            });
+            clearTimeout(completeTimeout);
+            this.activeAbortController = null;
+
+            if (!completeResponse.ok) {
+                const errJson = await completeResponse.json().catch(() => ({}));
+                throw new Error(errJson.error || `Error al completar la unión de fragmentos (HTTP ${completeResponse.status}).`);
+            }
+
+            const completeData = await completeResponse.json();
+            this.setPhase('Confirmando archivo', 'Archivo transferido. Guardando episodio...');
+            this.submitFormWithChunkedKey(completeData.chunked_key);
+
+        } catch (error) {
+            this.clearStallWatchdog();
+            this.activeXhr = null;
+            this.activeAbortController = null;
+            console.error('Error en subida por partes:', error);
+
+            this.uploading = false;
+            this.canRetry = true;
+            this.phaseLabel = 'Error';
+            this.phaseDetailLabel = 'La subida por fragmentos falló.';
+            this.statusMessage = error.message || 'Error durante la subida por fragmentos.';
+            
+            const errList = [error.message || 'Error de transferencia por fragmentos.'];
+            if (this.originalR2Error) {
+                errList.push(`Fallo previo en Cloudflare R2: ${this.originalR2Error.message}`);
+            }
+            this.errorMessages = errList;
+            this.uploadEtaLabel = '';
+        }
+    },
+    submitFormWithChunkedKey(chunkedKey) {
+        this.statusMessage = 'Archivo transferido con éxito. Guardando episodio...';
+        this.setPhase('Confirmando archivo', 'Registrando episodio en la base de datos...');
+
+        const form = this.formToSubmit || document.querySelector('form[action*="podcast-uploads"]');
+        const formData = new FormData(form);
+
+        formData.delete('archivo_mp3');
+        formData.append('chunked_key', chunkedKey);
+        formData.set('pipeline_action', this.pipelineAction || 'process');
+
+        const xhr = new XMLHttpRequest();
+        this.activeXhr = xhr;
+        xhr.open(form.method || 'POST', form.action, true);
+        xhr.responseType = 'text';
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState !== XMLHttpRequest.DONE) {
+                return;
+            }
+
+            this.activeXhr = null;
+            this.uploading = false;
+
+            let payload = null;
+            try {
+                payload = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+            } catch {
+                payload = null;
+            }
+
+            if (xhr.status >= 200 && xhr.status < 300) {
+                this.progress = 100;
+                this.progressLabel = '100%';
+                this.statusMessage = payload?.status ?? 'Episodio procesado correctamente.';
+                this.errorMessages = [];
+                this.uploadEtaLabel = 'Transferencia completada.';
+
+                if (payload?.pipeline_action === 'save') {
+                    this.phaseLabel = 'Guardado';
+                    this.phaseDetailLabel = 'Episodio creado sin iniciar el pipeline.';
+                } else {
+                    this.phaseLabel = 'Procesando RadioBOSS';
+                    this.phaseDetailLabel = 'El archivo está siendo procesado en segundo plano.';
+                }
+
+                window.dispatchEvent(new CustomEvent('podcast-upload-complete', {
+                    detail: {
+                        status: payload?.status ?? 'Episodio procesado correctamente.',
+                        redirectUrl: payload?.redirect_url ?? null,
+                    },
+                }));
+
+                if (payload?.redirect_url) {
+                    window.setTimeout(() => {
+                        window.location.href = payload.redirect_url;
+                    }, 300);
+                }
+
+                return;
+            }
+
+            this.canRetry = true;
+            const validationErrors = payload?.errors ?? {};
+            if (xhr.status === 422 || Object.keys(validationErrors).length > 0) {
+                this.showValidationIssues(form, validationErrors);
+                return;
+            }
+
+            this.phaseLabel = 'Error';
+            this.phaseDetailLabel = `Error HTTP ${xhr.status}`;
+            this.statusMessage = 'No se pudo completar el registro.';
+            this.errorMessages = payload?.message ? [payload.message] : [`Error HTTP ${xhr.status} al guardar episodio.`];
+            this.uploadEtaLabel = '';
+        };
+
+        xhr.onerror = () => {
+            this.activeXhr = null;
+            this.uploading = false;
+            this.canRetry = true;
+            this.phaseLabel = 'Error';
+            this.phaseDetailLabel = 'Error de red al guardar';
+            this.statusMessage = 'No se pudo contactar al servidor tras transferir el archivo.';
+            this.uploadEtaLabel = '';
+        };
+
+        xhr.send(formData);
+    },
+    submitFormWithR2Key(r2Key) {
+        this.statusMessage = 'Archivo subido a R2. Guardando información del episodio...';
+        this.setPhase('Confirmando archivo', 'Registrando episodio en la base de datos...');
+
+        const form = this.formToSubmit || document.querySelector('form[action*="podcast-uploads"]');
+        const formData = new FormData(form);
+        
+        formData.delete('archivo_mp3');
+        formData.append('r2_key', r2Key);
+        formData.set('pipeline_action', this.pipelineAction || 'process');
+
+        const xhr = new XMLHttpRequest();
+        this.activeXhr = xhr;
+        xhr.open(form.method || 'POST', form.action, true);
+        xhr.responseType = 'text';
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState !== XMLHttpRequest.DONE) {
+                return;
+            }
+
+            this.activeXhr = null;
+            this.uploading = false;
+
+            let payload = null;
+            try {
+                payload = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+            } catch {
+                payload = null;
+            }
+
+            if (xhr.status >= 200 && xhr.status < 300) {
+                this.progress = 100;
+                this.progressLabel = '100%';
+                this.statusMessage = payload?.status ?? 'Episodio procesado correctamente.';
+                this.errorMessages = [];
+                this.uploadEtaLabel = 'Transferencia completada.';
+
+                if (payload?.pipeline_action === 'save') {
+                    this.phaseLabel = 'Guardado';
+                    this.phaseDetailLabel = 'Episodio creado sin iniciar el pipeline.';
+                } else {
+                    this.phaseLabel = 'Procesando RadioBOSS';
+                    this.phaseDetailLabel = 'El archivo está siendo procesado en segundo plano.';
+                }
+
+                window.dispatchEvent(new CustomEvent('podcast-upload-complete', {
+                    detail: {
+                        status: payload?.status ?? 'Episodio procesado correctamente.',
+                        redirectUrl: payload?.redirect_url ?? null,
+                    },
+                }));
+
+                if (payload?.redirect_url) {
+                    window.setTimeout(() => {
+                        window.location.href = payload.redirect_url;
+                    }, 300);
+                }
+
+                return;
+            }
+
+            this.canRetry = true;
+            const validationErrors = payload?.errors ?? {};
+            if (xhr.status === 422 || Object.keys(validationErrors).length > 0) {
+                this.showValidationIssues(form, validationErrors);
+                return;
+            }
+
+            this.phaseLabel = 'Error';
+            this.phaseDetailLabel = `Error HTTP ${xhr.status}`;
+            this.statusMessage = 'No se pudo completar el registro.';
+            this.errorMessages = payload?.message ? [payload.message] : [`Error HTTP ${xhr.status} al guardar episodio.`];
+            this.uploadEtaLabel = '';
+        };
+
+        xhr.onerror = () => {
+            this.activeXhr = null;
+            this.uploading = false;
+            this.canRetry = true;
+            this.phaseLabel = 'Error';
+            this.phaseDetailLabel = 'Error de red al guardar el episodio.';
+            this.statusMessage = 'El registro falló por un error de red o del servidor.';
+            this.uploadEtaLabel = '';
+        };
+
+        xhr.send(formData);
+    },
+})),T.data(`podcastUploadsDashboard`,(e={})=>({recentUrl:e.recentUrl??``,refreshInterval:Number.isFinite(Number(e.refreshInterval))?Math.max(5e3,Number(e.refreshInterval)):15e3,isRefreshing:!1,lastUpdatedLabel:``,timer:null,requestToken:0,init(){this.recentUrl&&(this.refresh(!1),this.startTimer())},destroy(){this.stopTimer()},handleUploadSuccess(){this.startPolling(),this.refresh(!0)},startPolling(){this.startTimer()},startTimer(){this.timer||=window.setInterval(()=>{this.refresh(!0)},this.refreshInterval)},stopTimer(){this.timer&&=(window.clearInterval(this.timer),null)},hasActiveEntries(e=document){return(e.querySelectorAll?.(`[data-podcast-refresh-active="1"]`)??[]).length>0},parseHtml(e){let t=document.createElement(`template`);return t.innerHTML=e,t.content},renderHtml(e){if(this.$refs.recentUploads){let t=document.activeElement,n=this.$refs.recentUploads.contains(t),r=t?.getAttribute?.(`href`),i=t?.getAttribute?.(`name`),a=t?.getAttribute?.(`value`);if(this.$refs.recentUploads.innerHTML=e,n&&t){let e=null;r?e=this.$refs.recentUploads.querySelector(`a[href="${CSS.escape(r)}"]`):i&&a&&(e=this.$refs.recentUploads.querySelector(`button[name="${CSS.escape(i)}"][value="${CSS.escape(a)}"]`)),e&&typeof e.focus==`function`&&e.focus({preventScroll:!0})}}},async refresh(e=!1){if(!this.recentUrl||this.isRefreshing)return;let t=++this.requestToken;this.isRefreshing=!0;try{let e=new URL(this.recentUrl,window.location.origin);new URLSearchParams(window.location.search).forEach((t,n)=>{e.searchParams.set(n,t)});let n=await fetch(e.toString(),{headers:{"X-Requested-With":`XMLHttpRequest`,Accept:`text/html`},credentials:`same-origin`});if(!n.ok)throw Error(`HTTP ${n.status}`);let r=await n.text();if(t!==this.requestToken)return;let i=this.parseHtml(r),a=this.hasActiveEntries(i);this.renderHtml(r);let o=new Date;this.lastUpdatedLabel=`Actualizado: ${o.toLocaleTimeString(`es-ES`,{hour:`2-digit`,minute:`2-digit`,second:`2-digit`})}`,a?this.startTimer():this.stopTimer()}catch(e){console.warn(`podcastUploadsDashboard: no se pudo actualizar la lista de episodios.`,e)}finally{t===this.requestToken&&(this.isRefreshing=!1)}}})),T.data(`postContentEditor`,(e={})=>({blocks:Array.isArray(e.initialBlocks)?e.initialBlocks:[],uploadUrl:e.uploadUrl??``,uploading:!1,uploadError:``,serialized:``,serializedBlocks:``,init(){this.blocks.length?this.blocks=this.blocks.map(e=>this.normalizeBlock(e)):this.blocks=[this.createBlock(`paragraph`)],this.sync()},createBlock(e=`paragraph`){return{id:`block-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,type:e,value:``,src:``,alt:``,cite:``,caption:``,items:[]}},normalizeBlock(e={}){let t=this.createBlock(e.type||`paragraph`),n=Array.isArray(e.items)?e.items.map(e=>({id:e?.id??`item-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,src:typeof e?.src==`string`?e.src:``,alt:typeof e?.alt==`string`?e.alt:``})):[];return{...t,...e,type:[`paragraph`,`heading`,`quote`,`image`,`raw`].includes(e.type)?e.type:`paragraph`,value:typeof e.value==`string`?e.value:``,src:typeof e.src==`string`?e.src:``,alt:typeof e.alt==`string`?e.alt:``,cite:typeof e.cite==`string`?e.cite:``,caption:typeof e.caption==`string`?e.caption:``,items:e.type===`gallery`?n:[]}},addBlock(e){let t=this.createBlock(e);e===`gallery`&&!t.items.length&&t.items.push({id:`item-${Date.now()}`,src:``,alt:``}),this.blocks.push(t),this.sync()},removeBlock(e){if(this.blocks.length<=1){this.blocks=[this.createBlock(`paragraph`)],this.sync();return}this.blocks.splice(e,1),this.sync()},moveBlock(e,t){let n=e+t;if(n<0||n>=this.blocks.length)return;let[r]=this.blocks.splice(e,1);this.blocks.splice(n,0,r),this.sync()},sync(){this.serialized=this.blocks.map(e=>this.serializeBlock(e)).filter(e=>e!==``).join(`
 
 `),this.serializedBlocks=JSON.stringify(this.blocks),this.$refs.contentText&&(this.$refs.contentText.value=this.serialized),this.$refs.contentBlocks&&(this.$refs.contentBlocks.value=this.serializedBlocks)},async uploadImageForBlock(e,t){let n=t?.target?.files?.[0]??null;n&&(await this.uploadToBlock(e,[n],!1),t.target.value=``)},async uploadGalleryImages(e,t){let n=Array.from(t?.target?.files??[]);n.length&&(await this.uploadToBlock(e,n,!0),t.target.value=``)},async uploadToBlock(e,t,n){if(!this.uploadUrl){this.uploadError=`No upload endpoint configured.`;return}let r=new FormData;n?t.forEach(e=>r.append(`images[]`,e)):r.append(`image`,t[0]),this.uploading=!0,this.uploadError=``;try{let t=await fetch(this.uploadUrl,{method:`POST`,body:r,headers:{"X-Requested-With":`XMLHttpRequest`,Accept:`application/json`},credentials:`same-origin`}),i=await t.json(),a=Array.isArray(i?.data?.urls)?i.data.urls.filter(Boolean):[];if(!t.ok)throw Error(i?.message||`Upload failed`);n?a.forEach((t,n)=>{e.items.push({id:`item-${Date.now()}-${n}-${Math.random().toString(36).slice(2,8)}`,src:t,alt:``})}):a[0]&&(e.src=a[0]),this.sync()}catch(e){this.uploadError=e?.message||`Upload failed.`}finally{this.uploading=!1}},addGalleryItem(e){Array.isArray(e.items)||(e.items=[]),e.items.push({id:`item-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,src:``,alt:``}),this.sync()},removeGalleryItem(e,t){Array.isArray(e.items)&&(e.items.splice(t,1),e.items.length||e.items.push({id:`item-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,src:``,alt:``}),this.sync())},serializeBlock(e){let t=(e.value??``).trim(),n=(e.src??``).trim(),r=(e.alt??``).trim(),i=(e.cite??``).trim(),a=(e.caption??``).trim();switch(e.type){case`heading`:return t?`<h2>${this.escapeHtml(t)}</h2>`:``;case`quote`:return t?`<blockquote><p>${this.escapeHtml(t)}</p>${i?`<cite>${this.escapeHtml(i)}</cite>`:``}</blockquote>`:``;case`image`:return n?`<figure class="wp-block-image"><img src="${this.escapeAttr(n)}" alt="${this.escapeAttr(r)}"></figure>`:``;case`gallery`:return!Array.isArray(e.items)||!e.items.length?``:`<figure class="wp-block-gallery">${e.items.filter(e=>(e.src??``).trim()!==``).map(e=>`<figure class="wp-block-image"><img src="${this.escapeAttr((e.src??``).trim())}" alt="${this.escapeAttr((e.alt??``).trim())}"></figure>`).join(``)}${a?`<figcaption>${this.escapeHtml(a)}</figcaption>`:``}</figure>`;case`raw`:return t;default:return t?`<p>${this.escapeHtml(t).replace(/\n/g,`<br>`)}</p>`:``}},previewHtml(e){return this.serializeBlock(e)||`<div class="text-[#7b7b7b]">No preview yet.</div>`},escapeHtml(e){return String(e).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#039;`)},escapeAttr(e){return this.escapeHtml(e).replace(/`/g,`&#096;`)}}));function Of(){let e=document.querySelector(`.radio-player-dock`),t=document.querySelector(`#site-footer`),n=document.querySelector(`#site-content`);if(!e||!t||!n)return;let r=document.documentElement.style,i=window.matchMedia(`(max-width: 767px)`),a=()=>{e.classList.toggle(`radio-player-mobile`,i.matches)},o=()=>{let t=Math.ceil(e.getBoundingClientRect().height);r.setProperty(`--radio-player-offset`,`${t+24}px`)},s=(e=0)=>{r.setProperty(`--radio-player-lift`,`${Math.max(0,Math.ceil(e))}px`)};a(),o(),s(0),typeof ResizeObserver<`u`?new ResizeObserver(()=>{o()}).observe(e):window.addEventListener(`resize`,o,{passive:!0}),typeof IntersectionObserver<`u`&&new IntersectionObserver(e=>{let t=e[0];t&&s(t.isIntersecting?t.intersectionRect.height:0)},{root:null,threshold:[0,.01,.1,.25,.5,1]}).observe(t),typeof i.addEventListener==`function`?i.addEventListener(`change`,a):typeof i.addListener==`function`&&i.addListener(a)}document.readyState===`loading`?document.addEventListener(`DOMContentLoaded`,Of,{once:!0}):Of(),document.querySelector(`[data-radio-player-root]`)&&xf(T),T.start();var kf=()=>{window.dispatchEvent(new CustomEvent(`sr-force-close-modals`))};window.addEventListener(`load`,kf,{once:!0}),window.addEventListener(`pageshow`,kf);
