@@ -611,6 +611,19 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
             input.value = nextEpisode || '';
         }
     },
+    getActiveProgramSelect(form) {
+        if (! form) return null;
+        if (this.activeDay) {
+            const panel = form.querySelector(`[data-day-panel="${this.activeDay}"]`);
+            const select = panel?.querySelector('select[name="master_program_id"]');
+            if (select) {
+                return select;
+            }
+        }
+        return form.querySelector('select[name="master_program_id"]:not(:disabled)')
+            || form.querySelector('[name="master_program_id"]:not(:disabled)')
+            || form.querySelector('[name="master_program_id"]');
+    },
     tabForField(field) {
         if (['archivo_mp3', 'imagen_episodio_url', 'imagen_episodio_file'].includes(field)) {
             return 'multimedia';
@@ -630,8 +643,14 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         this.activeTab = this.tabForField(field);
 
         window.setTimeout(() => {
-            const selector = `[name="${CSS.escape(field)}"]`;
-            const element = form.querySelector(selector);
+            let element;
+            if (field === 'master_program_id') {
+                element = this.getActiveProgramSelect(form);
+            } else {
+                const selector = `[name="${CSS.escape(field)}"]`;
+                element = form.querySelector(selector);
+            }
+
             if (element?.scrollIntoView) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
@@ -752,7 +771,8 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
     validateBeforeSubmit(form) {
         const issues = {};
 
-        const programId = form.querySelector('[name="master_program_id"]')?.value?.trim?.() ?? '';
+        const programSelect = this.getActiveProgramSelect(form);
+        const programId = programSelect?.value?.trim?.() ?? '';
         if (! programId) {
             issues.master_program_id = ['Debes seleccionar un programa maestro.'];
         }
@@ -1056,6 +1076,12 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         const form = this.formToSubmit || document.querySelector('form[action*="podcast-uploads"]');
         const formData = new FormData(form);
 
+        const activeProgramSelect = this.getActiveProgramSelect(form);
+        const activeProgramId = activeProgramSelect?.value?.trim?.() ?? '';
+        if (activeProgramId) {
+            formData.set('master_program_id', activeProgramId);
+        }
+
         formData.delete('archivo_mp3');
         formData.append('chunked_key', chunkedKey);
         formData.set('pipeline_action', this.pipelineAction || 'process');
@@ -1145,6 +1171,12 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
 
         const form = this.formToSubmit || document.querySelector('form[action*="podcast-uploads"]');
         const formData = new FormData(form);
+
+        const activeProgramSelect = this.getActiveProgramSelect(form);
+        const activeProgramId = activeProgramSelect?.value?.trim?.() ?? '';
+        if (activeProgramId) {
+            formData.set('master_program_id', activeProgramId);
+        }
         
         formData.delete('archivo_mp3');
         formData.append('r2_key', r2Key);
