@@ -43,16 +43,33 @@ final class SendPodcastRadiobossNotification
             $message->send(new PodcastRadiobossUploadedMail($program));
 
             RadioProgram::withoutEvents(function () use ($program): void {
+                $meta = (array) ($program->delivery_metadata ?? []);
+                $meta['radioboss_notification_status'] = 'accepted_smtp';
+                $meta['radioboss_notification_smtp_accepted_at'] = now()->toIso8601String();
+                $meta['radioboss_notification_error'] = null;
+
                 $program->forceFill([
                     'radioboss_notification_sent_at' => now(),
+                    'delivery_metadata' => $meta,
                 ])->saveQuietly();
             });
 
-            $this->auditService->record($program, 'NOTIFICATION_SENT', 'Correo de confirmación de RadioBOSS enviado.', [
+            $this->auditService->record($program, 'NOTIFICATION_SENT', 'Correo de confirmación de RadioBOSS aceptado por el servidor SMTP.', [
                 'channel' => 'radioboss',
                 'mailer' => $mailer,
+                'smtp_accepted' => true,
             ]);
         } catch (\Throwable $exception) {
+            RadioProgram::withoutEvents(function () use ($program, $exception): void {
+                $meta = (array) ($program->delivery_metadata ?? []);
+                $meta['radioboss_notification_status'] = 'failed';
+                $meta['radioboss_notification_error'] = $exception->getMessage();
+
+                $program->forceFill([
+                    'delivery_metadata' => $meta,
+                ])->saveQuietly();
+            });
+
             Log::error('SendPodcastRadiobossNotification: fallo enviando el correo de RadioBOSS.', [
                 'program_id' => $program->id,
                 'exception' => $exception,

@@ -34,7 +34,10 @@ final class ReconcilePodcastPipelineCommand extends Command
             ->where(function ($query): void {
                 $query->whereNull('processing_finished_at')
                     ->orWhereIn('radioboss_status', ['radioboss_error', 'radioboss_pending'])
-                    ->orWhereIn('archive_org_status', ['archive_error', 'archive_pending', 'archive_pending_indexing']);
+                    ->orWhereIn('archive_org_status', ['archive_error', 'archive_pending', 'archive_pending_indexing'])
+                    ->orWhere('delivery_status', 'delivery_partial')
+                    ->orWhereNull('radioboss_notification_sent_at')
+                    ->orWhereNull('archive_notification_sent_at');
             })
             ->orderByDesc('updated_at')
             ->limit($limit)
@@ -90,7 +93,52 @@ final class ReconcilePodcastPipelineCommand extends Command
                 continue;
             }
 
-            if ($program->isEditorialApproved() && $program->radioboss_status !== 'radioboss_verified' && $program->radioboss_status !== 'archive_skipped') {
+            // Comprobar si el episodio ha sido superado por una emisión posterior verificada
+            $supersededBy = null;
+            if ($program->master_program_id) {
+                $supersededBy = RadioProgram::query()
+                    ->where('master_program_id', $program->master_program_id)
+                    ->where('id', '!=', $program->id)
+                    ->where(function ($q): void {
+                        $q->where('radioboss_status', 'radioboss_verified')
+                            ->orWhere('delivery_status', 'delivery_verified')
+                            ->orWhere('enviado_radioboss', true);
+                    })
+                    ->where(function ($q) use ($program): void {
+                        if ($program->fecha_emision) {
+                            $q->where('fecha_emision', '>', $program->fecha_emision);
+                        } elseif ($program->numero_episodio) {
+                            $q->where('numero_episodio', '>', $program->numero_episodio);
+                        }
+                    })
+                    ->orderByDesc('fecha_emision')
+                    ->orderByDesc('numero_episodio')
+                    ->first();
+            }
+
+            if ($supersededBy !== null) {
+                // Episodio superado: no sustituir en emisión activa, registrar trazabilidad
+                if ($program->radioboss_status !== 'radioboss_verified') {
+                    $meta = (array) ($program->delivery_metadata ?? []);
+                    $meta['superseded_by_id'] = $supersededBy->id;
+                    $meta['superseded_at'] = now()->toIso8601String();
+
+                    RadioProgram::withoutEvents(function () use ($program, $meta, $supersededBy): void {
+                        $program->forceFill([
+                            'radioboss_status' => 'radioboss_verified',
+                            'status_message' => sprintf('Episodio superado por #%d; conservado en respaldo.', $supersededBy->id),
+                            'delivery_metadata' => $meta,
+                        ])->saveQuietly();
+                    });
+
+                    $auditService->record($program, 'RADIOBOSS_SUPERSEDED', sprintf(
+                        'Episodio superado por #%d; no se envía a emisión activa.',
+                        $supersededBy->id
+                    ));
+
+                    $actions[] = 'superado (conservado en respaldo)';
+                }
+            } elseif ($program->isEditorialApproved() && $program->radioboss_status !== 'radioboss_verified' && $program->radioboss_status !== 'archive_skipped') {
                 UploadRadiobossJob::dispatch($program->id);
                 $actions[] = 'RadioBOSS';
             } elseif ($program->radioboss_status === 'radioboss_verified' && $program->radioboss_notification_sent_at === null) {
@@ -108,7 +156,7 @@ final class ReconcilePodcastPipelineCommand extends Command
 
             if (
                 $program->radioboss_status === 'radioboss_verified'
-                && in_array($program->archive_org_status, ['archive_verified', 'archive_pending_indexing'], true)
+                && in_array($program->archive_org_status, ['archive_verified', 'archive_pending_indexing', 'archive_skipped'], true)
                 && $program->delivery_status !== 'delivery_verified'
             ) {
                 PodcastDeliveryVerified::dispatch($program->id);

@@ -16,10 +16,26 @@
             $archiveStatus = (string) ($upload->archive_org_status ?? 'archive_pending');
             $deliveryStatus = (string) ($upload->delivery_status ?? 'delivery_pending');
 
-            $hasActivePipeline = in_array($radioStatus, ['radioboss_pending', 'processing', 'uploading'], true)
+            $isAudioDistributed = $radioStatus === 'radioboss_verified'
+                && in_array($archiveStatus, ['archive_verified', 'archive_skipped'], true);
+
+            $rbNotifAccepted = $upload->radioboss_notification_sent_at !== null
+                || data_get($upload->delivery_metadata, 'radioboss_notification_status') === 'accepted_smtp';
+            $archNotifAccepted = $upload->archive_notification_sent_at !== null
+                || data_get($upload->delivery_metadata, 'archive_notification_status') === 'accepted_smtp';
+
+            $rbNotifError = data_get($upload->delivery_metadata, 'radioboss_notification_error');
+            $archNotifError = data_get($upload->delivery_metadata, 'archive_notification_error');
+
+            $hasNotificationError = filled($rbNotifError) || filled($archNotifError);
+            $hasNotificationPending = $isAudioDistributed && (! $rbNotifAccepted || (($upload->masterProgram?->sync_archive_org ?? true) && ! $archNotifAccepted));
+
+            $hasActivePipeline = ! $isAudioDistributed && (
+                in_array($radioStatus, ['radioboss_pending', 'processing', 'uploading'], true)
                 || in_array($archiveStatus, ['archive_pending', 'archive_pending_indexing', 'processing', 'uploading'], true)
-                || in_array($deliveryStatus, ['delivery_pending', 'delivery_partial', 'processing', 'uploading'], true)
-                || $isProcessingAudio;
+                || in_array($deliveryStatus, ['delivery_pending', 'processing', 'uploading'], true)
+                || $isProcessingAudio
+            );
 
             $hasErrors = $hasAudioFailed
                 || $radioStatus === 'radioboss_error'
@@ -27,7 +43,7 @@
                 || $deliveryStatus === 'delivery_failed'
                 || $editorialStatus === 'retained_incident';
 
-            $isReady = $radioStatus === 'radioboss_verified' && in_array($archiveStatus, ['archive_verified', 'archive_skipped'], true);
+            $isReady = $isAudioDistributed && ! $hasNotificationError && ! $hasNotificationPending;
         @endphp
 
         <article
@@ -64,12 +80,22 @@
                             <span class="h-1.5 w-1.5 rounded-full bg-rose-400"></span>
                             <span>Requiere atención</span>
                         </span>
+                    @elseif ($isAudioDistributed && $hasNotificationError)
+                        <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-300 font-sans" title="{{ $rbNotifError ?: $archNotifError }}">
+                            <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+                            <span>Distribución completada; notificación fallida</span>
+                        </span>
+                    @elseif ($isAudioDistributed && $hasNotificationPending)
+                        <span class="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-300 font-sans">
+                            <span class="h-1.5 w-1.5 rounded-full bg-sky-400"></span>
+                            <span>Distribución completada; notificación pendiente</span>
+                        </span>
                     @elseif ($hasActivePipeline)
                         <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-300 font-sans">
                             <span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></span>
                             <span>En proceso</span>
                         </span>
-                    @elseif ($isReady)
+                    @elseif ($isReady || $isAudioDistributed)
                         <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300 font-sans">
                             <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
                             <span>Listo en emisión</span>
@@ -125,6 +151,23 @@
                             data-podcast-playback-url="{{ $upload->audioPlaybackUrl() }}"
                             class="h-8 max-w-[190px] sm:max-w-[240px]"
                         ></audio>
+                    @endif
+
+                    @if ($isAudioDistributed && ($hasNotificationError || $hasNotificationPending))
+                        <form action="{{ route('admin.podcast-uploads.retry', $upload) }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="target" value="notifications">
+                            <button
+                                type="submit"
+                                class="h-8 px-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-medium transition-colors inline-flex items-center gap-1.5"
+                                title="Reintentar notificación pendiente sin reenviar audio"
+                            >
+                                <svg class="h-3.5 w-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                <span>Reintentar notificación</span>
+                            </button>
+                        </form>
                     @endif
 
                     {{-- Desplegable Accesible: Más Acciones --}}
@@ -187,6 +230,16 @@
                                 >
                                     Reintentar solo Archive.org
                                 </button>
+                                @if ($isAudioDistributed && ($hasNotificationError || $hasNotificationPending))
+                                    <button
+                                        type="submit"
+                                        name="target"
+                                        value="notifications"
+                                        class="w-full text-left px-3 py-2 rounded-lg text-amber-300 hover:bg-amber-500/10 hover:text-white transition-colors font-medium"
+                                    >
+                                        Reintentar solo notificaciones
+                                    </button>
+                                @endif
                             </form>
                         </div>
                     </div>
@@ -330,26 +383,48 @@
                             </span>
                         @endif
 
-                        {{-- 5. Entrega / Notificación --}}
-                        @if ($deliveryStatus === 'delivery_verified')
-                            <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
-                                Correo · Notificado
+                        {{-- 5. Notificaciones (Servidor de correo SMTP) --}}
+                        @if ($rbNotifAccepted)
+                            <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-300" title="Aceptado por servidor SMTP para entrega">
+                                Notif. RadioBOSS · Aceptado SMTP ({{ optional($upload->radioboss_notification_sent_at)->format('H:i') ?? 'OK' }})
                             </span>
-                        @elseif ($deliveryStatus === 'delivery_partial')
-                            <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-amber-500/30 bg-amber-500/10 text-amber-300">
-                                Correo · Parcial
-                            </span>
-                        @elseif ($deliveryStatus === 'delivery_failed')
-                            <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-rose-500/30 bg-rose-500/10 text-rose-300">
-                                Correo · Error envío
-                            </span>
-                        @elseif ($deliveryStatus === 'skipped')
-                            <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-sky-500/30 bg-sky-500/10 text-sky-300">
-                                Correo · Omitido
+                        @elseif ($rbNotifError)
+                            <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-rose-500/30 bg-rose-500/10 text-rose-300" title="{{ $rbNotifError }}">
+                                Notif. RadioBOSS · Fallido
                             </span>
                         @else
                             <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-white/10 bg-white/5 text-gray-400">
-                                Correo · Pendiente
+                                Notif. RadioBOSS · Pendiente
+                            </span>
+                        @endif
+
+                        @if ($upload->masterProgram?->sync_archive_org ?? true)
+                            @if ($archNotifAccepted)
+                                <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-300" title="Aceptado por servidor SMTP para entrega">
+                                    Notif. Archive · Aceptado SMTP ({{ optional($upload->archive_notification_sent_at)->format('H:i') ?? 'OK' }})
+                                </span>
+                            @elseif ($archNotifError)
+                                <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-rose-500/30 bg-rose-500/10 text-rose-300" title="{{ $archNotifError }}">
+                                    Notif. Archive · Fallido
+                                </span>
+                            @else
+                                <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-white/10 bg-white/5 text-gray-400">
+                                    Notif. Archive · Pendiente
+                                </span>
+                            @endif
+                        @endif
+
+                        @if ($deliveryStatus === 'delivery_verified')
+                            <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
+                                Entrega final · Verificada
+                            </span>
+                        @elseif ($deliveryStatus === 'delivery_partial')
+                            <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-sky-500/30 bg-sky-500/10 text-sky-300">
+                                Entrega final · Parcial
+                            </span>
+                        @elseif ($deliveryStatus === 'delivery_failed')
+                            <span class="inline-flex items-center rounded-md border px-2 py-0.5 border-rose-500/30 bg-rose-500/10 text-rose-300">
+                                Entrega final · Fallida
                             </span>
                         @endif
                     </div>
@@ -373,6 +448,18 @@
                     <div class="rounded-lg border border-rose-900/40 bg-rose-950/20 p-3 text-xs text-rose-300 font-sans space-y-1">
                         <div class="font-semibold text-rose-200">Error en RadioBOSS FTP:</div>
                         <p class="leading-relaxed">{{ $upload->radioboss_last_error }}</p>
+                    </div>
+                @endif
+                @if ($rbNotifError)
+                    <div class="rounded-lg border border-amber-900/40 bg-amber-950/20 p-3 text-xs text-amber-300 font-sans space-y-1">
+                        <div class="font-semibold text-amber-200">Error en notificación RadioBOSS (SMTP):</div>
+                        <p class="leading-relaxed">{{ $rbNotifError }}</p>
+                    </div>
+                @endif
+                @if ($archNotifError)
+                    <div class="rounded-lg border border-amber-900/40 bg-amber-950/20 p-3 text-xs text-amber-300 font-sans space-y-1">
+                        <div class="font-semibold text-amber-200">Error en notificación Archive.org (SMTP):</div>
+                        <p class="leading-relaxed">{{ $archNotifError }}</p>
                     </div>
                 @endif
                 @if ($upload->archive_org_last_error)

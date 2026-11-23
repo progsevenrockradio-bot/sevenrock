@@ -89,9 +89,10 @@ class UploadArchiveOrgJob implements ShouldQueue
             $archiveResult = $archiveOrgPodcastService->syncEpisode($radioProgram);
             $pendingIndexing = (bool) ($archiveResult['pending_indexing'] ?? false);
             $archiveStatus = $pendingIndexing ? 'archive_pending_indexing' : 'archive_verified';
-            $deliveryStatus = $this->resolveDeliveryStatus($radioProgram, $archiveStatus);
+            $freshProgram = $radioProgram->fresh() ?? $radioProgram;
+            $deliveryStatus = $this->resolveDeliveryStatus($freshProgram, $archiveStatus);
 
-            RadioProgram::withoutEvents(function () use ($radioProgram, $archiveResult, $archiveStatus, $deliveryStatus, $pendingIndexing): void {
+            RadioProgram::withoutEvents(function () use ($radioProgram, $archiveResult, $archiveStatus, $deliveryStatus, $pendingIndexing, $freshProgram): void {
                 $radioProgram->forceFill([
                     'archive_org_status' => $archiveStatus,
                     'archive_org_remote_path' => $archiveResult['remote_path'] ?? $radioProgram->archive_org_remote_path,
@@ -112,9 +113,9 @@ class UploadArchiveOrgJob implements ShouldQueue
                     'delivery_metadata' => array_merge((array) ($radioProgram->delivery_metadata ?? []), [
                         'status' => $deliveryStatus,
                         'updated_at' => now()->toIso8601String(),
-                        'radioboss_status' => $radioProgram->radioboss_status ?? null,
+                        'radioboss_status' => $freshProgram->radioboss_status ?? null,
                         'archive_org_status' => $archiveStatus,
-                        'radioboss_verified' => (bool) $radioProgram->enviado_radioboss,
+                        'radioboss_verified' => in_array($freshProgram->radioboss_status, ['radioboss_verified', 'skipped'], true) || (bool) $freshProgram->enviado_radioboss,
                         'archive_verified' => $archiveStatus === 'archive_verified',
                         'archive_pending_indexing' => $pendingIndexing,
                         'archive_item_url' => $archiveResult['verification']['item_url'] ?? null,
@@ -147,8 +148,9 @@ class UploadArchiveOrgJob implements ShouldQueue
 
             PodcastArchiveUploaded::dispatch($radioProgram->id);
 
-            if (! $pendingIndexing && ($radioProgram->radioboss_status ?? null) === 'radioboss_verified') {
-                PodcastDeliveryVerified::dispatch($radioProgram->id);
+            $freshProgram = $radioProgram->fresh() ?? $radioProgram;
+            if (! $pendingIndexing && in_array(($freshProgram->radioboss_status ?? null), ['radioboss_verified', 'skipped'], true)) {
+                PodcastDeliveryVerified::dispatch($freshProgram->id);
             }
         } catch (Throwable $exception) {
             $this->markFailure($radioProgram, $exception->getMessage());
@@ -220,9 +222,11 @@ class UploadArchiveOrgJob implements ShouldQueue
 
     private function resolveDeliveryStatus(RadioProgram $radioProgram, string $archiveStatus): string
     {
-        return $radioProgram->radioboss_status === 'radioboss_verified' && $archiveStatus === 'archive_verified'
-            ? 'delivery_verified'
-            : 'delivery_partial';
+        $fresh = $radioProgram->fresh() ?? $radioProgram;
+        $rbVerified = in_array($fresh->radioboss_status, ['radioboss_verified', 'skipped'], true) || (bool) $fresh->enviado_radioboss;
+        $archVerified = in_array($archiveStatus, ['archive_verified', 'archive_skipped', 'skipped'], true);
+
+        return ($rbVerified && $archVerified) ? 'delivery_verified' : 'delivery_partial';
     }
 
     private function resolveSkippedDeliveryStatus(RadioProgram $radioProgram): string

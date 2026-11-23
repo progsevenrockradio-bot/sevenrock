@@ -438,10 +438,29 @@ final class PodcastUploadController extends Controller
             );
 
             $target = (string) $request->input('target', 'all');
+
+            if ($target === 'notifications') {
+                $notificationsSent = [];
+                if ($radioProgram->radioboss_status === 'radioboss_verified' && $radioProgram->radioboss_notification_sent_at === null) {
+                    \App\Events\PodcastRadiobossUploaded::dispatch($radioProgram->id);
+                    $notificationsSent[] = 'RadioBOSS';
+                }
+                if (in_array($radioProgram->archive_org_status, ['archive_verified', 'archive_pending_indexing'], true) && $radioProgram->archive_notification_sent_at === null) {
+                    \App\Events\PodcastArchiveUploaded::dispatch($radioProgram->id);
+                    $notificationsSent[] = 'Archive.org';
+                }
+
+                if ($notificationsSent !== []) {
+                    return back()->with('status', 'Reintentando notificación para: ' . implode(', ', $notificationsSent) . '.');
+                }
+
+                return back()->with('status', 'Las notificaciones ya fueron aceptadas por el servidor de correo o no aplican.');
+            }
+
             $retryPlan = $this->buildSelectiveRetryPlan($radioProgram, $target);
 
             if ($retryPlan['jobs'] === []) {
-                return back()->with('status', 'No hay tareas que reprocesar.');
+                return back()->with('status', $retryPlan['message'] ?: 'No hay tareas que reprocesar.');
             }
 
             // Actualizar estados a pendiente inmediatamente para reflejar el trabajo en la UI
@@ -635,6 +654,41 @@ final class PodcastUploadController extends Controller
             return [
                 'jobs' => $jobs,
                 'message' => "Procesando reintento para: {$targetLabel}.",
+            ];
+        }
+
+        $isAudioDistributed = $radioProgram->radioboss_status === 'radioboss_verified'
+            && in_array($radioProgram->archive_org_status, ['archive_verified', 'archive_skipped'], true);
+
+        if ($target === 'all' && $isAudioDistributed) {
+            if ($radioProgram->radioboss_notification_sent_at === null || $radioProgram->archive_notification_sent_at === null) {
+                if ($radioProgram->radioboss_notification_sent_at === null) {
+                    \App\Events\PodcastRadiobossUploaded::dispatch($radioProgram->id);
+                    $labels[] = 'correo RadioBOSS';
+                }
+                if ($radioProgram->archive_notification_sent_at === null) {
+                    \App\Events\PodcastArchiveUploaded::dispatch($radioProgram->id);
+                    $labels[] = 'correo Archive.org';
+                }
+
+                return [
+                    'jobs' => [],
+                    'message' => 'Audio ya verificado. Se reintentaron notificaciones pendientes: ' . implode(', ', $labels) . '.',
+                ];
+            }
+
+            if ($radioProgram->delivery_status !== 'delivery_verified') {
+                \App\Events\PodcastDeliveryVerified::dispatch($radioProgram->id);
+
+                return [
+                    'jobs' => [],
+                    'message' => 'Audio y notificaciones verificadas. Finalizando entrega.',
+                ];
+            }
+
+            return [
+                'jobs' => [],
+                'message' => 'El episodio ya se encuentra totalmente verificado y distribuido.',
             ];
         }
 

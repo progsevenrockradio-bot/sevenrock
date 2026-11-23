@@ -388,6 +388,13 @@ Schedule::command('podcast:reconcile-pipeline', [
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/podcast-reconcile.log'));
 
+// Restaurar episodios superados respetando la ventana de protección en vivo
+Schedule::command('podcast:restore-superseded-episode')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/podcast-restore-superseded.log'));
+
 // Vigilancia de integridad de assets de diseño (cada 5 minutos, sin solapamiento)
 Schedule::command('design:protect --monitor')
     ->everyFiveMinutes()

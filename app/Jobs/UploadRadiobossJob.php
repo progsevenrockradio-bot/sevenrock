@@ -209,10 +209,23 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
         $destinationPath = trim($folder, '/\\') . '/' . $baseName;
         $destinationPath = trim(str_replace(['//', '\\'], ['/', '/'], $destinationPath), '/');
 
-        // 3.3 Bloqueo por carpeta de emisión: evita que dos episodios destinados a la misma carpeta roten simultáneamente
+        // 3.3 Bloqueo por programa y por carpeta de emisión: coordina entregas simultáneas y evita colisiones
+        $programLockKey = 'podcast_program_delivery_' . ($radioProgram->master_program_id ?? $radioProgram->id);
+        $programLock = Cache::lock($programLockKey, 1800);
+        if (! $programLock->get()) {
+            $this->markFailure(
+                $radioProgram,
+                "Entrega para el programa bloqueada por otra transferencia o rotación activa a RadioBOSS. Entrega pospuesta para evitar colisión.",
+                $destinationPath
+            );
+
+            return;
+        }
+
         $folderLockKey = 'upload_radioboss_folder_' . sha1(strtolower($folder));
         $folderLock = Cache::lock($folderLockKey, 1800);
         if (! $folderLock->get()) {
+            $programLock->release();
             $this->markFailure(
                 $radioProgram,
                 "Carpeta de emisión ('{$folder}') bloqueada por otra transferencia o rotación activa a RadioBOSS. Entrega pospuesta para evitar inconsistencia o colisión concurrente en la misma carpeta.",
@@ -493,6 +506,63 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                 }
             }
 
+            // 7.3 Protección por programa: si este episodio está superado por una emisión posterior verificada,
+            // jamás debe desplazar la emisión activa. Se archiva directamente en respaldos_programas.
+            $supersedingEpisode = $this->isSupersededByNewerEpisode($freshProgram ?? $radioProgram);
+            if ($supersedingEpisode !== null) {
+                $backupRoot = (string) config('services.radioboss.backup_root', 'respaldos_programas');
+                $backupDir = trim($backupRoot, '/') . '/' . trim($folder, '/');
+                $ftpDisk->makeDirectory($backupDir);
+                $backupTarget = $this->resolveAvailableBackupPath($ftpDisk, $backupDir, $baseName);
+
+                $movedToBackup = (bool) $ftpDisk->move($tempRemotePath, $backupTarget);
+                if (! $movedToBackup && ! $ftpDisk->exists($backupTarget)) {
+                    throw new \RuntimeException("Fallo al mover episodio superado a respaldos_programas: {$backupTarget}");
+                }
+
+                Log::info('UploadRadiobossJob: episodio superado guardado en respaldo sin desplazar emisión activa.', [
+                    'program_id' => $radioProgram->id,
+                    'superseded_by' => $supersedingEpisode->id,
+                    'remote_path' => $backupTarget,
+                ]);
+
+                $audit->record($freshProgram ?? $radioProgram, 'RADIOBOSS_VERIFIED', 'Episodio superado guardado en respaldo sin desplazar emisión activa.', [
+                    'program_id' => $radioProgram->id,
+                    'superseded_by' => $supersedingEpisode->id,
+                    'remote_path' => $backupTarget,
+                ]);
+
+                RadioProgram::withoutEvents(function () use ($radioProgram, $backupTarget, $localSha256, $currentVersion, $supersedingEpisode): void {
+                    $radioProgram->forceFill([
+                        'enviado_radioboss' => true,
+                        'radioboss_status' => 'radioboss_verified',
+                        'radioboss_verified_at' => now(),
+                        'radioboss_last_error' => null,
+                        'status_message' => 'Episodio anterior archivado en respaldo (superado por emisión posterior).',
+                        'radioboss_metadata' => array_merge((array) ($radioProgram->radioboss_metadata ?? []), [
+                            'status' => 'radioboss_verified',
+                            'remote_path' => $backupTarget,
+                            'content_sha256' => $localSha256,
+                            'version' => $currentVersion,
+                            'superseded' => true,
+                            'superseded_by_id' => $supersedingEpisode->id,
+                            'archived_in_backup' => true,
+                            'verified_at' => now()->toIso8601String(),
+                        ]),
+                    ])->saveQuietly();
+                });
+
+                PodcastRadiobossUploaded::dispatch($radioProgram->id);
+
+                $fresh = $radioProgram->fresh() ?? $radioProgram;
+                $archStatus = (string) ($fresh->archive_org_status ?? '');
+                if (in_array($archStatus, ['archive_verified', 'archive_skipped'], true)) {
+                    PodcastDeliveryVerified::dispatch($fresh->id);
+                }
+
+                return;
+            }
+
             // 8. Renombrado estricto sin sobrescritura destructiva y rotación de respaldo comprobada
             $backedUpFiles = [];
             $unrotatedLegacyFiles = [];
@@ -511,6 +581,67 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
                     if (in_array($fileExt, ['mp3', 'm4a', 'aac', 'ogg', 'wav'], true)
                         && ! str_starts_with($fname, '.tmp_')
                         && ! str_ends_with($fname, '.part')) {
+
+                        // Comprobar si el archivo existente en emisión es más reciente que el episodio entrante
+                        $existingIdentity = self::extractEpisodeIdentity($fname);
+                        $isExistingFileNewer = false;
+
+                        if ($radioProgram->fecha_emision && $existingIdentity['broadcast_date']) {
+                            $currentDate = Carbon::parse($radioProgram->fecha_emision)->format('Y-m-d');
+                            if ($existingIdentity['broadcast_date'] > $currentDate) {
+                                $isExistingFileNewer = true;
+                            }
+                        }
+
+                        if (! $isExistingFileNewer && $radioProgram->numero_episodio && $existingIdentity['episode_number']) {
+                            if ((int) $existingIdentity['episode_number'] > (int) $radioProgram->numero_episodio) {
+                                $isExistingFileNewer = true;
+                            }
+                        }
+
+                        if ($isExistingFileNewer) {
+                            Log::warning('UploadRadiobossJob: Protección activada: archivo en emisión es más reciente. Guardando entrega en respaldo sin rotar emisión.', [
+                                'incoming_program_id' => $radioProgram->id,
+                                'incoming_episode' => $radioProgram->numero_episodio,
+                                'existing_file' => $fname,
+                            ]);
+
+                            try {
+                                $ftpDisk->makeDirectory($backupDir);
+                            } catch (Throwable) {
+                            }
+                            $backupTarget = $this->resolveAvailableBackupPath($ftpDisk, $backupDir, $baseName);
+                            $ftpDisk->move($tempRemotePath, $backupTarget);
+
+                            RadioProgram::withoutEvents(function () use ($radioProgram, $backupTarget, $localSha256, $currentVersion, $fname): void {
+                                $radioProgram->forceFill([
+                                    'enviado_radioboss' => true,
+                                    'radioboss_status' => 'radioboss_verified',
+                                    'radioboss_verified_at' => now(),
+                                    'radioboss_last_error' => null,
+                                    'status_message' => "Episodio archivado en respaldo (la emisión activa conserva '{$fname}').",
+                                    'radioboss_metadata' => array_merge((array) ($radioProgram->radioboss_metadata ?? []), [
+                                        'status' => 'radioboss_verified',
+                                        'remote_path' => $backupTarget,
+                                        'content_sha256' => $localSha256,
+                                        'version' => $currentVersion,
+                                        'superseded' => true,
+                                        'archived_in_backup' => true,
+                                        'verified_at' => now()->toIso8601String(),
+                                    ]),
+                                ])->saveQuietly();
+                            });
+
+                            PodcastRadiobossUploaded::dispatch($radioProgram->id);
+
+                            $fresh = $radioProgram->fresh() ?? $radioProgram;
+                            $archStatus = (string) ($fresh->archive_org_status ?? '');
+                            if (in_array($archStatus, ['archive_verified', 'archive_skipped'], true)) {
+                                PodcastDeliveryVerified::dispatch($fresh->id);
+                            }
+
+                            return;
+                        }
 
                         // Creación comprobada del directorio de respaldo externo fuera del árbol del evento
                         try {
@@ -813,9 +944,10 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
 
             PodcastRadiobossUploaded::dispatch($radioProgram->id);
 
-            $archiveStatus = (string) ($radioProgram->archive_org_status ?? '');
+            $freshProgram = $radioProgram->fresh() ?? $radioProgram;
+            $archiveStatus = (string) ($freshProgram->archive_org_status ?? '');
             if ($archiveStatus === 'archive_verified' || $archiveStatus === 'archive_skipped') {
-                PodcastDeliveryVerified::dispatch($radioProgram->id);
+                PodcastDeliveryVerified::dispatch($freshProgram->id);
             }
         } catch (Throwable $exception) {
             if (isset($tempRemotePath) && isset($ftpDisk)) {
@@ -873,6 +1005,12 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
             if (isset($folderLock)) {
                 try {
                     $folderLock->release();
+                } catch (Throwable) {
+                }
+            }
+            if (isset($programLock)) {
+                try {
+                    $programLock->release();
                 } catch (Throwable) {
                 }
             }
@@ -1488,5 +1626,54 @@ class UploadRadiobossJob implements ShouldQueue, ShouldBeUnique
         $converted = @mb_convert_encoding($value, 'UTF-8', 'Windows-1252,ISO-8859-1,UTF-8');
 
         return is_string($converted) && $converted !== '' ? $converted : utf8_encode($value);
+    }
+
+    public function isSupersededByNewerEpisode(RadioProgram $radioProgram): ?RadioProgram
+    {
+        if (! $radioProgram->master_program_id) {
+            return null;
+        }
+
+        $query = RadioProgram::query()
+            ->where('master_program_id', $radioProgram->master_program_id)
+            ->where('id', '!=', $radioProgram->id)
+            ->where(function ($q): void {
+                $q->where('radioboss_status', 'radioboss_verified')
+                  ->orWhere('delivery_status', 'delivery_verified')
+                  ->orWhere('enviado_radioboss', true);
+            });
+
+        if ($radioProgram->fecha_emision) {
+            $query->where('fecha_emision', '>', $radioProgram->fecha_emision);
+        } elseif ($radioProgram->numero_episodio) {
+            $query->where('numero_episodio', '>', $radioProgram->numero_episodio);
+        } else {
+            return null;
+        }
+
+        return $query->orderByDesc('fecha_emision')->orderByDesc('numero_episodio')->first();
+    }
+
+    public static function extractEpisodeIdentity(string $filename): array
+    {
+        $episodeNumber = null;
+        $date = null;
+
+        $base = basename($filename);
+
+        if (preg_match('/^(\d+)[\.\s_-]/', $base, $m)) {
+            $episodeNumber = (int) $m[1];
+        }
+
+        if (preg_match('/(\d{1,2})[-_](\d{1,2})[-_](\d{4})/', $base, $m)) {
+            $date = sprintf('%04d-%02d-%02d', (int) $m[3], (int) $m[2], (int) $m[1]);
+        } elseif (preg_match('/(\d{4})[-_](\d{1,2})[-_](\d{1,2})/', $base, $m)) {
+            $date = sprintf('%04d-%02d-%02d', (int) $m[1], (int) $m[2], (int) $m[3]);
+        }
+
+        return [
+            'episode_number' => $episodeNumber,
+            'broadcast_date' => $date,
+        ];
     }
 }
