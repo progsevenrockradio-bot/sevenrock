@@ -388,6 +388,13 @@ Schedule::command('podcast:reconcile-pipeline', [
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/podcast-reconcile.log'));
 
+// Vigilancia de integridad de assets de diseño (cada 5 minutos, sin solapamiento)
+Schedule::command('design:protect --monitor')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/design-protection.log'));
+
 // Procesamiento periódico de entregas editoriales estructuradas DV-1 de Darth Vader (exclusivamente como borradores, cada 15 minutos, sin IA, sin solapamiento)
 Schedule::command('emails:process --only-dv1')
     ->everyFifteenMinutes()

@@ -23,6 +23,7 @@ class DashboardController extends Controller
     public function index(): View
     {
         $pipeline = app(\App\Services\PodcastPipelineAuditService::class)->dashboardSnapshot();
+        $designProtection = app(\App\Services\DesignProtectionService::class)->getStatusSummary();
 
         return view('admin.dashboard', [
             'settings' => ThemeSetting::current(),
@@ -42,6 +43,7 @@ class DashboardController extends Controller
                 'outreach_registered' => $this->countIfTable('band_contacts', BandContact::query()->where('status', 'registered')),
             ],
             'pipeline' => $pipeline,
+            'designProtection' => $designProtection,
             'taxonomies' => [
                 'categories' => $this->taxonomiesFor(PostTaxonomy::TYPE_CATEGORY),
                 'tags' => $this->taxonomiesFor(PostTaxonomy::TYPE_TAG),

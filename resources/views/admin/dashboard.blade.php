@@ -117,6 +117,52 @@
 
         <!-- Right Side: Theme info & Shortcuts -->
         <aside class="space-y-6">
+            <!-- Design Asset Protection Status -->
+            <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6 md:p-8 rounded-lg">
+                <div class="flex items-center justify-between border-b border-[#2b2b2b] pb-2 mb-4">
+                    <h2 class="font-display text-xl uppercase tracking-[.12em] text-white">Protección de Diseño</h2>
+                    @if(($designProtection['status'] ?? '') === 'healthy')
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800">
+                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> Operativo
+                        </span>
+                    @elseif(($designProtection['status'] ?? '') === 'recovered')
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-950 text-yellow-400 border border-yellow-800">
+                            <span class="h-1.5 w-1.5 rounded-full bg-yellow-400"></span> Recuperado
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-950 text-red-400 border border-red-800">
+                            <span class="h-1.5 w-1.5 rounded-full bg-red-400"></span> Alerta
+                        </span>
+                    @endif
+                </div>
+                <div class="space-y-3 text-xs text-[#8b8b8b]">
+                    <div class="flex items-center justify-between border-b border-[#1b1b1d] pb-2">
+                        <span class="text-gray-400 font-semibold">Estado:</span>
+                        <span class="text-[#c7c7c7]">{{ $designProtection['label'] ?? 'Listo' }}</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-[#1b1b1d] pb-2">
+                        <span class="text-gray-400 font-semibold">Versión activa:</span>
+                        <span class="font-mono text-[#c7c7c7]">{{ $designProtection['manifest_hash'] ?? 'N/A' }}</span>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-[#1b1b1d] pb-2">
+                        <span class="text-gray-400 font-semibold">Respaldo verificado:</span>
+                        <span class="text-[#c7c7c7]">
+                            @if($designProtection['backup_available'] ?? false)
+                                <span class="text-emerald-400 font-medium">Disponible</span> ({{ $designProtection['backup_hash'] }})
+                            @else
+                                <span class="text-yellow-500 font-medium">Pendiente</span>
+                            @endif
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400 font-semibold">Última comprobación:</span>
+                        <span class="font-mono text-[11px] text-[#9a9a9a]">
+                            {{ !empty($designProtection['last_check']) ? \Illuminate\Support\Carbon::parse($designProtection['last_check'])->diffForHumans() : 'Reciente' }}
+                        </span>
+                    </div>
+                </div>
+            </section>
+
             <!-- Current Theme settings info -->
             <section class="border border-[#2b2b2b] bg-[rgba(16,16,18,.88)] p-6 md:p-8 rounded-lg">
                 <h2 class="font-display text-xl uppercase tracking-[.12em] text-white border-b border-[#2b2b2b] pb-2 mb-4">{{ $admin['current_theme'] }}</h2>
