@@ -279,6 +279,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::post('/{post}/approve-urls', 'approveUrls')->name('approve-urls');
         Route::post('/{post}/schedule', 'schedule')->name('schedule');
         Route::post('/{post}/reject', 'reject')->name('reject');
+        Route::post('/{post}/restore', 'restore')->name('restore');
         Route::post('/{post}/hold', 'hold')->name('hold');
         Route::post('/bulk-action', 'bulkAction')->name('bulk-action');
 

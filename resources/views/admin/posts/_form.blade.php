@@ -472,7 +472,61 @@
             @endif
         </div>
 
-        <!-- Caja 3: Taxonomías -->
+        <!-- Caja 3: Clasificación Editorial y Sección de Destino -->
+        @php
+            $resolvedClassification = $editorialClassification ?? \App\Support\EditorialClassification::resolve($post);
+            $selectedEditorialType = old(
+                'editorial_type',
+                in_array($resolvedClassification['type'], ['noticia', 'efemeride'], true) && ! $resolvedClassification['has_conflict']
+                    ? $resolvedClassification['type']
+                    : ''
+            );
+        @endphp
+        <div class="rounded-xl border border-white/10 bg-[#101012] p-5 shadow-xl space-y-3.5">
+            <h3 class="font-display text-sm uppercase tracking-wider text-[#dcdcdc] border-b border-white/10 pb-2.5">🧭 Tipo y Sección de Destino</h3>
+
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border {{ $resolvedClassification['badge_classes'] }}">
+                    <span aria-hidden="true">{{ $resolvedClassification['icon'] }}</span>
+                    <span>{{ $resolvedClassification['label'] }}</span>
+                </span>
+                <span class="text-gray-300">
+                    Destino: <strong class="text-white">{{ $resolvedClassification['destination'] }}</strong>
+                </span>
+            </div>
+
+            @if ($resolvedClassification['type'] === 'efemeride' && ! empty($resolvedClassification['historical_year']))
+                <div class="text-xs text-amber-200 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-1.5">
+                    Año histórico verificado: <strong>{{ $resolvedClassification['historical_year'] }}</strong>
+                </div>
+            @endif
+
+            @if ($resolvedClassification['has_conflict'])
+                <div class="text-xs text-rose-200 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
+                    {{ $resolvedClassification['conflict_reason'] }}
+                </div>
+            @endif
+
+            <div>
+                <label for="editorial_type_select" class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Clasificación editorial</label>
+                <select id="editorial_type_select" name="editorial_type" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 focus:border-[#c32720] focus:outline-none">
+                    <option value="" {{ $selectedEditorialType === '' ? 'selected' : '' }}>
+                        {{ $resolvedClassification['has_conflict'] ? 'Sin resolver (mantener conflicto para revisión)' : 'Sin clasificar / Mantener estado actual' }}
+                    </option>
+                    <option value="noticia" {{ $selectedEditorialType === 'noticia' ? 'selected' : '' }}>
+                        Noticia → Noticias Rock
+                    </option>
+                    <option value="efemeride" {{ $selectedEditorialType === 'efemeride' ? 'selected' : '' }}>
+                        Efeméride → Hoy en el Rock
+                    </option>
+                </select>
+                <p class="mt-1.5 text-[11px] text-gray-400 leading-relaxed">
+                    Editar título, texto o portada conserva automáticamente el tipo y la sección actuales. Si cambias este selector expresamente, se actualizará la sección de destino registrando el cambio y conservando otras categorías compatibles.
+                </p>
+            </div>
+        </div>
+
+        <!-- Caja 4: Taxonomías -->
         <div class="rounded-xl border border-white/10 bg-[#101012] p-5 shadow-xl">
             <h3 class="font-display text-sm uppercase tracking-wider text-[#dcdcdc] border-b border-white/10 pb-2.5 mb-4">🏷️ Categorías y Etiquetas</h3>
             

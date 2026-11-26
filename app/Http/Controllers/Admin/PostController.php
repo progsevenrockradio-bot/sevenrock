@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\PostTaxonomy;
+use App\Services\AuditTrailService;
 use App\Services\FileUploadService;
+use App\Support\EditorialClassification;
 use App\Support\WordPressContent;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -54,6 +56,7 @@ class PostController extends Controller
             'editorBlocks' => [
                 ['type' => 'paragraph', 'value' => ''],
             ],
+            'editorialClassification' => EditorialClassification::resolve($post),
             'categoriesSuggestions' => $this->taxonomySuggestions(PostTaxonomy::TYPE_CATEGORY),
             'tagsSuggestions' => $this->taxonomySuggestions(PostTaxonomy::TYPE_TAG),
         ]);
@@ -65,7 +68,7 @@ class PostController extends Controller
             $data = $this->validated($request);
             $categories = $data['categories'];
             $tags = $data['tags'];
-            unset($data['categories'], $data['tags']);
+            unset($data['_editorial_type_changed']);
             $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
             $data['featured_image'] = $this->resolveImage($request, null, $data['featured_image'] ?? null);
             $data = $this->persistableAttributes($data);
@@ -98,6 +101,8 @@ class PostController extends Controller
 
     public function edit(Post $post): View
     {
+        $post->loadMissing(['taxonomies', 'sanitizedMeta']);
+
         if ($post->published_at) {
             $post->published_at = $post->published_at->timezone($post->timezone ?? 'Europe/Madrid');
         }
@@ -105,6 +110,7 @@ class PostController extends Controller
         return view('admin.posts.edit', [
             'post' => $post,
             'editorBlocks' => WordPressContent::toEditorBlocks($post->content ?? []),
+            'editorialClassification' => EditorialClassification::resolve($post),
             'categoriesText' => implode(', ', $this->taxonomyNames($post, PostTaxonomy::TYPE_CATEGORY, 'categories')),
             'tagsText' => implode(', ', $this->taxonomyNames($post, PostTaxonomy::TYPE_TAG, 'tags')),
             'categoriesSuggestions' => $this->taxonomySuggestions(PostTaxonomy::TYPE_CATEGORY),
@@ -117,12 +123,13 @@ class PostController extends Controller
         try {
             return DB::transaction(function () use ($request, $post) {
                 // Bloqueo pesimista para evitar condiciones de carrera en concurrencia
-                $lockedPost = Post::lockForUpdate()->findOrFail($post->id);
+                $lockedPost = Post::lockForUpdate()->with(['taxonomies', 'sanitizedMeta'])->findOrFail($post->id);
 
                 $data = $this->validated($request, $lockedPost->id, $lockedPost);
                 $categories = $data['categories'];
                 $tags = $data['tags'];
-                unset($data['categories'], $data['tags']);
+                $typeChangeAudit = $data['_editorial_type_changed'] ?? null;
+                unset($data['_editorial_type_changed']);
                 $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
                 $data['featured_image'] = $this->resolveImage($request, $lockedPost->featured_image, $data['featured_image'] ?? null);
                 $data = $this->persistableAttributes($data);
@@ -134,6 +141,16 @@ class PostController extends Controller
 
                 $lockedPost->update($data);
                 $this->syncTaxonomies($lockedPost, $categories, $tags);
+
+                if (is_array($typeChangeAudit)) {
+                    app(AuditTrailService::class)->recordModel(
+                        event: 'editorial_type_changed',
+                        model: $lockedPost,
+                        before: ['classification' => $typeChangeAudit['before']],
+                        after: ['classification' => EditorialClassification::resolve($lockedPost->fresh(['taxonomies', 'sanitizedMeta'])), 'categories' => $categories],
+                        context: ['actor_id' => auth()->id()]
+                    );
+                }
 
                 return redirect()->route('admin.posts.index')->with('status', 'Post updated.');
             });
@@ -380,6 +397,7 @@ class PostController extends Controller
             'status' => ['nullable', 'string', Rule::in(['draft', 'published', 'scheduled'])],
             'categories_text' => ['nullable', 'string'],
             'tags_text' => ['nullable', 'string'],
+            'editorial_type' => ['nullable', 'string', Rule::in(['', EditorialClassification::TYPE_NOTICIA, EditorialClassification::TYPE_EFEMERIDE])],
             'is_published' => ['nullable', 'boolean'],
             'author_email' => ['nullable', 'email', 'max:255'],
             'notification_sender' => ['nullable', 'email', 'max:255'],
@@ -413,7 +431,33 @@ class PostController extends Controller
         }
 
         $validated['content'] = WordPressContent::toRenderableBlocks($contentSource);
-        $validated['categories'] = $this->splitCsv((string) ($validated['categories_text'] ?? ''));
+        $categories = $this->splitCsv((string) ($validated['categories_text'] ?? ''));
+        $requestedType = trim((string) ($validated['editorial_type'] ?? ''));
+
+        if ($existingPost) {
+            $currentClassification = EditorialClassification::resolve($existingPost);
+            $currentType = $currentClassification['type'];
+            $hasConflict = (bool) $currentClassification['has_conflict'];
+
+            if ($requestedType !== '' && ($requestedType !== $currentType || $hasConflict)) {
+                // Cambio explícito de tipo editorial por el editor: mantener coherentes clasificación y sección, conservando otras categorías compatibles
+                $categories = EditorialClassification::applyExplicitTypeToCategories($categories, $requestedType);
+                $validated['_editorial_type_changed'] = [
+                    'before'     => $currentClassification,
+                    'after_type' => $requestedType,
+                ];
+            } elseif (! $hasConflict && in_array($currentType, [EditorialClassification::TYPE_NOTICIA, EditorialClassification::TYPE_EFEMERIDE], true)) {
+                // Conservar la clasificación existente al editar título, texto o portada (sin convertir una efeméride en noticia ni perder su sección)
+                if ($categories === [] && ! $request->filled('categories_text')) {
+                    $categories = $this->taxonomyNames($existingPost, PostTaxonomy::TYPE_CATEGORY, 'categories');
+                }
+                $categories = EditorialClassification::applyExplicitTypeToCategories($categories, $currentType);
+            }
+        } elseif (in_array($requestedType, [EditorialClassification::TYPE_NOTICIA, EditorialClassification::TYPE_EFEMERIDE], true)) {
+            $categories = EditorialClassification::applyExplicitTypeToCategories($categories, $requestedType);
+        }
+
+        $validated['categories'] = $categories;
         $validated['tags'] = $this->splitCsv((string) ($validated['tags_text'] ?? ''));
 
         switch ($action) {
@@ -459,6 +503,7 @@ class PostController extends Controller
             $validated['content_text'],
             $validated['categories_text'],
             $validated['tags_text'],
+            $validated['editorial_type'],
             $validated['featured_image_file']
         );
 

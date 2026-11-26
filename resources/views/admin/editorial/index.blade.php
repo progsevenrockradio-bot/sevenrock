@@ -374,8 +374,8 @@
 
             {{-- Sub-navegación entre Bandeja, Fuentes e Incidencias --}}
             <div class="flex flex-wrap gap-2 text-xs font-medium">
-                <a href="{{ route('admin.editorial.index') }}" class="px-3 py-1.5 rounded-lg bg-[#c32720] text-white font-semibold shadow-sm">
-                    📥 Bandeja ({{ $counts['total'] }})
+                <a href="{{ route('admin.editorial.index', ['tab' => 'review']) }}" class="px-3 py-1.5 rounded-lg bg-[#c32720] text-white font-semibold shadow-sm">
+                    📥 Bandeja ({{ $counts['review'] }} por revisar)
                 </a>
                 <a href="{{ route('admin.editorial.sources.index') }}" class="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
                     🏢 Fuentes y Agencias
@@ -392,64 +392,147 @@
             </div>
         </div>
 
-        {{-- Resumen de Métricas / Chips de Estado --}}
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <a href="{{ route('admin.editorial.index', ['status' => 'all']) }}" class="rounded-xl border border-white/10 bg-[#101012] p-3.5 transition-all shadow-sm {{ $currentStatus === 'all' ? 'border-[#c32720] bg-[#c32720]/10' : 'hover:border-white/20' }}">
-                <div class="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Total Comunicados</div>
-                <div class="font-display text-xl text-white mt-1">{{ $counts['total'] }}</div>
-            </a>
-            <a href="{{ route('admin.editorial.index', ['status' => 'draft']) }}" class="rounded-xl border border-white/10 bg-[#101012] p-3.5 transition-all shadow-sm {{ $currentStatus === 'draft' ? 'border-[#c32720] bg-[#c32720]/10' : 'hover:border-white/20' }}">
-                <div class="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Borradores</div>
-                <div class="font-display text-xl text-amber-300 mt-1">{{ $counts['drafts'] }}</div>
-            </a>
-            <a href="{{ route('admin.editorial.index', ['status' => 'scheduled']) }}" class="rounded-xl border border-white/10 bg-[#101012] p-3.5 transition-all shadow-sm {{ $currentStatus === 'scheduled' ? 'border-[#c32720] bg-[#c32720]/10' : 'hover:border-white/20' }}">
-                <div class="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Programadas</div>
-                <div class="font-display text-xl text-blue-300 mt-1">{{ $counts['scheduled'] }}</div>
-            </a>
-            <a href="{{ route('admin.editorial.index', ['status' => 'published']) }}" class="rounded-xl border border-white/10 bg-[#101012] p-3.5 transition-all shadow-sm {{ $currentStatus === 'published' ? 'border-[#c32720] bg-[#c32720]/10' : 'hover:border-white/20' }}">
-                <div class="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Publicadas</div>
-                <div class="font-display text-xl text-emerald-400 mt-1">{{ $counts['published'] }}</div>
-            </a>
-            <a href="{{ route('admin.editorial.index', ['security' => 'active_embargo']) }}" class="rounded-xl border border-white/10 bg-[#101012] p-3.5 transition-all shadow-sm {{ $currentSecurity === 'active_embargo' ? 'border-amber-500 bg-amber-500/10' : 'hover:border-white/20' }}">
-                <div class="text-[10px] uppercase tracking-wider text-amber-400 font-medium">Bajo Embargo</div>
-                <div class="font-display text-xl text-amber-300 mt-1">{{ $counts['embargo_active'] }}</div>
-            </a>
-            <a href="{{ route('admin.editorial.index', ['status' => 'with_incidents']) }}" class="rounded-xl border border-white/10 bg-[#101012] p-3.5 transition-all shadow-sm {{ $currentStatus === 'with_incidents' ? 'border-rose-500 bg-rose-500/10' : 'hover:border-white/20' }}">
-                <div class="text-[10px] uppercase tracking-wider text-rose-400 font-medium">Incidencias</div>
-                <div class="font-display text-xl text-rose-300 mt-1">{{ $counts['with_incidents'] }}</div>
-            </a>
+        {{-- Pestañas Principales (Por revisar / Publicadas / Rechazadas) --}}
+        <div class="rounded-xl border border-white/10 bg-[#101012] p-2 shadow-xl">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2" role="tablist" aria-label="Estados de la Bandeja Editorial">
+                <a
+                    href="{{ route('admin.editorial.index', array_filter(['tab' => 'review', 'type' => $currentType !== 'all' ? $currentType : null])) }}"
+                    role="tab"
+                    aria-selected="{{ $currentTab === 'review' ? 'true' : 'false' }}"
+                    class="flex items-center justify-between rounded-lg px-4 py-3 text-xs font-semibold transition-all border {{ $currentTab === 'review' ? 'border-[#c32720] bg-[#c32720]/15 text-white shadow-md shadow-red-950/30' : 'border-white/5 bg-white/[0.02] text-gray-300 hover:bg-white/5 hover:text-white' }}"
+                >
+                    <div class="flex items-center gap-2">
+                        <span class="text-base" aria-hidden="true">🗂️</span>
+                        <div class="text-left">
+                            <div class="uppercase tracking-wider">Por revisar</div>
+                            <div class="text-[10px] font-normal text-gray-400">Borradores y pendientes de decisión</div>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full font-display text-sm {{ $currentTab === 'review' ? 'bg-[#c32720] text-white' : 'bg-white/10 text-amber-300' }}">
+                        {{ $counts['review'] }}
+                    </span>
+                </a>
+
+                <a
+                    href="{{ route('admin.editorial.index', array_filter(['tab' => 'published', 'type' => $currentType !== 'all' ? $currentType : null])) }}"
+                    role="tab"
+                    aria-selected="{{ $currentTab === 'published' ? 'true' : 'false' }}"
+                    class="flex items-center justify-between rounded-lg px-4 py-3 text-xs font-semibold transition-all border {{ $currentTab === 'published' ? 'border-emerald-500/60 bg-emerald-500/15 text-white shadow-md' : 'border-white/5 bg-white/[0.02] text-gray-300 hover:bg-white/5 hover:text-white' }}"
+                >
+                    <div class="flex items-center gap-2">
+                        <span class="text-base" aria-hidden="true">✅</span>
+                        <div class="text-left">
+                            <div class="uppercase tracking-wider">Publicadas</div>
+                            <div class="text-[10px] font-normal text-gray-400">Piezas ya publicadas en la web</div>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full font-display text-sm {{ $currentTab === 'published' ? 'bg-emerald-600 text-white' : 'bg-white/10 text-emerald-300' }}">
+                        {{ $counts['published'] }}
+                    </span>
+                </a>
+
+                <a
+                    href="{{ route('admin.editorial.index', array_filter(['tab' => 'rejected', 'type' => $currentType !== 'all' ? $currentType : null])) }}"
+                    role="tab"
+                    aria-selected="{{ $currentTab === 'rejected' ? 'true' : 'false' }}"
+                    class="flex items-center justify-between rounded-lg px-4 py-3 text-xs font-semibold transition-all border {{ $currentTab === 'rejected' ? 'border-rose-500/60 bg-rose-500/15 text-white shadow-md' : 'border-white/5 bg-white/[0.02] text-gray-300 hover:bg-white/5 hover:text-white' }}"
+                >
+                    <div class="flex items-center gap-2">
+                        <span class="text-base" aria-hidden="true">🚫</span>
+                        <div class="text-left">
+                            <div class="uppercase tracking-wider">Rechazadas</div>
+                            <div class="text-[10px] font-normal text-gray-400">Descartadas con historial y motivo</div>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full font-display text-sm {{ $currentTab === 'rejected' ? 'bg-rose-700 text-white' : 'bg-white/10 text-rose-300' }}">
+                        {{ $counts['rejected'] }}
+                    </span>
+                </a>
+            </div>
+
+            {{-- Filtro de Tipo Editorial (disponible en las 3 pestañas) + Accesos rápidos de «Por revisar» --}}
+            <div class="mt-2 pt-2.5 px-2 pb-1 border-t border-white/10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5">
+                <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                    <span class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mr-1">Tipo:</span>
+                    @php
+                        $typeFilters = [
+                            'all' => ['label' => 'Todas', 'count' => $typeCounts['all'], 'active' => 'bg-white/15 border-white/30 text-white', 'idle' => 'border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/10'],
+                            'noticia' => ['label' => '📰 Noticias', 'count' => $typeCounts['noticia'], 'active' => 'bg-sky-500/20 border-sky-400/60 text-sky-100', 'idle' => 'border-sky-500/20 bg-sky-500/5 text-sky-300 hover:bg-sky-500/15'],
+                            'efemeride' => ['label' => '📅 Efemérides', 'count' => $typeCounts['efemeride'], 'active' => 'bg-amber-500/20 border-amber-400/60 text-amber-100', 'idle' => 'border-amber-500/20 bg-amber-500/5 text-amber-300 hover:bg-amber-500/15'],
+                            'unclassified' => ['label' => '❓ Sin clasificar', 'count' => $typeCounts['unclassified'], 'active' => 'bg-zinc-600/40 border-zinc-400/60 text-white', 'idle' => 'border-zinc-500/25 bg-zinc-500/5 text-zinc-300 hover:bg-zinc-500/15'],
+                        ];
+                    @endphp
+                    @foreach ($typeFilters as $typeKey => $tf)
+                        <a
+                            href="{{ route('admin.editorial.index', array_filter([
+                                'tab' => $currentTab,
+                                'type' => $typeKey,
+                                'search' => $currentSearch !== '' ? $currentSearch : null,
+                                'status' => $currentStatus !== 'all' ? $currentStatus : null,
+                                'security' => $currentSecurity !== 'all' ? $currentSecurity : null,
+                                'sort' => $currentSort !== 'newest' ? $currentSort : null,
+                            ])) }}"
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-medium transition-colors {{ $currentType === $typeKey ? $tf['active'] : $tf['idle'] }}"
+                        >
+                            <span>{{ $tf['label'] }}</span>
+                            <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-black/40 font-mono">{{ $tf['count'] }}</span>
+                        </a>
+                    @endforeach
+                </div>
+
+                @if ($currentTab === 'review')
+                    <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+                        <span class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mr-1">Accesos rápidos:</span>
+                        <a href="{{ route('admin.editorial.index', ['tab' => 'review', 'status' => 'draft', 'type' => $currentType]) }}" class="px-2 py-1 rounded-md border {{ $currentStatus === 'draft' ? 'border-amber-400 bg-amber-500/15 text-amber-200' : 'border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/10' }}">
+                            Borradores ({{ $counts['drafts'] }})
+                        </a>
+                        <a href="{{ route('admin.editorial.index', ['tab' => 'review', 'status' => 'scheduled', 'type' => $currentType]) }}" class="px-2 py-1 rounded-md border {{ $currentStatus === 'scheduled' ? 'border-blue-400 bg-blue-500/15 text-blue-200' : 'border-white/10 bg-white/[0.03] text-blue-300 hover:bg-white/10' }}">
+                            ⏳ Programadas ({{ $counts['scheduled'] }})
+                        </a>
+                        <a href="{{ route('admin.editorial.index', ['tab' => 'review', 'security' => 'active_embargo', 'type' => $currentType]) }}" class="px-2 py-1 rounded-md border {{ $currentSecurity === 'active_embargo' ? 'border-amber-500 bg-amber-500/20 text-amber-200' : 'border-amber-500/20 bg-amber-500/5 text-amber-300 hover:bg-amber-500/15' }}">
+                            🔒 Embargos ({{ $counts['embargo_active'] }})
+                        </a>
+                        <a href="{{ route('admin.editorial.index', ['tab' => 'review', 'status' => 'with_incidents', 'type' => $currentType]) }}" class="px-2 py-1 rounded-md border {{ $currentStatus === 'with_incidents' ? 'border-rose-500 bg-rose-500/20 text-rose-200' : 'border-rose-500/20 bg-rose-500/5 text-rose-300 hover:bg-rose-500/15' }}">
+                            🚨 Incidencias ({{ $counts['with_incidents'] }})
+                        </a>
+                    </div>
+                @endif
+            </div>
         </div>
 
         {{-- Barra de Filtros y Búsqueda --}}
         <form method="GET" action="{{ route('admin.editorial.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 rounded-xl border border-white/10 bg-[#101012] p-4 sm:p-5 shadow-xl text-xs">
+            <input type="hidden" name="tab" value="{{ $currentTab }}">
+            <input type="hidden" name="type" value="{{ $currentType }}">
+
             {{-- Búsqueda --}}
             <div class="lg:col-span-2">
-                <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-medium mb-1">Buscar por titular, asunto o remitente</label>
+                <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-medium mb-1">Buscar en esta pestaña (titular, asunto o remitente)</label>
                 <div class="relative">
                     <input 
                         type="text" 
                         name="search" 
                         value="{{ $currentSearch }}" 
-                        placeholder="Ej. Judas Priest, Sony Music, fe de erratas..."
+                        placeholder="Ej. Judas Priest, Sony Music, efeméride..."
                         class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs text-gray-100 placeholder-gray-500 focus:border-[#c32720] focus:outline-none pr-8"
                     >
                     @if ($currentSearch)
-                        <a href="{{ route('admin.editorial.index') }}" class="absolute right-2 top-2 text-gray-400 hover:text-white">&times;</a>
+                        <a href="{{ route('admin.editorial.index', ['tab' => $currentTab, 'type' => $currentType]) }}" class="absolute right-2 top-2 text-gray-400 hover:text-white">&times;</a>
                     @endif
                 </div>
             </div>
 
-            {{-- Filtro Estado --}}
+            {{-- Filtro Sub-estado (respetando la pestaña activa) --}}
             <div>
-                <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-medium mb-1">Estado Editorial</label>
+                <label class="block text-[10px] uppercase tracking-wider text-gray-400 font-medium mb-1">Sub-estado</label>
                 <select name="status" class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs text-gray-100 focus:border-[#c32720] focus:outline-none" onchange="this.form.submit()">
-                    <option value="all" {{ $currentStatus === 'all' ? 'selected' : '' }}>Todos los estados</option>
-                    <option value="draft" {{ $currentStatus === 'draft' ? 'selected' : '' }}>Borrador (Draft)</option>
-                    <option value="scheduled" {{ $currentStatus === 'scheduled' ? 'selected' : '' }}>Programado</option>
-                    <option value="published" {{ $currentStatus === 'published' ? 'selected' : '' }}>Publicado</option>
-                    <option value="held" {{ $currentStatus === 'held' ? 'selected' : '' }}>Retenido por Seguridad</option>
+                    <option value="all" {{ $currentStatus === 'all' ? 'selected' : '' }}>Todos en esta pestaña</option>
+                    @if ($currentTab === 'review')
+                        <option value="draft" {{ $currentStatus === 'draft' ? 'selected' : '' }}>Borradores</option>
+                        <option value="scheduled" {{ $currentStatus === 'scheduled' ? 'selected' : '' }}>Programadas</option>
+                        <option value="held" {{ $currentStatus === 'held' ? 'selected' : '' }}>Retenidas / Requieren revisión</option>
+                    @endif
                     <option value="with_incidents" {{ $currentStatus === 'with_incidents' ? 'selected' : '' }}>Con Incidencia Pendiente</option>
-                    <option value="rejected" {{ $currentStatus === 'rejected' ? 'selected' : '' }}>Rechazado</option>
                 </select>
             </div>
 
@@ -566,6 +649,7 @@
                                 $meta = $post->sanitizedMeta;
                                 $hasActiveEmbargo = $meta && $meta->is_embargo_active && $meta->embargo_until?->isFuture();
                                 $pendingIncident = $post->incidents->first();
+                                $classification = \App\Support\EditorialClassification::resolve($post);
                                 $mediaInv = app(\App\Services\EmailMediaInventoryExtractor::class)->getEffectiveInventory($meta?->media_inventory, is_array($post->content) ? json_encode($post->content) : (string) $post->content);
                             @endphp
                             <tr class="hover:bg-white/[0.02] transition-colors">
@@ -591,14 +675,33 @@
                                     @if ($post->featured_image_url)
                                         <img src="{{ $post->featured_image_url }}" alt="Portada" class="w-16 h-16 object-cover rounded-lg border border-white/10 bg-black">
                                     @else
-                                        <div class="w-16 h-16 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-gray-500 text-xs font-mono">
+                                        <div class="w-16 h-16 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-gray-500 text-xs font-mono text-center px-1">
                                             Sin Portada
                                         </div>
                                     @endif
                                 </td>
 
-                                {{-- Titular y Resumen --}}
+                                {{-- Titular, Tipo Editorial y Resumen --}}
                                 <td class="p-3.5 align-top">
+                                    <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border {{ $classification['badge_classes'] }}">
+                                            <span aria-hidden="true">{{ $classification['icon'] }}</span>
+                                            <span>{{ $classification['label'] }}</span>
+                                        </span>
+
+                                        @if ($classification['type'] === 'efemeride' && ! empty($classification['historical_year']))
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-amber-500/30 bg-black/40 text-amber-200" title="Año histórico verificado del acontecimiento">
+                                                Año {{ $classification['historical_year'] }}
+                                            </span>
+                                        @endif
+
+                                        @if ($classification['has_conflict'])
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-rose-500/40 bg-rose-500/15 text-rose-200" title="{{ $classification['conflict_reason'] }}">
+                                                ⚠️ Conflicto de clasificación
+                                            </span>
+                                        @endif
+                                    </div>
+
                                     <div class="flex items-center gap-2">
                                         <span class="text-sm font-semibold text-white hover:text-[#c32720] transition-colors cursor-pointer" @click="openQuickView({{ $post->id }})">
                                             {{ $post->title }}
@@ -607,10 +710,26 @@
                                     <p class="mt-1 text-gray-400 line-clamp-2 text-xs leading-relaxed">
                                         {{ $post->excerpt ?: Str::limit(strip_tags(is_array($post->content) ? json_encode($post->content) : $post->content), 140) }}
                                     </p>
+
+                                    @if ($post->status === 'rejected' && $meta?->incident_reason)
+                                        <div class="mt-2 rounded-lg border border-rose-500/25 bg-rose-950/30 px-2.5 py-1.5 text-[11px] text-rose-200">
+                                            <strong class="text-rose-300">Motivo de rechazo:</strong> {{ $meta->incident_reason }}
+                                        </div>
+                                    @elseif ($currentTab === 'review' && ($meta?->incident_reason || $classification['has_conflict']))
+                                        <div class="mt-2 rounded-lg border border-amber-500/25 bg-amber-950/25 px-2.5 py-1.5 text-[11px] text-amber-200">
+                                            <strong class="text-amber-300">Motivo de revisión:</strong> {{ $classification['has_conflict'] ? $classification['conflict_reason'] : $meta->incident_reason }}
+                                        </div>
+                                    @endif
+
                                     <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
-                                        <span>Recibido: <strong class="text-gray-300" title="{{ $post->created_at->format('d/m/Y H:i:s') }}">{{ $post->created_at->diffForHumans() }}</strong></span>
+                                        @if ($currentTab === 'published' && $post->published_at)
+                                            <span>Publicada: <strong class="text-emerald-300" title="{{ $post->published_at->format('d/m/Y H:i:s') }}">{{ $post->published_at->format('d/m/Y H:i') }}</strong></span>
+                                        @else
+                                            <span>Recibido: <strong class="text-gray-300" title="{{ $post->created_at->format('d/m/Y H:i:s') }}">{{ $post->created_at->diffForHumans() }}</strong></span>
+                                        @endif
+                                        <span>• Sección: <strong class="text-gray-300">{{ $classification['destination'] }}</strong></span>
                                         @if ($post->source_subject)
-                                            <span>• Asunto Original: <em class="text-gray-400">"{{ Str::limit($post->source_subject, 40) }}"</em></span>
+                                            <span>• Asunto: <em class="text-gray-400">"{{ Str::limit($post->source_subject, 40) }}"</em></span>
                                         @endif
                                     </div>
                                 </td>
@@ -731,7 +850,18 @@
                                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                                         </a>
 
-                                        @if (!$post->is_published && $post->status !== 'published')
+                                        @if ($post->status === 'rejected')
+                                            <form action="{{ route('admin.editorial.restore', $post) }}" method="POST" class="inline" onsubmit="return confirm('¿Devolver esta pieza rechazada a la pestaña Por revisar?')">
+                                                @csrf
+                                                <button
+                                                    type="submit"
+                                                    class="inline-flex items-center justify-center h-7 px-2.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 text-xs font-medium cursor-pointer"
+                                                    title="Devolver a revisión"
+                                                >
+                                                    ↩️ Devolver a revisión
+                                                </button>
+                                            </form>
+                                        @elseif (!$post->is_published && $post->status !== 'published')
                                             @if ($post->hasPendingSources())
                                                 <button 
                                                     type="button" 
@@ -751,6 +881,15 @@
                                                     Publicar
                                                 </button>
                                             @endif
+
+                                            <button
+                                                type="button"
+                                                @click="openReject({{ $post->id }})"
+                                                class="inline-flex items-center justify-center h-7 w-7 rounded-md border border-rose-900/40 bg-rose-950/30 hover:bg-rose-900/40 text-rose-300 cursor-pointer"
+                                                title="Rechazar pieza"
+                                            >
+                                                ✕
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
@@ -817,7 +956,29 @@
 
                             {{-- Pestaña 1: Resumen --}}
                             <div x-show="quickViewTab === 'summary'" class="space-y-4">
-                                <div class="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
+                                <div class="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2.5">
+                                    <div class="flex flex-wrap items-center gap-2" x-show="quickViewData.classification">
+                                        <span
+                                            class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border"
+                                            :class="quickViewData.classification ? quickViewData.classification.badge_classes : ''"
+                                        >
+                                            <span x-text="quickViewData.classification ? quickViewData.classification.icon : ''"></span>
+                                            <span x-text="quickViewData.classification ? quickViewData.classification.label : 'Sin clasificar'"></span>
+                                        </span>
+                                        <span class="text-[11px] text-gray-300">
+                                            Sección de destino: <strong class="text-white" x-text="quickViewData.classification ? quickViewData.classification.destination : 'Sin sección asignada'"></strong>
+                                        </span>
+                                        <template x-if="quickViewData.classification && quickViewData.classification.type === 'efemeride' && quickViewData.classification.historical_year">
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border border-amber-500/30 bg-amber-500/10 text-amber-200">
+                                                Año histórico: <span x-text="quickViewData.classification.historical_year"></span>
+                                            </span>
+                                        </template>
+                                    </div>
+
+                                    <template x-if="quickViewData.classification && quickViewData.classification.has_conflict">
+                                        <div class="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-[11px] text-rose-200" x-text="quickViewData.classification.conflict_reason"></div>
+                                    </template>
+
                                     <div class="text-[10px] uppercase text-gray-400 font-semibold">Titular</div>
                                     <div class="text-base font-semibold text-white" x-text="quickViewData.title"></div>
                                     <div class="text-xs text-gray-300 mt-2" x-text="quickViewData.excerpt"></div>
@@ -949,33 +1110,46 @@
                                 </a>
 
                                 <div class="flex items-center gap-2">
-                                    {{-- Opción A: Si hay fuentes pendientes -> Acción explícita «Aprobar estas fuentes y publicar» --}}
-                                    <template x-if="quickViewData.meta && quickViewData.meta.has_pending_sources">
-                                        <form :action="'/admin/editorial/' + quickViewData.id + '/approve'" method="POST" onsubmit="return confirm('¿Aprobar explícitamente las fuentes mostradas y publicar ahora?')">
+                                    <template x-if="quickViewData.status === 'rejected'">
+                                        <form :action="'/admin/editorial/' + quickViewData.id + '/restore'" method="POST" onsubmit="return confirm('¿Devolver esta pieza a Por revisar?')">
                                             @csrf
-                                            <input type="hidden" name="approve_explicit_sources" value="1">
-                                            <template x-for="url in quickViewData.meta.pending_sources" :key="url">
-                                                <input type="hidden" name="sources_to_approve[]" :value="url">
-                                            </template>
                                             <button type="submit" class="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold">
-                                                ✅ Aprobar estas fuentes y publicar
+                                                ↩️ Devolver a revisión
                                             </button>
                                         </form>
                                     </template>
 
-                                    {{-- Opción B: Si las fuentes ya están aprobadas o no tiene fuentes pendientes -> Botón normal «Publicar Ahora» --}}
-                                    <template x-if="!quickViewData.meta || !quickViewData.meta.has_pending_sources">
-                                        <form :action="'/admin/editorial/' + quickViewData.id + '/approve'" method="POST" onsubmit="return confirm('¿Aprobar y publicar ahora?')">
-                                            @csrf
-                                            <button type="submit" class="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
-                                                ✅ Publicar Ahora
-                                            </button>
-                                        </form>
-                                    </template>
+                                    <template x-if="quickViewData.status !== 'rejected' && !quickViewData.is_published && quickViewData.status !== 'published'">
+                                        <div class="flex items-center gap-2">
+                                            {{-- Opción A: Si hay fuentes pendientes -> Acción explícita «Aprobar estas fuentes y publicar» --}}
+                                            <template x-if="quickViewData.meta && quickViewData.meta.has_pending_sources">
+                                                <form :action="'/admin/editorial/' + quickViewData.id + '/approve'" method="POST" onsubmit="return confirm('¿Aprobar explícitamente las fuentes mostradas y publicar ahora?')">
+                                                    @csrf
+                                                    <input type="hidden" name="approve_explicit_sources" value="1">
+                                                    <template x-for="url in quickViewData.meta.pending_sources" :key="url">
+                                                        <input type="hidden" name="sources_to_approve[]" :value="url">
+                                                    </template>
+                                                    <button type="submit" class="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold">
+                                                        ✅ Aprobar estas fuentes y publicar
+                                                    </button>
+                                                </form>
+                                            </template>
 
-                                    <button type="button" @click="quickViewOpen = false; openSchedule(quickViewData.id)" class="inline-flex items-center justify-center h-8 px-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium">
-                                        ⏳ Programar
-                                    </button>
+                                            {{-- Opción B: Si las fuentes ya están aprobadas o no tiene fuentes pendientes -> Botón normal «Publicar Ahora» --}}
+                                            <template x-if="!quickViewData.meta || !quickViewData.meta.has_pending_sources">
+                                                <form :action="'/admin/editorial/' + quickViewData.id + '/approve'" method="POST" onsubmit="return confirm('¿Aprobar y publicar ahora?')">
+                                                    @csrf
+                                                    <button type="submit" class="inline-flex items-center justify-center h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
+                                                        ✅ Publicar Ahora
+                                                    </button>
+                                                </form>
+                                            </template>
+
+                                            <button type="button" @click="quickViewOpen = false; openSchedule(quickViewData.id)" class="inline-flex items-center justify-center h-8 px-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium">
+                                                ⏳ Programar
+                                            </button>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </div>

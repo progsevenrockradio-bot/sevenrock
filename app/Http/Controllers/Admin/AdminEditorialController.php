@@ -14,6 +14,7 @@ use App\Services\AuditTrailService;
 use App\Services\EmailMediaInventoryExtractor;
 use App\Services\EmailSafetyValidator;
 use App\Services\EmailSenderSourceResolver;
+use App\Support\EditorialClassification;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -34,23 +35,83 @@ class AdminEditorialController extends Controller
     ) {}
 
     /**
-     * Bandeja Principal Editorial: Lista exclusivamente posts del circuito de correo.
+     * Consulta base para artículos del circuito editorial de correo.
+     */
+    protected function baseInboxQuery(): Builder
+    {
+        return Post::query()->where(function (Builder $q) {
+            $q->where(function (Builder $sub) {
+                $sub->whereNotNull('posts.source_subject')
+                    ->where('posts.source_subject', '!=', '');
+            })->orWhereHas('sanitizedMeta');
+        });
+    }
+
+    /**
+     * Aplica la partición mutuamente excluyente de las 3 pestañas:
+     * - review: borradores, programadas y piezas pendientes de decisión (no publicadas ni rechazadas)
+     * - published: piezas efectivamente publicadas (no rechazadas)
+     * - rejected: piezas descartadas (conservando historial y motivo)
+     */
+    protected function applyTabScope(Builder $query, string $tab): Builder
+    {
+        return match ($tab) {
+            'published' => $query
+                ->where(fn (Builder $q) => $q->whereNull('posts.status')->orWhere('posts.status', '!=', 'rejected'))
+                ->where(function (Builder $q) {
+                    $q->where('posts.status', 'published')
+                      ->orWhere('posts.is_published', true);
+                }),
+
+            'rejected' => $query->where('posts.status', 'rejected'),
+
+            default => $query
+                ->where(fn (Builder $q) => $q->whereNull('posts.status')->orWhere('posts.status', '!=', 'rejected'))
+                ->where(fn (Builder $q) => $q->whereNull('posts.status')->orWhere('posts.status', '!=', 'published'))
+                ->where(fn (Builder $q) => $q->whereNull('posts.is_published')->orWhere('posts.is_published', false)),
+        };
+    }
+
+    /**
+     * Bandeja Principal Editorial: Lista exclusivamente posts del circuito de correo,
+     * separados en tres pestañas excluyentes (Por revisar / Publicadas / Rechazadas).
      */
     public function index(Request $request): View
     {
         $this->ensureAuthorized();
 
-        $query = Post::query()
+        $rawTab = $request->string('tab')->trim()->lower()->value();
+        $status = $request->string('status')->trim()->value();
+
+        if (in_array($rawTab, ['review', 'published', 'rejected'], true)) {
+            $currentTab = $rawTab;
+        } elseif ($status === 'published') {
+            $currentTab = 'published';
+        } elseif ($status === 'rejected') {
+            $currentTab = 'rejected';
+        } else {
+            $currentTab = 'review';
+        }
+
+        $type = $request->string('type')->trim()->lower()->value();
+        if (! in_array($type, ['all', EditorialClassification::TYPE_NOTICIA, EditorialClassification::TYPE_EFEMERIDE, EditorialClassification::TYPE_UNCLASSIFIED], true)) {
+            $type = 'all';
+        }
+
+        $query = $this->baseInboxQuery()
             ->with(['sanitizedMeta', 'incidents' => function ($q) {
                 $q->where('resolution_status', 'pending_review');
-            }, 'taxonomies'])
-            ->where(function (Builder $q) {
-                $q->whereNotNull('source_subject')->where('source_subject', '!=', '')
-                  ->orWhereHas('sanitizedMeta');
-            });
+            }, 'taxonomies']);
 
-        // 1. Filtro por Estado Editorial
-        $status = $request->string('status')->trim()->value();
+        // 0. Partición estricta por pestaña activa (sin mezclar ni duplicar entre pestañas)
+        $this->applyTabScope($query, $currentTab);
+
+        // 1. Filtro por Tipo Editorial (Todas / Noticias / Efemérides / Sin clasificar)
+        if ($type !== 'all') {
+            EditorialClassification::applyTypeFilter($query, $type);
+        }
+
+        // 2. Sub-filtro de estado dentro de la pestaña activa
         if ($status !== '' && $status !== 'all') {
             if ($status === 'held') {
                 $query->whereHas('sanitizedMeta', function ($q) {
@@ -60,22 +121,22 @@ class AdminEditorialController extends Controller
                 $query->whereHas('incidents', function ($q) {
                     $q->where('resolution_status', 'pending_review');
                 });
-            } else {
-                $query->where('status', $status);
+            } elseif ($currentTab === 'review' && in_array($status, ['draft', 'scheduled'], true)) {
+                $query->where('posts.status', $status);
             }
         }
 
-        // 2. Filtro por Búsqueda (Título, Asunto, Remitente, Artista)
+        // 3. Filtro por Búsqueda (Título, Asunto, Remitente)
         $search = $request->string('search')->trim()->value();
         if ($search !== '') {
             $query->where(function (Builder $q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('source_subject', 'like', "%{$search}%")
-                  ->orWhere('author_email', 'like', "%{$search}%");
+                $q->where('posts.title', 'like', "%{$search}%")
+                  ->orWhere('posts.source_subject', 'like', "%{$search}%")
+                  ->orWhere('posts.author_email', 'like', "%{$search}%");
             });
         }
 
-        // 3. Filtro por Seguridad / Embargo
+        // 4. Filtro por Seguridad / Embargo
         $security = $request->string('security')->trim()->value();
         if ($security !== '' && $security !== 'all') {
             if ($security === 'active_embargo') {
@@ -90,11 +151,11 @@ class AdminEditorialController extends Controller
             }
         }
 
-        // 4. Ordenación
+        // 5. Ordenación
         $sort = $request->string('sort', 'newest')->value();
         switch ($sort) {
             case 'oldest':
-                $query->orderBy('created_at', 'asc');
+                $query->orderBy('posts.created_at', 'asc');
                 break;
             case 'embargo':
                 $query->leftJoin('email_post_sanitized_meta as epsm', 'posts.id', '=', 'epsm.post_id')
@@ -114,26 +175,51 @@ class AdminEditorialController extends Controller
                 break;
             case 'newest':
             default:
-                $query->orderBy('created_at', 'desc');
+                if ($currentTab === 'published') {
+                    $query->orderByDesc('posts.published_at')->orderByDesc('posts.created_at');
+                } else {
+                    $query->orderByDesc('posts.created_at');
+                }
                 break;
         }
 
         $perPage = in_array((int) $request->input('per_page'), [15, 30, 50], true) ? (int) $request->input('per_page') : 15;
         $posts = $query->paginate($perPage)->withQueryString();
 
-        // Contadores globales de cabecera
+        // Contadores reales por pestaña (mutuamente excluyentes) y sub-accesos de revisión
+        $reviewCount = $this->applyTabScope($this->baseInboxQuery(), 'review')->count();
+        $publishedCount = $this->applyTabScope($this->baseInboxQuery(), 'published')->count();
+        $rejectedCount = $this->applyTabScope($this->baseInboxQuery(), 'rejected')->count();
+
         $counts = [
-            'total'          => Post::where(fn($q) => $q->whereNotNull('source_subject')->where('source_subject', '!=', '')->orWhereHas('sanitizedMeta'))->count(),
-            'drafts'         => Post::where('status', 'draft')->where(fn($q) => $q->whereNotNull('source_subject')->where('source_subject', '!=', '')->orWhereHas('sanitizedMeta'))->count(),
-            'scheduled'      => Post::where('status', 'scheduled')->where(fn($q) => $q->whereNotNull('source_subject')->where('source_subject', '!=', '')->orWhereHas('sanitizedMeta'))->count(),
-            'published'      => Post::where('status', 'published')->where(fn($q) => $q->whereNotNull('source_subject')->where('source_subject', '!=', '')->orWhereHas('sanitizedMeta'))->count(),
-            'with_incidents' => EditorialIncident::where('resolution_status', 'pending_review')->count(),
-            'embargo_active' => EmailPostSanitizedMeta::where('is_embargo_active', true)->where('embargo_until', '>', now())->count(),
+            'total'          => $reviewCount + $publishedCount + $rejectedCount,
+            'review'         => $reviewCount,
+            'published'      => $publishedCount,
+            'rejected'       => $rejectedCount,
+            'drafts'         => $this->applyTabScope($this->baseInboxQuery(), 'review')->where('posts.status', 'draft')->count(),
+            'scheduled'      => $this->applyTabScope($this->baseInboxQuery(), 'review')->where('posts.status', 'scheduled')->count(),
+            'with_incidents' => $this->applyTabScope($this->baseInboxQuery(), 'review')
+                ->whereHas('incidents', fn ($q) => $q->where('resolution_status', 'pending_review'))
+                ->count(),
+            'embargo_active' => $this->applyTabScope($this->baseInboxQuery(), 'review')
+                ->whereHas('sanitizedMeta', fn ($q) => $q->where('is_embargo_active', true)->where('embargo_until', '>', now()))
+                ->count(),
+        ];
+
+        // Contadores por tipo editorial dentro de la pestaña activa
+        $typeCounts = [
+            'all'          => $counts[$currentTab] ?? 0,
+            'noticia'      => EditorialClassification::applyTypeFilter($this->applyTabScope($this->baseInboxQuery(), $currentTab), EditorialClassification::TYPE_NOTICIA)->count(),
+            'efemeride'    => EditorialClassification::applyTypeFilter($this->applyTabScope($this->baseInboxQuery(), $currentTab), EditorialClassification::TYPE_EFEMERIDE)->count(),
+            'unclassified' => EditorialClassification::applyTypeFilter($this->applyTabScope($this->baseInboxQuery(), $currentTab), EditorialClassification::TYPE_UNCLASSIFIED)->count(),
         ];
 
         return view('admin.editorial.index', [
             'posts'          => $posts,
             'counts'         => $counts,
+            'typeCounts'     => $typeCounts,
+            'currentTab'     => $currentTab,
+            'currentType'    => $type,
             'currentStatus'  => $status ?: 'all',
             'currentSearch'  => $search,
             'currentSecurity'=> $security ?: 'all',
@@ -206,6 +292,8 @@ class AdminEditorialController extends Controller
             }
         }
 
+        $classification = EditorialClassification::resolve($post);
+
         return response()->json([
             'success' => true,
             'data'    => [
@@ -214,6 +302,7 @@ class AdminEditorialController extends Controller
                 'slug'                 => $post->slug,
                 'status'               => $post->status,
                 'is_published'         => (bool) $post->is_published,
+                'classification'       => $classification,
                 'published_at'         => $post->published_at?->format('d/m/Y H:i'),
                 'created_at'           => $post->created_at?->format('d/m/Y H:i'),
                 'time_ago'             => $post->created_at?->diffForHumans(),
@@ -746,35 +835,103 @@ class AdminEditorialController extends Controller
             $post->is_published = false;
             $post->save();
 
-            if ($meta = $post->sanitizedMeta) {
-                $meta->security_status = 'rejected';
-                $meta->incident_reason = $reason;
-                $meta->save();
-            }
+            $actor = auth()->user();
+            $actorLabel = $actor?->name ? "{$actor->name} (#{$actor->id})" : 'Usuario #' . (auth()->id() ?? 'sistema');
+            $meta = $post->sanitizedMeta ?: new EmailPostSanitizedMeta(['post_id' => $post->id]);
+            $meta->security_status = 'rejected';
+            $meta->incident_reason = $reason;
+            $rejectStamp = '[Rechazado el ' . now()->format('d/m/Y H:i') . " por {$actorLabel}]: {$reason}";
+            $meta->editorial_notes = trim(($meta->editorial_notes ? $meta->editorial_notes . "\n" : '') . $rejectStamp);
+            $meta->save();
 
             $this->auditTrail->recordModel(
                 event: 'editorial_rejected',
                 model: $post,
                 before: $before,
                 after: $post->getAttributes(),
-                context: ['reason' => $reason, 'actor_id' => auth()->id()]
+                context: ['reason' => $reason, 'actor_id' => auth()->id(), 'actor_name' => $actor?->name]
             );
 
             DB::commit();
 
-            $msg = "Noticia rechazada y archivada con trazabilidad.";
+            $msg = "Pieza rechazada y archivada con trazabilidad.";
             return $request->wantsJson()
                 ? response()->json(['success' => true, 'message' => $msg])
                 : back()->with('success', $msg);
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error("AdminEditorialController: Error al programar post ID {$post->id}.", [
+            Log::error("AdminEditorialController: Error al rechazar post ID {$post->id}.", [
                 'post_id' => $post->id,
                 'code'    => $e->getCode(),
             ]);
             return $request->wantsJson()
-                ? response()->json(['success' => false, 'message' => 'Error interno al programar la publicación.'], 500)
-                : back()->with('error', 'Error interno al programar la publicación.');
+                ? response()->json(['success' => false, 'message' => 'Error interno al rechazar la publicación.'], 500)
+                : back()->with('error', 'Error interno al rechazar la publicación.');
+        }
+    }
+
+    /**
+     * Acción: Devolver una pieza rechazada a la pestaña «Por revisar»,
+     * registrando quién realizó la acción y cuándo, sin aprobar fuentes ni publicar.
+     */
+    public function restore(Request $request, Post $post): JsonResponse|RedirectResponse
+    {
+        $this->ensureAuthorized();
+        $this->ensureFromEmailPipeline($post);
+
+        if ($post->status !== 'rejected') {
+            $msg = 'Solo las piezas en estado rechazado pueden devolverse a revisión.';
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => $msg], 422)
+                : back()->with('error', $msg);
+        }
+
+        $reason = $request->string('reason')->trim()->value() ?: 'Devuelto a revisión desde Rechazadas';
+        $actor = auth()->user();
+        $actorLabel = $actor?->name ? "{$actor->name} (#{$actor->id})" : 'Usuario #' . (auth()->id() ?? 'sistema');
+        $restoredAt = now();
+
+        DB::beginTransaction();
+        try {
+            $before = $post->getOriginal();
+            $post->status = 'draft';
+            $post->is_published = false;
+            $post->save();
+
+            $meta = $post->sanitizedMeta ?: new EmailPostSanitizedMeta(['post_id' => $post->id]);
+            $meta->security_status = 'needs_review';
+            $restoreStamp = '[Devuelto a revisión el ' . $restoredAt->format('d/m/Y H:i') . " por {$actorLabel}]: {$reason}";
+            $meta->editorial_notes = trim(($meta->editorial_notes ? $meta->editorial_notes . "\n" : '') . $restoreStamp);
+            $meta->save();
+
+            $this->auditTrail->recordModel(
+                event: 'editorial_restored_to_review',
+                model: $post,
+                before: $before,
+                after: $post->getAttributes(),
+                context: [
+                    'actor_id'    => auth()->id(),
+                    'actor_name'  => $actor?->name,
+                    'restored_at' => $restoredAt->toIso8601String(),
+                    'reason'      => $reason,
+                ]
+            );
+
+            DB::commit();
+
+            $msg = "La pieza ha sido devuelta a «Por revisar» por {$actorLabel}.";
+            return $request->wantsJson()
+                ? response()->json(['success' => true, 'message' => $msg])
+                : back()->with('success', $msg);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("AdminEditorialController: Error al devolver a revisión post ID {$post->id}.", [
+                'post_id' => $post->id,
+                'code'    => $e->getCode(),
+            ]);
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => 'Error interno al devolver la pieza a revisión.'], 500)
+                : back()->with('error', 'Error interno al devolver la pieza a revisión.');
         }
     }
 
