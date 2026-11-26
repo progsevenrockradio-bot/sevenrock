@@ -280,8 +280,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::post('/{post}/schedule', 'schedule')->name('schedule');
         Route::post('/{post}/reject', 'reject')->name('reject');
         Route::post('/{post}/restore', 'restore')->name('restore');
+        Route::post('/{post}/reevaluate', 'reevaluate')->name('reevaluate');
         Route::post('/{post}/hold', 'hold')->name('hold');
         Route::post('/bulk-action', 'bulkAction')->name('bulk-action');
+        Route::post('/telegram-alerts-toggle', 'toggleTelegramAlerts')->name('telegram-alerts-toggle');
 
         Route::controller(\App\Http\Controllers\Admin\AdminEditorialSourceController::class)->prefix('sources')->name('sources.')->group(function (): void {
             Route::get('/', 'index')->name('index');

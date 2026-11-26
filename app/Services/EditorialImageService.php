@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -15,12 +17,93 @@ class EditorialImageService
     public const MAX_DIMENSION = 8000;      // 8000 px de ancho o alto máximo
     public const MAX_PIXELS = 25000000;     // 25 Megapíxeles antes de decodificar en memoria
     public const MAX_REDIRECTS = 3;         // Máximo 3 saltos de redirección
+    public const MAX_RECOVERY_ATTEMPTS = 4; // Reintentos limitados para errores temporales
     public const USER_AGENT = 'SevenRockRadioEditorial/1.0 (https://sevenrockradio.com; prog.sevenrockradio@gmail.com)';
 
     /**
-     * Resuelve, valida, descarga y optimiza una imagen nueva para un elemento editorial.
+     * Interpreta la cabecera HTTP Retry-After (segundos enteros o fecha HTTP).
+     */
+    public static function parseRetryAfterSeconds(?string $header): ?int
+    {
+        $val = trim((string) $header);
+        if ($val === '') {
+            return null;
+        }
+
+        if (ctype_digit($val)) {
+            return max(15, min(3600, (int) $val));
+        }
+
+        try {
+            $target = Carbon::parse($val);
+            $diff = (int) now()->diffInSeconds($target, false);
+
+            return $diff > 0 ? max(15, min(3600, $diff)) : 60;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Calcula la espera progresiva respetando Retry-After cuando el proveedor lo indica.
+     */
+    public static function computeBackoffSeconds(int $attempt, ?int $retryAfterSeconds = null): int
+    {
+        if ($retryAfterSeconds !== null && $retryAfterSeconds > 0) {
+            return max(15, min(3600, $retryAfterSeconds));
+        }
+
+        return match (max(1, $attempt)) {
+            1 => 300,   // 5 min
+            2 => 900,   // 15 min
+            3 => 2700,  // 45 min
+            default => 7200, // 2 h
+        };
+    }
+
+    protected function dedupCacheKey(string $url): string
+    {
+        return 'editorial_img_dedup:' . hash('sha256', trim($url));
+    }
+
+    protected function hostCooldownKey(string $host): string
+    {
+        return 'editorial_img_host_cooldown:' . hash('sha256', strtolower(trim($host)));
+    }
+
+    protected function getRemainingHostCooldown(string $host): int
+    {
+        $untilTs = Cache::get($this->hostCooldownKey($host));
+        if (! is_numeric($untilTs)) {
+            return 0;
+        }
+
+        return max(0, (int) $untilTs - now()->timestamp);
+    }
+
+    protected function registerHostCooldown(string $host, int $seconds): void
+    {
+        $seconds = max(15, min(3600, $seconds));
+        $untilTs = now()->timestamp + $seconds;
+        Cache::put($this->hostCooldownKey($host), $untilTs, now()->addSeconds($seconds + 5));
+    }
+
+    /**
+     * Resuelve, valida, descarga y optimiza una imagen nueva para un elemento editorial,
+     * reutilizando imágenes ya descargadas y verificadas (caché/deduplicación) y respetando
+     * Retry-After y límites de concurrencia por proveedor.
      *
-     * @return array{success: bool, path: ?string, credit: ?string, error: ?string}
+     * @return array{
+     *   success: bool,
+     *   path: ?string,
+     *   credit: ?string,
+     *   error: ?string,
+     *   structured_meta?: ?array,
+     *   retryable?: bool,
+     *   http_status?: ?int,
+     *   retry_after_seconds?: ?int,
+     *   reused_from_cache?: bool
+     * }
      */
     public function resolveAndStore(
         string $rawUrlOrPath,
@@ -33,10 +116,14 @@ class EditorialImageService
 
         if ($raw === '' || $raw === 'NINGUNA' || $raw === 'none') {
             return [
-                'success' => false,
-                'path'    => null,
-                'credit'  => null,
-                'error'   => "Imagen no proporcionada ('{$raw}')",
+                'success'             => false,
+                'path'                => null,
+                'credit'              => null,
+                'error'               => "Imagen no proporcionada ('{$raw}')",
+                'retryable'           => false,
+                'http_status'         => null,
+                'retry_after_seconds' => null,
+                'reused_from_cache'   => false,
             ];
         }
 
@@ -48,97 +135,225 @@ class EditorialImageService
 
             if (file_exists($fullStoragePath) || file_exists($publicPath)) {
                 return [
-                    'success' => true,
-                    'path'    => str_starts_with($raw, 'storage/') ? $raw : "storage/{$raw}",
-                    'credit'  => $declaredCredit,
-                    'error'   => null,
+                    'success'             => true,
+                    'path'                => str_starts_with($raw, 'storage/') ? $raw : "storage/{$raw}",
+                    'credit'              => $declaredCredit,
+                    'error'               => null,
+                    'retryable'           => false,
+                    'http_status'         => null,
+                    'retry_after_seconds' => null,
+                    'reused_from_cache'   => true,
                 ];
             }
 
             return [
-                'success' => false,
-                'path'    => null,
-                'credit'  => $declaredCredit,
-                'error'   => "Ruta local no encontrada en disco: '{$raw}'",
+                'success'             => false,
+                'path'                => null,
+                'credit'              => $declaredCredit,
+                'error'               => "Ruta local no encontrada en disco: '{$raw}'",
+                'retryable'           => false,
+                'http_status'         => null,
+                'retry_after_seconds' => null,
+                'reused_from_cache'   => false,
             ];
         }
 
         // 2. Caso B: Ficha de Wikimedia Commons o Wikipedia (resolución de API y licencia)
+        // La autorización manual de Cloudinary NO se aplica a imágenes recibidas en lotes.
         if (! $this->isWikimediaPageUrl($raw)) {
             return [
-                'success' => false,
-                'path'    => null,
-                'credit'  => $declaredCredit,
-                'error'   => "URL directa sin acreditación de permiso ('{$raw}'). Solo se automatizan imágenes nuevas a partir de fichas originales de Wikimedia Commons con metadatos verificados.",
+                'success'             => false,
+                'path'                => null,
+                'credit'              => $declaredCredit,
+                'error'               => "URL directa sin acreditación de permiso ('{$raw}'). Solo se automatizan imágenes nuevas a partir de fichas originales de Wikimedia Commons con metadatos verificados.",
+                'retryable'           => false,
+                'http_status'         => null,
+                'retry_after_seconds' => null,
+                'reused_from_cache'   => false,
             ];
         }
 
-        $metaResult = $this->resolveFromWikimediaCommonsApi($raw, $declaredCredit);
-        if (! $metaResult['success']) {
-            return [
-                'success' => false,
-                'path'    => null,
-                'credit'  => $declaredCredit,
-                'error'   => "Validación de Wikimedia Commons: " . $metaResult['error'],
-            ];
-        }
-
-        $downloadUrl = $metaResult['download_url'];
-        $resolvedCredit = $metaResult['credit'] ?: $declaredCredit;
-
-        // 3. Validación de seguridad inicial contra SSRF
-        $securityCheck = $this->validateSafeRemoteUrl($downloadUrl);
-        if (! $securityCheck['valid']) {
-            return [
-                'success' => false,
-                'path'    => null,
-                'credit'  => $declaredCredit,
-                'error'   => "Seguridad (anti-SSRF): " . $securityCheck['error'],
-            ];
-        }
-
-        // 4. Descarga controlada a fichero temporal (máximo 3 redirecciones validadas individualmente y streaming con límite en curso)
-        $downloadResult = $this->downloadToTempFile($downloadUrl);
-        if (! $downloadResult['success']) {
-            return [
-                'success' => false,
-                'path'    => null,
-                'credit'  => $declaredCredit,
-                'error'   => "Fallo de descarga: " . $downloadResult['error'],
-            ];
-        }
-
-        $tempPath = $downloadResult['temp_path'];
-
-        // 5. Validación de formato, límite de píxeles/dimensiones antes de GD, optimización y guardado atómico
-        try {
-            $storeResult = $this->optimizeAndStoreImage($tempPath, $batchId, $elementId, $slug);
-            @unlink($tempPath);
-
-            if (! $storeResult['success']) {
+        // 2.1 Deduplicación / caché de imágenes ya descargadas y verificadas en disco
+        $cached = Cache::get($this->dedupCacheKey($raw));
+        if (is_array($cached) && ! empty($cached['path'])) {
+            $cachedPath = (string) $cached['path'];
+            $storageRelative = str_starts_with($cachedPath, 'storage/') ? substr($cachedPath, 8) : $cachedPath;
+            if (file_exists(storage_path('app/public/' . $storageRelative)) || file_exists(public_path($cachedPath))) {
                 return [
-                    'success' => false,
-                    'path'    => null,
-                    'credit'  => $declaredCredit,
-                    'error'   => "Fallo de optimización: " . $storeResult['error'],
+                    'success'             => true,
+                    'path'                => $cachedPath,
+                    'credit'              => $cached['credit'] ?? $declaredCredit,
+                    'error'               => null,
+                    'structured_meta'     => $cached['structured_meta'] ?? null,
+                    'retryable'           => false,
+                    'http_status'         => 200,
+                    'retry_after_seconds' => null,
+                    'reused_from_cache'   => true,
+                ];
+            }
+        }
+
+        // 2.2 Control de concurrencia y respeto de ventana Retry-After por proveedor
+        $providerHost = strtolower((string) (parse_url($raw, PHP_URL_HOST) ?? 'commons.wikimedia.org'));
+        $cooldownRemaining = $this->getRemainingHostCooldown($providerHost);
+        if ($cooldownRemaining > 0) {
+            return [
+                'success'             => false,
+                'path'                => null,
+                'credit'              => $declaredCredit,
+                'error'               => "Esperando ventana Retry-After del proveedor ({$cooldownRemaining}s restantes)",
+                'retryable'           => true,
+                'http_status'         => 429,
+                'retry_after_seconds' => $cooldownRemaining,
+                'reused_from_cache'   => false,
+            ];
+        }
+
+        $lock = Cache::lock('editorial_img_host_lock:' . hash('sha256', $providerHost), 30);
+        try {
+            $lock->block(5);
+        } catch (\Throwable) {
+            return [
+                'success'             => false,
+                'path'                => null,
+                'credit'              => $declaredCredit,
+                'error'               => 'Control de concurrencia activo para evitar ráfagas de descarga; reintento diferido.',
+                'retryable'           => true,
+                'http_status'         => 429,
+                'retry_after_seconds' => 60,
+                'reused_from_cache'   => false,
+            ];
+        }
+
+        try {
+            $metaResult = $this->resolveFromWikimediaCommonsApi($raw, $declaredCredit);
+            if (! $metaResult['success']) {
+                return [
+                    'success'             => false,
+                    'path'                => null,
+                    'credit'              => $declaredCredit,
+                    'error'               => "Validación de Wikimedia Commons: " . $metaResult['error'],
+                    'retryable'           => (bool) ($metaResult['retryable'] ?? false),
+                    'http_status'         => $metaResult['http_status'] ?? null,
+                    'retry_after_seconds' => $metaResult['retry_after_seconds'] ?? null,
+                    'reused_from_cache'   => false,
                 ];
             }
 
-            return [
-                'success'         => true,
-                'path'            => $storeResult['relative_path'],
-                'credit'          => $resolvedCredit,
-                'error'           => null,
-                'structured_meta' => $metaResult['structured_meta'] ?? null,
-            ];
-        } catch (\Throwable $e) {
-            @unlink($tempPath);
-            return [
-                'success' => false,
-                'path'    => null,
-                'credit'  => $declaredCredit,
-                'error'   => "Excepción en procesamiento de imagen: " . $e->getMessage(),
-            ];
+            $downloadUrl = $metaResult['download_url'];
+            $resolvedCredit = $metaResult['credit'] ?: $declaredCredit;
+
+            // Comprobar caché también por URL directa de descarga
+            $cachedDirect = Cache::get($this->dedupCacheKey($downloadUrl));
+            if (is_array($cachedDirect) && ! empty($cachedDirect['path'])) {
+                $cachedPath = (string) $cachedDirect['path'];
+                $storageRelative = str_starts_with($cachedPath, 'storage/') ? substr($cachedPath, 8) : $cachedPath;
+                if (file_exists(storage_path('app/public/' . $storageRelative)) || file_exists(public_path($cachedPath))) {
+                    Cache::put($this->dedupCacheKey($raw), $cachedDirect, now()->addDays(7));
+
+                    return [
+                        'success'             => true,
+                        'path'                => $cachedPath,
+                        'credit'              => $resolvedCredit,
+                        'error'               => null,
+                        'structured_meta'     => $metaResult['structured_meta'] ?? ($cachedDirect['structured_meta'] ?? null),
+                        'retryable'           => false,
+                        'http_status'         => 200,
+                        'retry_after_seconds' => null,
+                        'reused_from_cache'   => true,
+                    ];
+                }
+            }
+
+            // 3. Validación de seguridad inicial contra SSRF
+            $securityCheck = $this->validateSafeRemoteUrl($downloadUrl);
+            if (! $securityCheck['valid']) {
+                return [
+                    'success'             => false,
+                    'path'                => null,
+                    'credit'              => $declaredCredit,
+                    'error'               => "Seguridad (anti-SSRF): " . $securityCheck['error'],
+                    'retryable'           => false,
+                    'http_status'         => null,
+                    'retry_after_seconds' => null,
+                    'reused_from_cache'   => false,
+                ];
+            }
+
+            // 4. Descarga controlada a fichero temporal (máximo 3 redirecciones validadas individualmente y streaming con límite en curso)
+            $downloadResult = $this->downloadToTempFile($downloadUrl);
+            if (! $downloadResult['success']) {
+                if (! empty($downloadResult['retry_after_seconds'])) {
+                    $this->registerHostCooldown($providerHost, (int) $downloadResult['retry_after_seconds']);
+                }
+
+                return [
+                    'success'             => false,
+                    'path'                => null,
+                    'credit'              => $declaredCredit,
+                    'error'               => "Fallo de descarga: " . $downloadResult['error'],
+                    'retryable'           => (bool) ($downloadResult['retryable'] ?? false),
+                    'http_status'         => $downloadResult['http_status'] ?? null,
+                    'retry_after_seconds' => $downloadResult['retry_after_seconds'] ?? null,
+                    'reused_from_cache'   => false,
+                ];
+            }
+
+            $tempPath = $downloadResult['temp_path'];
+
+            // 5. Validación de formato, límite de píxeles/dimensiones antes de GD, optimización y guardado atómico
+            try {
+                $storeResult = $this->optimizeAndStoreImage($tempPath, $batchId, $elementId, $slug);
+                @unlink($tempPath);
+
+                if (! $storeResult['success']) {
+                    return [
+                        'success'             => false,
+                        'path'                => null,
+                        'credit'              => $declaredCredit,
+                        'error'               => "Fallo de optimización: " . $storeResult['error'],
+                        'retryable'           => false,
+                        'http_status'         => 200,
+                        'retry_after_seconds' => null,
+                        'reused_from_cache'   => false,
+                    ];
+                }
+
+                $cachePayload = [
+                    'path'            => $storeResult['relative_path'],
+                    'credit'          => $resolvedCredit,
+                    'structured_meta' => $metaResult['structured_meta'] ?? null,
+                ];
+                Cache::put($this->dedupCacheKey($raw), $cachePayload, now()->addDays(7));
+                Cache::put($this->dedupCacheKey($downloadUrl), $cachePayload, now()->addDays(7));
+
+                return [
+                    'success'             => true,
+                    'path'                => $storeResult['relative_path'],
+                    'credit'              => $resolvedCredit,
+                    'error'               => null,
+                    'structured_meta'     => $metaResult['structured_meta'] ?? null,
+                    'retryable'           => false,
+                    'http_status'         => 200,
+                    'retry_after_seconds' => null,
+                    'reused_from_cache'   => false,
+                ];
+            } catch (\Throwable $e) {
+                @unlink($tempPath);
+
+                return [
+                    'success'             => false,
+                    'path'                => null,
+                    'credit'              => $declaredCredit,
+                    'error'               => "Excepción en procesamiento de imagen: " . $e->getMessage(),
+                    'retryable'           => false,
+                    'http_status'         => null,
+                    'retry_after_seconds' => null,
+                    'reused_from_cache'   => false,
+                ];
+            }
+        } finally {
+            optional($lock)->release();
         }
     }
 
@@ -170,7 +385,19 @@ class EditorialImageService
                 ->get($apiUrl);
 
             if (! $response->successful()) {
-                return ['success' => false, 'download_url' => null, 'credit' => null, 'error' => 'HTTP ' . $response->status() . ' desde Wikimedia API'];
+                $status = $response->status();
+                $retryable = in_array($status, [408, 429, 500, 502, 503, 504], true);
+                $retryAfter = $retryable ? self::parseRetryAfterSeconds($response->header('Retry-After')) : null;
+
+                return [
+                    'success'             => false,
+                    'download_url'        => null,
+                    'credit'              => null,
+                    'error'               => 'HTTP ' . $status . ' desde Wikimedia API',
+                    'retryable'           => $retryable,
+                    'http_status'         => $status,
+                    'retry_after_seconds' => $retryAfter,
+                ];
             }
 
             $data = $response->json();
@@ -460,7 +687,14 @@ class EditorialImageService
                     ->withOptions($options)
                     ->get($currentUrl);
             } catch (\Throwable $e) {
-                return ['success' => false, 'temp_path' => null, 'error' => "Fallo de conexión en salto {$hops}: " . $e->getMessage()];
+                return [
+                    'success'             => false,
+                    'temp_path'           => null,
+                    'error'               => "Fallo de conexión en salto {$hops}: " . $e->getMessage(),
+                    'retryable'           => true,
+                    'http_status'         => null,
+                    'retry_after_seconds' => null,
+                ];
             }
 
             $status = $response->status();
@@ -469,12 +703,12 @@ class EditorialImageService
             if (in_array($status, [301, 302, 303, 307, 308], true)) {
                 $hops++;
                 if ($hops > self::MAX_REDIRECTS) {
-                    return ['success' => false, 'temp_path' => null, 'error' => "Demasiadas redirecciones (máximo permitido: " . self::MAX_REDIRECTS . ")"];
+                    return ['success' => false, 'temp_path' => null, 'error' => "Demasiadas redirecciones (máximo permitido: " . self::MAX_REDIRECTS . ")", 'retryable' => false, 'http_status' => $status, 'retry_after_seconds' => null];
                 }
 
                 $location = $response->header('Location');
                 if (empty($location)) {
-                    return ['success' => false, 'temp_path' => null, 'error' => "Redirección HTTP {$status} sin cabecera Location"];
+                    return ['success' => false, 'temp_path' => null, 'error' => "Redirección HTTP {$status} sin cabecera Location", 'retryable' => false, 'http_status' => $status, 'retry_after_seconds' => null];
                 }
 
                 $currentUrl = $this->resolveRelativeUrl($currentUrl, $location);
@@ -482,7 +716,17 @@ class EditorialImageService
             }
 
             if ($status !== 200) {
-                return ['success' => false, 'temp_path' => null, 'error' => "HTTP {$status} al descargar imagen"];
+                $retryable = in_array($status, [408, 429, 500, 502, 503, 504], true);
+                $retryAfter = $retryable ? self::parseRetryAfterSeconds($response->header('Retry-After')) : null;
+
+                return [
+                    'success'             => false,
+                    'temp_path'           => null,
+                    'error'               => "HTTP {$status} al descargar imagen",
+                    'retryable'           => $retryable,
+                    'http_status'         => $status,
+                    'retry_after_seconds' => $retryAfter,
+                ];
             }
 
             // Descargar stream con control en tiempo real del tamaño acumulado

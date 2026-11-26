@@ -409,6 +409,37 @@ Schedule::command('emails:process --only-dv1')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/emails-process.log'));
 
+// Recuperación técnica acotada y reevaluación individual de imágenes pendientes (HTTP 429 / fallos temporales)
+Artisan::command('editorial:recover-pending {--limit=8 : Máximo de piezas por ronda} {--post= : ID de una pieza concreta}', function () {
+    $service = app(\App\Services\EditorialRecoveryService::class);
+    $postId = $this->option('post');
+
+    if ($postId !== null && $postId !== '') {
+        $post = \App\Models\Post::find((int) $postId);
+        if (! $post) {
+            $this->error("Post #{$postId} no encontrado.");
+
+            return 1;
+        }
+        $res = $service->reevaluatePost($post, isManualAction: false, attemptAutoPublish: true);
+        $this->line(json_encode($res, JSON_UNESCAPED_UNICODE));
+
+        return 0;
+    }
+
+    $limit = max(1, min(25, (int) $this->option('limit')));
+    $summary = $service->runScheduledBatch($limit);
+    $this->info("Recuperación editorial completada: procesadas={$summary['processed']}, imágenes_recuperadas={$summary['recovered']}, publicadas={$summary['published']}, reprogramadas={$summary['rescheduled']}, fallos={$summary['failed']}");
+
+    return 0;
+})->purpose('Recupera de forma acotada fallos técnicos temporales de imágenes y reevalúa piezas elegibles sin duplicar registros');
+
+Schedule::command('editorial:recover-pending --limit=8')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/editorial-recover.log'));
+
 // Recepción externa de programas (solo lectura IMAP, proceso separado de DV-1, cada 5 minutos sin solapamiento)
 Schedule::command('external-programs:poll')
     ->everyFiveMinutes()

@@ -266,6 +266,10 @@ class EditorialBatchProcessor
 
             $isExplicitlyNone = ($rawPath === 'NINGUNA' || $rawPath === 'none');
             $imagePath = $isExplicitlyNone ? null : $rawPath;
+            $candidateImageUrl = (! $isExplicitlyNone && is_string($rawPath) && (str_starts_with($rawPath, 'http://') || str_starts_with($rawPath, 'https://')))
+                ? trim($rawPath)
+                : null;
+            $imgResult = null;
 
             if ($isExplicitlyNone) {
                 // IMAGEN_URL era NINGUNA o none -> Pendiente visible de imagen
@@ -459,6 +463,53 @@ class EditorialBatchProcessor
                 if (Schema::hasColumn('email_post_sanitized_meta', 'image_alt')) {
                     $meta->image_alt = $safeImageAlt;
                 }
+                if (Schema::hasColumn('email_post_sanitized_meta', 'image_candidate_url')) {
+                    $meta->image_candidate_url = $candidateImageUrl;
+                }
+                if (Schema::hasColumn('email_post_sanitized_meta', 'editorial_date') && ! empty($parsed['editorial_date'])) {
+                    $meta->editorial_date = $parsed['editorial_date'];
+                }
+                if (Schema::hasColumn('email_post_sanitized_meta', 'forced_as_draft')) {
+                    $meta->forced_as_draft = ! $isAutoPublishEnabled;
+                }
+                if (Schema::hasColumn('email_post_sanitized_meta', 'dv_policy_snapshot')) {
+                    $meta->dv_policy_snapshot = [
+                        'elem'       => $elem,
+                        'image_meta' => $imageMeta,
+                        'context'    => [
+                            'sender_email'             => $senderEmail,
+                            'is_sender_authenticated'  => $isSenderAuthenticated,
+                            'is_local_import'          => ($sourceMessageId === null || str_starts_with($sourceMessageId, 'dv-local-')),
+                            'allow_local_auto_publish' => $allowLocalAutoPublish,
+                            'source_message_id'        => $sourceMessageId,
+                            'timezone'                 => $parsed['timezone'] ?? 'Europe/Madrid',
+                            'fecha_editorial'          => $parsed['editorial_date'] ?? null,
+                        ],
+                    ];
+                }
+                if (Schema::hasColumn('email_post_sanitized_meta', 'image_recovery_status')) {
+                    if (is_array($imgResult) && ! ($imgResult['success'] ?? false)) {
+                        $isRetryable = (bool) ($imgResult['retryable'] ?? false);
+                        $meta->image_recovery_attempts = max(1, (int) ($meta->image_recovery_attempts ?? 0) + 1);
+                        $meta->image_recovery_last_attempt_at = now();
+                        $meta->image_recovery_last_error = Str::limit((string) ($imgResult['error'] ?? 'Fallo de descarga'), 480, '');
+                        if ($isRetryable) {
+                            $waitSec = \App\Services\EditorialImageService::computeBackoffSeconds(
+                                (int) $meta->image_recovery_attempts,
+                                $imgResult['retry_after_seconds'] ?? null
+                            );
+                            $meta->image_recovery_status = \App\Services\EditorialRecoveryService::STATUS_PENDING_RETRY;
+                            $meta->image_recovery_next_retry_at = now()->addSeconds($waitSec);
+                        } else {
+                            $meta->image_recovery_status = \App\Services\EditorialRecoveryService::STATUS_PERMANENT_FAILURE;
+                            $meta->image_recovery_next_retry_at = null;
+                        }
+                    } elseif (! empty($imagePath)) {
+                        $meta->image_recovery_status = \App\Services\EditorialRecoveryService::STATUS_RECOVERED;
+                        $meta->image_recovery_last_error = null;
+                        $meta->image_recovery_next_retry_at = null;
+                    }
+                }
 
                 if ($isAutoPublished) {
                     // Evidencia explícita de política automática (sin firma humana falsa)
@@ -553,6 +604,31 @@ class EditorialBatchProcessor
         }
 
         $allSucceeded = count($failedElements) === 0;
+
+        // Aviso resumen deduplicado vía @SevenRock_Bot si el lote no renovó portada por bloqueos
+        if (! $isDryRun && $isAutoPublishEnabled && ($autoPublishedNoticias + $autoPublishedEfemerides) === 0 && count($processedElements) > 0) {
+            try {
+                $batchMetas = EmailPostSanitizedMeta::where('batch_id', $batchId)->get();
+                $techRetry = $batchMetas->where('image_recovery_status', \App\Services\EditorialRecoveryService::STATUS_PENDING_RETRY)->count();
+                $techPerm = $batchMetas->whereIn('image_recovery_status', [
+                    \App\Services\EditorialRecoveryService::STATUS_PERMANENT_FAILURE,
+                    \App\Services\EditorialRecoveryService::STATUS_EXHAUSTED,
+                ])->count();
+                $editorialPending = max(0, $batchMetas->count() - $techRetry - $techPerm);
+                $nextRetry = $batchMetas->pluck('image_recovery_next_retry_at')->filter()->sort()->first();
+
+                app(\App\Services\EditorialTelegramDigestService::class)->notifyBatchBlockedSummary([
+                    'batch_id'                  => $batchId,
+                    'published_count'           => 0,
+                    'technical_retry_count'     => $techRetry,
+                    'technical_permanent_count' => $techPerm,
+                    'editorial_pending_count'   => $editorialPending,
+                    'next_retry_at'             => $nextRetry ? $nextRetry->timezone('Europe/Madrid')->format('d/m/Y H:i') : null,
+                ]);
+            } catch (\Throwable $tgEx) {
+                Log::warning('EditorialBatchProcessor: fallo no bloqueante al enviar resumen Telegram.', ['error' => $tgEx->getMessage()]);
+            }
+        }
 
         return [
             'success'                   => $allSucceeded,

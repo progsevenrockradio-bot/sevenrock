@@ -11,6 +11,8 @@ use App\Models\EmailPostSanitizedMeta;
 use App\Models\EmailSenderSource;
 use App\Models\Post;
 use App\Services\AuditTrailService;
+use App\Services\EditorialRecoveryService;
+use App\Services\EditorialTelegramDigestService;
 use App\Services\EmailMediaInventoryExtractor;
 use App\Services\EmailSafetyValidator;
 use App\Services\EmailSenderSourceResolver;
@@ -215,16 +217,17 @@ class AdminEditorialController extends Controller
         ];
 
         return view('admin.editorial.index', [
-            'posts'          => $posts,
-            'counts'         => $counts,
-            'typeCounts'     => $typeCounts,
-            'currentTab'     => $currentTab,
-            'currentType'    => $type,
-            'currentStatus'  => $status ?: 'all',
-            'currentSearch'  => $search,
-            'currentSecurity'=> $security ?: 'all',
-            'currentSort'    => $sort,
-            'perPage'        => $perPage,
+            'posts'                          => $posts,
+            'counts'                         => $counts,
+            'typeCounts'                     => $typeCounts,
+            'currentTab'                     => $currentTab,
+            'currentType'                    => $type,
+            'currentStatus'                  => $status ?: 'all',
+            'currentSearch'                  => $search,
+            'currentSecurity'                => $security ?: 'all',
+            'currentSort'                    => $sort,
+            'perPage'                        => $perPage,
+            'editorialTelegramAlertsEnabled' => app(EditorialTelegramDigestService::class)->isEnabled(),
         ]);
     }
 
@@ -933,6 +936,59 @@ class AdminEditorialController extends Controller
                 ? response()->json(['success' => false, 'message' => 'Error interno al devolver la pieza a revisión.'], 500)
                 : back()->with('error', 'Error interno al devolver la pieza a revisión.');
         }
+    }
+
+    /**
+     * Acción administrativa: Reintentar descarga de imagen o reevaluar estado técnico
+     * de una pieza individual sin duplicar registros ni publicar automáticamente.
+     */
+    public function reevaluate(Request $request, Post $post): JsonResponse|RedirectResponse
+    {
+        $this->ensureAuthorized();
+        $this->ensureFromEmailPipeline($post);
+
+        $result = app(EditorialRecoveryService::class)->reevaluatePost(
+            post: $post,
+            isManualAction: true,
+            attemptAutoPublish: false
+        );
+
+        $isOk = in_array($result['outcome'], ['image_recovered_still_draft', 'image_retry_scheduled', 'remains_draft'], true);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => $isOk, 'data' => $result, 'message' => $result['message']]);
+        }
+
+        return $isOk
+            ? back()->with('success', $result['message'])
+            : back()->with('error', $result['message']);
+    }
+
+    /**
+     * Activa o desactiva el resumen editorial deduplicado vía @SevenRock_Bot
+     * sin alterar los avisos de programas externos recibidos.
+     */
+    public function toggleTelegramAlerts(Request $request): RedirectResponse
+    {
+        $this->ensureAuthorized();
+
+        $service = app(EditorialTelegramDigestService::class);
+        $newState = ! $service->isEnabled();
+        $service->setEnabled($newState);
+
+        $this->auditTrail->recordModel(
+            event: 'editorial_telegram_alerts_toggled',
+            model: \App\Models\ThemeSetting::current(),
+            after: ['editorial_telegram_alerts_enabled' => $newState],
+            context: ['actor_id' => auth()->id()]
+        );
+
+        return back()->with(
+            'success',
+            $newState
+                ? 'Resúmenes editoriales deduplicados activados en @SevenRock_Bot (independientes de programas recibidos).'
+                : 'Resúmenes editoriales en @SevenRock_Bot desactivados.'
+        );
     }
 
     /**

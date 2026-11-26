@@ -389,6 +389,17 @@
                 <a href="{{ route('admin.posts.create') }}" class="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white font-medium ml-auto sm:ml-2">
                     + Redactar Manual
                 </a>
+                <form action="{{ route('admin.editorial.telegram-alerts-toggle') }}" method="POST" class="inline">
+                    @csrf
+                    <button
+                        type="submit"
+                        class="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-medium transition-colors cursor-pointer {{ !empty($editorialTelegramAlertsEnabled) ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25' : 'border-white/10 bg-white/5 text-gray-300 hover:bg-white/10' }}"
+                        title="Activa o desactiva resúmenes editoriales deduplicados en @SevenRock_Bot (sin alterar avisos de programas recibidos)"
+                    >
+                        <span>🤖</span>
+                        <span>Resumen @SevenRock_Bot: {{ !empty($editorialTelegramAlertsEnabled) ? 'Activo' : 'Inactivo' }}</span>
+                    </button>
+                </form>
             </div>
         </div>
 
@@ -715,10 +726,50 @@
                                         <div class="mt-2 rounded-lg border border-rose-500/25 bg-rose-950/30 px-2.5 py-1.5 text-[11px] text-rose-200">
                                             <strong class="text-rose-300">Motivo de rechazo:</strong> {{ $meta->incident_reason }}
                                         </div>
-                                    @elseif ($currentTab === 'review' && ($meta?->incident_reason || $classification['has_conflict']))
-                                        <div class="mt-2 rounded-lg border border-amber-500/25 bg-amber-950/25 px-2.5 py-1.5 text-[11px] text-amber-200">
-                                            <strong class="text-amber-300">Motivo de revisión:</strong> {{ $classification['has_conflict'] ? $classification['conflict_reason'] : $meta->incident_reason }}
-                                        </div>
+                                    @elseif ($currentTab === 'review')
+                                        @php
+                                            $imgRecStatus = $meta?->image_recovery_status;
+                                            $imgNextRetry = $meta?->image_recovery_next_retry_at?->timezone('Europe/Madrid');
+                                            $imgLastErr = $meta?->image_recovery_last_error;
+                                            $imgAttempts = (int) ($meta?->image_recovery_attempts ?? 0);
+                                        @endphp
+                                        @if ($imgRecStatus === 'pending_retry')
+                                            <div class="mt-2 rounded-lg border border-sky-500/30 bg-sky-950/30 px-2.5 py-1.5 text-[11px] text-sky-200 space-y-0.5">
+                                                <div>
+                                                    <strong class="text-sky-300">🔄 Recuperación técnica de imagen (intento {{ $imgAttempts }}/{{ \App\Services\EditorialImageService::MAX_RECOVERY_ATTEMPTS }}):</strong>
+                                                    {{ $imgLastErr ?: 'Fallo temporal de descarga' }}
+                                                </div>
+                                                @if ($imgNextRetry)
+                                                    <div class="text-[10px] text-sky-300/90">
+                                                        Próximo reintento automático: <strong>{{ $imgNextRetry->format('d/m/Y H:i') }}</strong> (Europe/Madrid)
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @elseif ($imgRecStatus === 'recovered')
+                                            <div class="mt-2 inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-950/30 px-2 py-0.5 text-[10px] text-emerald-200">
+                                                ✅ Imagen recuperada ({{ $imgAttempts > 0 ? "intento {$imgAttempts}" : 'verificada' }})
+                                            </div>
+                                        @elseif ($imgRecStatus === 'permanent_failure')
+                                            <div class="mt-2 rounded-lg border border-rose-500/30 bg-rose-950/25 px-2.5 py-1.5 text-[11px] text-rose-200">
+                                                <strong class="text-rose-300">⛔ Fallo permanente de imagen:</strong> {{ $imgLastErr ?: 'Requiere carga o sustitución manual autorizada.' }}
+                                            </div>
+                                        @elseif ($imgRecStatus === 'exhausted')
+                                            <div class="mt-2 rounded-lg border border-rose-500/30 bg-rose-950/25 px-2.5 py-1.5 text-[11px] text-rose-200">
+                                                <strong class="text-rose-300">⚠️ Reintentos de imagen agotados ({{ $imgAttempts }}):</strong> {{ $imgLastErr ?: 'Requiere intervención manual.' }}
+                                            </div>
+                                        @endif
+
+                                        @if ($meta?->forced_as_draft)
+                                            <div class="mt-1.5 inline-flex items-center gap-1 rounded-md border border-zinc-500/30 bg-zinc-900/60 px-2 py-0.5 text-[10px] text-zinc-300">
+                                                📝 Importado como borrador forzado (--as-draft)
+                                            </div>
+                                        @endif
+
+                                        @if ($meta?->incident_reason || $classification['has_conflict'])
+                                            <div class="mt-1.5 rounded-lg border border-amber-500/25 bg-amber-950/25 px-2.5 py-1.5 text-[11px] text-amber-200">
+                                                <strong class="text-amber-300">Decisión editorial / motivo vigente:</strong> {{ $classification['has_conflict'] ? $classification['conflict_reason'] : $meta->incident_reason }}
+                                            </div>
+                                        @endif
                                     @endif
 
                                     <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
@@ -862,6 +913,30 @@
                                                 </button>
                                             </form>
                                         @elseif (!$post->is_published && $post->status !== 'published')
+                                            @if (empty($post->featured_image) && !empty($meta?->image_candidate_url))
+                                                <form action="{{ route('admin.editorial.reevaluate', $post) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button
+                                                        type="submit"
+                                                        class="inline-flex items-center justify-center h-7 px-2 rounded-md border border-sky-500/30 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20 text-xs font-medium cursor-pointer"
+                                                        title="Reintentar descarga de imagen acreditada (no publica automáticamente)"
+                                                    >
+                                                        🔄 Reintentar imagen
+                                                    </button>
+                                                </form>
+                                            @elseif ($meta && in_array($meta->image_recovery_status, ['pending_retry', 'exhausted'], true))
+                                                <form action="{{ route('admin.editorial.reevaluate', $post) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button
+                                                        type="submit"
+                                                        class="inline-flex items-center justify-center h-7 px-2 rounded-md border border-sky-500/30 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20 text-xs font-medium cursor-pointer"
+                                                        title="Reevaluar estado técnico de la pieza (no publica automáticamente)"
+                                                    >
+                                                        🔍 Reevaluar
+                                                    </button>
+                                                </form>
+                                            @endif
+
                                             @if ($post->hasPendingSources())
                                                 <button 
                                                     type="button" 

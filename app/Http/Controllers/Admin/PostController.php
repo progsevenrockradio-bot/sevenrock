@@ -142,6 +142,12 @@ class PostController extends Controller
                 $lockedPost->update($data);
                 $this->syncTaxonomies($lockedPost, $categories, $tags);
 
+                // Registrar modificación manual para que la recuperación automática nunca sobrescriba ediciones humanas
+                if ($lockedPost->sanitizedMeta && Schema::hasColumn('email_post_sanitized_meta', 'manually_modified_at')) {
+                    $lockedPost->sanitizedMeta->manually_modified_at = now();
+                    $lockedPost->sanitizedMeta->save();
+                }
+
                 if (is_array($typeChangeAudit)) {
                     app(AuditTrailService::class)->recordModel(
                         event: 'editorial_type_changed',
