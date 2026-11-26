@@ -289,6 +289,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
             Route::put('/{source}', 'update')->name('update');
         });
 
+        Route::controller(\App\Http\Controllers\Admin\AdminImageOriginController::class)->prefix('image-origins')->name('image-origins.')->group(function (): void {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::put('/{origin}', 'update')->name('update');
+            Route::patch('/{origin}/toggle', 'toggle')->name('toggle');
+            Route::delete('/{origin}', 'destroy')->name('destroy');
+        });
+
         Route::controller(\App\Http\Controllers\Admin\AdminEditorialIncidentController::class)->prefix('incidents')->name('incidents.')->group(function (): void {
             Route::get('/', 'index')->name('index');
             Route::get('/{incident}/diff', 'diff')->name('diff');

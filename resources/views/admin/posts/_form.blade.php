@@ -279,8 +279,43 @@
         </div>
 
         <!-- Caja 2: Imagen Destacada -->
-        <div class="rounded-xl border border-white/10 bg-[#101012] p-5 shadow-xl">
-            <h3 class="font-display text-sm uppercase tracking-wider text-[#dcdcdc] border-b border-white/10 pb-2.5 mb-4">📸 Imagen Destacada</h3>
+        @php
+            $imageRejection = session('image_rejection');
+            $canManageImageOrigins = auth()->user() && (
+                (method_exists(auth()->user(), 'hasAnyRole') && auth()->user()->hasAnyRole(['Admin', 'Super Admin']))
+                || (bool) (auth()->user()->is_admin ?? false)
+            );
+        @endphp
+        <div
+            class="rounded-xl border border-white/10 bg-[#101012] p-5 shadow-xl"
+            x-data="{
+                rejectionModalOpen: @js((bool) $imageRejection),
+                closeRejectionModal() {
+                    this.rejectionModalOpen = false;
+                    this.$nextTick(() => this.$refs.featuredImageInput?.focus());
+                },
+                retryImageSubmit() {
+                    this.rejectionModalOpen = false;
+                    const form = this.$el.closest('form');
+                    if (form) {
+                        const draftBtn = form.querySelector('button[name=_action][value=publish]');
+                        if (draftBtn) {
+                            draftBtn.click();
+                        }
+                    }
+                }
+            }"
+            x-init="if (rejectionModalOpen) { $nextTick(() => $refs.rejectionModalCloseBtn?.focus()); }"
+            @keydown.escape.window="if (rejectionModalOpen) closeRejectionModal()"
+        >
+            <div class="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5 mb-4">
+                <h3 class="font-display text-sm uppercase tracking-wider text-[#dcdcdc]">📸 Imagen Destacada</h3>
+                @if ($canManageImageOrigins)
+                    <a href="{{ route('admin.editorial.image-origins.index') }}" class="text-[11px] text-sky-300 hover:text-sky-200 underline">
+                        Orígenes autorizados
+                    </a>
+                @endif
+            </div>
             
             @if ($post->featured_image_url)
                 <div class="mb-4 overflow-hidden rounded-lg border border-white/10 bg-black">
@@ -305,18 +340,136 @@
 
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Ruta o URL de imagen</label>
-                    <input name="featured_image" value="{{ old('featured_image', $post->featured_image) }}" class="w-full rounded-lg border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-gray-100 placeholder-gray-500 focus:border-[#c32720] focus:outline-none" placeholder="https://... o ruta relativa">
-                    @error('featured_image')
-                        <p class="mt-1 text-xs text-rose-400 font-medium">{{ $message }}</p>
-                    @enderror
+                    <label for="featured_image_input" class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Ruta o URL de imagen</label>
+                    <input
+                        id="featured_image_input"
+                        x-ref="featuredImageInput"
+                        name="featured_image"
+                        value="{{ old('featured_image', $post->featured_image) }}"
+                        class="w-full rounded-lg border {{ $errors->has('featured_image') ? 'border-rose-500/70' : 'border-white/10' }} bg-black/40 px-3.5 py-2 text-sm text-gray-100 placeholder-gray-500 focus:border-[#c32720] focus:outline-none"
+                        placeholder="https://res.cloudinary.com/dutx97jzy/image/upload/... o ruta relativa"
+                        aria-describedby="{{ $imageRejection ? 'featured_image_rejection_inline' : '' }}"
+                    >
+
+                    @if ($imageRejection)
+                        <div id="featured_image_rejection_inline" class="mt-2 rounded-lg border border-rose-500/30 bg-rose-950/30 p-3 text-xs text-rose-200 space-y-1.5" role="alert">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-semibold text-rose-300">{{ $imageRejection['title'] ?? 'Imagen rechazada' }}</span>
+                                <span class="px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider border border-rose-500/30 bg-rose-500/10 text-rose-200">
+                                    {{ $imageRejection['category_label'] ?? 'Validación técnica' }}
+                                </span>
+                            </div>
+                            <p class="text-rose-100/90 leading-relaxed">{{ $imageRejection['message'] ?? $errors->first('featured_image') }}</p>
+                            @if (! empty($imageRejection['failed_check']))
+                                <p class="text-[11px] text-rose-200/80"><strong>Comprobación fallida:</strong> {{ $imageRejection['failed_check'] }}</p>
+                            @endif
+                            @if (! empty($imageRejection['suggested_action']))
+                                <p class="text-[11px] text-amber-200/90"><strong>Solución posible:</strong> {{ $imageRejection['suggested_action'] }}</p>
+                            @endif
+                            <button type="button" @click="rejectionModalOpen = true" class="text-[11px] text-sky-300 hover:text-sky-200 underline">
+                                Ver detalle completo del aviso
+                            </button>
+                        </div>
+                    @else
+                        @error('featured_image')
+                            <p class="mt-1 text-xs text-rose-400 font-medium" role="alert">{{ $message }}</p>
+                        @enderror
+                    @endif
                 </div>
 
                 <div>
                     <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">Subir archivo de imagen</label>
-                    <input type="file" name="featured_image_file" class="block w-full text-xs text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-white/10 file:text-gray-200 hover:file:bg-white/20">
+                    <input type="file" name="featured_image_file" accept="image/*" class="block w-full text-xs text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-white/10 file:text-gray-200 hover:file:bg-white/20">
+                </div>
+
+                <div class="pt-3 border-t border-white/10 space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1">Procedencia / Crédito editorial (Opcional)</label>
+                        <input type="text" name="image_source" value="{{ old('image_source', $post->image_source) }}" class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-gray-100 placeholder-gray-500 focus:border-[#c32720] focus:outline-none" placeholder="Ej. Prensa oficial / Foto: Juan Pérez">
+                        <p class="mt-1 text-[11px] text-gray-400">
+                            Registra la atribución editorial de la portada. La validación técnica del archivo no verifica licencias ni derechos legales.
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1">Texto alternativo de portada (Alt)</label>
+                        <input type="text" name="image_alt" value="{{ old('image_alt', $post->image_alt) }}" class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-gray-100 placeholder-gray-500 focus:border-[#c32720] focus:outline-none" placeholder="Descripción breve de la imagen">
+                    </div>
                 </div>
             </div>
+
+            @if ($imageRejection)
+                {{-- Modal accesible de rechazo de imagen --}}
+                <div
+                    x-show="rejectionModalOpen"
+                    x-cloak
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="image-rejection-modal-title"
+                    aria-describedby="image-rejection-modal-desc"
+                    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                >
+                    <div class="w-full max-w-lg rounded-2xl border border-rose-500/30 bg-[#101012] p-6 shadow-2xl space-y-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border {{ ($imageRejection['category'] ?? 'technical') === 'editorial' ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-rose-500/30 bg-rose-500/10 text-rose-300' }}">
+                                    {{ $imageRejection['category_label'] ?? 'Validación técnica del archivo' }}
+                                </span>
+                                <h4 id="image-rejection-modal-title" class="mt-2 font-display text-lg uppercase tracking-wider text-white">
+                                    {{ $imageRejection['title'] ?? 'No se pudo aceptar la imagen' }}
+                                </h4>
+                            </div>
+                            <button type="button" @click="closeRejectionModal()" aria-label="Cerrar aviso" class="text-gray-400 hover:text-white text-sm px-1.5 py-0.5 rounded">✕</button>
+                        </div>
+
+                        <div id="image-rejection-modal-desc" class="space-y-3 text-xs text-gray-200 leading-relaxed">
+                            <p>{{ $imageRejection['message'] ?? $errors->first('featured_image') }}</p>
+
+                            @if (! empty($imageRejection['failed_check']))
+                                <div class="rounded-lg border border-white/10 bg-black/40 p-3">
+                                    <div class="text-[11px] uppercase tracking-wider text-gray-400 mb-0.5">Comprobación que falló</div>
+                                    <div class="text-gray-100 font-medium">{{ $imageRejection['failed_check'] }}</div>
+                                </div>
+                            @endif
+
+                            @if (! empty($imageRejection['redacted_url']))
+                                <div class="rounded-lg border border-white/10 bg-black/40 p-3">
+                                    <div class="text-[11px] uppercase tracking-wider text-gray-400 mb-0.5">Dirección comprobada</div>
+                                    <div class="font-mono text-[11px] text-gray-300 break-all">{{ $imageRejection['redacted_url'] }}</div>
+                                </div>
+                            @endif
+
+                            @if (! empty($imageRejection['suggested_action']))
+                                <div class="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-amber-100">
+                                    <div class="text-[11px] uppercase tracking-wider text-amber-300 mb-0.5">Qué puedes hacer</div>
+                                    <div>{{ $imageRejection['suggested_action'] }}</div>
+                                </div>
+                            @endif
+
+                            <p class="text-[11px] text-gray-400">
+                                Se han conservado la URL introducida y el resto de los datos del formulario. El artículo no se ha publicado ni modificado.
+                            </p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-white/10">
+                            @if (($imageRejection['code'] ?? '') === 'unauthorized_origin' && $canManageImageOrigins)
+                                <a href="{{ route('admin.editorial.image-origins.index') }}" class="inline-flex items-center justify-center h-8 px-3 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-200 text-xs font-medium">
+                                    Gestionar orígenes autorizados
+                                </a>
+                            @endif
+
+                            @if (! empty($imageRejection['can_retry']))
+                                <button type="button" @click="retryImageSubmit()" class="inline-flex items-center justify-center h-8 px-3.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-200 text-xs font-semibold">
+                                    Reintentar
+                                </button>
+                            @endif
+
+                            <button type="button" x-ref="rejectionModalCloseBtn" @click="closeRejectionModal()" class="inline-flex items-center justify-center h-8 px-4 rounded-lg bg-[#c32720] hover:bg-[#a8201a] text-white text-xs font-semibold">
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <!-- Caja 3: Taxonomías -->

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\AuthorizedImageOrigin;
 use App\Models\EmailPostSanitizedMeta;
 use App\Models\Post;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class EmailSafetyValidator
@@ -448,31 +450,108 @@ class EmailSafetyValidator
         ];
     }
 
+    public const MAX_REMOTE_IMAGE_BYTES = 10485760; // 10 MB
+
+    /**
+     * Construye una estructura homogénea de rechazo que separa la validación técnica
+     * de la acreditación editorial y evita mensajes opacos.
+     *
+     * @return array{
+     *   code: string,
+     *   category: string,
+     *   category_label: string,
+     *   title: string,
+     *   message: string,
+     *   failed_check: string,
+     *   suggested_action: string,
+     *   can_retry: bool,
+     *   redacted_url: ?string
+     * }
+     */
+    public function buildImageRejectionReason(
+        string $code,
+        string $category,
+        string $title,
+        string $message,
+        string $failedCheck,
+        string $suggestedAction,
+        bool $canRetry = false,
+        ?string $url = null
+    ): array {
+        $categoryLabel = match ($category) {
+            'technical' => 'Validación técnica del archivo',
+            'editorial' => 'Acreditación editorial de uso',
+            default     => 'Causa indeterminada',
+        };
+
+        return [
+            'code'             => $code,
+            'category'         => $category,
+            'category_label'   => $categoryLabel,
+            'title'            => $title,
+            'message'          => $message,
+            'failed_check'     => $failedCheck,
+            'suggested_action' => $suggestedAction,
+            'can_retry'        => $canRetry,
+            'redacted_url'     => $url !== null ? $this->redactUrlForDisplay($url) : null,
+        ];
+    }
+
+    /**
+     * Oculta credenciales y parámetros sensibles de una URL antes de mostrarla en avisos o registros.
+     */
+    public function redactUrlForDisplay(string $url): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+
+        $parsed = parse_url($url);
+        if (! is_array($parsed) || empty($parsed['host'])) {
+            return preg_replace('/\?.*$/', '', $url) ?? $url;
+        }
+
+        $scheme = isset($parsed['scheme']) ? strtolower($parsed['scheme']) . '://' : '';
+        $host = strtolower((string) $parsed['host']);
+        $port = isset($parsed['port']) ? ':' . (int) $parsed['port'] : '';
+        $path = (string) ($parsed['path'] ?? '');
+        $hasQuery = isset($parsed['query']) && $parsed['query'] !== '';
+
+        return $scheme . $host . $port . $path . ($hasQuery ? '?[parámetros ocultos]' : '');
+    }
+
     /**
      * Valida de forma estricta que una noticia disponga de una imagen de portada utilizable
      * para su publicación manual, masiva o programada.
      *
-     * Reglas:
-     * - No se admiten valores vacíos, nulos o marcadores 'NINGUNA'/'none'.
-     * - Las rutas locales deben existir físicamente en disco (storage público o public).
-     * - Las URLs remotas deben responder exitosamente y confirmar contenido de imagen.
-     * - Las imágenes remotas se validan por host seguro, Content-Type y firma binaria;
-     *   no requieren que el path publique una extensión.
-     * - Las rutas locales sí requieren extensión de imagen permitida y existencia física.
-     *
-     * @return array{is_safe: bool, violation: ?string, normalized_path: ?string}
+     * @param  array{context?: string}  $options
+     * @return array{is_safe: bool, violation: ?string, normalized_path: ?string, reason?: ?array}
      */
-    public function validatePublishableCoverImage(Post|string|null $postOrImage): array
+    public function validatePublishableCoverImage(Post|string|null $postOrImage, array $options = []): array
     {
+        $context = (string) ($options['context'] ?? 'default');
+
         $rawImage = $postOrImage instanceof Post
             ? ($postOrImage->featured_image ?: $postOrImage->featured_image_path)
             : $postOrImage;
 
         if (empty($rawImage)) {
+            $msg = 'La noticia no dispone de una imagen de portada utilizable. Debe asignar una portada antes de publicar o programar.';
+
             return [
                 'is_safe'         => false,
-                'violation'       => 'La noticia no dispone de una imagen de portada utilizable. Debe asignar una portada antes de publicar o programar.',
+                'violation'       => $msg,
                 'normalized_path' => null,
+                'reason'          => $this->buildImageRejectionReason(
+                    code: 'missing_cover',
+                    category: 'technical',
+                    title: 'Portada obligatoria ausente',
+                    message: $msg,
+                    failedCheck: 'Presencia de archivo o URL de imagen de portada',
+                    suggestedAction: 'Introduce un enlace directo desde un origen autorizado o sube un archivo de imagen desde tu equipo.',
+                    canRetry: false,
+                ),
             ];
         }
 
@@ -491,21 +570,69 @@ class EmailSafetyValidator
 
         $clean = trim(str_replace('\\', '/', (string) $raw));
         if ($clean === '' || in_array(strtoupper($clean), ['NINGUNA', 'NONE', 'NULL'], true)) {
+            $msg = 'La noticia no dispone de una imagen de portada utilizable. Debe asignar una portada antes de publicar o programar.';
+
             return [
                 'is_safe'         => false,
-                'violation'       => 'La noticia no dispone de una imagen de portada utilizable. Debe asignar una portada antes de publicar o programar.',
+                'violation'       => $msg,
                 'normalized_path' => null,
+                'reason'          => $this->buildImageRejectionReason(
+                    code: 'missing_cover',
+                    category: 'technical',
+                    title: 'Portada obligatoria ausente',
+                    message: $msg,
+                    failedCheck: 'Presencia de archivo o URL de imagen de portada',
+                    suggestedAction: 'Introduce un enlace directo desde un origen autorizado o sube un archivo de imagen desde tu equipo.',
+                    canRetry: false,
+                ),
             ];
         }
 
         // 1. Validaciones de seguridad base (path traversal, esquemas no permitidos, credenciales expuestas, SSRF)
         $baseSafety = $this->validateFeaturedImage($clean);
         if (! $baseSafety['is_safe']) {
-            return $baseSafety;
+            $violation = (string) ($baseSafety['violation'] ?? 'Dirección o formato de imagen no válido.');
+            $isRestricted = str_contains(strtolower($violation), 'restringido') || str_contains(strtolower($violation), 'privado');
+            $isExtension = str_contains(strtolower($violation), 'extensión');
+
+            $reason = $isExtension
+                ? $this->buildImageRejectionReason(
+                    code: 'unsupported_size_or_format',
+                    category: 'technical',
+                    title: 'Tamaño o formato no admitido',
+                    message: $violation,
+                    failedCheck: 'Formato de archivo de imagen permitido (JPG, PNG, WEBP, GIF, AVIF, SVG)',
+                    suggestedAction: 'Convierte la imagen a JPG, PNG o WEBP y súbela desde tu equipo o usa un enlace directo compatible.',
+                    canRetry: false,
+                    url: $clean,
+                )
+                : ($isRestricted
+                    ? $this->buildImageRejectionReason(
+                        code: 'restricted_or_expired',
+                        category: 'technical',
+                        title: 'Acceso restringido o enlace caducado',
+                        message: $violation,
+                        failedCheck: 'Accesibilidad pública del recurso remoto',
+                        suggestedAction: 'Descarga la imagen y súbela como archivo o utiliza un enlace directo público en un origen autorizado.',
+                        canRetry: false,
+                        url: $clean,
+                    )
+                    : $this->buildImageRejectionReason(
+                        code: 'unsafe_address_or_redirect',
+                        category: 'technical',
+                        title: 'Dirección interna o redirección insegura',
+                        message: $violation,
+                        failedCheck: 'Seguridad de la dirección, esquema y protección anti-SSRF',
+                        suggestedAction: 'Utiliza una URL pública HTTPS válida sin credenciales incrustadas ni rutas internas, o sube el archivo desde tu equipo.',
+                        canRetry: false,
+                        url: $clean,
+                    ));
+
+            return array_merge($baseSafety, ['reason' => $reason]);
         }
 
         // 2. Chequeo de URLs con esquema. Para fuentes remotas no confiamos en la
-        // extensión (puede faltar); verifyRemoteImageUrl valida host, MIME y magic bytes.
+        // extensión (puede faltar); verifyRemoteImageUrl valida host, ruta, MIME, tamaño y magic bytes.
         $hasScheme = (bool) preg_match('#^https?://#i', $clean);
         if ($hasScheme) {
             $host = strtolower(parse_url($clean, PHP_URL_HOST) ?? '');
@@ -523,7 +650,7 @@ class EmailSafetyValidator
                 $clean = ltrim($path, '/');
                 $hasScheme = false;
             } else {
-                return $this->verifyRemoteImageUrl($clean);
+                return $this->verifyRemoteImageUrl($clean, $context);
             }
         }
 
@@ -533,10 +660,22 @@ class EmailSafetyValidator
             $ext = strtolower(pathinfo($pathForExt, PATHINFO_EXTENSION));
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'svg'];
             if (! in_array($ext, $allowedExtensions, true)) {
+                $msg = "La imagen local tiene una extensión no permitida o ausente ('.{$ext}').";
+
                 return [
                     'is_safe'         => false,
-                    'violation'       => "La imagen local tiene una extensión no permitida o ausente ('.{$ext}').",
+                    'violation'       => $msg,
                     'normalized_path' => null,
+                    'reason'          => $this->buildImageRejectionReason(
+                        code: 'unsupported_size_or_format',
+                        category: 'technical',
+                        title: 'Tamaño o formato no admitido',
+                        message: $msg,
+                        failedCheck: 'Formato de archivo de imagen permitido',
+                        suggestedAction: 'Sube un archivo en formato JPG, PNG, WEBP, GIF o AVIF.',
+                        canRetry: false,
+                        url: $clean,
+                    ),
                 ];
             }
 
@@ -556,10 +695,22 @@ class EmailSafetyValidator
                 || Storage::disk('public')->exists($relPath);
 
             if (! $existsLocally) {
+                $msg = "El archivo de imagen de portada no existe físicamente en el almacenamiento local: '{$clean}'.";
+
                 return [
                     'is_safe'         => false,
-                    'violation'       => "El archivo de imagen de portada no existe físicamente en el almacenamiento local: '{$clean}'.",
+                    'violation'       => $msg,
                     'normalized_path' => null,
+                    'reason'          => $this->buildImageRejectionReason(
+                        code: 'http_404',
+                        category: 'technical',
+                        title: 'Archivo local no encontrado',
+                        message: $msg,
+                        failedCheck: 'Existencia del archivo en almacenamiento local',
+                        suggestedAction: 'Sube la imagen nuevamente desde tu equipo o indica una URL directa de un origen autorizado.',
+                        canRetry: false,
+                        url: $clean,
+                    ),
                 ];
             }
 
@@ -567,6 +718,7 @@ class EmailSafetyValidator
                 'is_safe'         => true,
                 'violation'       => null,
                 'normalized_path' => $relPath,
+                'reason'          => null,
             ];
         }
 
@@ -574,6 +726,7 @@ class EmailSafetyValidator
             'is_safe'         => true,
             'violation'       => null,
             'normalized_path' => $clean,
+            'reason'          => null,
         ];
     }
 
@@ -652,57 +805,156 @@ class EmailSafetyValidator
     }
 
     /**
+     * Comprueba si una URL remota coincide con alguno de los orígenes de imágenes administrables
+     * configurados en base de datos para el contexto indicado.
+     *
+     * @return array{matched: bool, https_required_mismatch: bool, origin: ?AuthorizedImageOrigin}
+     */
+    public function matchConfiguredImageOrigin(string $scheme, string $host, string $path, string $context = 'default'): array
+    {
+        try {
+            if (! Schema::hasTable('authorized_image_origins')) {
+                return ['matched' => false, 'https_required_mismatch' => false, 'origin' => null];
+            }
+
+            $origins = AuthorizedImageOrigin::query()
+                ->active()
+                ->forContext($context)
+                ->where('host', strtolower($host))
+                ->get();
+
+            $httpsMismatch = false;
+            foreach ($origins as $origin) {
+                if ($origin->matchesUrl($scheme, $host, $path)) {
+                    return ['matched' => true, 'https_required_mismatch' => false, 'origin' => $origin];
+                }
+
+                // Detectar si coincidía host + ruta pero falló por usar HTTP en vez de HTTPS
+                if ($origin->require_https && strtolower($scheme) !== 'https' && $origin->matchesUrl('https', $host, $path)) {
+                    $httpsMismatch = true;
+                }
+            }
+
+            return ['matched' => false, 'https_required_mismatch' => $httpsMismatch, 'origin' => null];
+        } catch (\Throwable) {
+            return ['matched' => false, 'https_required_mismatch' => false, 'origin' => null];
+        }
+    }
+
+    /**
      * Valida de manera exhaustiva las restricciones de seguridad y red de una URL de imagen remota:
-     * - Esquema solo http/https
+     * - Esquema solo http/https (HTTPS obligatorio para orígenes administrados con require_https)
      * - Puerto estándar (80 o 443)
      * - Host no privado ni loopback
-     * - Host perteneciente a la allowlist de dominios autorizados
+     * - Host (y prefijo de ruta si aplica) perteneciente a la allowlist o a los orígenes administrados
      *
-     * @return array{is_safe: bool, violation: ?string}
+     * @return array{is_safe: bool, violation: ?string, reason?: ?array}
      */
-    public function validateRemoteImageUrlSecurity(string $url): array
+    public function validateRemoteImageUrlSecurity(string $url, string $context = 'default', bool $isRedirectHop = false): array
     {
         $parsed = parse_url($url);
         if (! is_array($parsed)) {
+            $msg = 'La URL remota de portada está mal formada.';
+
             return [
                 'is_safe'   => false,
-                'violation' => 'La URL remota de portada está mal formada.',
+                'violation' => $msg,
+                'reason'    => $this->buildImageRejectionReason(
+                    code: 'unsafe_address_or_redirect',
+                    category: 'technical',
+                    title: 'Dirección interna o redirección insegura',
+                    message: $msg,
+                    failedCheck: 'Sintaxis de la URL remota',
+                    suggestedAction: 'Revisa el enlace completo e introduce una URL HTTPS directa al archivo de imagen.',
+                    canRetry: false,
+                    url: $url,
+                ),
             ];
         }
 
         $scheme = strtolower((string) ($parsed['scheme'] ?? ''));
         if (! in_array($scheme, ['https', 'http'], true)) {
+            $msg = "Esquema no permitido en URL de portada remota: '{$scheme}://'. Solo se admite HTTPS.";
+
             return [
                 'is_safe'   => false,
-                'violation' => "Esquema no permitido en URL de portada remota: '{$scheme}://'. Solo se admite HTTPS o HTTP.",
+                'violation' => $msg,
+                'reason'    => $this->buildImageRejectionReason(
+                    code: 'unsafe_address_or_redirect',
+                    category: 'technical',
+                    title: 'Dirección interna o redirección insegura',
+                    message: $msg,
+                    failedCheck: 'Protocolo seguro (HTTPS)',
+                    suggestedAction: 'Usa un enlace que comience por https:// o sube la imagen desde tu equipo.',
+                    canRetry: false,
+                    url: $url,
+                ),
             ];
         }
 
         $port = $parsed['port'] ?? null;
         if ($port !== null && ! in_array((int) $port, [80, 443], true)) {
+            $msg = "Puerto de red no permitido en la URL de portada remota ({$port}). Solo se admiten puertos estándar (80 o 443).";
+
             return [
                 'is_safe'   => false,
-                'violation' => "Puerto de red no permitido en la URL de portada remota ({$port}). Solo se admiten puertos estándar (80 o 443).",
+                'violation' => $msg,
+                'reason'    => $this->buildImageRejectionReason(
+                    code: 'unsafe_address_or_redirect',
+                    category: 'technical',
+                    title: 'Dirección interna o redirección insegura',
+                    message: $msg,
+                    failedCheck: 'Puerto de red estándar (80/443)',
+                    suggestedAction: 'Elimina puertos no estándar de la URL o sube la imagen desde tu equipo.',
+                    canRetry: false,
+                    url: $url,
+                ),
             ];
         }
 
         $host = strtolower((string) ($parsed['host'] ?? ''));
         if ($host === '') {
+            $msg = 'La URL de portada remota no especifica un nombre de host válido.';
+
             return [
                 'is_safe'   => false,
-                'violation' => 'La URL de portada remota no especifica un nombre de host válido.',
+                'violation' => $msg,
+                'reason'    => $this->buildImageRejectionReason(
+                    code: 'unsafe_address_or_redirect',
+                    category: 'technical',
+                    title: 'Dirección interna o redirección insegura',
+                    message: $msg,
+                    failedCheck: 'Nombre de dominio válido',
+                    suggestedAction: 'Introduce una URL completa con dominio público válido (por ejemplo https://...).',
+                    canRetry: false,
+                    url: $url,
+                ),
             ];
         }
 
         // Bloqueo estricto de destinos privados, loopback y cloud metadata
         if ($this->isPrivateOrLoopbackHost($host)) {
+            $msg = $isRedirectHop
+                ? "La imagen redirige hacia una dirección interna o privada no permitida ('{$host}')."
+                : "La URL de portada remota apunta a una dirección interna o privada no permitida ('{$host}').";
+
             return [
                 'is_safe'   => false,
-                'violation' => "La URL de portada remota apunta a una dirección interna o privada no permitida ('{$host}').",
+                'violation' => $msg,
+                'reason'    => $this->buildImageRejectionReason(
+                    code: 'unsafe_address_or_redirect',
+                    category: 'technical',
+                    title: 'Dirección interna o redirección insegura',
+                    message: $msg,
+                    failedCheck: $isRedirectHop ? 'Seguridad del destino de redirección (anti-SSRF)' : 'Protección frente a direcciones internas o privadas (anti-SSRF)',
+                    suggestedAction: 'Usa un enlace directo público en un origen autorizado o sube la imagen desde tu equipo.',
+                    canRetry: false,
+                    url: $url,
+                ),
             ];
         }
 
-        // Restricción a dominios autorizados
+        // 1. Comprobar allowlist base (dominios confiables del sistema)
         $allowedHosts = $this->getAllowedImageHosts();
         $isAllowed = false;
         foreach ($allowedHosts as $allowedHost) {
@@ -712,14 +964,57 @@ class EmailSafetyValidator
             }
         }
 
+        // 2. Comprobar orígenes administrables en BD (p. ej. espacio propio de Cloudinary con prefijo de cuenta)
         if (! $isAllowed) {
+            $path = (string) ($parsed['path'] ?? '/');
+            $originMatch = $this->matchConfiguredImageOrigin($scheme, $host, $path, $context);
+
+            if ($originMatch['matched']) {
+                $isAllowed = true;
+            } elseif ($originMatch['https_required_mismatch']) {
+                $msg = "El origen '{$host}' requiere obligatoriamente conexión cifrada HTTPS.";
+
+                return [
+                    'is_safe'   => false,
+                    'violation' => $msg,
+                    'reason'    => $this->buildImageRejectionReason(
+                        code: 'unsafe_address_or_redirect',
+                        category: 'technical',
+                        title: 'Dirección interna o redirección insegura',
+                        message: $msg,
+                        failedCheck: 'Uso obligatorio de HTTPS en el origen autorizado',
+                        suggestedAction: 'Cambia el enlace de http:// a https:// y vuelve a intentarlo.',
+                        canRetry: false,
+                        url: $url,
+                    ),
+                ];
+            }
+        }
+
+        if (! $isAllowed) {
+            $msg = $isRedirectHop
+                ? "La URL de imagen redirige a un origen no autorizado ('{$host}')."
+                : "El dominio o espacio '{$host}' no pertenece a los orígenes autorizados para imágenes remotas. Esta comprobación es técnica y no evalúa licencias de uso.";
+
             return [
                 'is_safe'   => false,
-                'violation' => "El dominio '{$host}' no pertenece a los orígenes autorizados para portadas remotas.",
+                'violation' => $msg,
+                'reason'    => $this->buildImageRejectionReason(
+                    code: $isRedirectHop ? 'unsafe_address_or_redirect' : 'unauthorized_origin',
+                    category: 'technical',
+                    title: $isRedirectHop ? 'Dirección interna o redirección insegura' : 'Origen no autorizado',
+                    message: $msg,
+                    failedCheck: $isRedirectHop ? 'Origen de destino tras redirección HTTP' : 'Lista de orígenes de imágenes autorizados (host y ruta permitida)',
+                    suggestedAction: $isRedirectHop
+                        ? 'Usa un enlace directo sin redirecciones a terceros o sube la imagen desde tu equipo.'
+                        : 'Sube la imagen desde tu equipo, usa un enlace desde un espacio autorizado (como tu cuenta de Cloudinary configurada) o solicita la autorización del origen al administrador.',
+                    canRetry: false,
+                    url: $url,
+                ),
             ];
         }
 
-        return ['is_safe' => true, 'violation' => null];
+        return ['is_safe' => true, 'violation' => null, 'reason' => null];
     }
 
     /**
@@ -797,22 +1092,23 @@ class EmailSafetyValidator
     /**
      * Comprueba que una imagen remota externa responda correctamente y devuelva un tipo de contenido de imagen.
      *
-     * @return array{is_safe: bool, violation: ?string, normalized_path: ?string}
+     * @return array{is_safe: bool, violation: ?string, normalized_path: ?string, reason?: ?array}
      */
-    public function verifyRemoteImageUrl(string $url): array
+    public function verifyRemoteImageUrl(string $url, string $context = 'default'): array
     {
         $currentUrl = $url;
         $redirectCount = 0;
         $maxRedirects = 2; // Máximo 2 saltos controlados
 
         while ($redirectCount <= $maxRedirects) {
-            // 1. Validar seguridad estricta del salto actual (esquema, puerto, host autorizado, no privado)
-            $sec = $this->validateRemoteImageUrlSecurity($currentUrl);
+            // 1. Validar seguridad estricta del salto actual (esquema, puerto, host/ruta autorizados, no privado)
+            $sec = $this->validateRemoteImageUrlSecurity($currentUrl, $context, $redirectCount > 0);
             if (! $sec['is_safe']) {
                 return [
                     'is_safe'         => false,
                     'violation'       => $sec['violation'],
                     'normalized_path' => null,
+                    'reason'          => $sec['reason'] ?? null,
                 ];
             }
 
@@ -823,12 +1119,13 @@ class EmailSafetyValidator
                     'is_safe'         => true,
                     'violation'       => null,
                     'normalized_path' => $currentUrl,
+                    'reason'          => null,
                 ];
             }
 
             try {
                 // 2. Consulta HEAD acotada sin seguir redirecciones automáticamente
-                $response = Http::timeout(4)
+                $response = Http::timeout(6)
                     ->withoutRedirecting()
                     ->withHeaders([
                         'Referer'    => config('app.url', 'https://sevenrockradio.com/'),
@@ -838,7 +1135,7 @@ class EmailSafetyValidator
 
                 // Si el servidor rechaza HEAD con 405 (Method Not Allowed), probamos GET acotado con Range y streaming
                 if ($response->status() === 405) {
-                    $response = Http::timeout(4)
+                    $response = Http::timeout(6)
                         ->withoutRedirecting()
                         ->withOptions(['stream' => true])
                         ->withHeaders([
@@ -849,10 +1146,47 @@ class EmailSafetyValidator
                         ->get($currentUrl);
                 }
             } catch (\Throwable $e) {
+                $errLower = strtolower($e->getMessage());
+                $isTimeout = str_contains($errLower, 'timed out')
+                    || str_contains($errLower, 'timeout')
+                    || str_contains($errLower, 'curl error 28');
+
+                if ($isTimeout) {
+                    $msg = 'El servidor remoto tardó demasiado en responder al verificar la imagen (tiempo de espera agotado).';
+
+                    return [
+                        'is_safe'         => false,
+                        'violation'       => $msg,
+                        'normalized_path' => null,
+                        'reason'          => $this->buildImageRejectionReason(
+                            code: 'timeout',
+                            category: 'technical',
+                            title: 'Tiempo de espera agotado',
+                            message: $msg,
+                            failedCheck: 'Tiempo de respuesta del servidor remoto',
+                            suggestedAction: 'Reintenta en unos instantes o descarga la imagen y súbela desde tu equipo.',
+                            canRetry: true,
+                            url: $currentUrl,
+                        ),
+                    ];
+                }
+
+                $msg = 'No se pudo determinar la causa exacta al conectar con el servidor de la imagen remota.';
+
                 return [
                     'is_safe'         => false,
-                    'violation'       => "No se pudo conectar con el servidor de la imagen remota: " . $e->getMessage(),
+                    'violation'       => $msg,
                     'normalized_path' => null,
+                    'reason'          => $this->buildImageRejectionReason(
+                        code: 'unknown_error',
+                        category: 'unknown',
+                        title: 'No se pudo comprobar la imagen',
+                        message: $msg,
+                        failedCheck: 'Conexión de red con el servidor remoto',
+                        suggestedAction: 'Comprueba que el enlace esté bien escrito, reintenta más tarde o sube el archivo desde tu equipo.',
+                        canRetry: true,
+                        url: $currentUrl,
+                    ),
                 ];
             }
 
@@ -860,19 +1194,43 @@ class EmailSafetyValidator
             if (in_array($response->status(), [301, 302, 303, 307, 308], true)) {
                 $location = $response->header('Location');
                 if (empty($location)) {
+                    $msg = "Respuesta de redirección HTTP {$response->status()} sin destino válido.";
+
                     return [
                         'is_safe'         => false,
-                        'violation'       => "Respuesta de redirección HTTP {$response->status()} sin cabecera Location.",
+                        'violation'       => $msg,
                         'normalized_path' => null,
+                        'reason'          => $this->buildImageRejectionReason(
+                            code: 'unsafe_address_or_redirect',
+                            category: 'technical',
+                            title: 'Dirección interna o redirección insegura',
+                            message: $msg,
+                            failedCheck: 'Cabecera Location de redirección',
+                            suggestedAction: 'Usa el enlace directo al archivo de imagen sin redirecciones intermedias o sube la imagen desde tu equipo.',
+                            canRetry: false,
+                            url: $currentUrl,
+                        ),
                     ];
                 }
 
                 $redirectCount++;
                 if ($redirectCount > $maxRedirects) {
+                    $msg = "Demasiadas redirecciones al verificar la imagen remota (máximo permitido: {$maxRedirects}).";
+
                     return [
                         'is_safe'         => false,
-                        'violation'       => "Demasiadas redirecciones al verificar la imagen remota (máximo permitido: {$maxRedirects}).",
+                        'violation'       => $msg,
                         'normalized_path' => null,
+                        'reason'          => $this->buildImageRejectionReason(
+                            code: 'unsafe_address_or_redirect',
+                            category: 'technical',
+                            title: 'Dirección interna o redirección insegura',
+                            message: $msg,
+                            failedCheck: 'Límite máximo de redirecciones HTTP',
+                            suggestedAction: 'Copia la URL final directa de la imagen o súbela como archivo.',
+                            canRetry: false,
+                            url: $currentUrl,
+                        ),
                     ];
                 }
 
@@ -884,14 +1242,98 @@ class EmailSafetyValidator
 
             // 4. Códigos de éxito aceptables (200 OK o 206 Partial Content)
             if (! in_array($response->status(), [200, 206], true)) {
+                $status = $response->status();
+                $reason = match ($status) {
+                    404 => $this->buildImageRejectionReason(
+                        code: 'http_404',
+                        category: 'technical',
+                        title: 'Imagen no encontrada (HTTP 404)',
+                        message: 'El servidor remoto indicó que el archivo no existe en esa dirección (HTTP 404).',
+                        failedCheck: 'Disponibilidad del archivo remoto (HTTP 404)',
+                        suggestedAction: 'Comprueba que la URL esté completa y sin recortes, o sube la imagen desde tu equipo.',
+                        canRetry: false,
+                        url: $currentUrl,
+                    ),
+                    403 => $this->buildImageRejectionReason(
+                        code: 'http_403',
+                        category: 'technical',
+                        title: 'Acceso denegado (HTTP 403)',
+                        message: 'El servidor remoto rechazó la lectura de la imagen con HTTP 403 (protección anti-hotlink o permisos).',
+                        failedCheck: 'Permiso técnico de lectura del servidor remoto (HTTP 403)',
+                        suggestedAction: 'Descarga la imagen y súbela desde tu equipo, o publícala en un espacio público autorizado.',
+                        canRetry: false,
+                        url: $currentUrl,
+                    ),
+                    429 => $this->buildImageRejectionReason(
+                        code: 'http_429',
+                        category: 'technical',
+                        title: 'Demasiadas peticiones (HTTP 429)',
+                        message: 'El servidor remoto limitó temporalmente las comprobaciones (HTTP 429).',
+                        failedCheck: 'Límite de tasa del servidor remoto (HTTP 429)',
+                        suggestedAction: 'Espera unos segundos y pulsa «Reintentar», o sube el archivo desde tu equipo.',
+                        canRetry: true,
+                        url: $currentUrl,
+                    ),
+                    401, 410 => $this->buildImageRejectionReason(
+                        code: 'restricted_or_expired',
+                        category: 'technical',
+                        title: 'Acceso restringido o enlace caducado',
+                        message: "El enlace requiere autenticación o ha caducado (HTTP {$status}).",
+                        failedCheck: "Vigencia y acceso público del enlace (HTTP {$status})",
+                        suggestedAction: 'Genera un enlace público directo no caducado o sube la imagen como archivo.',
+                        canRetry: false,
+                        url: $currentUrl,
+                    ),
+                    default => $this->buildImageRejectionReason(
+                        code: 'http_error',
+                        category: 'technical',
+                        title: "Error del servidor remoto (HTTP {$status})",
+                        message: "El servidor remoto respondió con HTTP {$status} y no permitió verificar la imagen.",
+                        failedCheck: "Respuesta HTTP válida (200/206; recibido {$status})",
+                        suggestedAction: $status >= 500
+                            ? 'El servidor de origen tiene un fallo temporal. Reintenta más tarde o sube el archivo desde tu equipo.'
+                            : 'Comprueba el enlace directo o sube la imagen desde tu equipo.',
+                        canRetry: $status >= 500,
+                        url: $currentUrl,
+                    ),
+                };
+
                 return [
                     'is_safe'         => false,
-                    'violation'       => "La imagen remota no responde correctamente (código HTTP {$response->status()}). No se puede confirmar su visualización.",
+                    'violation'       => $reason['message'],
                     'normalized_path' => null,
+                    'reason'          => $reason,
                 ];
             }
 
-            // 5. Verificación estricta de Content-Type y magic bytes
+            // 5. Verificación de tamaño si el servidor informa Content-Length
+            $contentLengthHeader = $response->header('Content-Length');
+            if ($contentLengthHeader !== '' && is_numeric($contentLengthHeader)) {
+                $bytes = (int) $contentLengthHeader;
+                if ($bytes > self::MAX_REMOTE_IMAGE_BYTES) {
+                    $mb = round($bytes / 1048576, 1);
+                    $maxMb = (int) (self::MAX_REMOTE_IMAGE_BYTES / 1048576);
+                    $msg = "La imagen supera el tamaño máximo admitido ({$mb} MB frente a un límite de {$maxMb} MB).";
+
+                    return [
+                        'is_safe'         => false,
+                        'violation'       => $msg,
+                        'normalized_path' => null,
+                        'reason'          => $this->buildImageRejectionReason(
+                            code: 'unsupported_size_or_format',
+                            category: 'technical',
+                            title: 'Tamaño o formato no admitido',
+                            message: $msg,
+                            failedCheck: "Tamaño máximo de archivo ({$maxMb} MB)",
+                            suggestedAction: 'Reduce el peso o resolución de la imagen (o usa una transformación optimizada) y vuelve a intentarlo.',
+                            canRetry: false,
+                            url: $currentUrl,
+                        ),
+                    ];
+                }
+            }
+
+            // 6. Verificación estricta de Content-Type y magic bytes
             $contentType = strtolower(trim((string) $response->header('Content-Type')));
             $mime = trim(explode(';', $contentType)[0]);
 
@@ -908,22 +1350,51 @@ class EmailSafetyValidator
             $isOctetStreamOrAmbiguous = in_array($mime, ['application/octet-stream', 'binary/octet-stream', ''], true);
 
             if (! $isReliableImageMime && ! $isOctetStreamOrAmbiguous) {
+                $isUnsupportedImageFormat = str_starts_with($mime, 'image/');
+                $msg = $isUnsupportedImageFormat
+                    ? "El formato de imagen '{$mime}' no está admitido para portadas."
+                    : "La URL remota no devuelve un contenido de imagen válido (Content-Type: '{$contentType}').";
+
                 return [
                     'is_safe'         => false,
-                    'violation'       => "La URL remota no devuelve un contenido de imagen válido (Content-Type: '{$contentType}').",
+                    'violation'       => $msg,
                     'normalized_path' => null,
+                    'reason'          => $this->buildImageRejectionReason(
+                        code: $isUnsupportedImageFormat ? 'unsupported_size_or_format' : 'invalid_image_content',
+                        category: 'technical',
+                        title: $isUnsupportedImageFormat ? 'Tamaño o formato no admitido' : 'Contenido que no es una imagen válida',
+                        message: $msg,
+                        failedCheck: 'Tipo de contenido real (Content-Type)',
+                        suggestedAction: $isUnsupportedImageFormat
+                            ? 'Usa un formato compatible (JPG, PNG, WEBP, GIF o AVIF) o sube la imagen convertida.'
+                            : 'Asegúrate de pegar el enlace directo al archivo de imagen y no a una página web o visor.',
+                        canRetry: false,
+                        url: $currentUrl,
+                    ),
                 ];
             }
 
-            // 6. Inspección obligatoria de los primeros bytes (Magic Bytes).
+            // 7. Inspección obligatoria de los primeros bytes (Magic Bytes).
             // Una cabecera HEAD o Content-Type por sí sola no demuestra que el archivo sea una imagen real.
             $rawBytes = $this->readLimitedSampleBytes($response, $currentUrl, 1024);
 
             if (! $this->matchesImageMagicBytes($rawBytes)) {
+                $msg = 'El archivo remoto no presenta una estructura de imagen válida (firma binaria o magic bytes no reconocidos).';
+
                 return [
                     'is_safe'         => false,
-                    'violation'       => "El archivo remoto no presenta una estructura de imagen válida (firma binaria o magic bytes no reconocidos).",
+                    'violation'       => $msg,
                     'normalized_path' => null,
+                    'reason'          => $this->buildImageRejectionReason(
+                        code: 'invalid_image_content',
+                        category: 'technical',
+                        title: 'Contenido que no es una imagen válida',
+                        message: $msg,
+                        failedCheck: 'Verificación binaria real del archivo (magic bytes)',
+                        suggestedAction: 'Comprueba que el enlace apunte directamente a un archivo de imagen real (JPG, PNG, WEBP, GIF o AVIF) o sube el archivo desde tu equipo.',
+                        canRetry: false,
+                        url: $currentUrl,
+                    ),
                 ];
             }
 
@@ -931,13 +1402,26 @@ class EmailSafetyValidator
                 'is_safe'         => true,
                 'violation'       => null,
                 'normalized_path' => $currentUrl,
+                'reason'          => null,
             ];
         }
 
+        $msg = 'Excedido el límite de redirecciones para la imagen remota.';
+
         return [
             'is_safe'         => false,
-            'violation'       => "Excedido el límite de redirecciones para la imagen remota.",
+            'violation'       => $msg,
             'normalized_path' => null,
+            'reason'          => $this->buildImageRejectionReason(
+                code: 'unsafe_address_or_redirect',
+                category: 'technical',
+                title: 'Dirección interna o redirección insegura',
+                message: $msg,
+                failedCheck: 'Límite máximo de redirecciones HTTP',
+                suggestedAction: 'Copia la URL final directa de la imagen o súbela como archivo.',
+                canRetry: false,
+                url: $currentUrl,
+            ),
         ];
     }
 

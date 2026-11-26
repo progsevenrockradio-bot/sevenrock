@@ -35,6 +35,9 @@
                 <a href="{{ route('admin.editorial.index') }}" class="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all">
                     ← Volver a Bandeja
                 </a>
+                <a href="{{ route('admin.editorial.image-origins.index') }}" class="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-200 text-xs font-medium transition-all">
+                    🖼️ Orígenes de Imágenes
+                </a>
                 <button type="button" @click="createModalOpen = true" class="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg bg-[#c32720] hover:bg-[#a8201a] text-white text-xs font-semibold tracking-wide shadow-md shadow-red-950/40 transition-all focus:outline-none focus:ring-2 focus:ring-[#c32720]/50">
                     + Registrar Nueva Fuente
                 </button>

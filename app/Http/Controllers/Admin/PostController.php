@@ -316,8 +316,21 @@ class PostController extends Controller
             }
 
             if ($isSocialPage) {
+                $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
+                $msg = 'La URL introducida corresponde a una página de Facebook o red social, no a un archivo directo de imagen (.jpg, .png, etc.). Debe ingresar el enlace directo al archivo de imagen o subir una imagen desde su equipo.';
+                session()->flash('image_rejection', $safetyValidator->buildImageRejectionReason(
+                    code: 'invalid_image_content',
+                    category: 'technical',
+                    title: 'Contenido que no es una imagen válida',
+                    message: $msg,
+                    failedCheck: 'Enlace directo a archivo de imagen (se detectó una página web de red social)',
+                    suggestedAction: 'Descarga la imagen y súbela desde tu equipo, o usa un enlace directo desde un origen autorizado.',
+                    canRetry: false,
+                    url: $trimmedImage,
+                ));
+
                 throw ValidationException::withMessages([
-                    'featured_image' => 'La URL introducida corresponde a una página de Facebook o red social, no a un archivo directo de imagen (.jpg, .png, etc.). Debe ingresar el enlace directo al archivo de imagen o subir una imagen desde su equipo.',
+                    'featured_image' => $msg,
                 ]);
             }
 
@@ -359,6 +372,8 @@ class PostController extends Controller
             'external_link_label' => ['nullable', 'string', 'max:255'],
             'source_name' => ['nullable', 'string', 'max:255'],
             'source_url' => ['nullable', 'url', 'max:2048'],
+            'image_source' => ['nullable', 'string', 'max:255'],
+            'image_alt' => ['nullable', 'string', 'max:255'],
             'meta_title' => ['nullable', 'string', 'max:120'],
             'meta_description' => ['nullable', 'string'],
             'published_at' => ['nullable', 'date'],
@@ -425,8 +440,14 @@ class PostController extends Controller
 
             if ($effectiveImage !== 'file_upload_pending') {
                 $safetyValidator = app(\App\Services\EmailSafetyValidator::class);
-                $coverValidation = $safetyValidator->validatePublishableCoverImage($effectiveImage);
+                $coverValidation = $safetyValidator->validatePublishableCoverImage($effectiveImage, [
+                    'context' => \App\Models\AuthorizedImageOrigin::SCOPE_MANUAL_EDITORIAL,
+                ]);
                 if (! $coverValidation['is_safe']) {
+                    if (! empty($coverValidation['reason'])) {
+                        session()->flash('image_rejection', $coverValidation['reason']);
+                    }
+
                     throw ValidationException::withMessages([
                         'featured_image' => $coverValidation['violation'],
                     ]);
@@ -482,6 +503,8 @@ class PostController extends Controller
             'external_link_label',
             'source_name',
             'source_url',
+            'image_source',
+            'image_alt',
             'meta_title',
             'meta_description',
             'status',
