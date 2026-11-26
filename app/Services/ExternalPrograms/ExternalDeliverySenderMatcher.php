@@ -9,6 +9,7 @@ use App\Models\MasterProgram;
 use App\Services\EmailSecurityVerifier;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class ExternalDeliverySenderMatcher
 {
@@ -78,7 +79,8 @@ class ExternalDeliverySenderMatcher
         ?string $replyToEmail,
         string $rawHeaders,
         string $bodyText,
-        array $senderIndex
+        array $senderIndex,
+        string $subject = ''
     ): array {
         $from = $this->normalizeEmail($rawFromEmail);
         $replyTo = $this->normalizeEmail($replyToEmail);
@@ -90,7 +92,9 @@ class ExternalDeliverySenderMatcher
                 matchedEmail: $from,
                 programs: $senderIndex[$from],
                 auth: $auth,
-                viaPlatformRelay: false
+                viaPlatformRelay: false,
+                subject: $subject,
+                bodyText: $bodyText
             );
         }
 
@@ -103,7 +107,9 @@ class ExternalDeliverySenderMatcher
                     matchedEmail: $replyTo,
                     programs: $senderIndex[$replyTo],
                     auth: $auth,
-                    viaPlatformRelay: true
+                    viaPlatformRelay: true,
+                    subject: $subject,
+                    bodyText: $bodyText
                 );
             }
 
@@ -160,7 +166,9 @@ class ExternalDeliverySenderMatcher
         string $matchedEmail,
         Collection $programs,
         array $auth,
-        bool $viaPlatformRelay
+        bool $viaPlatformRelay,
+        string $subject = '',
+        string $bodyText = ''
     ): array {
         $isAuthenticated = (bool) ($auth['is_authenticated'] ?? false);
         $isSpoofing = (bool) ($auth['is_spoofing'] ?? false);
@@ -183,8 +191,24 @@ class ExternalDeliverySenderMatcher
             ];
         }
 
-        // Si el remitente está asociado a varios programas, dejar pendiente la identificación.
+        // Si el remitente está asociado a varios programas, intentar desambiguación inequívoca
+        // primero por asunto y, si no basta, usando el contenido como apoyo.
         if ($programs->count() > 1) {
+            $disambiguated = $this->disambiguateAuthorizedPrograms($programs, $subject, $bodyText);
+            if ($disambiguated !== null) {
+                return [
+                    'should_register' => true,
+                    'master_program_id' => (int) $disambiguated->id,
+                    'effective_sender_email' => $matchedEmail,
+                    'identification_status' => ExternalProgramDelivery::ID_MATCHED,
+                    'status' => ExternalProgramDelivery::STATUS_PENDING,
+                    'incident_reason' => $viaPlatformRelay
+                        ? 'Aviso recibido a través de la plataforma (Reply-To verificado con autenticación de plataforma).'
+                        : null,
+                    'auth' => $auth,
+                ];
+            }
+
             $names = $programs->pluck('nombre')->filter()->implode(', ');
 
             return [
@@ -193,7 +217,7 @@ class ExternalDeliverySenderMatcher
                 'effective_sender_email' => $matchedEmail,
                 'identification_status' => ExternalProgramDelivery::ID_AMBIGUOUS,
                 'status' => ExternalProgramDelivery::STATUS_NEEDS_REVIEW,
-                'incident_reason' => "El remitente {$matchedEmail} está asociado a varios programas ({$names}). Selecciona el programa correspondiente.",
+                'incident_reason' => "El remitente {$matchedEmail} está asociado a varios programas ({$names}) y no hubo coincidencia inequívoca en asunto ni contenido. Selecciona el programa correspondiente.",
                 'auth' => $auth,
             ];
         }
@@ -212,6 +236,93 @@ class ExternalDeliverySenderMatcher
                 : null,
             'auth' => $auth,
         ];
+    }
+
+    /**
+     * Desambigua entre los programas autorizados de un remitente compartido:
+     * 1. Compara el asunto normalizado contra nombres y alias administrables de sus programas autorizados.
+     * 2. Solo si el asunto no produce coincidencia, usa el cuerpo del correo como apoyo.
+     * 3. Asigna únicamente si existe una coincidencia inequívoca con UN solo programa.
+     *
+     * @param  Collection<int, MasterProgram>  $programs
+     */
+    protected function disambiguateAuthorizedPrograms(Collection $programs, string $subject, string $bodyText): ?MasterProgram
+    {
+        $normalizedSubject = $this->normalizeForMatching($subject);
+        if ($normalizedSubject !== '') {
+            $subjectMatches = $this->findMatchingProgramsInNormalizedText($programs, $normalizedSubject);
+            if ($subjectMatches->count() === 1) {
+                return $subjectMatches->first();
+            }
+            if ($subjectMatches->count() > 1) {
+                // Varios programas mencionados en el asunto -> ambiguo, no asignar automáticamente
+                return null;
+            }
+        }
+
+        $normalizedBody = $this->normalizeForMatching($bodyText);
+        if ($normalizedBody !== '') {
+            $bodyMatches = $this->findMatchingProgramsInNormalizedText($programs, $normalizedBody);
+            if ($bodyMatches->count() === 1) {
+                return $bodyMatches->first();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  Collection<int, MasterProgram>  $programs
+     * @return Collection<int, MasterProgram>
+     */
+    protected function findMatchingProgramsInNormalizedText(Collection $programs, string $normalizedText): Collection
+    {
+        return $programs->filter(function (MasterProgram $program) use ($normalizedText): bool {
+            foreach ($this->buildRecognitionTerms($program) as $term) {
+                if (preg_match('/(?:^| )' . preg_quote($term, '/') . '(?:$| )/', $normalizedText) === 1) {
+                    return true;
+                }
+            }
+
+            return false;
+        })->values();
+    }
+
+    /**
+     * Construye términos normalizados (nombre oficial, variante sin artículo inicial y alias administrables).
+     *
+     * @return array<int, string>
+     */
+    protected function buildRecognitionTerms(MasterProgram $program): array
+    {
+        $terms = [];
+        $candidates = array_merge(
+            [(string) $program->nombre],
+            $program->deliveryRecognitionAliasesList()
+        );
+
+        foreach ($candidates as $raw) {
+            $norm = $this->normalizeForMatching($raw);
+            if (strlen($norm) >= 4) {
+                $terms[] = $norm;
+
+                // Variante sin artículo inicial (ej. "los archivos secretos del rock and roll" -> "archivos secretos del rock and roll")
+                $withoutArticle = preg_replace('/^(?:el|la|los|las)\s+/', '', $norm) ?: '';
+                if (strlen($withoutArticle) >= 4 && $withoutArticle !== $norm) {
+                    $terms[] = $withoutArticle;
+                }
+            }
+        }
+
+        return array_values(array_unique($terms));
+    }
+
+    protected function normalizeForMatching(string $text): string
+    {
+        $ascii = Str::ascii(mb_strtolower($text, 'UTF-8'));
+        $clean = preg_replace('/[^a-z0-9]+/', ' ', $ascii) ?: '';
+
+        return trim(preg_replace('/\s+/', ' ', $clean) ?: '');
     }
 
     /**

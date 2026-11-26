@@ -76,6 +76,7 @@ class MasterProgram extends Model
         'email_notificacion',
         'recognize_delivery_from_notification_email',
         'preferred_delivery_platform',
+        'delivery_recognition_aliases',
         'email_copia_notificacion',
     ];
 
@@ -184,6 +185,30 @@ class MasterProgram extends Model
         }
 
         return self::DELIVERY_PLATFORMS[$key] ?? null;
+    }
+
+    /**
+     * Devuelve los nombres alternativos administrables para reconocer entregas de este programa.
+     *
+     * @return array<int, string>
+     */
+    public function deliveryRecognitionAliasesList(): array
+    {
+        $raw = trim((string) ($this->delivery_recognition_aliases ?? ''));
+        if ($raw === '') {
+            return [];
+        }
+
+        $parts = preg_split('/[\r\n,;]+/', $raw) ?: [];
+        $aliases = [];
+        foreach ($parts as $part) {
+            $clean = trim($part);
+            if ($clean !== '' && mb_strlen($clean) >= 3) {
+                $aliases[] = $clean;
+            }
+        }
+
+        return array_values(array_unique($aliases));
     }
 
     /**

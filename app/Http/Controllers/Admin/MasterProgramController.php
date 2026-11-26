@@ -305,6 +305,7 @@ final class MasterProgramController extends Controller
             'email_notificacion' => ['nullable', 'email', 'max:255'],
             'recognize_delivery_from_notification_email' => ['nullable', 'boolean'],
             'preferred_delivery_platform' => ['nullable', Rule::in(array_keys(MasterProgram::DELIVERY_PLATFORMS))],
+            'delivery_recognition_aliases' => ['nullable', 'string', 'max:2000'],
             'email_copia_notificacion' => ['nullable', 'email', 'max:255'],
             'editorial_mode' => ['nullable', Rule::in(['mandatory_review', 'autonomous'])],
             'confirm_autonomous_mode' => ['nullable', 'boolean'],
@@ -348,6 +349,12 @@ final class MasterProgramController extends Controller
             $validated['preferred_delivery_platform'] = array_key_exists($pref, MasterProgram::DELIVERY_PLATFORMS) ? $pref : null;
         } else {
             unset($validated['preferred_delivery_platform']);
+        }
+        if (Schema::hasColumn('master_programs', 'delivery_recognition_aliases')) {
+            $aliases = trim((string) ($validated['delivery_recognition_aliases'] ?? ''));
+            $validated['delivery_recognition_aliases'] = $aliases !== '' ? $aliases : null;
+        } else {
+            unset($validated['delivery_recognition_aliases']);
         }
         $validated['email_copia_notificacion'] = trim((string) ($validated['email_copia_notificacion'] ?? '')) ?: null;
 

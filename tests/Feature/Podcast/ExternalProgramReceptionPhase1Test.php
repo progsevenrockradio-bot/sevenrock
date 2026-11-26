@@ -587,4 +587,166 @@ TXT;
         $this->assertSame('prog.sevenrockradio@gmail.com', $resolved['email']);
         $this->assertSame('dedicated-app-pass', $resolved['password']);
     }
+
+    public function test_shared_sender_disambiguates_unambiguous_subject_and_keeps_ambiguous_in_review(): void
+    {
+        Http::fake([
+            'https://api.telegram.org/*' => Http::response(['ok' => true], 200),
+        ]);
+
+        $archivos = $this->createMasterProgram([
+            'nombre' => 'Los Archivos Secretos del Rock and Roll',
+            'email_notificacion' => 'antoniotovar734@gmail.com',
+            'recognize_delivery_from_notification_email' => true,
+            'delivery_recognition_aliases' => "Archivos Secretos\nASRR",
+        ]);
+        $adn = $this->createMasterProgram([
+            'nombre' => 'ADN Sonoro del Underground',
+            'email_notificacion' => 'antoniotovar734@gmail.com',
+            'recognize_delivery_from_notification_email' => true,
+        ]);
+        $codigo = $this->createMasterProgram([
+            'nombre' => 'Código Zona Misterio',
+            'email_notificacion' => 'antoniotovar734@gmail.com',
+            'recognize_delivery_from_notification_email' => true,
+        ]);
+
+        $validGmailHeaders = "Authentication-Results: mx.google.com;\r\n       dkim=pass header.d=gmail.com;\r\n       spf=pass;\r\n       dmarc=pass\r\n";
+
+        $messages = [
+            // 1. Asunto inequívoco (alias administrable + mayúsculas/acentos) -> Archivos Secretos
+            $this->makeFakeImapMessage([
+                'message_id' => '<shared-ep337@gmail.com>',
+                'from_email' => 'antoniotovar734@gmail.com',
+                'raw_headers' => $validGmailHeaders,
+                'subject' => 'ARCHIVOS SECRETOS #337 - Entrega',
+                'text' => 'https://drive.google.com/file/d/ep337drive/view',
+            ]),
+            // 2. Asunto genérico, pero cuerpo menciona inequívocamente Código Zona Misterio (sin acento)
+            $this->makeFakeImapMessage([
+                'message_id' => '<shared-codigo@gmail.com>',
+                'from_email' => 'antoniotovar734@gmail.com',
+                'raw_headers' => $validGmailHeaders,
+                'subject' => 'Episodio de esta semana',
+                'text' => "Hola, envío programa Codigo Zona Misterio:\nhttps://fromsmash.com/codigo-ep10",
+            ]),
+            // 3. Asunto menciona dos programas -> ambiguo, requiere revisión
+            $this->makeFakeImapMessage([
+                'message_id' => '<shared-two@gmail.com>',
+                'from_email' => 'antoniotovar734@gmail.com',
+                'raw_headers' => $validGmailHeaders,
+                'subject' => 'ADN Sonoro del Underground y Código Zona Misterio',
+                'text' => 'https://we.tl/t-twoprograms1',
+            ]),
+            // 4. Sin coincidencia en asunto ni cuerpo -> ambiguo, requiere revisión (no asigna por orden)
+            $this->makeFakeImapMessage([
+                'message_id' => '<shared-none@gmail.com>',
+                'from_email' => 'antoniotovar734@gmail.com',
+                'raw_headers' => $validGmailHeaders,
+                'subject' => 'Envío semanal',
+                'text' => 'Aquí va el archivo: https://we.tl/t-genericweekly',
+            ]),
+        ];
+
+        $this->bindMockImapMessages($messages);
+
+        $result = app(ExternalProgramInboxPoller::class)->poll();
+        $this->assertSame(4, $result['registered']);
+
+        $d1 = ExternalProgramDelivery::query()->where('message_id', 'shared-ep337@gmail.com')->firstOrFail();
+        $this->assertSame($archivos->id, $d1->master_program_id);
+        $this->assertSame(ExternalProgramDelivery::STATUS_PENDING, $d1->status);
+        $this->assertSame(ExternalProgramDelivery::ID_MATCHED, $d1->identification_status);
+
+        $d2 = ExternalProgramDelivery::query()->where('message_id', 'shared-codigo@gmail.com')->firstOrFail();
+        $this->assertSame($codigo->id, $d2->master_program_id);
+        $this->assertSame(ExternalProgramDelivery::STATUS_PENDING, $d2->status);
+
+        $d3 = ExternalProgramDelivery::query()->where('message_id', 'shared-two@gmail.com')->firstOrFail();
+        $this->assertNull($d3->master_program_id);
+        $this->assertSame(ExternalProgramDelivery::STATUS_NEEDS_REVIEW, $d3->status);
+        $this->assertSame(ExternalProgramDelivery::ID_AMBIGUOUS, $d3->identification_status);
+
+        $d4 = ExternalProgramDelivery::query()->where('message_id', 'shared-none@gmail.com')->firstOrFail();
+        $this->assertNull($d4->master_program_id);
+        $this->assertSame(ExternalProgramDelivery::STATUS_NEEDS_REVIEW, $d4->status);
+        $this->assertSame(ExternalProgramDelivery::ID_AMBIGUOUS, $d4->identification_status);
+    }
+
+    public function test_archived_email_in_gmail_all_mail_is_detected_once_without_duplicates(): void
+    {
+        Http::fake([
+            'https://api.telegram.org/*' => Http::response(['ok' => true], 200),
+        ]);
+
+        $program = $this->createMasterProgram([
+            'nombre' => 'Los Archivos Secretos del Rock and Roll',
+            'email_notificacion' => 'antoniotovar734@gmail.com',
+            'recognize_delivery_from_notification_email' => true,
+        ]);
+
+        $archivedMsg = $this->makeFakeImapMessage([
+            'message_id' => '<archived-ep337@gmail.com>',
+            'from_email' => 'antoniotovar734@gmail.com',
+            'raw_headers' => "Authentication-Results: mx.google.com;\r\n       dkim=pass header.d=gmail.com;\r\n       spf=pass;\r\n       dmarc=pass\r\n",
+            'subject' => 'Los Archivos Secretos del Rock and Roll #337',
+            'text' => 'https://drive.google.com/file/d/archived337/view',
+        ]);
+
+        $inboxQuery = Mockery::mock(WhereQuery::class);
+        $inboxQuery->shouldReceive('leaveUnread')->atLeast()->once()->andReturnSelf();
+        $inboxQuery->shouldReceive('since')->atLeast()->once()->andReturnSelf();
+        $inboxQuery->shouldReceive('setFetchOrder')->with('desc')->atLeast()->once()->andReturnSelf();
+        $inboxQuery->shouldReceive('limit')->atLeast()->once()->andReturnSelf();
+        $inboxQuery->shouldReceive('get')->atLeast()->once()->andReturn(new MessageCollection([]));
+
+        $inboxFolder = Mockery::mock(Folder::class);
+        $inboxFolder->path = 'INBOX';
+        $inboxFolder->name = 'INBOX';
+        $inboxFolder->shouldReceive('query')->atLeast()->once()->andReturn($inboxQuery);
+
+        $allMailQuery = Mockery::mock(WhereQuery::class);
+        $allMailQuery->shouldReceive('leaveUnread')->atLeast()->once()->andReturnSelf();
+        $allMailQuery->shouldReceive('since')->atLeast()->once()->andReturnSelf();
+        $allMailQuery->shouldReceive('setFetchOrder')->with('desc')->atLeast()->once()->andReturnSelf();
+        $allMailQuery->shouldReceive('limit')->atLeast()->once()->andReturnSelf();
+        $allMailQuery->shouldReceive('get')->atLeast()->once()->andReturn(new MessageCollection([$archivedMsg]));
+
+        $allMailFolder = Mockery::mock(Folder::class);
+        $allMailFolder->path = '[Gmail]/Todos';
+        $allMailFolder->name = 'Todos';
+        $allMailFolder->shouldReceive('query')->atLeast()->once()->andReturn($allMailQuery);
+
+        $client = Mockery::mock(Client::class);
+        $client->shouldReceive('connect')->atLeast()->once();
+        $client->shouldReceive('getFolder')->with('INBOX')->atLeast()->once()->andReturn($inboxFolder);
+        $client->shouldReceive('getFolder')->with('[Gmail]/Todos')->atLeast()->once()->andReturn($allMailFolder);
+        $client->shouldReceive('disconnect')->atLeast()->once();
+
+        $cm = Mockery::mock(ClientManager::class);
+        $cm->shouldReceive('make')->atLeast()->once()->andReturn($client);
+        $this->app->instance(ClientManager::class, $cm);
+
+        /** @var ExternalProgramInboxPoller $poller */
+        $poller = app(ExternalProgramInboxPoller::class);
+
+        // 1.ª consulta: detecta el correo archivado en [Gmail]/Todos y envía 1 aviso
+        $first = $poller->poll();
+        $this->assertSame(1, $first['registered']);
+        $this->assertSame(1, $first['notified']);
+        $this->assertFalse($archivedMsg->mutatedFlags);
+        $this->assertFalse($archivedMsg->movedOrDeleted);
+        Http::assertSentCount(1);
+
+        $delivery = ExternalProgramDelivery::query()->where('message_id', 'archived-ep337@gmail.com')->firstOrFail();
+        $this->assertSame($program->id, $delivery->master_program_id);
+        $this->assertSame('[Gmail]/Todos', $delivery->folder);
+
+        // 2.ª consulta: no duplica ni vuelve a avisar
+        $second = $poller->poll();
+        $this->assertSame(0, $second['registered']);
+        $this->assertSame(1, $second['duplicates']);
+        $this->assertSame(1, ExternalProgramDelivery::query()->count());
+        Http::assertSentCount(1);
+    }
 }

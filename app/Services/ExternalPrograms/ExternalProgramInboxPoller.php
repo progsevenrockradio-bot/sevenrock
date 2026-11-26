@@ -93,10 +93,10 @@ class ExternalProgramInboxPoller
         $client->connect();
 
         try {
-            $folder = $client->getFolder('INBOX');
-            if (! $folder) {
+            $foldersToScan = $this->resolveFoldersToScan($client);
+            if ($foldersToScan === []) {
                 $summary['status'] = 'error';
-                $summary['reason'] = 'No se pudo acceder a la carpeta INBOX.';
+                $summary['reason'] = 'No se pudo acceder a ninguna carpeta IMAP válida (INBOX / archivados).';
                 return $summary;
             }
 
@@ -106,56 +106,70 @@ class ExternalProgramInboxPoller
                 ? now((string) config('app.timezone', 'Europe/Madrid'))->subDays(2)->startOfDay()
                 : $sinceDate->copy()->startOfDay();
 
-            $query = $folder->query()
-                ->leaveUnread()
-                ->since($imapSince)
-                ->setFetchOrder('desc')
-                ->limit(max(1, min(200, $limit)));
+            $seenMessageIdsInRun = [];
 
-            // Evitar descargar cuerpos/adjuntos pesados de correos ajenos: leer cabeceras primero
-            // y cargar el cuerpo únicamente cuando el mensaje coincide con remitente/Message-ID.
-            if ($targetMessageId !== '' && method_exists($query, 'setFetchBody')) {
-                $query->setFetchBody(false);
-            } elseif (method_exists($query, 'setFetchBody') && ! ($query instanceof \Mockery\MockInterface)) {
-                $query->setFetchBody(false);
-            }
+            foreach ($foldersToScan as $folder) {
+                $folderName = (string) ($folder->path ?? $folder->name ?? 'INBOX');
 
-            $messages = $query->get();
+                $query = $folder->query()
+                    ->leaveUnread()
+                    ->since($imapSince)
+                    ->setFetchOrder('desc')
+                    ->limit(max(1, min(200, $limit)));
 
-            foreach ($messages as $message) {
-                $msgId = $this->extractNormalizedMessageId($message);
-                if ($targetMessageId !== '' && strcasecmp((string) $msgId, $targetMessageId) !== 0) {
-                    continue;
+                // Evitar descargar cuerpos/adjuntos pesados de correos ajenos: leer cabeceras primero
+                // y cargar el cuerpo únicamente cuando el mensaje coincide con remitente/Message-ID.
+                if ($targetMessageId !== '' && method_exists($query, 'setFetchBody')) {
+                    $query->setFetchBody(false);
+                } elseif (method_exists($query, 'setFetchBody') && ! ($query instanceof \Mockery\MockInterface)) {
+                    $query->setFetchBody(false);
                 }
 
-                $summary['scanned']++;
-                $result = $this->processMessage(
-                    message: $message,
-                    mailbox: $account['email'],
-                    folderName: (string) ($folder->path ?? $folder->name ?? 'INBOX'),
-                    sinceDate: $targetMessageId !== '' ? null : $sinceDate,
-                    senderIndex: $senderIndex,
-                    dryRun: $dryRun
-                );
+                $messages = $query->get();
 
-                if ($result['outcome'] === 'duplicate') {
-                    $summary['duplicates']++;
-                } elseif ($result['outcome'] === 'registered') {
-                    $summary['registered']++;
-                    if ($result['delivery'] !== null) {
-                        $summary['deliveries'][] = $result['delivery'];
+                foreach ($messages as $message) {
+                    $msgId = $this->extractNormalizedMessageId($message);
+                    if ($targetMessageId !== '' && strcasecmp((string) $msgId, $targetMessageId) !== 0) {
+                        continue;
                     }
-                    if ($result['notified'] === true) {
-                        $summary['notified']++;
-                    } elseif ($result['notified'] === false) {
-                        $summary['notification_failures']++;
-                    }
-                } else {
-                    $summary['ignored']++;
-                }
 
-                if ($targetMessageId !== '') {
-                    break;
+                    // Deduplicación entre carpetas (INBOX y [Gmail]/Todos) dentro de la misma ejecución
+                    if ($msgId !== null && isset($seenMessageIdsInRun[strtolower($msgId)])) {
+                        continue;
+                    }
+                    if ($msgId !== null) {
+                        $seenMessageIdsInRun[strtolower($msgId)] = true;
+                    }
+
+                    $summary['scanned']++;
+                    $result = $this->processMessage(
+                        message: $message,
+                        mailbox: $account['email'],
+                        folderName: $folderName,
+                        sinceDate: $targetMessageId !== '' ? null : $sinceDate,
+                        senderIndex: $senderIndex,
+                        dryRun: $dryRun
+                    );
+
+                    if ($result['outcome'] === 'duplicate') {
+                        $summary['duplicates']++;
+                    } elseif ($result['outcome'] === 'registered') {
+                        $summary['registered']++;
+                        if ($result['delivery'] !== null) {
+                            $summary['deliveries'][] = $result['delivery'];
+                        }
+                        if ($result['notified'] === true) {
+                            $summary['notified']++;
+                        } elseif ($result['notified'] === false) {
+                            $summary['notification_failures']++;
+                        }
+                    } else {
+                        $summary['ignored']++;
+                    }
+
+                    if ($targetMessageId !== '') {
+                        break 2;
+                    }
                 }
             }
         } finally {
@@ -324,13 +338,14 @@ class ExternalProgramInboxPoller
             return ['outcome' => 'ignored', 'delivery' => null, 'notified' => null];
         }
 
-        // Verificar remitente autorizado + autenticidad SPF/DKIM/DMARC
+        // Verificar remitente autorizado + autenticidad SPF/DKIM/DMARC (+ desambiguación por asunto/cuerpo)
         $match = $this->senderMatcher->matchMessage(
             rawFromEmail: $rawFromEmail,
             replyToEmail: $replyToEmail,
             rawHeaders: $rawHeaders,
             bodyText: $textBody . "\n" . strip_tags((string) $htmlBody),
-            senderIndex: $senderIndex
+            senderIndex: $senderIndex,
+            subject: $subject
         );
 
         if (! $match['should_register']) {
@@ -398,6 +413,55 @@ class ExternalProgramInboxPoller
             'delivery' => $delivery->fresh(['masterProgram']),
             'notified' => (bool) $telegramResult['ok'],
         ];
+    }
+
+    /**
+     * Resuelve INBOX + la carpeta de archivados/Todos del proveedor (como [Gmail]/Todos o [Gmail]/All Mail),
+     * sin recorrer todas las etiquetas innecesariamente.
+     *
+     * @return array<int, mixed>
+     */
+    protected function resolveFoldersToScan(mixed $client): array
+    {
+        $folders = [];
+        $addedPaths = [];
+
+        try {
+            $inbox = $client->getFolder('INBOX');
+            if ($inbox) {
+                $path = (string) ($inbox->path ?? $inbox->name ?? 'INBOX');
+                $folders[] = $inbox;
+                $addedPaths[strtolower($path)] = true;
+            }
+        } catch (Throwable $e) {
+            Log::warning('[ExternalProgramInboxPoller] No se pudo abrir INBOX: ' . $e->getMessage());
+        }
+
+        // Solo añadir la primera carpeta de archivados/Todos disponible del proveedor
+        $archiveCandidates = [
+            '[Gmail]/Todos',
+            '[Gmail]/All Mail',
+            'All Mail',
+            'Archive',
+        ];
+
+        foreach ($archiveCandidates as $candidate) {
+            try {
+                $archiveFolder = $client->getFolder($candidate);
+                if ($archiveFolder) {
+                    $path = (string) ($archiveFolder->path ?? $archiveFolder->name ?? $candidate);
+                    if (! isset($addedPaths[strtolower($path)])) {
+                        $folders[] = $archiveFolder;
+                        $addedPaths[strtolower($path)] = true;
+                    }
+                    break;
+                }
+            } catch (Throwable) {
+                // La carpeta no existe en este proveedor o mock; probar la siguiente candidata
+            }
+        }
+
+        return $folders;
     }
 
     public function resolveSinceDate(?string $override = null): ?Carbon

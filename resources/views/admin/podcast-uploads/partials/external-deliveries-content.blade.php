@@ -244,6 +244,12 @@
                 </div>
 
                 <dl class="grid gap-1.5 text-xs text-gray-300 sm:grid-cols-2">
+                    @if (filled($delivery->subject))
+                        <div class="sm:col-span-2">
+                            <dt class="text-[11px] text-gray-500">Asunto del correo</dt>
+                            <dd class="text-gray-200 font-medium break-words">{{ $delivery->subject }}</dd>
+                        </div>
+                    @endif
                     <div>
                         <dt class="text-[11px] text-gray-500">Remitente</dt>
                         <dd class="truncate font-mono text-[11px] text-gray-200">

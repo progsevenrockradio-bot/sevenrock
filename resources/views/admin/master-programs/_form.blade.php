@@ -574,6 +574,12 @@
                         <p class="mt-1 text-[11px] text-zinc-400">Dato orientativo: si llega un enlace de otra plataforma admitida, se detectará igualmente sin rechazarlo.</p>
                         @error('preferred_delivery_platform')<p class="mt-1 text-xs text-red-400">{{ $message }}</p>@enderror
                     </div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $labelClass }}">Nombres alternativos para reconocimiento (opcional)</label>
+                        <textarea name="delivery_recognition_aliases" rows="2" class="{{ $textareaClass }}" placeholder="Uno por línea (ej. Archivos Secretos)">{{ old('delivery_recognition_aliases', $masterProgram->delivery_recognition_aliases) }}</textarea>
+                        <p class="mt-1 text-[11px] text-zinc-400">Útil cuando un mismo productor envía varios programas y el asunto usa un nombre abreviado.</p>
+                        @error('delivery_recognition_aliases')<p class="mt-1 text-xs text-red-400">{{ $message }}</p>@enderror
+                    </div>
                     <div>
                         <label class="{{ $labelClass }}">Red social 1 (URL)</label>
                         <input name="red_social1_url" value="{{ old('red_social1_url', $masterProgram->red_social1_url) }}" class="{{ $inputClass }}">
