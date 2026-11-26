@@ -245,7 +245,10 @@ class EditorialClassification
                       $tn->where('name', $categoryName)
                          ->orWhere('slug', $slug);
                   });
-            })->orWhereJsonContains('posts.categories', $categoryName);
+            })->orWhere(function (Builder $json) use ($categoryName) {
+                $json->whereNotNull('posts.categories')
+                     ->whereJsonContains('posts.categories', $categoryName);
+            });
         });
     }
 
