@@ -85,6 +85,7 @@ final class PodcastUploadController extends Controller
 
         $masterPrograms->each(static function (MasterProgram $program) use ($maxEpisodes): void {
             $program->next_episode_suggested = max(1, ($maxEpisodes[$program->id] ?? 0) + 1);
+            $program->next_emission_info = $program->calculateNextEmission();
         });
 
         $programsByDay = collect($dayTabs)
@@ -260,7 +261,8 @@ final class PodcastUploadController extends Controller
                 },
             ],
             'live_title' => ['required', 'string', 'max:255'],
-            'fecha_emision' => ['required', 'date'],
+            'fecha_emision' => ['nullable', 'date'],
+            'fecha_emision_manual' => ['nullable', 'boolean'],
             'biografia_invitado' => ['nullable', 'string', 'max:255'],
             'resena' => ['nullable', 'string'],
             'imagen_episodio_url' => ['nullable', 'url', 'max:255'],
@@ -309,7 +311,25 @@ final class PodcastUploadController extends Controller
             'archivo_mp3.max' => 'El archivo MP3 no puede superar 500 MB.',
         ]);
 
-        $master = MasterProgram::query()->findOrFail((int) $data['master_program_id']);
+        $master = MasterProgram::query()->with('emisiones')->findOrFail((int) $data['master_program_id']);
+
+        // Resolver fecha de emisión de forma coherente con el formulario:
+        // - Si el usuario envió una fecha (manual o confirmada), se conserva.
+        // - Si viene vacía, se calcula la próxima emisión prevista del programa maestro.
+        // - Si falta configuración del horario, se informa explícitamente (nunca se sustituye por hoy).
+        $rawFechaEmision = trim((string) ($data['fecha_emision'] ?? ''));
+        if ($rawFechaEmision !== '') {
+            $resolvedFechaEmision = Carbon::parse($rawFechaEmision)->toDateString();
+        } else {
+            $nextEmission = $master->calculateNextEmission();
+            if (($nextEmission['status'] ?? '') !== 'ok' || empty($nextEmission['date'])) {
+                return back()->withInput()->withErrors([
+                    'fecha_emision' => (string) ($nextEmission['label'] ?? 'Falta configurar el horario del programa maestro. Indica la fecha de emisión manualmente.'),
+                ]);
+            }
+            $resolvedFechaEmision = (string) $nextEmission['date'];
+        }
+        $data['fecha_emision'] = $resolvedFechaEmision;
 
         // Protección contra transferencias concurrentes del mismo programa
         $programLock = Cache::lock("podcast_upload_master_{$master->id}", 60);

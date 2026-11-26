@@ -263,6 +263,10 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
     activeDay: options.initialDay ?? 'LUNES',
     activeTab: options.initialTab ?? 'multimedia',
     fecha_emision: options.initialDate ?? '',
+    fechaEmisionManual: Boolean(options.initialDateManual ?? false),
+    lastSuggestedDate: '',
+    lastSuggestedLabel: '',
+    lastSuggestedType: '',
     dateSuggestion: '',
     dateSuggestionType: '',
     uploading: false,
@@ -419,10 +423,14 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         this.updateUploadEstimate(file);
     },
     init() {
-        this.computeDateForDay(this.activeDay);
+        this.$nextTick(() => {
+            this.syncDateFromActiveProgram();
+        });
 
-        this.$watch('activeDay', (day) => {
-            this.computeDateForDay(day);
+        this.$watch('activeDay', () => {
+            this.$nextTick(() => {
+                this.syncDateFromActiveProgram();
+            });
         });
 
         try {
@@ -558,50 +566,60 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
             this.uppy = null;
         }
     },
-    computeDateForDay(dayKey) {
-        const targetDay = DAY_MAP[String(dayKey ?? '').toUpperCase()];
-        if (!targetDay) {
+    markFechaEmisionManual() {
+        if (this.fecha_emision && String(this.fecha_emision).trim() !== '') {
+            this.fechaEmisionManual = true;
+        }
+    },
+    restoreSuggestedDate() {
+        if (this.lastSuggestedDate) {
+            this.fechaEmisionManual = false;
+            this.fecha_emision = this.lastSuggestedDate;
+            this.dateSuggestion = this.lastSuggestedLabel;
+            this.dateSuggestionType = this.lastSuggestedType;
+        }
+    },
+    syncDateFromActiveProgram() {
+        const form = this.$el?.tagName === 'FORM' ? this.$el : document.querySelector('form[action*="podcast-uploads"]');
+        const select = this.getActiveProgramSelect(form);
+        const selectedOption = select?.options?.[select.selectedIndex] ?? null;
+        if (selectedOption && selectedOption.value) {
+            this.applyProgramNextEmission(selectedOption);
+        } else if (!this.fechaEmisionManual && !this.fecha_emision) {
+            this.lastSuggestedDate = '';
+            this.lastSuggestedLabel = '';
+            this.lastSuggestedType = '';
+            this.dateSuggestion = 'Selecciona un programa maestro para proponer su próxima emisión.';
+            this.dateSuggestionType = 'future';
+        }
+    },
+    applyProgramNextEmission(selectedOption) {
+        if (!selectedOption || !selectedOption.value) {
             return;
         }
 
-        const today = new Date();
-        const currentDay = today.getDay();
-        const currentDayIso = currentDay === 0 ? 7 : currentDay;
-        const targetDate = new Date(today);
+        const nextDate = selectedOption.getAttribute('data-next-emission-date') || '';
+        const nextStatus = selectedOption.getAttribute('data-next-emission-status') || '';
+        const nextLabel = selectedOption.getAttribute('data-next-emission-label') || '';
+        const nextType = selectedOption.getAttribute('data-next-emission-type') || 'future';
 
-        if (targetDay === currentDayIso) {
-            this.dateSuggestionType = 'today';
-            this.dateSuggestion = 'Hoy es el día correcto';
-            this.fecha_emision = this.toDateInputValue(today);
+        this.lastSuggestedDate = nextDate;
+        this.lastSuggestedLabel = nextLabel;
+        this.lastSuggestedType = nextType;
+        this.dateSuggestion = nextLabel;
+        this.dateSuggestionType = nextType;
+
+        if (this.fechaEmisionManual) {
+            // Nunca sobrescribir una fecha elegida manualmente por el usuario
             return;
         }
 
-        const diff = targetDay > currentDayIso
-            ? targetDay - currentDayIso
-            : 7 - currentDayIso + targetDay;
-
-        targetDate.setDate(today.getDate() + diff);
-        this.dateSuggestionType = targetDay > currentDayIso ? 'future' : 'next';
-        this.dateSuggestion = `Próximo ${this.formatWeekday(targetDate)} = ${this.formatDayMonth(targetDate)}`;
-        this.fecha_emision = this.toDateInputValue(targetDate);
-    },
-    formatWeekday(date) {
-        return date.toLocaleDateString('es-ES', {
-            weekday: 'long',
-        });
-    },
-    formatDayMonth(date) {
-        return date.toLocaleDateString('es-ES', {
-            day: 'numeric',
-            month: 'long',
-        });
-    },
-    toDateInputValue(date) {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-
-        return `${y}-${m}-${d}`;
+        if (nextStatus === 'ok' && nextDate) {
+            this.fecha_emision = nextDate;
+        } else {
+            // Si falta configuración suficiente, no sustituir silenciosamente por hoy
+            this.fecha_emision = '';
+        }
     },
     updateEpisodeNumber(event) {
         const selectedOption = event.target.options[event.target.selectedIndex];
@@ -610,6 +628,7 @@ Alpine.data('podcastUploadForm', (options = {}) => ({
         if (input) {
             input.value = nextEpisode || '';
         }
+        this.applyProgramNextEmission(selectedOption);
     },
     getActiveProgramSelect(form) {
         if (!form) return null;

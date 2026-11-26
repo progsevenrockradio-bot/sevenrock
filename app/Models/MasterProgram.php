@@ -482,6 +482,220 @@ class MasterProgram extends Model
     }
 
     /**
+     * Calcula la próxima emisión prevista del programa maestro usando su calendario,
+     * hora de inicio, duración y zona horaria.
+     *
+     * Reglas:
+     * - Antes del día de emisión -> propone la siguiente fecha correspondiente.
+     * - Mismo día antes de la hora de inicio -> propone ese mismo día.
+     * - Durante la emisión en curso -> respeta protección en vivo y propone la siguiente emisión disponible.
+     * - Mismo día tras finalizar la emisión -> propone la siguiente emisión.
+     * - Si falta configuración suficiente -> devuelve status 'incomplete_config' indicando qué dato falta
+     *   (nunca sustituye silenciosamente por hoy).
+     *
+     * @return array{
+     *     status: 'ok'|'incomplete_config',
+     *     date: ?string,
+     *     datetime: ?string,
+     *     day_key: ?string,
+     *     time: ?string,
+     *     timezone: ?string,
+     *     is_today: bool,
+     *     is_live_now: bool,
+     *     label: string,
+     *     missing_fields: array<int, string>,
+     * }
+     */
+    public function calculateNextEmission(?Carbon $referenceNow = null): array
+    {
+        $rawTz = trim((string) ($this->timezone ?? ''));
+        $missing = [];
+
+        if ($rawTz === '' || ! in_array($rawTz, timezone_identifiers_list(), true)) {
+            $missing[] = 'zona horaria';
+        }
+
+        $isoDayMap = [
+            'LUNES' => 1,
+            'MARTES' => 2,
+            'MIERCOLES' => 3,
+            'JUEVES' => 4,
+            'VIERNES' => 5,
+            'SABADO' => 6,
+            'DOMINGO' => 7,
+        ];
+
+        $emisiones = $this->relationLoaded('emisiones') ? $this->emisiones : $this->emisiones()->get();
+        $slots = [];
+
+        if ($emisiones->isNotEmpty()) {
+            foreach ($emisiones->where('activo', true) as $em) {
+                $dayKey = strtoupper(trim((string) ($em->dia_semana ?? '')));
+                $hora = trim((string) ($em->hora_inicio ?? ''));
+                if (isset($isoDayMap[$dayKey]) && $hora !== '') {
+                    $durationSeconds = ($em->duracion_segundos !== null && (int) $em->duracion_segundos > 0)
+                        ? (int) $em->duracion_segundos
+                        : max(1, (int) ($em->duracion_minutos ?? $this->duracion_minutos ?? 120)) * 60;
+
+                    $slots[] = [
+                        'day_key' => $dayKey,
+                        'day_iso' => $isoDayMap[$dayKey],
+                        'time' => $hora,
+                        'duration_seconds' => $durationSeconds,
+                    ];
+                }
+            }
+
+            if ($slots === []) {
+                $missing[] = 'emisión semanal activa con día y hora';
+            }
+        } else {
+            $baseDay = strtoupper(trim((string) ($this->dia_transmision ?? '')));
+            $baseTime = trim((string) ($this->hora_transmision ?? ''));
+
+            if (! isset($isoDayMap[$baseDay])) {
+                $missing[] = 'día de transmisión';
+            }
+            if ($baseTime === '') {
+                $missing[] = 'hora de transmisión';
+            }
+
+            if ($missing === []) {
+                $slots[] = [
+                    'day_key' => $baseDay,
+                    'day_iso' => $isoDayMap[$baseDay],
+                    'time' => $baseTime,
+                    'duration_seconds' => max(1, (int) ($this->duracion_minutos ?? 120)) * 60,
+                ];
+            }
+        }
+
+        if ($missing !== [] || $slots === []) {
+            $missingList = implode(', ', array_unique($missing));
+
+            return [
+                'status' => 'incomplete_config',
+                'date' => null,
+                'datetime' => null,
+                'day_key' => null,
+                'time' => null,
+                'timezone' => $rawTz !== '' ? $rawTz : null,
+                'is_today' => false,
+                'is_live_now' => false,
+                'label' => "Falta configurar {$missingList} en el programa maestro. Indica la fecha de emisión manualmente.",
+                'missing_fields' => array_values(array_unique($missing)),
+            ];
+        }
+
+        $nowLocal = ($referenceNow ? $referenceNow->copy() : Carbon::now())->setTimezone($rawTz);
+        $todayDateStr = $nowLocal->format('Y-m-d');
+        $isLiveNow = false;
+        $bestCandidate = null;
+
+        for ($offset = 0; $offset <= 14; $offset++) {
+            $dayCarbon = $nowLocal->copy()->startOfDay()->addDays($offset);
+            $dayIso = (int) $dayCarbon->dayOfWeekIso;
+            $dateStr = $dayCarbon->format('Y-m-d');
+
+            foreach ($slots as $slot) {
+                if ($slot['day_iso'] !== $dayIso) {
+                    continue;
+                }
+
+                $timeParts = explode(':', $slot['time']);
+                $hh = str_pad(trim($timeParts[0] ?? '0'), 2, '0', STR_PAD_LEFT);
+                $mm = str_pad(trim($timeParts[1] ?? '0'), 2, '0', STR_PAD_LEFT);
+                $ss = str_pad(trim($timeParts[2] ?? '0'), 2, '0', STR_PAD_LEFT);
+                $normalizedTime = "{$hh}:{$mm}:{$ss}";
+
+                try {
+                    $startsAt = Carbon::createFromFormat('Y-m-d H:i:s', "{$dateStr} {$normalizedTime}", $rawTz);
+                } catch (\Throwable) {
+                    continue;
+                }
+
+                $endsAt = $startsAt->copy()->addSeconds((int) $slot['duration_seconds']);
+
+                // Si la emisión está actualmente en curso, respetar protección en vivo y pasar a la siguiente
+                if ($nowLocal->greaterThanOrEqualTo($startsAt) && $nowLocal->lessThan($endsAt)) {
+                    $isLiveNow = true;
+                    continue;
+                }
+
+                // Si la emisión de hoy ya terminó, buscar la siguiente
+                if ($nowLocal->greaterThanOrEqualTo($endsAt)) {
+                    continue;
+                }
+
+                if ($bestCandidate === null || $startsAt->lt($bestCandidate['starts_at'])) {
+                    $bestCandidate = [
+                        'starts_at' => $startsAt,
+                        'day_key' => $slot['day_key'],
+                        'time_short' => "{$hh}:{$mm}",
+                    ];
+                }
+            }
+
+            if ($bestCandidate !== null) {
+                break;
+            }
+        }
+
+        if ($bestCandidate === null) {
+            return [
+                'status' => 'incomplete_config',
+                'date' => null,
+                'datetime' => null,
+                'day_key' => null,
+                'time' => null,
+                'timezone' => $rawTz,
+                'is_today' => false,
+                'is_live_now' => $isLiveNow,
+                'label' => 'No se pudo determinar una próxima emisión válida. Indica la fecha de emisión manualmente.',
+                'missing_fields' => ['hora de transmisión válida'],
+            ];
+        }
+
+        /** @var Carbon $startsAt */
+        $startsAt = $bestCandidate['starts_at'];
+        $candidateDate = $startsAt->format('Y-m-d');
+        $isToday = $candidateDate === $todayDateStr;
+        $dayNames = [
+            1 => 'lunes', 2 => 'martes', 3 => 'miércoles', 4 => 'jueves',
+            5 => 'viernes', 6 => 'sábado', 7 => 'domingo',
+        ];
+        $monthNames = [
+            1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
+            5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
+            9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre',
+        ];
+        $dayLabel = $dayNames[(int) $startsAt->dayOfWeekIso] ?? '';
+        $monthLabel = $monthNames[(int) $startsAt->month] ?? '';
+        $humanDate = sprintf('%s %d de %s', $dayLabel, (int) $startsAt->day, $monthLabel);
+
+        if ($isLiveNow) {
+            $label = "Emisión en curso ahora (protección en vivo). Próxima emisión: {$humanDate} ({$bestCandidate['time_short']} {$rawTz})";
+        } elseif ($isToday) {
+            $label = "Emisión hoy a las {$bestCandidate['time_short']} ({$rawTz})";
+        } else {
+            $label = "Próxima emisión: {$humanDate} ({$bestCandidate['time_short']} {$rawTz})";
+        }
+
+        return [
+            'status' => 'ok',
+            'date' => $candidateDate,
+            'datetime' => $startsAt->format('Y-m-d H:i:s'),
+            'day_key' => $bestCandidate['day_key'],
+            'time' => $bestCandidate['time_short'],
+            'timezone' => $rawTz,
+            'is_today' => $isToday,
+            'is_live_now' => $isLiveNow,
+            'label' => $label,
+            'missing_fields' => [],
+        ];
+    }
+
+    /**
      * Calcula el plazo límite de entrega para una emisión específica.
      *
      * @param mixed $emissionDate Fecha de emisión (Y-m-d o objeto fecha)

@@ -173,7 +173,12 @@
         method="POST"
         enctype="multipart/form-data"
         class="mt-6 space-y-6"
-        x-data="podcastUploadForm({ initialDay: @js($initialDay), initialTab: @js($initialTab), initialDate: @js(old('fecha_emision', now()->toDateString())) })"
+        x-data="podcastUploadForm({
+            initialDay: @js($initialDay),
+            initialTab: @js($initialTab),
+            initialDate: @js(old('fecha_emision', '')),
+            initialDateManual: @js(old('fecha_emision_manual') === '1' || old('fecha_emision') !== null)
+        })"
         @submit="submit($event)"
     >
         @csrf

@@ -62,9 +62,19 @@
                 >
                     <option value="">-- Seleccionar programa maestro de {{ $dayLabel }} --</option>
                     @forelse ($dayPrograms as $masterProgram)
+                        @php
+                            $nextEmission = $masterProgram->next_emission_info ?? $masterProgram->calculateNextEmission();
+                            $nextEmissionType = ($nextEmission['status'] ?? '') === 'incomplete_config'
+                                ? 'warning'
+                                : (! empty($nextEmission['is_today']) ? 'today' : 'future');
+                        @endphp
                         <option
                             value="{{ $masterProgram->id }}"
                             data-next-episode="{{ $masterProgram->next_episode_suggested }}"
+                            data-next-emission-date="{{ $nextEmission['date'] ?? '' }}"
+                            data-next-emission-status="{{ $nextEmission['status'] ?? 'incomplete_config' }}"
+                            data-next-emission-label="{{ $nextEmission['label'] ?? '' }}"
+                            data-next-emission-type="{{ $nextEmissionType }}"
                             @selected((string) old('master_program_id') === (string) $masterProgram->id)
                         >
                             {{ $masterProgram->name }} (Siguiente sugerido: Ep. {{ $masterProgram->next_episode_suggested }})
@@ -128,24 +138,44 @@
 
         {{-- Fecha de emisión --}}
         <div>
-            <label class="block text-xs font-medium text-gray-300 font-sans mb-1.5">
-                Fecha de emisión
-            </label>
+            <div class="mb-1.5 flex items-center justify-between gap-2">
+                <label class="block text-xs font-medium text-gray-300 font-sans">
+                    Fecha de emisión <span class="text-[#c32720]">*</span>
+                </label>
+                <template x-if="fechaEmisionManual && lastSuggestedDate">
+                    <button
+                        type="button"
+                        @click="restoreSuggestedDate()"
+                        class="text-[11px] font-medium text-sky-400 hover:text-sky-300 hover:underline"
+                    >
+                        Usar próxima emisión
+                    </button>
+                </template>
+            </div>
+            <input type="hidden" name="fecha_emision_manual" :value="fechaEmisionManual ? '1' : '0'">
             <input
                 type="date"
                 name="fecha_emision"
                 x-model="fecha_emision"
+                @input="markFechaEmisionManual()"
+                @change="markFechaEmisionManual()"
                 class="h-10 w-full rounded-lg border border-white/10 bg-black/50 px-3.5 text-xs sm:text-sm text-gray-200 focus:border-[#c32720] focus:ring-1 focus:ring-[#c32720] focus:outline-none transition-colors"
             >
+            <template x-if="fechaEmisionManual && fecha_emision">
+                <p class="mt-1 text-[11px] font-sans text-sky-300">
+                    Fecha elegida manualmente (se conservará al cambiar de paso, reintentar o guardar).
+                </p>
+            </template>
             <template x-if="dateSuggestion">
                 <p
                     class="mt-1 text-[11px] font-sans"
                     :class="{
                         'text-emerald-400': dateSuggestionType === 'today',
                         'text-amber-300': dateSuggestionType === 'future' || dateSuggestionType === 'next',
+                        'text-rose-300': dateSuggestionType === 'warning',
                         'text-orange-300': dateSuggestionType === 'past',
                     }"
-                    x-text="dateSuggestionType === 'today' ? '✅ ' + dateSuggestion : '📅 ' + dateSuggestion"
+                    x-text="dateSuggestionType === 'today' ? '✅ ' + dateSuggestion : (dateSuggestionType === 'warning' ? '⚠️ ' + dateSuggestion : '📅 ' + dateSuggestion)"
                 ></p>
             </template>
             @error('fecha_emision')
