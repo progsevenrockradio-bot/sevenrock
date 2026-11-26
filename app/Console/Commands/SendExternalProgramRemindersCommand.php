@@ -33,3 +33,4 @@ class SendExternalProgramRemindersCommand extends Command
         return self::SUCCESS;
     }
 }
+

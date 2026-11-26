@@ -33,3 +33,4 @@ class MasterProgramDeliverySender extends Model
         return $this->belongsTo(MasterProgram::class, 'master_program_id');
     }
 }
+

@@ -2,10 +2,24 @@
     $pendingExternalDeliveries = $pendingExternalDeliveries ?? collect();
     $resolvedExternalDeliveries = $resolvedExternalDeliveries ?? collect();
     $allMasterPrograms = $allMasterPrograms ?? collect();
+    $externalReceptionSettings = $externalReceptionSettings ?? [
+        'mailbox_email' => '',
+        'telegram_chat_id' => '',
+        'since_date' => '',
+        'has_telegram_token' => false,
+    ];
+    $sinceDateForInput = '';
+    if (! empty($externalReceptionSettings['since_date'])) {
+        try {
+            $sinceDateForInput = \Illuminate\Support\Carbon::parse((string) $externalReceptionSettings['since_date'])->format('Y-m-d\TH:i');
+        } catch (\Throwable) {
+            $sinceDateForInput = '';
+        }
+    }
 @endphp
 
-<div x-data="{ tab: 'pending', manualOpen: false }" class="space-y-4">
-    {{-- Pestañas + botón de registro manual --}}
+<div x-data="{ tab: 'pending', manualOpen: false, settingsOpen: false }" class="space-y-4">
+    {{-- Pestañas + configuración + registro manual --}}
     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
         <div class="flex items-center gap-1.5">
             <button
@@ -26,14 +40,83 @@
             </button>
         </div>
 
-        <button
-            type="button"
-            @click="manualOpen = !manualOpen"
-            class="h-8 rounded-lg border border-white/10 bg-white/5 px-3 text-xs font-medium text-gray-200 hover:bg-white/10 hover:text-white transition-colors"
-        >
-            <span x-text="manualOpen ? 'Ocultar registro manual' : '+ Registrar enlace manual'"></span>
-        </button>
+        <div class="flex items-center gap-1.5">
+            <button
+                type="button"
+                @click="settingsOpen = !settingsOpen; if (settingsOpen) manualOpen = false"
+                class="h-8 rounded-lg border border-white/10 bg-white/5 px-3 text-xs font-medium text-gray-200 hover:bg-white/10 hover:text-white transition-colors"
+            >
+                <span x-text="settingsOpen ? 'Ocultar configuración' : 'Configuración'"></span>
+            </button>
+            <button
+                type="button"
+                @click="manualOpen = !manualOpen; if (manualOpen) settingsOpen = false"
+                class="h-8 rounded-lg border border-white/10 bg-white/5 px-3 text-xs font-medium text-gray-200 hover:bg-white/10 hover:text-white transition-colors"
+            >
+                <span x-text="manualOpen ? 'Ocultar manual' : '+ Registrar enlace'"></span>
+            </button>
+        </div>
     </div>
+
+    {{-- Configuración administrable (buzón, destino Telegram y fecha de inicio) --}}
+    <form
+        x-show="settingsOpen"
+        x-cloak
+        action="{{ route('admin.podcast-uploads.external-deliveries.settings') }}"
+        method="POST"
+        class="rounded-xl border border-white/10 bg-[#141418] p-4 space-y-3"
+    >
+        @csrf
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="text-xs font-semibold text-white">Configuración de recepción externa</div>
+            <span class="rounded-md px-2 py-0.5 text-[10px] font-semibold {{ ! empty($externalReceptionSettings['has_telegram_token']) ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300' }}">
+                Bot Telegram: {{ ! empty($externalReceptionSettings['has_telegram_token']) ? 'Token configurado' : 'Sin token' }}
+            </span>
+        </div>
+        <p class="text-[11px] text-gray-400">
+            Estos parámetros se aplican al instante sin cambios de código ni reinicios. Los remitentes se activan por programa maestro.
+        </p>
+        <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+                <label class="mb-1 block text-[11px] font-medium text-gray-400">Buzón receptor (IMAP)</label>
+                <input
+                    type="email"
+                    name="mailbox_email"
+                    value="{{ old('mailbox_email', $externalReceptionSettings['mailbox_email']) }}"
+                    placeholder="prog.sevenrockradio@gmail.com"
+                    class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs text-gray-100 focus:border-[#c32720] focus:outline-none"
+                >
+            </div>
+            <div>
+                <label class="mb-1 block text-[11px] font-medium text-gray-400">Destino Telegram administrativo (chat_id)</label>
+                <input
+                    type="text"
+                    name="telegram_chat_id"
+                    value="{{ old('telegram_chat_id', $externalReceptionSettings['telegram_chat_id']) }}"
+                    placeholder="Ej. -1001234567890"
+                    class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs text-gray-100 focus:border-[#c32720] focus:outline-none"
+                >
+            </div>
+            <div class="sm:col-span-2">
+                <label class="mb-1 block text-[11px] font-medium text-gray-400">Fecha y hora de inicio de consulta ({{ config('app.timezone', 'Europe/Madrid') }})</label>
+                <input
+                    type="datetime-local"
+                    name="since_date"
+                    value="{{ old('since_date', $sinceDateForInput) }}"
+                    class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs text-gray-100 focus:border-[#c32720] focus:outline-none"
+                >
+                <p class="mt-1 text-[11px] text-gray-500">Solo se procesarán correos recibidos a partir de esta fecha para evitar avisos históricos.</p>
+            </div>
+        </div>
+        <div class="flex justify-end pt-1">
+            <button
+                type="submit"
+                class="h-8 rounded-lg bg-[#c32720] hover:bg-[#d63028] px-3.5 text-xs font-semibold text-white transition-colors"
+            >
+                Guardar configuración
+            </button>
+        </div>
+    </form>
 
     {{-- Formulario de registro manual de enlace y asociación de remitente --}}
     <form
@@ -303,3 +386,4 @@
         @endforelse
     </div>
 </div>
+

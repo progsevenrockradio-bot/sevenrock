@@ -11,6 +11,7 @@ use App\Jobs\ProcessMp3Job;
 use App\Jobs\UploadArchiveOrgJob;
 use App\Jobs\UploadRadiobossJob;
 use App\Models\ExternalProgramDelivery;
+use App\Models\ExternalProgramSetting;
 use App\Models\MasterProgram;
 use App\Models\MasterProgramEmision;
 use App\Models\RadioProgram;
@@ -167,6 +168,16 @@ final class PodcastUploadController extends Controller
                 ->get();
         }
 
+        $externalReceptionSettings = [
+            'mailbox_email' => ExternalProgramSetting::getValue('mailbox_email')
+                ?: (string) config('services.external_programs.mailbox', ''),
+            'telegram_chat_id' => ExternalProgramSetting::getValue('telegram_chat_id')
+                ?: (string) config('services.external_programs.telegram_chat_id', ''),
+            'since_date' => ExternalProgramSetting::getValue('since_date')
+                ?: (string) config('services.external_programs.since_date', ''),
+            'has_telegram_token' => filled(config('services.external_programs.telegram_bot_token')),
+        ];
+
         return view('admin.podcast-uploads.index', [
             'dayTabs' => $dayTabs,
             'programsByDay' => $programsByDay,
@@ -178,6 +189,7 @@ final class PodcastUploadController extends Controller
             'pendingExternalDeliveries' => $pendingExternalDeliveries,
             'resolvedExternalDeliveries' => $resolvedExternalDeliveries,
             'pendingExternalDeliveriesCount' => $pendingExternalDeliveriesCount,
+            'externalReceptionSettings' => $externalReceptionSettings,
         ]);
     }
 

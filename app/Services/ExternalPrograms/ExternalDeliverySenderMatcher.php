@@ -257,3 +257,4 @@ class ExternalDeliverySenderMatcher
         return filter_var($clean, FILTER_VALIDATE_EMAIL) ? $clean : '';
     }
 }
+

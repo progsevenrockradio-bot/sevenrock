@@ -485,7 +485,20 @@ TXT;
             ->assertSee('Piloto Rock')
             ->assertSee('Caducidad desconocida');
 
-        // 4. Aplazar y luego marcar como descargado
+        // 4. Actualizar configuración administrable (buzón, Telegram, fecha de inicio) sin tocar código
+        $this->actingAs($admin)
+            ->post(route('admin.podcast-uploads.external-deliveries.settings'), [
+                'mailbox_email' => 'entregas@sevenrockradio.com',
+                'telegram_chat_id' => '-1001234567890',
+                'since_date' => '2026-11-26 11:00',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('entregas@sevenrockradio.com', ExternalProgramSetting::getValue('mailbox_email'));
+        $this->assertSame('-1001234567890', ExternalProgramSetting::getValue('telegram_chat_id'));
+        $this->assertSame('2026-11-26 11:00:00', ExternalProgramSetting::getValue('since_date'));
+
+        // 5. Aplazar y luego marcar como descargado
         $this->actingAs($admin)
             ->post(route('admin.podcast-uploads.external-deliveries.snooze', $delivery), ['hours' => 24])
             ->assertRedirect();

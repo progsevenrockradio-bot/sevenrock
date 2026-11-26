@@ -195,3 +195,4 @@ class ExternalProgramDelivery extends Model
             : (string) config('app.timezone', 'Europe/Madrid');
     }
 }
+

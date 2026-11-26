@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ExternalProgramDelivery;
+use App\Models\ExternalProgramSetting;
 use App\Models\MasterProgram;
 use App\Models\MasterProgramDeliverySender;
 use App\Services\ExternalPrograms\ExternalDeliveryLinkDetector;
@@ -194,6 +195,34 @@ final class ExternalProgramDeliveryController extends Controller
             ->with('error', 'No se pudo enviar el aviso por Telegram: ' . ($result['error'] ?? 'Error desconocido.'));
     }
 
+    public function updateSettings(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'mailbox_email' => ['nullable', 'email', 'max:255'],
+            'telegram_chat_id' => ['nullable', 'string', 'max:64', 'regex:/^(-?\d+|@[A-Za-z0-9_]{4,64})$/'],
+            'since_date' => ['nullable', 'date'],
+        ], [
+            'mailbox_email.email' => 'El buzón receptor debe ser una dirección de correo válida.',
+            'telegram_chat_id.regex' => 'El destino de Telegram debe ser un chat_id numérico (ej. -1001234567890) o un canal @usuario.',
+            'since_date.date' => 'La fecha de inicio de consulta no es válida.',
+        ]);
+
+        $tz = (string) config('app.timezone', 'Europe/Madrid');
+        $mailbox = ! empty($validated['mailbox_email']) ? strtolower(trim((string) $validated['mailbox_email'])) : null;
+        $chatId = ! empty($validated['telegram_chat_id']) ? trim((string) $validated['telegram_chat_id']) : null;
+        $sinceDate = ! empty($validated['since_date'])
+            ? Carbon::parse((string) $validated['since_date'], $tz)->format('Y-m-d H:i:s')
+            : null;
+
+        ExternalProgramSetting::setValue('mailbox_email', $mailbox);
+        ExternalProgramSetting::setValue('telegram_chat_id', $chatId);
+        ExternalProgramSetting::setValue('since_date', $sinceDate);
+
+        return redirect()
+            ->route('admin.podcast-uploads.index', ['external_panel' => 1])
+            ->with('status', 'Configuración de recepción externa actualizada sin reiniciar ni desplegar.');
+    }
+
     protected function associateSenderWithProgram(int $programId, string $email): void
     {
         $program = MasterProgram::query()->find($programId);
@@ -220,3 +249,4 @@ final class ExternalProgramDeliveryController extends Controller
         );
     }
 }
+

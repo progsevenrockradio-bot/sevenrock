@@ -395,6 +395,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
             ->prefix('external-deliveries')
             ->name('external-deliveries.')
             ->group(function (): void {
+                Route::post('/settings', 'updateSettings')->name('settings');
                 Route::post('/manual', 'storeManual')->name('manual');
                 Route::post('/{delivery}/assign-program', 'assignProgram')->name('assign-program');
                 Route::post('/{delivery}/snooze', 'snooze')->name('snooze');
