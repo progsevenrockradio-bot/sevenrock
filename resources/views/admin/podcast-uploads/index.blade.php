@@ -30,7 +30,8 @@
     @endphp
 
     {{-- Cabecera estilizada, compacta y moderna --}}
-    <header class="rounded-2xl border border-white/5 bg-[#101012] p-5 sm:p-6 shadow-xl" x-data="{ helpOpen: false }">
+    <div x-data="{ helpOpen: false, externalPanelOpen: @js((bool) request()->boolean('external_panel')) }">
+    <header class="rounded-2xl border border-white/5 bg-[#101012] p-5 sm:p-6 shadow-xl">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <div class="flex items-center gap-2 text-xs font-medium text-gray-400">
@@ -46,7 +47,22 @@
                 </p>
             </div>
 
-            <div class="flex items-center gap-2.5 shrink-0">
+            <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+                @php $pendingExternalCount = (int) ($pendingExternalDeliveriesCount ?? 0); @endphp
+                <button
+                    type="button"
+                    @click="externalPanelOpen = !externalPanelOpen"
+                    class="h-9 px-3.5 rounded-lg border {{ $pendingExternalCount > 0 ? 'border-[#c32720]/50 bg-[#c32720]/15 text-white hover:bg-[#c32720]/25' : 'border-white/10 bg-white/5 text-gray-200 hover:bg-white/10 hover:text-white' }} text-xs font-semibold transition-colors inline-flex items-center gap-2"
+                    :aria-expanded="externalPanelOpen"
+                >
+                    <svg class="h-3.5 w-3.5 {{ $pendingExternalCount > 0 ? 'text-[#c32720]' : 'text-gray-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span>Programas recibidos</span>
+                    <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold {{ $pendingExternalCount > 0 ? 'bg-[#c32720] text-white' : 'bg-white/10 text-gray-300' }}">
+                        {{ $pendingExternalCount }}
+                    </span>
+                </button>
                 <a
                     href="{{ route('admin.master-programs.index') }}"
                     class="h-9 px-3.5 rounded-lg border border-white/10 bg-white/5 text-xs font-medium text-gray-200 hover:bg-white/10 hover:text-white transition-colors inline-flex items-center gap-1.5"
@@ -146,6 +162,10 @@
             </div>
         </div>
     </header>
+
+    {{-- Panel de Programas recibidos (lateral en escritorio, plegable en móvil) --}}
+    @include('admin.podcast-uploads.partials.external-deliveries-panel')
+    </div>
 
     {{-- Formulario Principal --}}
     <form

@@ -409,6 +409,20 @@ Schedule::command('emails:process --only-dv1')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/emails-process.log'));
 
+// Recepción externa de programas (solo lectura IMAP, proceso separado de DV-1, cada 5 minutos sin solapamiento)
+Schedule::command('external-programs:poll')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/external-programs-poll.log'));
+
+// Recordatorios diarios y avisos de caducidad para programas externos pendientes
+Schedule::command('external-programs:send-reminders')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/external-programs-reminders.log'));
+
 // Rotate featured videos every Monday at 00:00 (legacy, not to be confused with the new rotator)
 Schedule::command('videos:rotate-releases')
     ->weeklyOn(1, '00:00')

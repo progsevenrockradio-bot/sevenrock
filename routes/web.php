@@ -391,6 +391,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/{radioProgram}/download', 'download')->name('download');
         Route::delete('/{id}', 'destroy')->name('destroy');
 
+        Route::controller(\App\Http\Controllers\Admin\ExternalProgramDeliveryController::class)
+            ->prefix('external-deliveries')
+            ->name('external-deliveries.')
+            ->group(function (): void {
+                Route::post('/manual', 'storeManual')->name('manual');
+                Route::post('/{delivery}/assign-program', 'assignProgram')->name('assign-program');
+                Route::post('/{delivery}/snooze', 'snooze')->name('snooze');
+                Route::post('/{delivery}/mark-downloaded', 'markDownloaded')->name('mark-downloaded');
+                Route::post('/{delivery}/discard', 'discard')->name('discard');
+                Route::post('/{delivery}/retry-telegram', 'retryTelegram')->name('retry-telegram');
+            });
+
         Route::controller(\App\Http\Controllers\Admin\AdminPodcastEditorialController::class)
             ->prefix('{radioProgram}/editorial')
             ->name('editorial.')

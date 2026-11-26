@@ -205,6 +205,7 @@ final class MasterProgramController extends Controller
             'previewNewsIdsText' => '',
             'generateCodeAction' => null,
             'emisiones'          => collect(),
+            'deliverySenders'    => collect(),
             'availableConductors' => $this->loadAvailableConductors(),
             'authorizedConductorIds' => [],
         ]);
@@ -214,6 +215,7 @@ final class MasterProgramController extends Controller
     {
         $masterProgram = MasterProgram::query()->create($this->validated($request));
         $this->saveEmisiones($masterProgram, $request);
+        $this->saveDeliverySenders($masterProgram, $request);
         $this->syncConductors($masterProgram, $request);
         $masterProgram->syncEmisionNormal();
 
@@ -231,6 +233,9 @@ final class MasterProgramController extends Controller
             'previewNewsIdsText' => $this->idListToText($masterProgram->preview_news_ids),
             'generateCodeAction' => route('admin.programs.generate-code', $masterProgram),
             'emisiones'          => $masterProgram->emisiones()->get(),
+            'deliverySenders'    => Schema::hasTable('master_program_delivery_senders')
+                ? $masterProgram->deliverySenders()->get()
+                : collect(),
             'availableConductors' => $this->loadAvailableConductors(),
             'authorizedConductorIds' => Schema::hasTable('master_program_conductor')
                 ? $masterProgram->authorizedConductors()->pluck('users.id')->map(fn ($id) => (int) $id)->all()
@@ -242,6 +247,7 @@ final class MasterProgramController extends Controller
     {
         $masterProgram->update($this->validated($request, $masterProgram->id, $masterProgram));
         $this->saveEmisiones($masterProgram, $request);
+        $this->saveDeliverySenders($masterProgram, $request);
         $this->syncConductors($masterProgram, $request);
         $masterProgram->syncEmisionNormal();
 
@@ -297,6 +303,7 @@ final class MasterProgramController extends Controller
             'stats_updated_at' => ['nullable', 'date'],
             'ruta_ftp' => ['nullable', 'string', 'max:255'],
             'email_notificacion' => ['nullable', 'email', 'max:255'],
+            'recognize_delivery_from_notification_email' => ['nullable', 'boolean'],
             'email_copia_notificacion' => ['nullable', 'email', 'max:255'],
             'editorial_mode' => ['nullable', Rule::in(['mandatory_review', 'autonomous'])],
             'confirm_autonomous_mode' => ['nullable', 'boolean'],
@@ -330,6 +337,11 @@ final class MasterProgramController extends Controller
         $validated['archive_identifier'] = trim((string) ($validated['archive_identifier'] ?? '')) ?: null;
         $validated['ruta_ftp'] = trim((string) ($validated['ruta_ftp'] ?? '')) ?: null;
         $validated['email_notificacion'] = trim((string) ($validated['email_notificacion'] ?? '')) ?: null;
+        if (Schema::hasColumn('master_programs', 'recognize_delivery_from_notification_email')) {
+            $validated['recognize_delivery_from_notification_email'] = $request->boolean('recognize_delivery_from_notification_email');
+        } else {
+            unset($validated['recognize_delivery_from_notification_email']);
+        }
         $validated['email_copia_notificacion'] = trim((string) ($validated['email_copia_notificacion'] ?? '')) ?: null;
 
         if (Schema::hasColumn('master_programs', 'editorial_mode')) {
@@ -669,6 +681,82 @@ final class MasterProgramController extends Controller
         if ($deleteIds !== []) {
             $masterProgram->emisiones()->whereIn('id', $deleteIds)->delete();
         }
+    }
+
+    /**
+     * Guarda los correos alternativos de entrega externa del programa maestro.
+     * Estos remitentes no reciben notificaciones salientes automáticamente.
+     */
+    private function saveDeliverySenders(MasterProgram $masterProgram, Request $request): void
+    {
+        if (! Schema::hasTable('master_program_delivery_senders')) {
+            return;
+        }
+
+        if (! $request->has('delivery_senders_section_present') && ! $request->has('delivery_senders')) {
+            return;
+        }
+
+        $rows = $request->input('delivery_senders', []);
+        if (! is_array($rows)) {
+            $rows = [];
+        }
+
+        $request->validate([
+            'delivery_senders.*.email' => ['nullable', 'email', 'max:255'],
+            'delivery_senders.*.label' => ['nullable', 'string', 'max:120'],
+            'delivery_senders.*.is_active' => ['nullable'],
+        ], [
+            'delivery_senders.*.email.email' => 'Cada correo alternativo de entrega debe ser una dirección válida.',
+            'delivery_senders.*.label.max' => 'La etiqueta del remitente alternativo no puede superar los 120 caracteres.',
+        ]);
+
+        $keptIds = [];
+        $seenEmails = [];
+
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $email = strtolower(trim((string) ($row['email'] ?? '')));
+            if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+
+            if (isset($seenEmails[$email])) {
+                continue;
+            }
+            $seenEmails[$email] = true;
+
+            $label = trim((string) ($row['label'] ?? '')) ?: null;
+            $isActive = isset($row['is_active']) ? (bool) filter_var($row['is_active'], FILTER_VALIDATE_BOOL) : true;
+            $rowId = (int) ($row['id'] ?? 0);
+
+            $existing = $rowId > 0
+                ? $masterProgram->deliverySenders()->find($rowId)
+                : $masterProgram->deliverySenders()->where('email', $email)->first();
+
+            if ($existing) {
+                $existing->update([
+                    'email' => $email,
+                    'label' => $label,
+                    'is_active' => $isActive,
+                ]);
+                $keptIds[] = $existing->id;
+            } else {
+                $created = $masterProgram->deliverySenders()->create([
+                    'email' => $email,
+                    'label' => $label,
+                    'is_active' => $isActive,
+                ]);
+                $keptIds[] = $created->id;
+            }
+        }
+
+        $masterProgram->deliverySenders()
+            ->when($keptIds !== [], fn ($q) => $q->whereNotIn('id', $keptIds))
+            ->delete();
     }
 
     private function normalizeTime(string $value, ?int $programId = null): ?string

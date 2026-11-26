@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\ProcessMp3Job;
 use App\Jobs\UploadArchiveOrgJob;
 use App\Jobs\UploadRadiobossJob;
+use App\Models\ExternalProgramDelivery;
 use App\Models\MasterProgram;
 use App\Models\MasterProgramEmision;
 use App\Models\RadioProgram;
@@ -142,6 +143,30 @@ final class PodcastUploadController extends Controller
             );
         }
 
+        $pendingExternalDeliveries = collect();
+        $resolvedExternalDeliveries = collect();
+        $pendingExternalDeliveriesCount = 0;
+
+        if (Schema::hasTable('external_program_deliveries')) {
+            $pendingExternalDeliveries = ExternalProgramDelivery::query()
+                ->with(['masterProgram', 'resolvedByUser'])
+                ->activePending()
+                ->orderByDesc('received_at')
+                ->orderByDesc('id')
+                ->limit(100)
+                ->get();
+
+            $pendingExternalDeliveriesCount = $pendingExternalDeliveries->count();
+
+            $resolvedExternalDeliveries = ExternalProgramDelivery::query()
+                ->with(['masterProgram', 'resolvedByUser'])
+                ->resolved()
+                ->orderByDesc('resolved_at')
+                ->orderByDesc('id')
+                ->limit(40)
+                ->get();
+        }
+
         return view('admin.podcast-uploads.index', [
             'dayTabs' => $dayTabs,
             'programsByDay' => $programsByDay,
@@ -149,6 +174,10 @@ final class PodcastUploadController extends Controller
             'suggestedEpisodeNumber' => $suggestedEpisodeNumber,
             'recentUploads' => $this->recentUploads(),
             'recentPublishedUploads' => $this->recentPublishedUploads(),
+            'allMasterPrograms' => $masterPrograms,
+            'pendingExternalDeliveries' => $pendingExternalDeliveries,
+            'resolvedExternalDeliveries' => $resolvedExternalDeliveries,
+            'pendingExternalDeliveriesCount' => $pendingExternalDeliveriesCount,
         ]);
     }
 

@@ -65,12 +65,14 @@ class MasterProgram extends Model
         'stats_updated_at',
         'ruta_ftp',
         'email_notificacion',
+        'recognize_delivery_from_notification_email',
         'email_copia_notificacion',
     ];
 
     protected $casts = [
         'activo' => 'boolean',
         'sync_archive_org' => 'boolean',
+        'recognize_delivery_from_notification_email' => 'boolean',
         'duracion_minutos' => 'integer',
         'submission_cutoff_minutes' => 'integer',
         'default_news_ids' => 'array',
@@ -146,6 +148,58 @@ class MasterProgram extends Model
     public function radioPrograms(): HasMany
     {
         return $this->hasMany(RadioProgram::class, 'master_program_id');
+    }
+
+    public function deliverySenders(): HasMany
+    {
+        return $this->hasMany(MasterProgramDeliverySender::class, 'master_program_id')
+            ->orderBy('email');
+    }
+
+    public function activeDeliverySenders(): HasMany
+    {
+        return $this->deliverySenders()->where('is_active', true);
+    }
+
+    public function externalDeliveries(): HasMany
+    {
+        return $this->hasMany(ExternalProgramDelivery::class, 'master_program_id');
+    }
+
+    /**
+     * Devuelve los correos autorizados para reconocer entregas externas de este programa.
+     * Nunca incluye CC ni destinatarios globales.
+     *
+     * @return array<int, string>
+     */
+    public function authorizedDeliverySenderEmails(): array
+    {
+        $emails = [];
+
+        if (
+            (bool) ($this->recognize_delivery_from_notification_email ?? false)
+            && filled($this->email_notificacion)
+        ) {
+            $primary = strtolower(trim((string) $this->email_notificacion));
+            if (filter_var($primary, FILTER_VALIDATE_EMAIL)) {
+                $emails[] = $primary;
+            }
+        }
+
+        if (Schema::hasTable('master_program_delivery_senders')) {
+            $senders = $this->relationLoaded('deliverySenders')
+                ? $this->deliverySenders->where('is_active', true)
+                : $this->activeDeliverySenders()->get();
+
+            foreach ($senders as $sender) {
+                $addr = strtolower(trim((string) $sender->email));
+                if (filter_var($addr, FILTER_VALIDATE_EMAIL)) {
+                    $emails[] = $addr;
+                }
+            }
+        }
+
+        return array_values(array_unique($emails));
     }
 
     /**

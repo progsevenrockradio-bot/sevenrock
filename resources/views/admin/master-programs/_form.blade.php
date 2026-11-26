@@ -541,6 +541,21 @@
                     <div>
                         <label class="{{ $labelClass }}">Correo de notificación</label>
                         <input name="email_notificacion" value="{{ old('email_notificacion', $masterProgram->email_notificacion) }}" class="{{ $inputClass }}">
+                        @error('email_notificacion')<p class="mt-1 text-xs text-red-400">{{ $message }}</p>@enderror
+                        <label class="mt-2.5 flex items-start gap-2 text-xs text-zinc-300 cursor-pointer">
+                            <input type="hidden" name="recognize_delivery_from_notification_email" value="0">
+                            <input
+                                type="checkbox"
+                                name="recognize_delivery_from_notification_email"
+                                value="1"
+                                @checked(old('recognize_delivery_from_notification_email', (bool) ($masterProgram->recognize_delivery_from_notification_email ?? false)))
+                                class="mt-0.5 h-4 w-4 shrink-0 rounded border-white/20 bg-zinc-900 accent-[#c32720]"
+                            >
+                            <span>
+                                <strong class="font-medium text-zinc-100">Reconocer entregas desde este correo</strong>
+                                <span class="block text-[11px] text-zinc-400 mt-0.5">Mantiene su uso para notificaciones salientes. Nunca autoriza CC ni destinatarios globales.</span>
+                            </span>
+                        </label>
                     </div>
                     <div>
                         <label class="{{ $labelClass }}">Correo en copia (CC)</label>
@@ -553,6 +568,123 @@
                     <div>
                         <label class="{{ $labelClass }}">Red social 2 (URL)</label>
                         <input name="red_social2_url" value="{{ old('red_social2_url', $masterProgram->red_social2_url) }}" class="{{ $inputClass }}">
+                    </div>
+                </div>
+
+                {{-- Correos alternativos de entrega externa --}}
+                @php
+                    $deliverySendersSource = $deliverySenders ?? collect();
+                    if (old('delivery_senders') !== null && is_array(old('delivery_senders'))) {
+                        $deliverySendersArray = collect(old('delivery_senders'))->values()->map(static fn ($row): array => [
+                            'id' => (int) ($row['id'] ?? 0),
+                            'email' => (string) ($row['email'] ?? ''),
+                            'label' => (string) ($row['label'] ?? ''),
+                            'is_active' => ! empty($row['is_active']),
+                        ])->all();
+                    } else {
+                        $deliverySendersArray = $deliverySendersSource->map(static fn ($sender): array => [
+                            'id' => (int) $sender->id,
+                            'email' => (string) $sender->email,
+                            'label' => (string) ($sender->label ?? ''),
+                            'is_active' => (bool) $sender->is_active,
+                        ])->values()->all();
+                    }
+                    $deliverySendersJson = json_encode($deliverySendersArray, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+                @endphp
+                <div
+                    class="border-t border-white/10 pt-4 space-y-3"
+                    x-data="{
+                        senders: {{ $deliverySendersJson }},
+                        addSender() {
+                            this.senders.push({ id: 0, email: '', label: '', is_active: true });
+                        },
+                        removeSender(index) {
+                            this.senders.splice(index, 1);
+                        }
+                    }"
+                >
+                    <input type="hidden" name="delivery_senders_section_present" value="1">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-200">Correos alternativos de entrega</h3>
+                            <p class="mt-0.5 text-[11px] text-zinc-400">Remitentes adicionales autorizados solo para detectar entregas externas. No reciben notificaciones salientes automáticamente.</p>
+                        </div>
+                        <button
+                            type="button"
+                            @click="addSender()"
+                            class="inline-flex h-8 items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 text-xs font-medium text-zinc-200 transition hover:bg-white/10 hover:text-white"
+                        >
+                            + Añadir correo
+                        </button>
+                    </div>
+
+                    @php
+                        $deliverySenderErrors = collect($errors->getMessages())
+                            ->filter(fn ($messages, $key) => str_starts_with($key, 'delivery_senders'))
+                            ->flatten();
+                    @endphp
+                    @if ($deliverySenderErrors->isNotEmpty())
+                        <div class="rounded-lg border border-red-500/30 bg-red-500/10 p-2.5 text-xs text-red-300">
+                            <ul class="list-disc list-inside space-y-0.5">
+                                @foreach ($deliverySenderErrors as $err)
+                                    <li>{{ $err }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    <template x-if="senders.length === 0">
+                        <p class="text-[11px] text-zinc-500">Sin correos alternativos configurados.</p>
+                    </template>
+
+                    <div class="space-y-2.5">
+                        <template x-for="(sender, idx) in senders" :key="idx">
+                            <div class="rounded-lg border border-white/10 bg-[#141418] p-3 space-y-2.5">
+                                <input type="hidden" :name="'delivery_senders[' + idx + '][id]'" :value="sender.id">
+                                <div class="grid gap-2.5 sm:grid-cols-2">
+                                    <div>
+                                        <label class="mb-1 block text-[11px] font-medium text-zinc-400">Correo del remitente</label>
+                                        <input
+                                            type="email"
+                                            :name="'delivery_senders[' + idx + '][email]'"
+                                            x-model="sender.email"
+                                            placeholder="productor@ejemplo.com"
+                                            class="{{ $inputClass }}"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-[11px] font-medium text-zinc-400">Etiqueta (opcional)</label>
+                                        <input
+                                            type="text"
+                                            :name="'delivery_senders[' + idx + '][label]'"
+                                            x-model="sender.label"
+                                            placeholder="Ej. Estudio / Productor"
+                                            class="{{ $inputClass }}"
+                                        >
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <label class="inline-flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+                                        <input type="hidden" :name="'delivery_senders[' + idx + '][is_active]'" value="0">
+                                        <input
+                                            type="checkbox"
+                                            :name="'delivery_senders[' + idx + '][is_active]'"
+                                            value="1"
+                                            x-model="sender.is_active"
+                                            class="h-4 w-4 rounded border-white/20 bg-zinc-900 accent-[#c32720]"
+                                        >
+                                        <span x-text="sender.is_active ? 'Activo' : 'Desactivado'"></span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        @click="removeSender(idx)"
+                                        class="inline-flex h-7 items-center rounded-md border border-red-500/20 bg-red-500/10 px-2 text-[11px] font-medium text-red-400 transition hover:bg-red-500/20"
+                                    >
+                                        Quitar
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </section>
