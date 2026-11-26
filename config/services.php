@@ -134,7 +134,7 @@ return [
         'enabled' => (bool) env('EXTERNAL_PROGRAMS_ENABLED', false),
         'mailbox' => env('EXTERNAL_PROGRAMS_MAILBOX', env('IMAP_USERNAME')),
         'since_date' => env('EXTERNAL_PROGRAMS_SINCE_DATE'),
-        'telegram_bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'telegram_bot_token' => env('EXTERNAL_PROGRAMS_TELEGRAM_BOT_TOKEN', env('TELEGRAM_BOT_TOKEN')),
         'telegram_chat_id' => env('EXTERNAL_PROGRAMS_TELEGRAM_CHAT_ID', env('TELEGRAM_ADMIN_CHAT_ID', env('TELEGRAM_CHAT_ID'))),
         'reminder_min_age_hours' => (int) env('EXTERNAL_PROGRAMS_REMINDER_MIN_AGE_HOURS', 20),
         'reminder_interval_hours' => (int) env('EXTERNAL_PROGRAMS_REMINDER_INTERVAL_HOURS', 23),
