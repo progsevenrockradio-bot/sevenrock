@@ -152,6 +152,8 @@ final class PodcastUploadController extends Controller
             $pendingExternalDeliveries = ExternalProgramDelivery::query()
                 ->with(['masterProgram', 'resolvedByUser'])
                 ->activePending()
+                ->orderByRaw('CASE WHEN expires_at IS NULL THEN 1 ELSE 0 END ASC')
+                ->orderBy('expires_at', 'asc')
                 ->orderByDesc('received_at')
                 ->orderByDesc('id')
                 ->limit(100)

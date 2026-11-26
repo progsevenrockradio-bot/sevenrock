@@ -24,6 +24,15 @@ class MasterProgram extends Model
     public const EDITORIAL_MODE_MANDATORY = 'mandatory_review';
     public const EDITORIAL_MODE_AUTONOMOUS = 'autonomous';
 
+    /** @var array<string, string> */
+    public const DELIVERY_PLATFORMS = [
+        'google_drive' => 'Google Drive',
+        'smash' => 'Smash',
+        'wetransfer' => 'WeTransfer',
+        'transfernow' => 'TransferNow',
+        'other' => 'Otra',
+    ];
+
     protected $table = 'master_programs';
 
     protected $fillable = [
@@ -66,6 +75,7 @@ class MasterProgram extends Model
         'ruta_ftp',
         'email_notificacion',
         'recognize_delivery_from_notification_email',
+        'preferred_delivery_platform',
         'email_copia_notificacion',
     ];
 
@@ -164,6 +174,16 @@ class MasterProgram extends Model
     public function externalDeliveries(): HasMany
     {
         return $this->hasMany(ExternalProgramDelivery::class, 'master_program_id');
+    }
+
+    public function preferredDeliveryPlatformLabel(): ?string
+    {
+        $key = trim((string) ($this->preferred_delivery_platform ?? ''));
+        if ($key === '') {
+            return null;
+        }
+
+        return self::DELIVERY_PLATFORMS[$key] ?? null;
     }
 
     /**

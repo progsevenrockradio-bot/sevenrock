@@ -438,6 +438,20 @@ class ExternalProgramInboxPoller
             ?: ''
         )));
 
+        // 0. Credenciales dedicadas de recepción externa (aisladas del buzón editorial DV-1)
+        $extUser = strtolower(trim((string) config('services.external_programs.imap_username', '')));
+        $extPass = trim((string) config('services.external_programs.imap_password', ''));
+        if ($extUser !== '' && $extPass !== '' && ($targetMailbox === '' || $targetMailbox === $extUser)) {
+            return [
+                'email' => $extUser,
+                'host' => (string) config('services.external_programs.imap_host', 'imap.gmail.com'),
+                'port' => (int) config('services.external_programs.imap_port', 993),
+                'encryption' => (string) config('services.external_programs.imap_encryption', 'ssl'),
+                'username' => $extUser,
+                'password' => $extPass,
+            ];
+        }
+
         // 1. Buscar primero en cuentas de correo configuradas en MarketingMailAccount si coincide
         if ($targetMailbox !== '') {
             $account = MarketingMailAccount::query()

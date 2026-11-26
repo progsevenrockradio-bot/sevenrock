@@ -132,7 +132,12 @@ return [
 
     'external_programs' => [
         'enabled' => (bool) env('EXTERNAL_PROGRAMS_ENABLED', false),
-        'mailbox' => env('EXTERNAL_PROGRAMS_MAILBOX', env('IMAP_USERNAME')),
+        'mailbox' => env('EXTERNAL_PROGRAMS_MAILBOX', env('EXTERNAL_PROGRAMS_IMAP_USERNAME', env('IMAP_USERNAME'))),
+        'imap_host' => env('EXTERNAL_PROGRAMS_IMAP_HOST', env('IMAP_HOST', 'imap.gmail.com')),
+        'imap_port' => (int) env('EXTERNAL_PROGRAMS_IMAP_PORT', env('IMAP_PORT', 993)),
+        'imap_encryption' => env('EXTERNAL_PROGRAMS_IMAP_ENCRYPTION', env('IMAP_ENCRYPTION', 'ssl')),
+        'imap_username' => env('EXTERNAL_PROGRAMS_IMAP_USERNAME'),
+        'imap_password' => env('EXTERNAL_PROGRAMS_IMAP_PASSWORD'),
         'since_date' => env('EXTERNAL_PROGRAMS_SINCE_DATE'),
         'telegram_bot_token' => env('EXTERNAL_PROGRAMS_TELEGRAM_BOT_TOKEN', env('TELEGRAM_BOT_TOKEN')),
         'telegram_chat_id' => env('EXTERNAL_PROGRAMS_TELEGRAM_CHAT_ID', env('TELEGRAM_ADMIN_CHAT_ID', env('TELEGRAM_CHAT_ID'))),

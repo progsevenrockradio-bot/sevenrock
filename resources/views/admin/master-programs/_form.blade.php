@@ -561,6 +561,19 @@
                         <label class="{{ $labelClass }}">Correo en copia (CC)</label>
                         <input name="email_copia_notificacion" value="{{ old('email_copia_notificacion', $masterProgram->email_copia_notificacion) }}" class="{{ $inputClass }}">
                     </div>
+                    <div class="sm:col-span-2">
+                        <label class="{{ $labelClass }}">Plataforma habitual de entrega</label>
+                        <select name="preferred_delivery_platform" class="{{ $inputClass }}">
+                            <option value="" @selected(old('preferred_delivery_platform', $masterProgram->preferred_delivery_platform ?? '') === '')>Sin preferencia</option>
+                            @foreach (\App\Models\MasterProgram::DELIVERY_PLATFORMS as $platformKey => $platformName)
+                                <option value="{{ $platformKey }}" @selected(old('preferred_delivery_platform', $masterProgram->preferred_delivery_platform ?? '') === $platformKey)>
+                                    {{ $platformName }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-[11px] text-zinc-400">Dato orientativo: si llega un enlace de otra plataforma admitida, se detectará igualmente sin rechazarlo.</p>
+                        @error('preferred_delivery_platform')<p class="mt-1 text-xs text-red-400">{{ $message }}</p>@enderror
+                    </div>
                     <div>
                         <label class="{{ $labelClass }}">Red social 1 (URL)</label>
                         <input name="red_social1_url" value="{{ old('red_social1_url', $masterProgram->red_social1_url) }}" class="{{ $inputClass }}">

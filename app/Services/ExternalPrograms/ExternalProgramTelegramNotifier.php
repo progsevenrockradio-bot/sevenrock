@@ -110,6 +110,10 @@ class ExternalProgramTelegramNotifier
         $sender = e($delivery->sender_email ?: ($delivery->raw_from_email ?: 'Remitente no especificado'));
         $received = e($delivery->formattedReceivedAt());
         $platform = e($delivery->platformLabel());
+        $preferredLabel = $delivery->masterProgram?->preferredDeliveryPlatformLabel();
+        if ($preferredLabel !== null && $delivery->masterProgram?->preferred_delivery_platform !== $delivery->platform) {
+            $platform .= ' (habitual: ' . e($preferredLabel) . ')';
+        }
         $expiry = e($delivery->formattedExpiresAt());
         $status = e($delivery->statusLabel());
         $url = e($delivery->delivery_url);

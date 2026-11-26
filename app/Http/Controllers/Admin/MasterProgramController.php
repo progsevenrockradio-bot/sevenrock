@@ -304,6 +304,7 @@ final class MasterProgramController extends Controller
             'ruta_ftp' => ['nullable', 'string', 'max:255'],
             'email_notificacion' => ['nullable', 'email', 'max:255'],
             'recognize_delivery_from_notification_email' => ['nullable', 'boolean'],
+            'preferred_delivery_platform' => ['nullable', Rule::in(array_keys(MasterProgram::DELIVERY_PLATFORMS))],
             'email_copia_notificacion' => ['nullable', 'email', 'max:255'],
             'editorial_mode' => ['nullable', Rule::in(['mandatory_review', 'autonomous'])],
             'confirm_autonomous_mode' => ['nullable', 'boolean'],
@@ -341,6 +342,12 @@ final class MasterProgramController extends Controller
             $validated['recognize_delivery_from_notification_email'] = $request->boolean('recognize_delivery_from_notification_email');
         } else {
             unset($validated['recognize_delivery_from_notification_email']);
+        }
+        if (Schema::hasColumn('master_programs', 'preferred_delivery_platform')) {
+            $pref = trim((string) ($validated['preferred_delivery_platform'] ?? ''));
+            $validated['preferred_delivery_platform'] = array_key_exists($pref, MasterProgram::DELIVERY_PLATFORMS) ? $pref : null;
+        } else {
+            unset($validated['preferred_delivery_platform']);
         }
         $validated['email_copia_notificacion'] = trim((string) ($validated['email_copia_notificacion'] ?? '')) ?: null;
 

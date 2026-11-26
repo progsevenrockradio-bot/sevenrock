@@ -510,4 +510,81 @@ TXT;
         $this->assertSame(ExternalProgramDelivery::STATUS_DOWNLOADED, $delivery->fresh()->status);
         $this->assertNotNull($delivery->fresh()->resolved_at);
     }
+
+    public function test_preferred_platform_advisory_and_expiry_priority_ordering(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $program = $this->createMasterProgram([
+            'nombre' => 'Metal Sin Limites',
+            'email_notificacion' => 'metal@estudio.com',
+            'recognize_delivery_from_notification_email' => true,
+            'preferred_delivery_platform' => 'wetransfer',
+        ]);
+
+        // 1. Guardar plataforma habitual desde el formulario de programa maestro
+        $this->actingAs($admin)
+            ->put(route('admin.master-programs.update', $program), [
+                'nombre' => $program->nombre,
+                'conductor' => $program->conductor,
+                'dia_transmision' => $program->dia_transmision,
+                'timezone' => $program->timezone,
+                'duracion_minutos' => $program->duracion_minutos,
+                'genero' => $program->genero,
+                'email_notificacion' => 'metal@estudio.com',
+                'recognize_delivery_from_notification_email' => '1',
+                'preferred_delivery_platform' => 'wetransfer',
+            ])
+            ->assertRedirect(route('admin.master-programs.edit', $program));
+
+        $this->assertSame('wetransfer', $program->fresh()->preferred_delivery_platform);
+
+        // 2. Entrega más reciente SIN caducidad conocida (creada después)
+        $noExpiry = ExternalProgramDelivery::query()->create([
+            'master_program_id' => $program->id,
+            'source_type' => ExternalProgramDelivery::SOURCE_MANUAL,
+            'sender_email' => 'metal@estudio.com',
+            'subject' => 'Sin caducidad conocida',
+            'received_at' => now('Europe/Madrid'),
+            'received_timezone' => 'Europe/Madrid',
+            'platform' => ExternalProgramDelivery::PLATFORM_GOOGLE_DRIVE,
+            'delivery_url' => 'https://drive.google.com/file/d/noexpiry123/view',
+            'expires_at' => null,
+            'identification_status' => ExternalProgramDelivery::ID_MATCHED,
+            'status' => ExternalProgramDelivery::STATUS_PENDING,
+        ]);
+
+        // 3. Entrega anterior PERO próxima a vencer (12h) -> debe aparecer PRIMERO
+        $expiringSoon = ExternalProgramDelivery::query()->create([
+            'master_program_id' => $program->id,
+            'source_type' => ExternalProgramDelivery::SOURCE_MANUAL,
+            'sender_email' => 'metal@estudio.com',
+            'subject' => 'Urgente vence pronto',
+            'received_at' => now('Europe/Madrid')->subHours(5),
+            'received_timezone' => 'Europe/Madrid',
+            'platform' => ExternalProgramDelivery::PLATFORM_GOOGLE_DRIVE,
+            'delivery_url' => 'https://drive.google.com/file/d/urgent123/view',
+            'expires_at' => now('Europe/Madrid')->addHours(12),
+            'expiry_source' => 'email_body',
+            'identification_status' => ExternalProgramDelivery::ID_MATCHED,
+            'status' => ExternalProgramDelivery::STATUS_PENDING,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.podcast-uploads.index'));
+        $response->assertOk()
+            ->assertSee('Próximo a vencer')
+            ->assertSee('Google Drive')
+            ->assertSee('Habitual: WeTransfer')
+            ->assertSeeInOrder(['Urgente vence pronto', 'Sin caducidad conocida']);
+
+        // 4. Credenciales IMAP dedicadas tienen prioridad y no pisan IMAP_USERNAME editorial
+        config([
+            'services.imap.username' => 'sevenrockradio@gmail.com',
+            'services.external_programs.imap_username' => 'prog.sevenrockradio@gmail.com',
+            'services.external_programs.imap_password' => 'dedicated-app-pass',
+        ]);
+        $resolved = app(ExternalProgramInboxPoller::class)->resolveMailboxConfig('prog.sevenrockradio@gmail.com');
+        $this->assertNotNull($resolved);
+        $this->assertSame('prog.sevenrockradio@gmail.com', $resolved['email']);
+        $this->assertSame('dedicated-app-pass', $resolved['password']);
+    }
 }

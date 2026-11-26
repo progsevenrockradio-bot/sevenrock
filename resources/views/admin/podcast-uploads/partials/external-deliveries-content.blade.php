@@ -196,8 +196,17 @@
                 $isNeedsReview = $delivery->status === \App\Models\ExternalProgramDelivery::STATUS_NEEDS_REVIEW;
                 $isSnoozed = $delivery->isSnoozed();
                 $telegramFailed = $delivery->telegram_status === \App\Models\ExternalProgramDelivery::TELEGRAM_FAILED;
+                $isExpired = $delivery->expires_at !== null && $delivery->expires_at->isPast();
+                $isExpiringSoon = $delivery->expires_at !== null && $delivery->expires_at->isFuture() && $delivery->expires_at->lte(now()->addHours(48));
+                $preferredPlatformLabel = $delivery->masterProgram?->preferredDeliveryPlatformLabel();
+                $preferredPlatformKey = $delivery->masterProgram?->preferred_delivery_platform;
+                $cardBorder = $isExpired
+                    ? 'border-rose-500/40 bg-rose-950/15'
+                    : ($isExpiringSoon
+                        ? 'border-amber-400/45 bg-amber-950/15'
+                        : ($isNeedsReview ? 'border-amber-500/30 bg-amber-950/10' : 'border-white/10 bg-[#141418]'));
             @endphp
-            <article class="rounded-xl border {{ $isNeedsReview ? 'border-amber-500/30 bg-amber-950/10' : 'border-white/10 bg-[#141418]' }} p-4 space-y-3">
+            <article class="rounded-xl border {{ $cardBorder }} p-4 space-y-3">
                 <div class="flex flex-wrap items-start justify-between gap-2">
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
@@ -207,9 +216,23 @@
                             <span class="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $isNeedsReview ? 'bg-amber-500/20 text-amber-300' : ($isSnoozed ? 'bg-sky-500/20 text-sky-300' : 'bg-[#c32720]/20 text-rose-300') }}">
                                 {{ $delivery->statusLabel() }}
                             </span>
+                            @if ($isExpired)
+                                <span class="inline-flex items-center rounded-md bg-rose-500/25 px-2 py-0.5 text-[11px] font-semibold text-rose-200">
+                                    Enlace caducado
+                                </span>
+                            @elseif ($isExpiringSoon)
+                                <span class="inline-flex items-center rounded-md bg-amber-500/25 px-2 py-0.5 text-[11px] font-semibold text-amber-200">
+                                    Próximo a vencer
+                                </span>
+                            @endif
                             <span class="inline-flex items-center rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-medium text-gray-200">
                                 {{ $delivery->platformLabel() }}
                             </span>
+                            @if ($preferredPlatformLabel !== null && $preferredPlatformKey !== $delivery->platform)
+                                <span class="inline-flex items-center rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-gray-400">
+                                    Habitual: {{ $preferredPlatformLabel }}
+                                </span>
+                            @endif
                         </div>
                         @if (filled($delivery->subject))
                             <p class="mt-1 text-xs text-gray-300">{{ $delivery->subject }}</p>
