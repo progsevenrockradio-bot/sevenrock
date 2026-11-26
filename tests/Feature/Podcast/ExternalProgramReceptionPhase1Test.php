@@ -296,17 +296,17 @@ TXT;
 
         // Sin aplazamiento y >24h -> envía recordatorio diario
         $delivery->forceFill(['snoozed_until' => null])->save();
-        $dailyStats = $reminderService->processReminders(false, Carbon::parse('2026-11-27 12:00:00', 'Europe/Madrid'));
+        $dailyStats = $reminderService->processReminders(false, now('Europe/Madrid')->addHours(25));
         $this->assertSame(1, $dailyStats['daily_sent']);
         Http::assertSentCount(2);
 
         // Resolver pendiente como descargado -> detiene recordatorios
         $delivery->forceFill([
             'status' => ExternalProgramDelivery::STATUS_DOWNLOADED,
-            'resolved_at' => Carbon::parse('2026-11-27 13:00:00', 'Europe/Madrid'),
+            'resolved_at' => now('Europe/Madrid')->addHours(26),
         ])->save();
 
-        $afterResolve = $reminderService->processReminders(false, Carbon::parse('2026-11-29 12:00:00', 'Europe/Madrid'));
+        $afterResolve = $reminderService->processReminders(false, now('Europe/Madrid')->addHours(72));
         $this->assertSame(0, $afterResolve['checked']);
         $this->assertSame(0, $afterResolve['daily_sent']);
         $this->assertSame(0, $afterResolve['expiry_sent']);

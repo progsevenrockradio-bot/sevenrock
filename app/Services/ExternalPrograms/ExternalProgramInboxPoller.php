@@ -31,8 +31,14 @@ class ExternalProgramInboxPoller
      *
      * @return array<string, mixed>
      */
-    public function poll(?string $sinceOverride = null, ?string $mailboxOverride = null, int $limit = 50, bool $dryRun = false): array
-    {
+    public function poll(
+        ?string $sinceOverride = null,
+        ?string $mailboxOverride = null,
+        int $limit = 50,
+        bool $dryRun = false,
+        ?string $messageIdOverride = null
+    ): array {
+        $targetMessageId = $messageIdOverride !== null ? trim($messageIdOverride, " \t\n\r\0\x0B<>") : '';
         $summary = [
             'status' => 'ok',
             'reason' => null,
@@ -55,7 +61,7 @@ class ExternalProgramInboxPoller
         }
 
         $sinceDate = $this->resolveSinceDate($sinceOverride);
-        if ($sinceDate === null) {
+        if ($sinceDate === null && $targetMessageId === '') {
             $summary['status'] = 'skipped';
             $summary['reason'] = 'No hay fecha de inicio (since_date) configurada; se omite la consulta para evitar avalancha de avisos históricos.';
             return $summary;
@@ -69,7 +75,7 @@ class ExternalProgramInboxPoller
         }
 
         $summary['mailbox'] = $account['email'];
-        $summary['since'] = $sinceDate->toIso8601String();
+        $summary['since'] = $sinceDate?->toIso8601String();
 
         $client = $this->clientManager->make([
             'host' => $account['host'],
@@ -96,21 +102,38 @@ class ExternalProgramInboxPoller
 
             // Consulta estrictamente en modo solo lectura: leaveUnread() fuerza IMAP::FT_PEEK (BODY.PEEK)
             // y since() acota por fecha sin depender de unseen().
+            $imapSince = $targetMessageId !== ''
+                ? now((string) config('app.timezone', 'Europe/Madrid'))->subDays(2)->startOfDay()
+                : $sinceDate->copy()->startOfDay();
+
             $query = $folder->query()
                 ->leaveUnread()
-                ->since($sinceDate->copy()->startOfDay())
+                ->since($imapSince)
                 ->setFetchOrder('desc')
                 ->limit(max(1, min(200, $limit)));
+
+            // Evitar descargar cuerpos/adjuntos pesados de correos ajenos: leer cabeceras primero
+            // y cargar el cuerpo únicamente cuando el mensaje coincide con remitente/Message-ID.
+            if ($targetMessageId !== '' && method_exists($query, 'setFetchBody')) {
+                $query->setFetchBody(false);
+            } elseif (method_exists($query, 'setFetchBody') && ! ($query instanceof \Mockery\MockInterface)) {
+                $query->setFetchBody(false);
+            }
 
             $messages = $query->get();
 
             foreach ($messages as $message) {
+                $msgId = $this->extractNormalizedMessageId($message);
+                if ($targetMessageId !== '' && strcasecmp((string) $msgId, $targetMessageId) !== 0) {
+                    continue;
+                }
+
                 $summary['scanned']++;
                 $result = $this->processMessage(
                     message: $message,
                     mailbox: $account['email'],
                     folderName: (string) ($folder->path ?? $folder->name ?? 'INBOX'),
-                    sinceDate: $sinceDate,
+                    sinceDate: $targetMessageId !== '' ? null : $sinceDate,
                     senderIndex: $senderIndex,
                     dryRun: $dryRun
                 );
@@ -130,6 +153,10 @@ class ExternalProgramInboxPoller
                 } else {
                     $summary['ignored']++;
                 }
+
+                if ($targetMessageId !== '') {
+                    break;
+                }
             }
         } finally {
             try {
@@ -143,6 +170,87 @@ class ExternalProgramInboxPoller
     }
 
     /**
+     * Inspecciona mensajes recientes de un remitente concreto en modo SOLO LECTURA (FT_PEEK),
+     * sin persistir nada ni enviar avisos.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function inspectSenderMessages(string $senderEmail, ?string $mailboxOverride = null, int $days = 2, int $limit = 10): array
+    {
+        $account = $this->resolveMailboxConfig($mailboxOverride);
+        if ($account === null) {
+            return [];
+        }
+
+        $tz = (string) config('app.timezone', 'Europe/Madrid');
+        $client = $this->clientManager->make([
+            'host' => $account['host'],
+            'port' => $account['port'],
+            'encryption' => $account['encryption'],
+            'validate_cert' => (bool) config('services.imap.validate_cert', false),
+            'username' => $account['username'],
+            'password' => $account['password'],
+            'protocol' => 'imap',
+            'options' => [
+                'fetch' => IMAP::FT_PEEK,
+            ],
+        ]);
+
+        $client->connect();
+        $rows = [];
+
+        try {
+            $folder = $client->getFolder('INBOX');
+            if (! $folder) {
+                return [];
+            }
+
+            $messages = $folder->query()
+                ->leaveUnread()
+                ->from(strtolower(trim($senderEmail)))
+                ->since(now($tz)->subDays(max(1, $days))->startOfDay())
+                ->setFetchOrder('desc')
+                ->limit(max(1, min(20, $limit)))
+                ->get();
+
+            foreach ($messages as $message) {
+                $mid = $this->extractNormalizedMessageId($message);
+                $receivedAt = $this->extractReceivedAt($message, $tz);
+                $rawDate = is_callable([$message, 'getDate']) ? (string) $message->getDate() : '';
+                $flags = [];
+                if (is_callable([$message, 'getFlags'])) {
+                    try {
+                        $flags = $message->getFlags()->toArray();
+                    } catch (Throwable) {
+                        $flags = [];
+                    }
+                }
+                $links = $this->linkDetector->extractLinks(
+                    $this->extractTextBody($message),
+                    $this->extractHtmlBody($message)
+                );
+
+                $rows[] = [
+                    'message_id' => $mid,
+                    'subject' => $this->extractSubject($message),
+                    'raw_date' => $rawDate,
+                    'received_local' => $receivedAt?->format('Y-m-d H:i:s T'),
+                    'flags' => array_values($flags),
+                    'links' => $links,
+                ];
+            }
+        } finally {
+            try {
+                $client->disconnect();
+            } catch (Throwable) {
+                // ignore
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
      * Procesa un mensaje IMAP individual sin modificar jamás sus flags ni abrir/descargar enlaces.
      *
      * @param  array<string, \Illuminate\Support\Collection<int, \App\Models\MasterProgram>>  $senderIndex
@@ -152,7 +260,7 @@ class ExternalProgramInboxPoller
         mixed $message,
         string $mailbox,
         string $folderName,
-        Carbon $sinceDate,
+        ?Carbon $sinceDate,
         array $senderIndex,
         bool $dryRun = false
     ): array {
@@ -165,7 +273,7 @@ class ExternalProgramInboxPoller
         }
 
         $receivedAt = $this->extractReceivedAt($message, $tz);
-        if ($receivedAt !== null && $receivedAt->lt($sinceDate)) {
+        if ($sinceDate !== null && $receivedAt !== null && $receivedAt->lt($sinceDate)) {
             return ['outcome' => 'ignored', 'delivery' => null, 'notified' => null];
         }
 
@@ -173,6 +281,39 @@ class ExternalProgramInboxPoller
         $replyToEmail = $this->extractReplyToAddress($message);
         $rawHeaders = $this->extractRawHeaders($message);
         $subject = $this->extractSubject($message);
+
+        // Pre-filtro rápido por cabeceras antes de cargar el cuerpo (evita memoria innecesaria en correos ajenos)
+        $isKnownSender = $rawFromEmail !== '' && isset($senderIndex[$rawFromEmail]);
+        $isPlatformRelay = $rawFromEmail !== '' && $this->senderMatcher->isPlatformRelaySender($rawFromEmail);
+        if (! $isKnownSender && ! $isPlatformRelay) {
+            return ['outcome' => 'ignored', 'delivery' => null, 'notified' => null];
+        }
+
+        // Cargar cuerpo solo para mensajes relevantes en modo estrictamente solo lectura (FT_PEEK + EXAMINE)
+        if (method_exists($message, 'parseBody')) {
+            $hasBody = (method_exists($message, 'hasTextBody') && $message->hasTextBody())
+                || (method_exists($message, 'hasHTMLBody') && $message->hasHTMLBody());
+            if (! $hasBody) {
+                try {
+                    if (method_exists($message, 'setFetchOption')) {
+                        $message->setFetchOption(IMAP::FT_PEEK);
+                    }
+                    if (method_exists($message, 'getClient')) {
+                        $msgClient = $message->getClient();
+                        if ($msgClient && method_exists($msgClient, 'getConnection')) {
+                            $conn = $msgClient->getConnection();
+                            if ($conn && method_exists($conn, 'examineFolder')) {
+                                $conn->examineFolder($folderName);
+                            }
+                        }
+                    }
+                    $message->parseBody();
+                } catch (Throwable $e) {
+                    Log::warning('[ExternalProgramInboxPoller] No se pudo parsear cuerpo del mensaje: ' . $e->getMessage());
+                }
+            }
+        }
+
         $textBody = $this->extractTextBody($message);
         $htmlBody = $this->extractHtmlBody($message);
         $imapUid = $this->extractUid($message);
@@ -338,7 +479,7 @@ class ExternalProgramInboxPoller
     protected function extractNormalizedMessageId(mixed $message): ?string
     {
         try {
-            $raw = method_exists($message, 'getMessageId') ? (string) $message->getMessageId() : '';
+            $raw = is_callable([$message, 'getMessageId']) ? (string) $message->getMessageId() : '';
             $clean = trim($raw, " \t\n\r\0\x0B<>");
             return $clean !== '' ? mb_substr($clean, 0, 250) : null;
         } catch (Throwable) {
@@ -349,7 +490,7 @@ class ExternalProgramInboxPoller
     protected function extractReceivedAt(mixed $message, string $tz): ?Carbon
     {
         try {
-            if (! method_exists($message, 'getDate')) {
+            if (! is_callable([$message, 'getDate'])) {
                 return null;
             }
             $date = $message->getDate();
@@ -379,7 +520,7 @@ class ExternalProgramInboxPoller
     protected function extractFromAddress(mixed $message): array
     {
         try {
-            $from = method_exists($message, 'getFrom') ? $message->getFrom() : null;
+            $from = is_callable([$message, 'getFrom']) ? $message->getFrom() : null;
             if (is_object($from) && method_exists($from, 'first')) {
                 $first = $from->first();
                 if (is_object($first)) {
@@ -404,7 +545,7 @@ class ExternalProgramInboxPoller
     protected function extractReplyToAddress(mixed $message): ?string
     {
         try {
-            if (method_exists($message, 'getReplyTo')) {
+            if (is_callable([$message, 'getReplyTo'])) {
                 $replyTo = $message->getReplyTo();
                 if (is_object($replyTo) && method_exists($replyTo, 'first')) {
                     $first = $replyTo->first();
@@ -423,7 +564,7 @@ class ExternalProgramInboxPoller
     protected function extractRawHeaders(mixed $message): string
     {
         try {
-            if (method_exists($message, 'getHeader')) {
+            if (is_callable([$message, 'getHeader'])) {
                 $header = $message->getHeader();
                 if (is_object($header) && isset($header->raw) && is_string($header->raw)) {
                     return $header->raw;
@@ -442,7 +583,17 @@ class ExternalProgramInboxPoller
     protected function extractSubject(mixed $message): string
     {
         try {
-            return method_exists($message, 'getSubject') ? trim((string) $message->getSubject()) : '';
+            $raw = is_callable([$message, 'getSubject']) ? trim((string) $message->getSubject()) : '';
+            if ($raw === '') {
+                return '';
+            }
+            if (function_exists('mb_decode_mimeheader') && str_contains($raw, '=?')) {
+                $decoded = @mb_decode_mimeheader($raw);
+                if (is_string($decoded) && trim($decoded) !== '') {
+                    return trim($decoded);
+                }
+            }
+            return $raw;
         } catch (Throwable) {
             return '';
         }
@@ -451,7 +602,7 @@ class ExternalProgramInboxPoller
     protected function extractTextBody(mixed $message): string
     {
         try {
-            return method_exists($message, 'getTextBody') ? (string) ($message->getTextBody() ?? '') : '';
+            return is_callable([$message, 'getTextBody']) ? (string) ($message->getTextBody() ?? '') : '';
         } catch (Throwable) {
             return '';
         }
@@ -460,7 +611,7 @@ class ExternalProgramInboxPoller
     protected function extractHtmlBody(mixed $message): ?string
     {
         try {
-            if (method_exists($message, 'getHTMLBody')) {
+            if (is_callable([$message, 'getHTMLBody'])) {
                 $html = $message->getHTMLBody();
                 return is_string($html) ? $html : null;
             }
@@ -474,7 +625,7 @@ class ExternalProgramInboxPoller
     protected function extractUid(mixed $message): ?int
     {
         try {
-            if (method_exists($message, 'getUid')) {
+            if (is_callable([$message, 'getUid'])) {
                 $uid = $message->getUid();
                 return is_numeric($uid) ? (int) $uid : null;
             }
