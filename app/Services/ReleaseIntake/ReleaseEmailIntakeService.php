@@ -44,8 +44,13 @@ class ReleaseEmailIntakeService
      *
      * @return array<string, mixed>
      */
-    public function poll(int $limit = 30, bool $dryRun = false, ?string $sinceOverride = null): array
-    {
+    public function poll(
+        int $limit = 30,
+        bool $dryRun = false,
+        ?string $sinceOverride = null,
+        ?string $messageIdOverride = null
+    ): array {
+        $targetMessageId = $messageIdOverride !== null ? $this->normalizeMessageId($messageIdOverride) : '';
         $summary = [
             'status' => 'ok',
             'reason' => null,
@@ -59,7 +64,7 @@ class ReleaseEmailIntakeService
             'releases' => [],
         ];
 
-        if (! ReleaseIntakeSetting::isEnabled()) {
+        if (! ReleaseIntakeSetting::isEnabled() && $targetMessageId === '') {
             $summary['status'] = 'disabled';
             $summary['reason'] = 'La recepción de correos de lanzamientos está desactivada hasta configurar un piloto.';
 
@@ -79,7 +84,7 @@ class ReleaseEmailIntakeService
         }
 
         $sinceDate = $this->resolveSinceDate($sinceOverride);
-        if ($sinceDate === null) {
+        if ($sinceDate === null && $targetMessageId === '') {
             $summary['status'] = 'skipped';
             $summary['reason'] = 'Falta configurar la fecha de inicio de consulta (since_date).';
 
@@ -95,7 +100,7 @@ class ReleaseEmailIntakeService
         }
 
         $summary['mailbox'] = $mailboxConfig['email'];
-        $summary['since'] = $sinceDate->toDateString();
+        $summary['since'] = $sinceDate?->toDateString();
 
         $client = $this->clientManager->make([
             'host' => $mailboxConfig['host'],
@@ -122,7 +127,9 @@ class ReleaseEmailIntakeService
             }
 
             $seenMessageIds = [];
-            $imapSince = $sinceDate->copy()->startOfDay();
+            $imapSince = $targetMessageId !== ''
+                ? ($sinceDate ? $sinceDate->copy()->subDays(3)->startOfDay() : now((string) config('app.timezone', 'America/Caracas'))->subDays(5)->startOfDay())
+                : $sinceDate->copy()->startOfDay();
 
             foreach ($folders as $folder) {
                 $folderName = (string) ($folder->path ?? $folder->name ?? 'INBOX');
@@ -139,6 +146,9 @@ class ReleaseEmailIntakeService
 
                 foreach ($query->get() as $message) {
                     $msgId = $this->normalizeMessageId((string) ($message->getMessageId()?->first() ?? ''));
+                    if ($targetMessageId !== '' && strcasecmp($msgId, $targetMessageId) !== 0) {
+                        continue;
+                    }
                     if ($msgId !== '' && isset($seenMessageIds[strtolower($msgId)])) {
                         continue;
                     }
@@ -163,7 +173,7 @@ class ReleaseEmailIntakeService
 
                     $rawDate = $message->getDate()?->first();
                     $receivedAt = $rawDate ? Carbon::parse((string) $rawDate) : now();
-                    if ($receivedAt->lt($sinceDate->copy()->startOfDay())) {
+                    if ($targetMessageId === '' && $sinceDate !== null && $receivedAt->lt($sinceDate->copy()->startOfDay())) {
                         $summary['ignored']++;
                         continue;
                     }
@@ -250,15 +260,14 @@ class ReleaseEmailIntakeService
         $authResult = $this->securityVerifier->verify($senderEmail, $rawHeaders);
         $isSpoofing = (bool) ($authResult['is_spoofing'] ?? false);
 
-        // 3. Evaluar embargo y fecha de lanzamiento musical (reutilizando ReleaseScheduleManager)
+        // 3. Evaluar embargo y fecha de lanzamiento musical (reutilizando ReleaseScheduleManager + fecha en asunto)
         $schedule = $this->scheduleManager->evaluateSchedule($subject, $bodyText, $receivedAt);
-        $musicalReleaseDate = $schedule['musical_release_date'] instanceof Carbon
-            ? $schedule['musical_release_date']->toDateString()
-            : null;
+        [$artistName, $releaseTitle, $subjectReleaseDate] = $this->extractArtistTitleAndDate($subject, $sender);
+        $musicalReleaseDate = $subjectReleaseDate
+            ?? ($schedule['musical_release_date'] instanceof Carbon ? $schedule['musical_release_date']->toDateString() : null);
 
-        // 4. Extraer artista, título, tipo y enlaces sin inventar datos ni usar IA de pago
-        [$artistName, $releaseTitle] = $this->extractArtistAndTitle($subject, $sender);
-        $releaseType = $this->detectReleaseType($subject . ' ' . $bodyText);
+        // 4. Extraer tipo y enlaces sin inventar datos ni usar IA de pago
+        $releaseType = $this->detectReleaseType($subject, $bodyText);
         $links = $this->extractLinks($bodyText);
         $proposalSummary = $this->buildProposalSummary($bodyText);
         $usageConditions = $this->extractUsageConditions($bodyText, $schedule['notes'] ?? null);
@@ -361,39 +370,81 @@ class ReleaseEmailIntakeService
     }
 
     /**
-     * @return array{0: string, 1: string}
+     * @return array{0: string, 1: string, 2: ?string}
      */
-    private function extractArtistAndTitle(string $subject, ReleaseIntakeSender $sender): array
+    private function extractArtistTitleAndDate(string $subject, ReleaseIntakeSender $sender): array
     {
         $clean = trim((string) preg_replace('/^(?:re|fwd|fw|rv)\s*:\s*/iu', '', $subject));
         $clean = trim((string) preg_replace('/^\[[^\]]+\]\s*/u', '', $clean));
+
+        // Formato con guiones y fecha al final: "Artist-Title-6th November 2026" o "Artist - Title - 6th November 2026"
+        $parts = array_values(array_filter(array_map('trim', preg_split('/\s*[-–—]\s*/u', $clean) ?: [])));
+        if (count($parts) >= 3) {
+            $lastPart = end($parts);
+            $parsedDate = $this->tryParseSubjectDate((string) $lastPart);
+            if ($parsedDate !== null) {
+                array_pop($parts);
+                $artist = array_shift($parts);
+                $title = implode(' - ', $parts);
+                if ($artist !== '' && $title !== '') {
+                    return [mb_substr($artist, 0, 255), mb_substr($title, 0, 255), $parsedDate];
+                }
+            }
+        }
 
         foreach ([' - ', ' – ', ' — ', ': '] as $sep) {
             if (str_contains($clean, $sep)) {
                 [$left, $right] = array_map('trim', explode($sep, $clean, 2));
                 if ($left !== '' && $right !== '') {
-                    return [mb_substr($left, 0, 255), mb_substr($right, 0, 255)];
+                    return [mb_substr($left, 0, 255), mb_substr($right, 0, 255), null];
                 }
             }
+        }
+
+        if (count($parts) === 2 && $parts[0] !== '' && $parts[1] !== '') {
+            return [mb_substr($parts[0], 0, 255), mb_substr($parts[1], 0, 255), null];
         }
 
         $artist = trim((string) $sender->entity_name) !== '' ? trim((string) $sender->entity_name) : 'Artista por confirmar';
         $title = $clean !== '' ? mb_substr($clean, 0, 255) : 'Propuesta sin título';
 
-        return [$artist, $title];
+        return [$artist, $title, null];
     }
 
-    private function detectReleaseType(string $text): string
+    private function tryParseSubjectDate(string $candidate): ?string
     {
-        $lower = mb_strtolower($text);
-
-        if (preg_match('/\b(nuevo\s+sencillo|new\s+single|single|sencillo|videoclip)\b/iu', $lower)) {
-            return 'single';
+        $trimmed = trim($candidate);
+        if (! preg_match('/\b(19|20)\d{2}\b/', $trimmed)) {
+            return null;
         }
-        if (preg_match('/\b(nuevo\s+ep|new\s+ep|\bep\b)\b/iu', $lower)) {
+
+        $normalized = str_ireplace(
+            ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre', ' de ', ' del '],
+            ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december', ' ', ' '],
+            $trimmed
+        );
+
+        try {
+            return Carbon::parse($normalized)->toDateString();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function detectReleaseType(string $subject, string $body): string
+    {
+        $combined = mb_strtolower($subject . ' ' . $body);
+
+        if (preg_match('/\b(nuevo\s+[aá]lbum|new\s+album|studio\s+album|full\s+album|debut\s+album|\d+(?:st|nd|rd|th)\s+album|disco\s+de\s+estudio)\b/iu', $combined)) {
+            return 'album';
+        }
+        if (preg_match('/\b(nuevo\s+ep|new\s+ep|\bep\b)\b/iu', $combined)) {
             return 'ep';
         }
-        if (preg_match('/\b(nuevo\s+[aá]lbum|new\s+album|disco\s+de\s+estudio|[aá]lbum|lp)\b/iu', $lower)) {
+        if (preg_match('/\b(nuevo\s+sencillo|new\s+single|lead\s+single|single|sencillo|videoclip)\b/iu', $combined)) {
+            return 'single';
+        }
+        if (preg_match('/\b([aá]lbum|lp)\b/iu', $combined)) {
             return 'album';
         }
 

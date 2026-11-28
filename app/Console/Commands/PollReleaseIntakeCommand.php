@@ -12,6 +12,7 @@ class PollReleaseIntakeCommand extends Command
     protected $signature = 'releases:poll-intake
                             {--limit=30 : Máximo de correos a inspeccionar por carpeta}
                             {--since= : Fecha de inicio opcional (YYYY-MM-DD)}
+                            {--message-id= : Procesa únicamente un Message-ID exacto sin ampliar al histórico}
                             {--dry-run : Simula la consulta sin registrar propuestas}';
 
     protected $description = 'Consulta en modo solo lectura el buzón configurado para propuestas de nuevos lanzamientos musicales';
@@ -22,6 +23,7 @@ class PollReleaseIntakeCommand extends Command
             limit: max(1, min(100, (int) $this->option('limit'))),
             dryRun: (bool) $this->option('dry-run'),
             sinceOverride: $this->option('since') ? (string) $this->option('since') : null,
+            messageIdOverride: $this->option('message-id') ? (string) $this->option('message-id') : null,
         );
 
         $status = (string) ($result['status'] ?? 'error');

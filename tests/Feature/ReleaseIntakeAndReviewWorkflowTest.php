@@ -101,6 +101,26 @@ final class ReleaseIntakeAndReviewWorkflowTest extends TestCase
         $this->assertCount(1, $dups);
         $this->assertTrue($dups->first()['different_type']);
 
+        // 5. Asunto con guiones sin espacios y fecha musical al final (caso piloto real)
+        $pilotResult = $intake->ingestAuthorizedMessage([
+            'message_id' => '<pilot-sbe-001@hotmail.com>',
+            'sender_email' => 'prensa@ripplesello.test',
+            'subject' => 'Sonic Beat Explosion-Chasing Ghosts-6th November 2026',
+            'body_text' => 'High energy rock from Germany, 5th album "Chasing Ghosts", missed last months singles.',
+            'raw_headers' => "Authentication-Results: mx.google.com; spf=pass; dkim=pass header.d=ripplesello.test; dmarc=pass\r\n",
+            'received_at' => Carbon::create(2026, 11, 27, 0, 15, 58, 'America/Caracas'),
+            'folder' => 'INBOX',
+            'mailbox' => 'piloto@sevenrockradio.test',
+            'attachments' => ['_07_High Times.mp3'],
+        ], $sender);
+
+        $this->assertSame('registered', $pilotResult['outcome']);
+        $this->assertSame('Sonic Beat Explosion', $pilotResult['release']->artist_name);
+        $this->assertSame('Chasing Ghosts', $pilotResult['release']->title);
+        $this->assertSame('album', $pilotResult['release']->release_type);
+        $this->assertSame('2026-11-06', $pilotResult['release']->released_at?->toDateString());
+        $this->assertSame('2026-11-27', $pilotResult['release']->announced_at?->toDateString());
+
         Bus::assertNothingDispatched();
         Mail::assertNothingSent();
     }
