@@ -427,10 +427,15 @@
                             $cleanRelDesc = \App\Models\Post::sanitizeExcerpt($release->description, null, 150);
                             $hasCover = filled($release->cover_image);
                             $coverUrl = $hasCover ? \App\Support\PublicMediaUrl::normalizePublicUrl($release->cover_image) : null;
+                            $isFutureMusicalRelease = $release->released_at !== null && $release->released_at->isFuture();
+                            $announcedDateLabel = $release->announced_at?->locale('es')->translatedFormat('j \d\e F \d\e Y');
                             $releaseDateLabel = $release->released_at?->locale('es')->translatedFormat('j \d\e F \d\e Y');
-                            $publishedDateLabel = $release->created_at?->locale('es')->translatedFormat('j \d\e F \d\e Y');
-                            $showBothDates = $releaseDateLabel && $publishedDateLabel
-                                && $release->released_at->toDateString() !== $release->created_at->toDateString();
+                            $effectivePublishedAt = $release->published_at ?? $release->created_at;
+                            $publishedDateLabel = $effectivePublishedAt?->locale('es')->translatedFormat('j \d\e F \d\e Y');
+                            $showPublishedDate = $publishedDateLabel && (
+                                (! $releaseDateLabel && ! $announcedDateLabel)
+                                || ($release->released_at && $effectivePublishedAt && $release->released_at->toDateString() !== $effectivePublishedAt->toDateString())
+                            );
                         @endphp
                         <article class="lucille-flat-surface p-4 flex h-full min-w-0 flex-col justify-between transition-colors duration-200 hover:border-lucille-accent/40 group">
                             <div class="min-w-0">
@@ -468,12 +473,23 @@
                                 </h3>
                                 <p class="mt-1 text-[11px] font-semibold uppercase tracking-[.16em] text-gray-300 line-clamp-1 break-words">{{ $release->artist_name }}</p>
 
-                                <div class="mt-2 space-y-0.5 text-[10px] uppercase tracking-[.1em] text-gray-400">
-                                    @if ($releaseDateLabel)
-                                        <p><span class="text-gray-500">Lanzamiento:</span> {{ $releaseDateLabel }}</p>
+                                <div class="mt-2 space-y-0.5 text-[10px] uppercase tracking-[.08em] text-gray-400">
+                                    @if ($isFutureMusicalRelease)
+                                        <span class="mb-1 inline-flex items-center rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-amber-300">
+                                            Próximo lanzamiento
+                                        </span>
                                     @endif
-                                    @if ($showBothDates || (! $releaseDateLabel && $publishedDateLabel))
-                                        <p><span class="text-gray-500">Publicado:</span> {{ $publishedDateLabel }}</p>
+                                    @if ($announcedDateLabel)
+                                        <p><span class="text-gray-500">Anunciado el</span> {{ $announcedDateLabel }}</p>
+                                    @endif
+                                    @if ($releaseDateLabel)
+                                        <p>
+                                            <span class="text-gray-500">{{ $isFutureMusicalRelease ? 'Lanzamiento previsto para el' : 'Lanzamiento el' }}</span>
+                                            {{ $releaseDateLabel }}
+                                        </p>
+                                    @endif
+                                    @if ($showPublishedDate)
+                                        <p><span class="text-gray-500">Publicado en SevenRock el</span> {{ $publishedDateLabel }}</p>
                                     @endif
                                 </div>
 

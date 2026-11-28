@@ -59,22 +59,51 @@ class NewRelease extends Model
         });
     }
 
+    public const REVIEW_PENDING = 'pending_review';
+    public const REVIEW_PUBLISHED = 'published';
+    public const REVIEW_REJECTED = 'rejected';
+
+    /** @var array<string, string> */
+    public const RELEASE_TYPES = [
+        'single' => 'Single',
+        'ep' => 'EP',
+        'album' => 'Álbum',
+        'other' => 'Otro',
+    ];
+
     protected $fillable = [
         'title',
         'slug',
         'artist_name',
+        'release_type',
         'radio_artist_id',
         'released_at',
+        'announced_at',
+        'published_at',
         'cover_image',
+        'cover_source',
+        'cover_permission_credit',
         'audio_path',
         'youtube_url',
         'spotify_url',
+        'official_url',
+        'download_url',
         'description',
+        'proposal_summary',
         'is_active',
+        'review_status',
+        'rejection_reason',
+        'reviewed_by',
+        'reviewed_at',
+        'received_at',
         'is_embargo_active',
         'embargo_until',
+        'usage_conditions',
+        'intake_metadata',
         'source_subject',
         'source_message_id',
+        'source_sender_email',
+        'source_sender_auth',
         'security_status',
         'incident_reason',
         'show_in_feed',
@@ -86,11 +115,18 @@ class NewRelease extends Model
     protected function casts(): array
     {
         return [
-            'released_at'       => 'date',
-            'embargo_until'     => 'datetime',
-            'is_active'         => 'boolean',
-            'is_embargo_active' => 'boolean',
-            'show_in_feed'      => 'boolean',
+            'released_at'        => 'date',
+            'announced_at'       => 'date',
+            'published_at'       => 'datetime',
+            'reviewed_at'        => 'datetime',
+            'received_at'        => 'datetime',
+            'embargo_until'      => 'datetime',
+            'is_active'          => 'boolean',
+            'is_embargo_active'  => 'boolean',
+            'show_in_feed'       => 'boolean',
+            'reviewed_by'        => 'integer',
+            'source_sender_auth' => 'array',
+            'intake_metadata'    => 'array',
         ];
     }
 
@@ -100,21 +136,38 @@ class NewRelease extends Model
     }
 
     /**
-     * Criterio público único de la ficha: activo, con fecha ya alcanzada y sin embargo vigente.
+     * Criterio público único de la ficha: activo, publicado efectivamente y sin embargo vigente.
      *
-     * show_in_feed NO forma parte del criterio: solo controla si aparece en portada/listados
-     * y en el Muro; una ficha con show_in_feed=false sigue siendo accesible por su enlace.
-     * Un embargo marcado como activo sin fecha de fin se trata como vigente (igual que el panel editorial).
+     * - Permite anunciar un álbum/single con fecha musical futura (`released_at > now()`)
+     *   siempre que esté aprobado, activo y sin embargo vigente (la vista lo identifica como
+     *   «Lanzamiento previsto para…», nunca como ya editado).
+     * - Excluye borradores, pendientes de revisión, rechazados, retenciones de seguridad y embargos.
      */
     public function scopePubliclyAccessible(Builder $query): Builder
     {
-        return $query
+        $query
             ->where('is_active', true)
-            ->where(fn (Builder $q) => $q->whereNull('released_at')->orWhere('released_at', '<=', now()))
             ->where(fn (Builder $q) => $q
                 ->where('is_embargo_active', false)
                 ->orWhereNull('is_embargo_active')
-                ->orWhere(fn (Builder $e) => $e->whereNotNull('embargo_until')->where('embargo_until', '<=', now())));
+                ->orWhere(fn (Builder $e) => $e->whereNotNull('embargo_until')->where('embargo_until', '<=', now())))
+            ->where(fn (Builder $q) => $q
+                ->whereNull('security_status')
+                ->orWhereNotIn('security_status', self::SECURITY_HOLD_STATUSES));
+
+        if (Schema::hasColumn($this->getTable(), 'review_status')) {
+            $query->where(fn (Builder $q) => $q
+                ->whereNull('review_status')
+                ->orWhere('review_status', self::REVIEW_PUBLISHED));
+        }
+
+        if (Schema::hasColumn($this->getTable(), 'published_at')) {
+            $query->where(fn (Builder $q) => $q
+                ->whereNull('published_at')
+                ->orWhere('published_at', '<=', now()));
+        }
+
+        return $query;
     }
 
     public function isPubliclyAccessible(): bool
@@ -123,7 +176,15 @@ class NewRelease extends Model
             return false;
         }
 
-        if ($this->released_at !== null && $this->released_at->isFuture()) {
+        if ($this->hasSecurityHold()) {
+            return false;
+        }
+
+        if ($this->review_status !== null && $this->review_status !== self::REVIEW_PUBLISHED) {
+            return false;
+        }
+
+        if ($this->published_at !== null && $this->published_at->isFuture()) {
             return false;
         }
 
@@ -132,6 +193,132 @@ class NewRelease extends Model
         }
 
         return true;
+    }
+
+    public function effectiveReviewStatus(): string
+    {
+        $explicit = trim((string) ($this->review_status ?? ''));
+        if (in_array($explicit, [self::REVIEW_PENDING, self::REVIEW_PUBLISHED, self::REVIEW_REJECTED], true)) {
+            return $explicit;
+        }
+
+        if ((string) $this->security_status === 'rejected') {
+            return self::REVIEW_REJECTED;
+        }
+
+        return $this->is_active ? self::REVIEW_PUBLISHED : self::REVIEW_PENDING;
+    }
+
+    public function releaseTypeLabel(): string
+    {
+        $key = trim((string) ($this->release_type ?? ''));
+
+        return self::RELEASE_TYPES[$key] ?? 'Sin clasificar';
+    }
+
+    /**
+     * Lista explícita de datos faltantes para revisión editorial (sin inventar valores).
+     *
+     * @return array<int, string>
+     */
+    public function missingFieldsSummary(): array
+    {
+        $missing = [];
+        if (blank($this->cover_image)) {
+            $missing[] = 'Portada';
+        } elseif (blank($this->cover_permission_credit)) {
+            $missing[] = 'Permiso o crédito de portada';
+        }
+        if ($this->released_at === null) {
+            $missing[] = 'Fecha de lanzamiento musical';
+        }
+        if (blank($this->release_type)) {
+            $missing[] = 'Tipo (single/EP/álbum)';
+        }
+        if (blank($this->description)) {
+            $missing[] = 'Reseña editorial verificada';
+        }
+        if (blank($this->official_url) && blank($this->spotify_url) && blank($this->youtube_url)) {
+            $missing[] = 'Enlaces oficiales o de escucha';
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Detecta posibles duplicados por Message-ID, artista+título normalizados o enlaces de origen.
+     * Nunca fusiona automáticamente un single con un álbum del mismo nombre.
+     *
+     * @return \Illuminate\Support\Collection<int, array{release: self, reason: string, different_type: bool}>
+     */
+    public function findPotentialDuplicates(): \Illuminate\Support\Collection
+    {
+        $candidates = static::query()
+            ->where('id', '!=', $this->id)
+            ->where(function (Builder $q): void {
+                $hasCondition = false;
+
+                if (filled($this->source_message_id)) {
+                    $q->orWhere('source_message_id', $this->source_message_id);
+                    $hasCondition = true;
+                }
+
+                if (filled($this->artist_name) && filled($this->title)) {
+                    $q->orWhere(function (Builder $sub): void {
+                        $sub->whereRaw('LOWER(TRIM(artist_name)) = ?', [mb_strtolower(trim((string) $this->artist_name))])
+                            ->whereRaw('LOWER(TRIM(title)) = ?', [mb_strtolower(trim((string) $this->title))]);
+                    });
+                    $hasCondition = true;
+                }
+
+                foreach (['official_url', 'spotify_url', 'youtube_url'] as $urlCol) {
+                    $val = trim((string) ($this->{$urlCol} ?? ''));
+                    if ($val !== '' && Schema::hasColumn($this->getTable(), $urlCol)) {
+                        $q->orWhere($urlCol, $val);
+                        $hasCondition = true;
+                    }
+                }
+
+                if (! $hasCondition) {
+                    $q->whereRaw('1 = 0');
+                }
+            })
+            ->limit(10)
+            ->get();
+
+        $myType = trim((string) ($this->release_type ?? ''));
+
+        return $candidates->map(function (self $other) use ($myType): array {
+            $reasons = [];
+            if (filled($this->source_message_id) && strcasecmp((string) $this->source_message_id, (string) $other->source_message_id) === 0) {
+                $reasons[] = 'Mismo Message-ID';
+            }
+            if (mb_strtolower(trim((string) $this->artist_name)) === mb_strtolower(trim((string) $other->artist_name))
+                && mb_strtolower(trim((string) $this->title)) === mb_strtolower(trim((string) $other->title))) {
+                $reasons[] = 'Mismo artista y título';
+            }
+            foreach (['official_url' => 'enlace oficial', 'spotify_url' => 'Spotify', 'youtube_url' => 'YouTube'] as $col => $label) {
+                $a = trim((string) ($this->{$col} ?? ''));
+                $b = trim((string) ($other->{$col} ?? ''));
+                if ($a !== '' && $a === $b) {
+                    $reasons[] = "Mismo {$label}";
+                }
+            }
+
+            $otherType = trim((string) ($other->release_type ?? ''));
+            $differentType = $myType !== '' && $otherType !== '' && $myType !== $otherType;
+
+            return [
+                'release' => $other,
+                'reason' => implode(' · ', array_unique($reasons)),
+                'different_type' => $differentType,
+            ];
+        });
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     /**

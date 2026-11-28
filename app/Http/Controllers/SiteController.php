@@ -106,12 +106,7 @@ class SiteController extends Controller
             fn () => NewRelease::query()
                 ->publiclyAccessible()
                 ->where('show_in_feed', true)
-                ->where(function ($q): void {
-                    $q->whereNull('security_status')
-                        ->orWhereNotIn('security_status', NewRelease::SECURITY_HOLD_STATUSES);
-                })
-                ->orderByRaw('CASE WHEN released_at IS NULL THEN 1 ELSE 0 END ASC')
-                ->orderByDesc('released_at')
+                ->orderByRaw('COALESCE(published_at, created_at) DESC')
                 ->orderByDesc('id')
                 ->take(4)
                 ->get(),

@@ -340,9 +340,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
+        Route::post('/intake/settings', 'updateIntakeSettings')->name('intake.settings');
+        Route::post('/intake/senders', 'storeIntakeSender')->name('intake.senders.store');
+        Route::patch('/intake/senders/{sender}/toggle', 'toggleIntakeSender')->name('intake.senders.toggle');
+        Route::delete('/intake/senders/{sender}', 'destroyIntakeSender')->name('intake.senders.destroy');
         Route::get('/{newRelease}/edit', 'edit')->name('edit');
         Route::put('/{newRelease}', 'update')->name('update');
         Route::delete('/{newRelease}', 'destroy')->name('destroy');
+        Route::post('/{newRelease}/approve', 'approve')->name('approve');
+        Route::post('/{newRelease}/reject', 'reject')->name('reject');
+        Route::post('/{newRelease}/return-to-review', 'returnToReview')->name('return-to-review');
         Route::post('/{newRelease}/approve-broadcast', 'approveBroadcast')->name('approve-broadcast');
     });
 
