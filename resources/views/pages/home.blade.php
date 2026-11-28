@@ -418,73 +418,98 @@
     <x-sections.background-band class="home-section-texture home-section-black">
         <div class="py-12 md:py-16">
             <x-ui.section-heading :title="$homeHeadings['new_album_release']['title'] ?? 'Nuevos'" :accent="$homeHeadings['new_album_release']['accent'] ?? 'Lanzamientos'" :subtitle="'Lo más reciente y destacado en la señal de Seven Rock Radio'" />
-            
-            <div class="mx-auto max-w-[1200px] px-6 mt-8 md:mt-10">
-                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+
+            <div class="mx-auto max-w-[1200px] px-4 sm:px-6 mt-8 md:mt-10">
+                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 items-stretch">
                     @foreach($newReleases as $release)
                         @php
-                            $cleanRelDesc = trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode((string) $release->description, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
+                            $releaseUrl = route('new-releases.single', $release->slug);
+                            $cleanRelDesc = \App\Models\Post::sanitizeExcerpt($release->description, null, 150);
+                            $hasCover = filled($release->cover_image);
+                            $coverUrl = $hasCover ? \App\Support\PublicMediaUrl::normalizePublicUrl($release->cover_image) : null;
+                            $releaseDateLabel = $release->released_at?->locale('es')->translatedFormat('j \d\e F \d\e Y');
+                            $publishedDateLabel = $release->created_at?->locale('es')->translatedFormat('j \d\e F \d\e Y');
+                            $showBothDates = $releaseDateLabel && $publishedDateLabel
+                                && $release->released_at->toDateString() !== $release->created_at->toDateString();
                         @endphp
-                        <div class="lucille-flat-surface p-4 flex flex-col justify-between transition-colors duration-200 hover:border-lucille-accent/40 group">
-                            <div>
-                                <!-- Portada -->
-                                <div class="relative aspect-square overflow-hidden bg-[#111]">
-                                    <img src="{{ $release->cover_image_url ?: asset('assets/lucille/logo.png') }}"
-                                         alt="{{ $release->title }}" width="400" height="400"
-                                         onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = '1'; this.src = '{{ asset('assets/lucille/logo.png') }}'; }"
-                                         class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" decoding="async">
-                                    @if($release->youtube_url)
-                                        <a href="{{ $release->youtube_url }}" target="_blank" rel="noreferrer" class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                            <svg class="h-12 w-12 text-lucille-accent hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M23.498 6.163a3.003 3.003 0 00-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 00-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 002.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 002.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                                            </svg>
-                                        </a>
+                        <article class="lucille-flat-surface p-4 flex h-full min-w-0 flex-col justify-between transition-colors duration-200 hover:border-lucille-accent/40 group">
+                            <div class="min-w-0">
+                                {{-- Portada con enlace a la ficha y respaldo explícito (sin portada vs. imagen rota) --}}
+                                <a href="{{ $releaseUrl }}" class="block relative aspect-square overflow-hidden bg-[#121215] border border-white/10" aria-label="Ver ficha de {{ $release->title }} de {{ $release->artist_name }}">
+                                    @if ($hasCover && $coverUrl)
+                                        <img src="{{ $coverUrl }}"
+                                             alt="Portada de {{ $release->title }} — {{ $release->artist_name }}"
+                                             width="400" height="400"
+                                             onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden'); this.nextElementSibling.classList.add('flex');"
+                                             class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                             loading="lazy" decoding="async">
+                                        <div class="hidden h-full w-full flex-col items-center justify-center p-4 bg-[#121215] text-center">
+                                            <span class="text-[9px] font-semibold uppercase tracking-[.22em] text-amber-400">Imagen no disponible</span>
+                                            <span class="mt-2 font-display text-sm uppercase tracking-wider text-lucille-heading line-clamp-2 break-words">{{ $release->title }}</span>
+                                            <span class="mt-1 text-[11px] uppercase tracking-[.14em] text-gray-400 line-clamp-1">{{ $release->artist_name }}</span>
+                                        </div>
+                                    @else
+                                        <div class="flex h-full w-full flex-col items-center justify-center p-4 bg-[radial-gradient(circle_at_center,rgba(195,39,32,0.14),rgba(16,16,18,0.98))] text-center">
+                                            <div class="mb-2.5 flex h-10 w-10 items-center justify-center rounded-full border border-lucille-accent/40 bg-lucille-accent/10 text-lucille-accent">
+                                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                                                </svg>
+                                            </div>
+                                            <span class="text-[9px] font-semibold uppercase tracking-[.22em] text-gray-400">Sin portada registrada</span>
+                                            <span class="mt-1.5 font-display text-sm uppercase tracking-wider text-lucille-heading line-clamp-2 break-words">{{ $release->title }}</span>
+                                            <span class="mt-1 text-[10px] uppercase tracking-[.16em] text-gray-400 line-clamp-1">{{ $release->artist_name }}</span>
+                                        </div>
+                                    @endif
+                                </a>
+
+                                {{-- Metadatos --}}
+                                <h3 class="mt-4 font-display text-[15px] sm:text-[16px] uppercase leading-snug tracking-[.06em] text-lucille-heading line-clamp-2 min-h-[2.6rem] break-words group-hover:text-lucille-accent transition-colors">
+                                    <a href="{{ $releaseUrl }}" class="hover:underline focus:outline-none">{{ $release->title }}</a>
+                                </h3>
+                                <p class="mt-1 text-[11px] font-semibold uppercase tracking-[.16em] text-gray-300 line-clamp-1 break-words">{{ $release->artist_name }}</p>
+
+                                <div class="mt-2 space-y-0.5 text-[10px] uppercase tracking-[.1em] text-gray-400">
+                                    @if ($releaseDateLabel)
+                                        <p><span class="text-gray-500">Lanzamiento:</span> {{ $releaseDateLabel }}</p>
+                                    @endif
+                                    @if ($showBothDates || (! $releaseDateLabel && $publishedDateLabel))
+                                        <p><span class="text-gray-500">Publicado:</span> {{ $publishedDateLabel }}</p>
                                     @endif
                                 </div>
 
-                                <!-- Meta -->
-                                <h3 class="mt-4 font-display text-[15px] sm:text-[16px] uppercase tracking-[.08em] text-lucille-heading line-clamp-1 group-hover:text-lucille-accent transition-colors">{{ $release->title }}</h3>
-                                <p class="text-[12px] uppercase tracking-[.18em] text-lucille-body line-clamp-1 mt-1">{{ $release->artist_name }}</p>
-
-                                @if($release->released_at)
-                                    <p class="text-[10px] uppercase tracking-[.12em] text-lucille-body/70 mt-1">{{ $release->released_at->locale('es')->translatedFormat('d M, Y') }}</p>
-                                @endif
-
-                                @if($cleanRelDesc !== '')
-                                    <p class="mt-2.5 text-xs leading-5 text-lucille-body line-clamp-3">{{ $cleanRelDesc }}</p>
+                                @if ($cleanRelDesc !== '')
+                                    <p class="mt-2.5 text-xs leading-5 text-gray-300/90 line-clamp-3 break-words">{{ $cleanRelDesc }}</p>
                                 @endif
                             </div>
 
-                            <div>
-                                <!-- Audio Player -->
-                                @if($release->audio_url)
-                                    <div class="mt-4 border-t border-lucille-line/20 pt-4">
+                            <div class="mt-auto pt-4">
+                                @if ($release->audio_url)
+                                    <div class="mb-3 border-t border-lucille-line/20 pt-3">
                                         <audio src="{{ $release->audio_url }}" controls class="w-full h-8 accent-lucille-accent dark-audio" controlsList="nodownload"></audio>
                                     </div>
                                 @endif
 
-                                <!-- Action Links -->
-                                <div class="mt-4 flex items-center justify-between border-t border-lucille-line/20 pt-3">
-                                    <div class="flex gap-3">
-                                        @if($release->spotify_url)
-                                            <a href="{{ $release->spotify_url }}" target="_blank" rel="noreferrer" class="text-[#1DB954] hover:scale-110 transition-transform" title="Escuchar en Spotify">
+                                <div class="flex items-center justify-between gap-2 border-t border-lucille-line/20 pt-3">
+                                    <div class="flex items-center gap-3">
+                                        @if ($release->spotify_url)
+                                            <a href="{{ $release->spotify_url }}" target="_blank" rel="noreferrer" class="text-[#1DB954] hover:scale-110 transition-transform" title="Escuchar en Spotify" aria-label="Escuchar {{ $release->title }} en Spotify">
                                                 <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                                                     <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.02.24-2.82-1.74-6.36-2.129-10.56-1.17-.419.09-.81-.179-.9-.6-.09-.42.18-.81.6-.9 4.62-1.051 8.58-.6 11.76 1.348.36.24.48.66.24 1.022zm1.44-3.3c-.3.42-.84.6-1.26.3-3.24-1.98-8.16-2.58-12-1.38-.479.12-.99-.12-1.11-.6-.12-.48.12-.99.6-1.11 4.38-1.32 9.78-.6 13.5 1.68.42.24.6.78.27 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.3c-.6.18-1.26-.18-1.44-.78-.18-.6.18-1.26.78-1.44 4.26-1.29 11.34-1.02 15.84 1.65.54.3.72 1.02.42 1.56-.3.48-1.02.72-1.56.42z"/>
                                                 </svg>
                                             </a>
                                         @endif
-                                        @if($release->youtube_url)
-                                            <a href="{{ $release->youtube_url }}" target="_blank" rel="noreferrer" class="text-[#FF0000] hover:scale-110 transition-transform" title="Ver en YouTube">
+                                        @if ($release->youtube_url)
+                                            <a href="{{ $release->youtube_url }}" target="_blank" rel="noreferrer" class="text-[#FF0000] hover:scale-110 transition-transform" title="Ver en YouTube" aria-label="Ver {{ $release->title }} en YouTube">
                                                 <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                                                     <path d="M23.498 6.163a3.003 3.003 0 00-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 00-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 002.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 002.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                                                 </svg>
                                             </a>
                                         @endif
                                     </div>
-                                    <a href="{{ route('new-releases.single', $release->slug) }}" class="text-[11px] uppercase tracking-[.18em] text-lucille-heading hover:text-lucille-accent transition-colors">Reseña &rarr;</a>
+                                    <a href="{{ $releaseUrl }}" class="text-[11px] font-semibold uppercase tracking-[.16em] text-lucille-heading hover:text-lucille-accent transition-colors">Ver ficha &rarr;</a>
                                 </div>
                             </div>
-                        </div>
+                        </article>
                     @endforeach
                 </div>
             </div>

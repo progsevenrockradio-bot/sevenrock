@@ -54,7 +54,7 @@ class SiteController extends Controller
                 collect()
             ),
             'galleryImages'   => $galleryImages,
-            'posts'           => $this->latestPosts(),
+            'posts'           => $this->latestPosts($noticiasRock->pluck('id')->map(static fn ($id): int => (int) $id)->all()),
             'noticiasRock'    => $noticiasRock,
             'efemerides'      => $efemerides,
             'newReleases'     => $newReleases,
@@ -105,11 +105,14 @@ class SiteController extends Controller
         $newReleases = $this->safeValue(
             fn () => NewRelease::query()
                 ->publiclyAccessible()
-                ->where('is_active', true)
                 ->where('show_in_feed', true)
-                ->where(fn ($q) => $q->whereNull('released_at')->orWhere('released_at', '<=', now()))
+                ->where(function ($q): void {
+                    $q->whereNull('security_status')
+                        ->orWhereNotIn('security_status', NewRelease::SECURITY_HOLD_STATUSES);
+                })
+                ->orderByRaw('CASE WHEN released_at IS NULL THEN 1 ELSE 0 END ASC')
                 ->orderByDesc('released_at')
-                ->latest()
+                ->orderByDesc('id')
                 ->take(4)
                 ->get(),
             collect()
@@ -135,19 +138,40 @@ class SiteController extends Controller
     private function homePosts(): array
     {
         $noticiasRock = $this->safeValue(
-            fn () => Post::query()
-                ->published()
-                ->where(function ($q) {
-                    $q->whereJsonContains('categories', 'Noticias Rock')
-                      ->orWhereHas('taxonomies', fn ($t) => $t->where('name', 'Noticias Rock'));
-                })
-                ->where('content', 'not like', '%html,body,table%')
-                ->where('excerpt', 'not like', '%html,body,table%')
-                ->where('excerpt', 'not like', '%mso-table-lspace%')
-                ->orderByDesc('published_at')
-                ->orderByDesc('id')
-                ->take(4)
-                ->get(),
+            function () {
+                $query = Post::query()
+                    ->with('taxonomies')
+                    ->published()
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now())
+                    ->where(function ($q) {
+                        $q->whereJsonContains('categories', 'Noticias Rock')
+                          ->orWhereHas('taxonomies', fn ($t) => $t->where('name', 'Noticias Rock'));
+                    })
+                    ->where(function ($q): void {
+                        $q->whereNull('content')->orWhere('content', 'not like', '%html,body,table%');
+                    })
+                    ->where(function ($q): void {
+                        $q->whereNull('excerpt')
+                            ->orWhere(function ($sub): void {
+                                $sub->where('excerpt', 'not like', '%html,body,table%')
+                                    ->where('excerpt', 'not like', '%mso-table-lspace%');
+                            });
+                    });
+
+                if (Schema::hasColumn('posts', 'status')) {
+                    $query->where(function ($q): void {
+                        $q->whereNull('status')
+                            ->orWhereNotIn('status', ['draft', 'rejected', 'pending', 'pending_review', 'archived']);
+                    });
+                }
+
+                return $query
+                    ->orderByDesc('published_at')
+                    ->orderByDesc('id')
+                    ->take(4)
+                    ->get();
+            },
             collect()
         );
 
@@ -1449,52 +1473,80 @@ class SiteController extends Controller
         return view('pages.contact');
     }
 
-    private function latestPosts(): array
+    /**
+     * @param  array<int, int>  $excludeIds
+     * @return array<int, array<string, mixed>>
+     */
+    private function latestPosts(array $excludeIds = []): array
     {
         $version = $this->cacheVersion('posts');
+        $normalizedExclude = array_values(array_unique(array_filter(array_map('intval', $excludeIds))));
+        sort($normalizedExclude);
+        $excludeKey = $normalizedExclude !== [] ? md5(implode(',', $normalizedExclude)) : 'none';
 
-        return Cache::remember("site.home.latest_posts.v{$version}", now()->addMinutes(10), function (): array {
+        return Cache::remember("site.home.latest_posts.v2.{$version}.{$excludeKey}", now()->addMinutes(10), function () use ($normalizedExclude): array {
             try {
                 if (! DB::connection()->getSchemaBuilder()->hasTable('posts')) {
                     return [];
                 }
 
-                return DB::table('posts')
-                    ->where('status', 'published')
-                    ->where(function ($query) {
-                        $query->whereNull('author_email')
-                              ->orWhere('author_email', '!=', 'dark.vader.agent@gmail.com');
+                $hasStatus = Schema::hasColumn('posts', 'status');
+
+                $query = Post::query()
+                    ->with('taxonomies')
+                    ->published()
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now())
+                    ->where(function ($q): void {
+                        $q->whereNull('categories')
+                            ->orWhere('categories', 'not like', '%Hoy en el Rock%');
                     })
-                    ->where(function ($query) {
-                        $query->whereNull('categories')
-                              ->orWhere(function ($q) {
-                                  $q->where('categories', 'not like', '%Noticias Rock%')
-                                    ->where('categories', 'not like', '%Hoy en el Rock%');
-                              });
+                    ->whereDoesntHave('taxonomies', fn ($t) => $t->where('name', 'Hoy en el Rock'))
+                    ->where(function ($q): void {
+                        $q->whereNull('content')->orWhere('content', 'not like', '%html,body,table%');
                     })
+                    ->where(function ($q): void {
+                        $q->whereNull('excerpt')
+                            ->orWhere(function ($sub): void {
+                                $sub->where('excerpt', 'not like', '%html,body,table%')
+                                    ->where('excerpt', 'not like', '%mso-table-lspace%');
+                            });
+                    });
+
+                if ($hasStatus) {
+                    $query->where(function ($q): void {
+                        $q->whereNull('status')
+                            ->orWhereNotIn('status', ['draft', 'rejected', 'pending', 'pending_review', 'archived']);
+                    });
+                }
+
+                if ($normalizedExclude !== []) {
+                    $query->whereNotIn('id', $normalizedExclude);
+                }
+
+                return $query
                     ->orderByDesc('published_at')
+                    ->orderByDesc('id')
                     ->limit(3)
                     ->get()
-                    ->map(function (object $post): array {
-                        $publishedAt = ! empty($post->published_at)
-                            ? \Illuminate\Support\Carbon::parse((string) $post->published_at)
-                            : null;
-                        $image = $this->resolvePublicImage((string) ($post->featured_image_path ?? ''));
-                        $excerpt = $this->excerptFromContent((string) ($post->content ?? ''), (string) ($post->meta_description ?? ''));
+                    ->map(static function (Post $post): array {
+                        $publishedAt = $post->published_at;
+                        $categories = $post->categoryNames();
+                        $primaryCategory = $categories[0] ?? 'Actualidad';
+                        $rawImage = trim((string) ($post->featured_image ?? ''));
+                        $imageUrl = $rawImage !== '' ? $post->featured_image_url : null;
 
                         return [
-                            'title' => (string) $post->title,
-                            'date' => $publishedAt?->format('F j, Y') ?? '',
-                            'category' => 'Blog',
-                            'categories' => ['Blog'],
-                            'excerpt' => $excerpt,
-                            'image' => $image,
-                            'url' => route('posts.single', [
-                                'year' => $publishedAt?->format('Y') ?? now()->format('Y'),
-                                'month' => $publishedAt?->format('m') ?? now()->format('m'),
-                                'day' => $publishedAt?->format('d') ?? now()->format('d'),
-                                'slug' => (string) $post->slug,
-                            ]),
+                            'id' => (int) $post->id,
+                            'title' => trim((string) $post->title),
+                            'date' => $publishedAt?->locale('es')->translatedFormat('j \d\e F \d\e Y') ?? '',
+                            'category' => $primaryCategory,
+                            'categories' => $categories !== [] ? $categories : [$primaryCategory],
+                            'excerpt' => $post->clean_excerpt,
+                            'has_image' => $rawImage !== '',
+                            'image' => $imageUrl,
+                            'image_alt' => trim((string) ($post->image_alt ?: $post->title)),
+                            'url' => $post->url,
                         ];
                     })
                     ->all();

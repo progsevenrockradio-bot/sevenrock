@@ -115,7 +115,10 @@ final class HeadlineTickerService
 
         return DB::table('posts')
             ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now())
             ->latest('published_at')
+            ->orderByDesc('id')
             ->limit(4)
             ->get()
             ->map(function (object $post): array {

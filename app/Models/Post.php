@@ -195,12 +195,17 @@ class Post extends Model
         if (str_starts_with($trimmed, '{') || str_starts_with($trimmed, '[')) {
             $decoded = json_decode($trimmed, true);
             if (is_array($decoded)) {
+                $firstElem = reset($decoded);
                 $text = data_get($decoded, 'rendered')
                     ?? data_get($decoded, 'content')
                     ?? data_get($decoded, 'text')
                     ?? data_get($decoded, '0.value')
                     ?? data_get($decoded, '0.content.html')
-                    ?? '';
+                    ?? (is_string($firstElem) ? $firstElem : '');
+            } else {
+                // JSON truncado o malformado: limpiar envoltorio inicial [" o {"
+                $text = preg_replace('/^\s*[\[\{]\s*"?/', '', $trimmed) ?? $trimmed;
+                $text = preg_replace('/"?\s*[\]\}]\s*$/', '', $text) ?? $text;
             }
         }
 
