@@ -16,6 +16,9 @@
                 </h1>
             </div>
             <div class="flex items-center gap-3">
+                @if (! empty($returnToUrl))
+                    <a href="{{ $returnToUrl }}" class="lucille-button-solid text-xs">← Volver a Entregas y emisiones</a>
+                @endif
                 <a href="{{ route('conductor.episodes.edit', $radioProgram) }}" class="lucille-button text-xs">Modificar entrega</a>
                 <a href="{{ route('conductor.episodes.index') }}" class="lucille-button text-xs">Volver</a>
             </div>

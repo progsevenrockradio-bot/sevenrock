@@ -15,6 +15,7 @@
             </div>
             <div class="flex items-center gap-3">
                 <span class="text-xs text-[#9a9a9a]">{{ $conductor->name }}</span>
+                <a href="{{ route('conductor.episodes.deliveries.index') }}" class="lucille-button text-xs">Entregas y emisiones</a>
                 <a href="{{ route('conductor.episodes.create') }}" class="lucille-button-solid text-xs">+ Nueva Entrega</a>
                 <form action="{{ route('conductor.logout') }}" method="POST">
                     @csrf

@@ -1,8 +1,4 @@
-@extends('admin.layouts.app')
-
-@section('title', 'Revisión Editorial de Episodio')
-
-@section('content')
+<x-layouts.admin :title="'Revisión Editorial de Episodio - '.config('app.name')">
 <div class="space-y-8">
     <div class="flex flex-wrap items-start justify-between gap-4 border border-[#2b2b2b] bg-[#101012] p-6">
         <div>
@@ -17,6 +13,9 @@
             </p>
         </div>
         <div class="flex flex-wrap gap-3">
+            @if (! empty($returnToUrl))
+                <a href="{{ $returnToUrl }}" class="lucille-button-solid text-xs">← Volver a Entregas y emisiones</a>
+            @endif
             <a href="{{ route('admin.podcast-uploads.download', $radioProgram) }}" class="lucille-button text-xs">Descargar MP3 ({{ $radioProgram->readableDownloadFilename() }})</a>
             <a href="{{ route('admin.podcast-uploads.index') }}" class="lucille-button text-xs">Volver a Podcast Uploads</a>
         </div>
@@ -433,5 +432,5 @@
         </div>
     </section>
 </div>
-@endsection
+</x-layouts.admin>
 

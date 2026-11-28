@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Admin\SongController as AdminSongController;
 use App\Http\Controllers\Admin\PodcastUploadController as AdminPodcastUploadController;
+use App\Http\Controllers\Admin\AdminPodcastDeliveryReportController;
 use App\Http\Controllers\Admin\AdminPodcastPresignController;
 use App\Http\Controllers\Admin\AdminPodcastChunkUploadController;
 use App\Http\Controllers\Admin\ProgramCodeController as AdminProgramCodeController;
@@ -214,6 +215,8 @@ Route::prefix('conductores')->name('conductor.')->group(function (): void {
 
     Route::middleware(['auth', 'conductor'])->prefix('entregas')->name('episodes.')->group(function (): void {
         Route::get('/', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'index'])->name('index');
+        Route::get('/entregas-y-emisiones', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'deliveries'])->name('deliveries.index');
+        Route::get('/entregas-y-emisiones/imprimir', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'deliveriesPrint'])->name('deliveries.print');
         Route::post('/presign', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'presign'])->name('presign');
         Route::get('/crear/{masterProgram?}', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\Conductor\ConductorEpisodeController::class, 'store'])->name('store');
@@ -393,6 +396,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', 'audit', 't
         Route::get('/manual/pdf', 'manualPdf')->name('manual.pdf');
         Route::get('/publicados', 'published')->name('published');
         Route::get('/publicados/imprimir', 'publishedPrint')->name('published.print');
+        Route::get('/entregas-y-emisiones', [AdminPodcastDeliveryReportController::class, 'index'])->name('deliveries.index');
+        Route::get('/entregas-y-emisiones/imprimir', [AdminPodcastDeliveryReportController::class, 'print'])->name('deliveries.print');
         Route::get('/recent', 'recentUploadsFragment')->name('recent');
         Route::post('/presign', [AdminPodcastPresignController::class, 'presign'])->name('presign');
         Route::post('/chunk', [AdminPodcastChunkUploadController::class, 'uploadChunk'])->name('chunk');

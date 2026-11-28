@@ -214,11 +214,15 @@ class AdminPodcastEditorialController extends Controller
     /**
      * Vista de revisión y edición editorial en el panel de administración.
      */
-    public function show(RadioProgram $radioProgram): View
+    public function show(Request $request, RadioProgram $radioProgram): View
     {
         $radioProgram->loadMissing(['masterProgram', 'submittedBy']);
         $master = $radioProgram->masterProgram;
         $checks = is_array($radioProgram->editorial_checks) ? $radioProgram->editorial_checks : [];
+        $returnToUrl = app(\App\Services\PodcastDeliveryReportService::class)->sanitizeReturnToUrl(
+            $request->query('return_to'),
+            '/admin/podcast-uploads/entregas-y-emisiones'
+        );
 
         return view('admin.podcast-uploads.editorial-review', [
             'episode' => $radioProgram,
@@ -232,6 +236,7 @@ class AdminPodcastEditorialController extends Controller
             'operationalStates' => $radioProgram->operationalStates(),
             'radiobossAnalysis' => $radioProgram->radiobossFilenameAnalysis(),
             'isDelivered' => $radioProgram->isDeliveredToRadioboss(),
+            'returnToUrl' => $returnToUrl,
         ]);
     }
 

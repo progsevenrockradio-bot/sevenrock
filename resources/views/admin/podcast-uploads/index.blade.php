@@ -48,6 +48,15 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+                <a
+                    href="{{ route('admin.podcast-uploads.deliveries.index') }}"
+                    class="h-9 px-3.5 rounded-lg border border-[#c32720]/40 bg-[#c32720]/15 text-xs font-semibold text-white hover:bg-[#c32720]/25 transition-colors inline-flex items-center gap-1.5"
+                >
+                    <svg class="h-3.5 w-3.5 text-[#c32720]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    </svg>
+                    <span>Entregas y emisiones</span>
+                </a>
                 @php $pendingExternalCount = (int) ($pendingExternalDeliveriesCount ?? 0); @endphp
                 <button
                     type="button"

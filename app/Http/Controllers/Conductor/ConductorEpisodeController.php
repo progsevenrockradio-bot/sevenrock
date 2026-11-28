@@ -108,6 +108,41 @@ class ConductorEpisodeController extends Controller
         ]);
     }
 
+    public function deliveries(Request $request): View
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        $reportService = app(\App\Services\PodcastDeliveryReportService::class);
+        $filters = $reportService->extractFilters($request, $user);
+        $report = $reportService->getPaginatedReport($request, $user, $filters, 25);
+
+        return view('conductor.episodes.deliveries', [
+            'user' => $user,
+            'conductor' => $user,
+            'paginator' => $report['paginator'],
+            'rows' => $report['rows'],
+            'filters' => $report['filters'],
+            'filterOptions' => $report['filterOptions'],
+            'activeFilterLabels' => $report['activeFilterLabels'],
+            'appTimezone' => $report['appTimezone'],
+            'programTimezones' => $report['programTimezones'],
+            'printQuery' => $report['printQuery'],
+            'distributionStatusOptions' => \App\Services\PodcastDeliveryReportService::DISTRIBUTION_STATUS_OPTIONS,
+            'sortOptions' => \App\Services\PodcastDeliveryReportService::SORT_OPTIONS,
+        ]);
+    }
+
+    public function deliveriesPrint(Request $request): View
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        $reportService = app(\App\Services\PodcastDeliveryReportService::class);
+        $filters = $reportService->extractFilters($request, $user);
+        $report = $reportService->getPrintReport($request, $user, $filters);
+
+        return view('admin.podcast-uploads.deliveries-print', $report);
+    }
+
     /**
      * Emite una autorización de subida directa a R2 vinculada al conductor, programa,
      * clave exacta, caducidad y estado de consumo.
@@ -492,7 +527,7 @@ class ConductorEpisodeController extends Controller
             ->with('status', 'Recibido, pendiente de revisión editorial');
     }
 
-    public function show(RadioProgram $radioProgram): View
+    public function show(Request $request, RadioProgram $radioProgram): View
     {
         /** @var User $user */
         $user = Auth::user();
@@ -502,6 +537,10 @@ class ConductorEpisodeController extends Controller
 
         $radioProgram->loadMissing('masterProgram');
         $deadlineInfo = $radioProgram->masterProgram?->calculateEmissionDeadline($radioProgram->fecha_emision);
+        $returnToUrl = app(\App\Services\PodcastDeliveryReportService::class)->sanitizeReturnToUrl(
+            $request->query('return_to'),
+            '/conductores/entregas/entregas-y-emisiones'
+        );
 
         return view('conductor.episodes.show', [
             'user' => $user,
@@ -514,6 +553,7 @@ class ConductorEpisodeController extends Controller
             'hasLateException' => $radioProgram->hasActiveLateSubmissionException(),
             'canShareAndDownload' => $radioProgram->canConductorShareAndDownload(),
             'publicShareUrl' => $radioProgram->publicShareUrl(),
+            'returnToUrl' => $returnToUrl,
         ]);
     }
 
