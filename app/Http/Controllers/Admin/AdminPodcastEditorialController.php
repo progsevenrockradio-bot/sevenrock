@@ -347,6 +347,8 @@ class AdminPodcastEditorialController extends Controller
 
             $this->auditService->record($radioProgram, 'ADMIN_EDITORIAL_POST_DELIVERY_UPDATED', 'El administrador actualizó los datos editoriales de un episodio ya entregado.', [
                 'admin_id' => Auth::id(),
+                'admin_name' => Auth::user()?->name,
+                'original_submitted_by_user_id' => $radioProgram->submitted_by_user_id,
                 'live_title' => $radioProgram->live_title,
                 'has_guest_bio' => ! empty($radioProgram->biografia_invitado),
                 'audio_reprocessed' => false,
@@ -470,8 +472,11 @@ class AdminPodcastEditorialController extends Controller
 
         $this->auditService->record($radioProgram, 'ADMIN_EDITORIAL_UPDATED', 'El administrador actualizó los datos editoriales del episodio.', [
             'admin_id' => Auth::id(),
+            'admin_name' => Auth::user()?->name,
+            'original_submitted_by_user_id' => $radioProgram->submitted_by_user_id,
             'cover_changed' => $coverChanged,
             'cover_update_scope' => $coverChanged ? $coverScope : null,
+            'audio_replaced' => $hasNewAudio,
             'audio_reprocessed' => $shouldReprocessMp3 && $radioProgram->isEditorialApproved(),
         ]);
 

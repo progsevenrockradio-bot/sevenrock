@@ -427,7 +427,10 @@ final class PodcastUploadController extends Controller
         $pipelineAction = strtolower(trim((string) $request->input('pipeline_action', 'process')));
         $shouldProcessPipeline = $pipelineAction !== 'save';
 
-        $radioProgram = RadioProgram::withoutEvents(function () use ($master, $data, $rawPath, $disk, $syncArchiveOrg, $imagePath, $manualEpisodeNumber, $shouldProcessPipeline, $durationSeconds): RadioProgram {
+        $authenticatedUserId = Auth::id();
+        $authenticatedUserName = Auth::user()?->name;
+
+        $radioProgram = RadioProgram::withoutEvents(function () use ($master, $data, $rawPath, $disk, $syncArchiveOrg, $imagePath, $manualEpisodeNumber, $shouldProcessPipeline, $durationSeconds, $authenticatedUserId): RadioProgram {
             $radioBossaStatus = $shouldProcessPipeline ? 'radioboss_pending' : 'skipped';
             $archiveStatus = $shouldProcessPipeline ? 'archive_pending' : 'skipped';
             $deliveryStatus = $shouldProcessPipeline ? 'delivery_pending' : 'skipped';
@@ -437,6 +440,7 @@ final class PodcastUploadController extends Controller
 
             return RadioProgram::query()->create([
                 'master_program_id' => $master->id,
+                'submitted_by_user_id' => $authenticatedUserId,
                 'titulo_programa' => (string) $master->nombre,
                 'conductor' => (string) $master->conductor,
                 'numero_episodio' => $manualEpisodeNumber ?? $this->nextEpisodeNumber($master),
@@ -487,6 +491,8 @@ final class PodcastUploadController extends Controller
             'El episodio fue recibido desde el panel administrativo.',
             [
                 'source' => 'admin-podcast-uploads',
+                'submitted_by_user_id' => $authenticatedUserId,
+                'submitted_by_user_name' => $authenticatedUserName,
                 'should_process_pipeline' => $shouldProcessPipeline,
                 'sync_archive_org' => $syncArchiveOrg,
             ]
